@@ -49,6 +49,7 @@ O pesquisador pode ter um vínculo acadêmico ou institucional, mas isso não al
 Opções:
 - IC
 - Extensão
+- Estagiário
 - TCC
 - Mestrado
 - Doutorado
