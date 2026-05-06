@@ -21,7 +21,10 @@ type SlotSelection = {
   periodo: PeriodoId;
 };
 
+type VistaAgenda = "hoje" | "semana";
+
 const limitePorHorario = 10;
+const nomesVisiveisPorHorario = 3;
 
 const periodos: Array<{
   id: PeriodoId;
@@ -96,6 +99,8 @@ export function AgendaLaboratorio() {
   const [slotsSelecionados, setSlotsSelecionados] = useState<SlotSelection[]>(
     [],
   );
+  const [vistaAgenda, setVistaAgenda] = useState<VistaAgenda>("hoje");
+  const [slotsExpandidos, setSlotsExpandidos] = useState<string[]>([]);
   const [erro, setErro] = useState("");
 
   useEffect(() => {
@@ -107,8 +112,13 @@ export function AgendaLaboratorio() {
     }
   }, [nomesPesquisadores, pesquisadorSelecionado]);
 
+  const hoje = new Date().getDay();
+  const diaAtual = semanaAtual.find((dia) => dia.weekday === hoje);
+  const diasVisiveis = vistaAgenda === "hoje" && diaAtual ? [diaAtual] : semanaAtual;
   const totalPesquisadores = new Set(
-    agenda.map((entry) => entry.pesquisador),
+    agenda
+      .map((entry) => entry.pesquisador)
+      .filter((nome) => nomesPesquisadores.includes(nome)),
   ).size;
   const totalSlots = semanaAtual.length * periodos.length;
   const slotsCheios = semanaAtual.reduce((total, dia) => {
@@ -143,6 +153,19 @@ export function AgendaLaboratorio() {
 
       return [...selecionados, slot];
     });
+  }
+
+  function trocarVista(novaVista: VistaAgenda) {
+    setVistaAgenda(novaVista);
+    calendarioRef.current?.scrollIntoView({ behavior: "smooth" });
+  }
+
+  function toggleSlotExpandido(slotKey: string) {
+    setSlotsExpandidos((slotsAtuais) =>
+      slotsAtuais.includes(slotKey)
+        ? slotsAtuais.filter((key) => key !== slotKey)
+        : [...slotsAtuais, slotKey],
+    );
   }
 
   function abrirModal() {
@@ -227,10 +250,16 @@ export function AgendaLaboratorio() {
           <div className="flex w-full flex-col gap-2 sm:flex-row md:w-auto">
             <Button
               fullWidth
-              variant="secondary"
-              onClick={() =>
-                calendarioRef.current?.scrollIntoView({ behavior: "smooth" })
-              }
+              variant={vistaAgenda === "hoje" ? "primary" : "secondary"}
+              onClick={() => trocarVista("hoje")}
+            >
+              <CalendarDays aria-hidden="true" className="mr-2 h-5 w-5" />
+              Ver hoje
+            </Button>
+            <Button
+              fullWidth
+              variant={vistaAgenda === "semana" ? "primary" : "secondary"}
+              onClick={() => trocarVista("semana")}
             >
               <CalendarDays aria-hidden="true" className="mr-2 h-5 w-5" />
               Ver semana
@@ -250,8 +279,8 @@ export function AgendaLaboratorio() {
               <CalendarDays aria-hidden="true" className="h-6 w-6" />
             </div>
             <div>
-              <p className="text-base font-semibold text-muted">Semana atual</p>
-              <p className="text-2xl font-bold text-text">
+              <p className="text-sm font-semibold text-muted">Semana atual</p>
+              <p className="text-xl font-bold text-text">
                 {semanaAtual[0].numero} - {semanaAtual[4].numero}
               </p>
             </div>
@@ -263,11 +292,11 @@ export function AgendaLaboratorio() {
               <Users aria-hidden="true" className="h-6 w-6" />
             </div>
             <div>
-              <p className="text-base font-semibold text-muted">
+              <p className="text-sm font-semibold text-muted">
                 Pesquisadores
               </p>
-              <p className="text-2xl font-bold text-text">
-                {totalPesquisadores} com horario
+              <p className="text-xl font-bold text-text">
+                {totalPesquisadores} de {nomesPesquisadores.length} com horario
               </p>
             </div>
           </div>
@@ -278,10 +307,10 @@ export function AgendaLaboratorio() {
               <Users aria-hidden="true" className="h-6 w-6" />
             </div>
             <div>
-              <p className="text-base font-semibold text-muted">
+              <p className="text-sm font-semibold text-muted">
                 Horarios cheios
               </p>
-              <p className="text-2xl font-bold text-text">
+              <p className="text-xl font-bold text-text">
                 {slotsCheios} de {totalSlots}
               </p>
             </div>
@@ -290,33 +319,61 @@ export function AgendaLaboratorio() {
       </section>
 
       <section ref={calendarioRef} className="mt-5 scroll-mt-24">
-        <div className="grid gap-4 xl:grid-cols-5">
-          {semanaAtual.map((dia) => (
-            <Card key={dia.weekday} className="flex min-h-[520px] flex-col">
-              <div className="mb-4 border-b border-border pb-3">
-                <h3 className="text-2xl font-bold text-text">{dia.label}</h3>
-                <p className="mt-1 text-lg text-muted">{dia.numero}</p>
+        <div
+          className={
+            vistaAgenda === "hoje"
+              ? "grid gap-4 lg:grid-cols-3"
+              : "grid gap-4 md:grid-cols-2 xl:grid-cols-5"
+          }
+        >
+          {diasVisiveis.map((dia) => (
+            <Card
+              key={dia.weekday}
+              className={
+                vistaAgenda === "hoje"
+                  ? "lg:col-span-3"
+                  : "flex min-h-[420px] flex-col"
+              }
+            >
+              <div className="mb-3 border-b border-border pb-3">
+                <h3 className="text-xl font-bold text-text">{dia.label}</h3>
+                <p className="mt-1 text-base text-muted">{dia.numero}</p>
               </div>
 
-              <div className="flex flex-1 flex-col gap-3">
+              <div
+                className={
+                  vistaAgenda === "hoje"
+                    ? "grid gap-3 md:grid-cols-3"
+                    : "flex flex-1 flex-col gap-3"
+                }
+              >
                 {periodos.map((periodo) => {
                   const nomes = getPesquisadoresDoSlot(
                     dia.weekday,
                     periodo.id,
                   );
                   const estaCheio = nomes.length >= limitePorHorario;
+                  const slotKey = getSlotKey({
+                    weekday: dia.weekday,
+                    periodo: periodo.id,
+                  });
+                  const slotExpandido = slotsExpandidos.includes(slotKey);
+                  const nomesVisiveis = slotExpandido
+                    ? nomes
+                    : nomes.slice(0, nomesVisiveisPorHorario);
+                  const nomesOcultos = nomes.length - nomesVisiveis.length;
 
                   return (
                     <article
                       key={periodo.id}
-                      className="flex min-h-36 flex-col rounded-lg border border-border bg-background p-4"
+                      className="flex min-h-32 flex-col rounded-lg border border-border bg-background p-3"
                     >
-                      <div className="mb-3 flex items-start justify-between gap-3">
+                      <div className="mb-2 flex items-start justify-between gap-3">
                         <div>
-                          <p className="text-xl font-bold text-text">
+                          <p className="text-lg font-bold text-text">
                             {periodo.label}
                           </p>
-                          <p className="mt-1 text-base font-semibold text-muted">
+                          <p className="mt-1 text-sm font-semibold text-muted">
                             {periodo.horario}
                           </p>
                         </div>
@@ -328,17 +385,39 @@ export function AgendaLaboratorio() {
 
                       {nomes.length > 0 ? (
                         <ul className="flex flex-wrap gap-2">
-                          {nomes.map((nome) => (
+                          {nomesVisiveis.map((nome) => (
                             <li
                               key={nome}
-                              className="rounded-lg border border-border bg-surface px-3 py-2 text-base font-semibold text-text"
+                              className="rounded-md border border-border bg-surface px-2.5 py-1.5 text-sm font-semibold text-text"
                             >
                               {nome}
                             </li>
                           ))}
+                          {nomesOcultos > 0 ? (
+                            <li>
+                              <button
+                                className="rounded-md border border-primary bg-primary-soft px-2.5 py-1.5 text-sm font-bold text-primary transition hover:bg-surface"
+                                onClick={() => toggleSlotExpandido(slotKey)}
+                                type="button"
+                              >
+                                +{nomesOcultos}
+                              </button>
+                            </li>
+                          ) : null}
+                          {slotExpandido && nomes.length > nomesVisiveisPorHorario ? (
+                            <li>
+                              <button
+                                className="rounded-md border border-border bg-surface px-2.5 py-1.5 text-sm font-semibold text-muted transition hover:text-primary"
+                                onClick={() => toggleSlotExpandido(slotKey)}
+                                type="button"
+                              >
+                                Ver menos
+                              </button>
+                            </li>
+                          ) : null}
                         </ul>
                       ) : (
-                        <p className="rounded-lg border border-dashed border-border bg-surface p-3 text-base text-muted">
+                        <p className="rounded-lg border border-dashed border-border bg-surface p-3 text-sm text-muted">
                           Nenhum pesquisador registrado.
                         </p>
                       )}
