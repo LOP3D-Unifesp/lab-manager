@@ -2,20 +2,19 @@ import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
 import { StatusBadge } from "../components/ui/StatusBadge";
-
-const pesquisadores = [
-  { nome: "Ana Lima", vinculo: "Mestrado", status: "No laboratório" },
-  { nome: "Bruno Costa", vinculo: "IC", status: "Remoto" },
-  { nome: "Carla Mendes", vinculo: "Doutorado", status: "No laboratório" },
-];
+import { pesquisadores } from "../lib/pesquisadores";
 
 export function Pesquisadores() {
   return (
     <div>
       <PageHeader
         title="Pesquisadores"
-        description="Consulta inicial de pesquisadores, vínculos acadêmicos e presença planejada."
-        action={<Button fullWidth variant="secondary">Adicionar placeholder</Button>}
+        description="Consulta inicial de pesquisadores, vinculos academicos e presenca planejada."
+        action={
+          <Button fullWidth variant="secondary">
+            Adicionar placeholder
+          </Button>
+        }
       />
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -27,13 +26,13 @@ export function Pesquisadores() {
                   {pesquisador.nome}
                 </h3>
                 <p className="mt-2 text-lg text-muted">
-                  Vínculo: {pesquisador.vinculo}
+                  Vinculo: {pesquisador.vinculo}
                 </p>
               </div>
               <StatusBadge
                 label={pesquisador.status}
                 variant={
-                  pesquisador.status === "No laboratório" ? "success" : "info"
+                  pesquisador.status === "No laboratorio" ? "success" : "info"
                 }
               />
             </div>
