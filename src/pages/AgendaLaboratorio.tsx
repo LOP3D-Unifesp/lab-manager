@@ -1,11 +1,11 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CalendarDays, Plus, Users, X } from "lucide-react";
 
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
 import { StatusBadge } from "../components/ui/StatusBadge";
-import { nomesPesquisadores } from "../lib/pesquisadores";
+import { usePesquisadoresCadastrados } from "../lib/pesquisadores";
 
 type PeriodoId = "manha" | "tarde" | "noite";
 
@@ -82,15 +82,30 @@ function isSameSlot(a: SlotSelection, b: SlotSelection) {
 export function AgendaLaboratorio() {
   const semanaAtual = useMemo(() => getSemanaAtual(), []);
   const calendarioRef = useRef<HTMLElement | null>(null);
+  const { pesquisadores } = usePesquisadoresCadastrados();
+  const nomesPesquisadores = useMemo(
+    () =>
+      pesquisadores
+        .map((pesquisador) => `${pesquisador.nome} ${pesquisador.sobrenome}`)
+        .sort((a, b) => a.localeCompare(b, "pt-BR")),
+    [pesquisadores],
+  );
   const [agenda, setAgenda] = useState(agendaInicial);
   const [mostrarModal, setMostrarModal] = useState(false);
-  const [pesquisadorSelecionado, setPesquisadorSelecionado] = useState(
-    nomesPesquisadores[0],
-  );
+  const [pesquisadorSelecionado, setPesquisadorSelecionado] = useState("");
   const [slotsSelecionados, setSlotsSelecionados] = useState<SlotSelection[]>(
     [],
   );
   const [erro, setErro] = useState("");
+
+  useEffect(() => {
+    if (
+      nomesPesquisadores.length > 0 &&
+      !nomesPesquisadores.includes(pesquisadorSelecionado)
+    ) {
+      setPesquisadorSelecionado(nomesPesquisadores[0]);
+    }
+  }, [nomesPesquisadores, pesquisadorSelecionado]);
 
   const totalPesquisadores = new Set(
     agenda.map((entry) => entry.pesquisador),
@@ -139,7 +154,7 @@ export function AgendaLaboratorio() {
     setMostrarModal(false);
     setErro("");
     setSlotsSelecionados([]);
-    setPesquisadorSelecionado(nomesPesquisadores[0]);
+    setPesquisadorSelecionado(nomesPesquisadores[0] ?? "");
   }
 
   function registrarHorario(event: React.FormEvent<HTMLFormElement>) {
@@ -147,6 +162,11 @@ export function AgendaLaboratorio() {
 
     if (slotsSelecionados.length === 0) {
       setErro("Selecione pelo menos um horario da semana.");
+      return;
+    }
+
+    if (!pesquisadorSelecionado) {
+      setErro("Cadastre pelo menos um pesquisador antes de registrar horario.");
       return;
     }
 
@@ -363,6 +383,7 @@ export function AgendaLaboratorio() {
                 Pesquisador
                 <select
                   className="min-h-11 rounded-lg border border-border bg-background px-3 text-lg"
+                  disabled={nomesPesquisadores.length === 0}
                   value={pesquisadorSelecionado}
                   onChange={(event) => {
                     setErro("");
@@ -462,6 +483,7 @@ export function AgendaLaboratorio() {
           </Card>
         </div>
       ) : null}
+
     </div>
   );
 }

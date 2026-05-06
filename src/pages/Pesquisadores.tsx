@@ -1,51 +1,24 @@
 import { FormEvent, useState } from "react";
 import { createPortal } from "react-dom";
-import { LayoutGrid, List, Trash2, UserPlus, X } from "lucide-react";
+import { Trash2, UserPlus, X } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
 import { StatusBadge } from "../components/ui/StatusBadge";
-
-type Pesquisador = {
-  id: number;
-  nome: string;
-  sobrenome: string;
-  vinculo: string;
-  status: string;
-};
+import {
+  Pesquisador,
+  usePesquisadoresCadastrados,
+} from "../lib/pesquisadores";
 
 type Visualizacao = "cards" | "lista";
 type Ordenacao = "alfabetica" | "vinculo" | "presenca";
-
-const pesquisadoresIniciais: Pesquisador[] = [
-  {
-    id: 1,
-    nome: "Ana",
-    sobrenome: "Lima",
-    vinculo: "Mestrado",
-    status: "No laboratório",
-  },
-  {
-    id: 2,
-    nome: "Bruno",
-    sobrenome: "Costa",
-    vinculo: "IC",
-    status: "Remoto",
-  },
-  {
-    id: 3,
-    nome: "Carla",
-    sobrenome: "Mendes",
-    vinculo: "Doutorado",
-    status: "No laboratório",
-  },
-];
 
 const vinculos = ["IC", "Mestrado", "Doutorado", "Pós-doutorado", "Docente"];
 const presencas = ["No laboratório", "Remoto"];
 
 export function Pesquisadores() {
-  const [pesquisadores, setPesquisadores] = useState(pesquisadoresIniciais);
+  const { pesquisadores, adicionarPesquisador, excluirPesquisador } =
+    usePesquisadoresCadastrados();
   const [visualizacao, setVisualizacao] = useState<Visualizacao>("cards");
   const [ordenacao, setOrdenacao] = useState<Ordenacao>("alfabetica");
   const [modalCadastroAberto, setModalCadastroAberto] = useState(false);
@@ -58,7 +31,7 @@ export function Pesquisadores() {
     status: presencas[0],
   });
 
-  const adicionarPesquisador = (event: FormEvent<HTMLFormElement>) => {
+  const salvarNovoPesquisador = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const nome = novoPesquisador.nome.trim();
@@ -68,16 +41,12 @@ export function Pesquisadores() {
       return;
     }
 
-    setPesquisadores((listaAtual) => [
-      ...listaAtual,
-      {
-        id: Date.now(),
-        nome,
-        sobrenome,
-        vinculo: novoPesquisador.vinculo,
-        status: novoPesquisador.status,
-      },
-    ]);
+    adicionarPesquisador({
+      nome,
+      sobrenome,
+      vinculo: novoPesquisador.vinculo,
+      status: novoPesquisador.status,
+    });
     setNovoPesquisador({
       nome: "",
       sobrenome: "",
@@ -87,16 +56,12 @@ export function Pesquisadores() {
     setModalCadastroAberto(false);
   };
 
-  const excluirPesquisador = () => {
+  const confirmarExclusaoPesquisador = () => {
     if (!pesquisadorParaExcluir) {
       return;
     }
 
-    setPesquisadores((listaAtual) =>
-      listaAtual.filter(
-        (pesquisador) => pesquisador.id !== pesquisadorParaExcluir.id,
-      ),
-    );
+    excluirPesquisador(pesquisadorParaExcluir.id);
     setPesquisadorParaExcluir(null);
   };
 
@@ -172,7 +137,7 @@ export function Pesquisadores() {
 
               <form
                 className="grid gap-4 text-left"
-                onSubmit={adicionarPesquisador}
+                onSubmit={salvarNovoPesquisador}
               >
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="grid gap-2 text-base font-semibold text-text">
@@ -299,7 +264,7 @@ export function Pesquisadores() {
                 >
                   Cancelar
                 </Button>
-                <Button variant="danger" onClick={excluirPesquisador}>
+                <Button variant="danger" onClick={confirmarExclusaoPesquisador}>
                   Excluir pesquisador
                 </Button>
               </div>
@@ -330,7 +295,7 @@ export function Pesquisadores() {
                 <option value="presenca">Presença</option>
               </select>
             </label>
-            <div className="grid grid-cols-2 rounded-lg border border-border bg-surface p-1">
+            <div className="flex min-h-9 items-center rounded-md border border-border bg-surface p-1">
               <button
                 type="button"
                 title="Visualizar em cards"
@@ -338,11 +303,13 @@ export function Pesquisadores() {
                 aria-pressed={visualizacao === "cards"}
                 onClick={() => setVisualizacao("cards")}
                 className={[
-                  "inline-flex min-h-10 items-center justify-center rounded-md px-3 text-primary transition hover:bg-primary-soft",
-                  visualizacao === "cards" ? "bg-primary-soft" : "",
+                  "inline-flex min-h-7 items-center justify-center rounded px-3 text-[12px] font-semibold transition",
+                  visualizacao === "cards"
+                    ? "bg-primary text-white"
+                    : "text-primary hover:bg-primary-soft",
                 ].join(" ")}
               >
-                <LayoutGrid className="h-5 w-5" aria-hidden="true" />
+                Cards
               </button>
               <button
                 type="button"
@@ -351,11 +318,13 @@ export function Pesquisadores() {
                 aria-pressed={visualizacao === "lista"}
                 onClick={() => setVisualizacao("lista")}
                 className={[
-                  "inline-flex min-h-10 items-center justify-center rounded-md px-3 text-primary transition hover:bg-primary-soft",
-                  visualizacao === "lista" ? "bg-primary-soft" : "",
+                  "inline-flex min-h-7 items-center justify-center rounded px-3 text-[12px] font-semibold transition",
+                  visualizacao === "lista"
+                    ? "bg-primary text-white"
+                    : "text-primary hover:bg-primary-soft",
                 ].join(" ")}
               >
-                <List className="h-5 w-5" aria-hidden="true" />
+                Lista
               </button>
             </div>
             <Button
