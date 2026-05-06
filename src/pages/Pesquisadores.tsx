@@ -15,7 +15,7 @@ export function Pesquisadores() {
       <PageHeader
         title="Pesquisadores"
         description="Consulta inicial de pesquisadores, vínculos acadêmicos e presença planejada."
-        action={<Button fullWidth variant="secondary">Adicionar placeholder</Button>}
+        action={<Button fullWidth variant="secondary">Adicionar pesquisador</Button>}
       />
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
