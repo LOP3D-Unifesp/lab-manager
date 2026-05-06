@@ -6,7 +6,7 @@ import { StatusBadge } from "../components/ui/StatusBadge";
 const periodos = [
   { horario: "08:00 - 12:00", pessoas: "4 pesquisadores", status: "Aberto" },
   { horario: "13:00 - 17:00", pessoas: "6 pesquisadores", status: "Movimento alto" },
-  { horario: "18:00 - 21:00", pessoas: "2 pesquisadores", status: "Monitorar" },
+  { horario: "18:00 - 21:00", pessoas: "3 pesquisadores", status: "Monitorar" },
 ];
 
 export function AgendaLaboratorio() {
