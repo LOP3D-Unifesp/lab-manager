@@ -37,15 +37,6 @@ const agendaInicial: AgendaEntry[] = [
   { id: 1, pesquisador: "Ana Lima", weekday: 1, periodo: "manha" },
   { id: 2, pesquisador: "Bruno Costa", weekday: 1, periodo: "manha" },
   { id: 3, pesquisador: "Carla Mendes", weekday: 1, periodo: "tarde" },
-  { id: 4, pesquisador: "Diego Rocha", weekday: 1, periodo: "tarde" },
-  { id: 5, pesquisador: "Fernanda Alves", weekday: 2, periodo: "manha" },
-  { id: 6, pesquisador: "Gabriel Nunes", weekday: 2, periodo: "noite" },
-  { id: 7, pesquisador: "Helena Martins", weekday: 3, periodo: "manha" },
-  { id: 8, pesquisador: "Igor Santos", weekday: 3, periodo: "tarde" },
-  { id: 9, pesquisador: "Julia Torres", weekday: 4, periodo: "tarde" },
-  { id: 10, pesquisador: "Lucas Pereira", weekday: 4, periodo: "noite" },
-  { id: 11, pesquisador: "Marina Souza", weekday: 5, periodo: "manha" },
-  { id: 12, pesquisador: "Nicolas Ferreira", weekday: 5, periodo: "tarde" },
 ];
 
 const diasDaSemana = [
