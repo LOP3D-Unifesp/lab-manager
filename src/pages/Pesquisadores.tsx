@@ -121,6 +121,22 @@ export function Pesquisadores() {
                   <p className="mt-1 text-sm font-semibold leading-5 text-muted">
                     {pesquisador.telefone || "Sem telefone"}
                   </p>
+                  <p className="mt-2 text-sm font-semibold leading-5 text-muted">
+                    {pesquisador.bolsista ? "Bolsista" : "Nao bolsista"}
+                    {pesquisador.cargaHorariaSemanal
+                      ? ` - ${pesquisador.cargaHorariaSemanal}h/semana`
+                      : ""}
+                  </p>
+                  {pesquisador.lattesUrl ? (
+                    <a
+                      className="mt-2 inline-flex text-sm font-bold text-primary hover:text-primary-dark"
+                      href={pesquisador.lattesUrl}
+                      rel="noreferrer"
+                      target="_blank"
+                    >
+                      Lattes
+                    </a>
+                  ) : null}
                 </div>
                 <StatusBadge
                   label={pesquisador.status}
@@ -150,6 +166,9 @@ export function Pesquisadores() {
                   <th className="px-5 py-3 text-sm font-semibold text-muted">
                     Presenca
                   </th>
+                  <th className="px-5 py-3 text-sm font-semibold text-muted">
+                    Bolsa/carga
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -171,6 +190,16 @@ export function Pesquisadores() {
                       <span className="block whitespace-nowrap">
                         {pesquisador.telefone || "Sem telefone"}
                       </span>
+                      {pesquisador.lattesUrl ? (
+                        <a
+                          className="block whitespace-nowrap text-primary hover:text-primary-dark"
+                          href={pesquisador.lattesUrl}
+                          rel="noreferrer"
+                          target="_blank"
+                        >
+                          Lattes
+                        </a>
+                      ) : null}
                     </td>
                     <td className="whitespace-nowrap px-5 py-3">
                       <StatusBadge
@@ -181,6 +210,12 @@ export function Pesquisadores() {
                             : "info"
                         }
                       />
+                    </td>
+                    <td className="whitespace-nowrap px-5 py-3 text-base text-muted">
+                      {pesquisador.bolsista ? "Bolsista" : "Nao bolsista"}
+                      {pesquisador.cargaHorariaSemanal
+                        ? ` - ${pesquisador.cargaHorariaSemanal}h`
+                        : ""}
                     </td>
                   </tr>
                 ))}

@@ -119,7 +119,12 @@ export function Dashboard() {
 
   const pesquisadoresHoje = new Set(
     availability
-      .filter((slot) => slot.weekday === weekdayHoje)
+      .filter((slot) => slot.weekday === weekdayHoje && slot.work_mode === "onsite")
+      .map((slot) => slot.profile_id),
+  );
+  const pesquisadoresHomeOfficeHoje = new Set(
+    availability
+      .filter((slot) => slot.weekday === weekdayHoje && slot.work_mode === "remote")
       .map((slot) => slot.profile_id),
   );
   const pesquisadoresPresenciaisHoje = profiles.filter((profile) =>
@@ -165,7 +170,7 @@ export function Dashboard() {
         <StatCard
           title="Pesquisadores hoje"
           value={String(pesquisadoresPresenciaisHoje.length)}
-          description={`${pesquisadoresHoje.size} pesquisador(es) com horario cadastrado hoje.`}
+          description={`${pesquisadoresHomeOfficeHoje.size} pesquisador(es) em home office hoje.`}
           icon={Users}
         />
         <StatCard
@@ -278,8 +283,12 @@ export function Dashboard() {
                   ? `Voce esta nesta lista: ${meusSlotsHoje
                       .map(
                         (slot) =>
-                          periodos.find((periodo) => periodo.id === slot.periodo)
-                            ?.label,
+                          `${periodos.find((periodo) => periodo.id === slot.periodo)
+                            ?.label} ${
+                            slot.work_mode === "remote"
+                              ? "(home office)"
+                              : "(presencial)"
+                          }`,
                       )
                       .filter(Boolean)
                       .join(", ")}`
@@ -293,7 +302,12 @@ export function Dashboard() {
                 (slot) =>
                   slot.weekday === weekdayHoje && slot.periodo === periodo.id,
               );
-              const total = slotsDoPeriodo.length;
+              const total = slotsDoPeriodo.filter(
+                (slot) => slot.work_mode === "onsite",
+              ).length;
+              const totalHomeOffice = slotsDoPeriodo.filter(
+                (slot) => slot.work_mode === "remote",
+              ).length;
               const meuSlot = currentProfile
                 ? slotsDoPeriodo.some((slot) => slot.profile_id === currentProfile.id)
                 : false;
@@ -315,7 +329,9 @@ export function Dashboard() {
                       ) : null}
                     </div>
                     <p className="mt-1 text-sm font-semibold text-muted">
-                      Pesquisadores agendados
+                      {totalHomeOffice > 0
+                        ? `${totalHomeOffice} em home office`
+                        : "Pesquisadores presenciais"}
                     </p>
                   </div>
                   <StatusBadge

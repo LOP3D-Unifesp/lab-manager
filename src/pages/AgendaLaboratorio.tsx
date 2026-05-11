@@ -8,6 +8,7 @@ import {
   periodos,
   type AvailabilitySlot,
   type PeriodoId,
+  type WorkMode,
 } from "../lib/domain";
 import { usePesquisadoresCadastrados } from "../lib/pesquisadores";
 import {
@@ -22,6 +23,7 @@ type AgendaEntry = {
   pesquisador: string;
   weekday: number;
   periodo: PeriodoId;
+  workMode: WorkMode;
 };
 
 type SlotSelection = {
@@ -109,6 +111,8 @@ export function AgendaLaboratorio() {
   const [slotsSelecionados, setSlotsSelecionados] = useState<SlotSelection[]>(
     [],
   );
+  const [modoTrabalhoSelecionado, setModoTrabalhoSelecionado] =
+    useState<WorkMode>("onsite");
   const [vistaAgenda, setVistaAgenda] = useState<VistaAgenda>("hoje");
   const [popupSlot, setPopupSlot] = useState<PopupSlot>(null);
   const [erro, setErro] = useState("");
@@ -141,6 +145,7 @@ export function AgendaLaboratorio() {
         pesquisador: `${pesquisador.nome} ${pesquisador.sobrenome}`,
         weekday: slot.weekday,
         periodo: slot.periodo,
+        workMode: slot.work_mode,
       };
     });
   }, [availability, pesquisadores]);
@@ -223,14 +228,20 @@ export function AgendaLaboratorio() {
 
   function getTotalPresencialDoSlot(weekday: number, periodo: PeriodoId) {
     return getEntriesDoSlot(weekday, periodo).filter(
-      (entry) => !pesquisadorEhRemoto(entry.profileId),
+      (entry) => entry.workMode === "onsite",
     ).length;
   }
 
-  function pesquisadorEhRemoto(profileId: string) {
-    const pesquisador = pesquisadores.find((item) => item.id === profileId);
+  function getTotalHomeOfficeDoSlot(weekday: number, periodo: PeriodoId) {
+    return getEntriesDoSlot(weekday, periodo).filter(
+      (entry) => entry.workMode === "remote",
+    ).length;
+  }
 
-    return pesquisador?.status === "Remoto";
+  function getTotalAulaDoSlot(weekday: number, periodo: PeriodoId) {
+    return getEntriesDoSlot(weekday, periodo).filter(
+      (entry) => entry.workMode === "aula",
+    ).length;
   }
 
   function slotEstaSelecionado(slot: SlotSelection) {
@@ -289,6 +300,7 @@ export function AgendaLaboratorio() {
     setErro("");
     setSlotsSelecionados([]);
     setPesquisadorSelecionado(pesquisadoresOrdenados[0]?.id ?? "");
+    setModoTrabalhoSelecionado("onsite");
   }
 
   async function registrarHorario(event: React.FormEvent<HTMLFormElement>) {
@@ -299,12 +311,6 @@ export function AgendaLaboratorio() {
       pesquisadorSelecionado ||
       pesquisadoresOrdenados[0]?.id ||
       "";
-    const pesquisadorEscolhido = pesquisadoresOrdenados.find(
-      (pesquisador) => pesquisador.id === profileIdSelecionado,
-    );
-    const pesquisadorSelecionadoEhRemoto =
-      pesquisadorEscolhido?.status === "Remoto";
-
     if (slotsSelecionados.length === 0) {
       setErro("Selecione pelo menos um horario da semana.");
       return;
@@ -318,16 +324,16 @@ export function AgendaLaboratorio() {
     const slotCheio = slotsSelecionados.find((slot) => {
       const totalAtual = getTotalPresencialDoSlot(slot.weekday, slot.periodo);
       const jaRegistrado = agenda.some(
-        (entry) =>
-          entry.profileId === profileIdSelecionado &&
-          entry.weekday === slot.weekday &&
-          entry.periodo === slot.periodo,
+          (entry) =>
+            entry.profileId === profileIdSelecionado &&
+            entry.weekday === slot.weekday &&
+            entry.periodo === slot.periodo,
       );
 
       return (
         totalAtual >= limitePorHorario &&
         !jaRegistrado &&
-        !pesquisadorSelecionadoEhRemoto
+        modoTrabalhoSelecionado === "onsite"
       );
     });
 
@@ -357,7 +363,13 @@ export function AgendaLaboratorio() {
 
     try {
       setSalvando(true);
-      await addAvailabilitySlots(profileIdSelecionado, slotsNovos);
+      await addAvailabilitySlots(
+        profileIdSelecionado,
+        slotsNovos.map((slot) => ({
+          ...slot,
+          workMode: modoTrabalhoSelecionado,
+        })),
+      );
       await carregarDisponibilidade();
       fecharModal();
     } catch (error) {
@@ -368,11 +380,11 @@ export function AgendaLaboratorio() {
   }
 
   const popupEntriesPresenciais =
-    popupSlot?.entries.filter((entry) => !pesquisadorEhRemoto(entry.profileId)) ??
-    [];
-  const popupEntriesRemotas =
-    popupSlot?.entries.filter((entry) => pesquisadorEhRemoto(entry.profileId)) ??
-    [];
+    popupSlot?.entries.filter((entry) => entry.workMode === "onsite") ?? [];
+  const popupEntriesHomeOffice =
+    popupSlot?.entries.filter((entry) => entry.workMode === "remote") ?? [];
+  const popupEntriesAula =
+    popupSlot?.entries.filter((entry) => entry.workMode === "aula") ?? [];
 
   return (
     <div>
@@ -489,9 +501,9 @@ export function AgendaLaboratorio() {
               >
                 {periodos.map((periodo) => {
                   const entries = getEntriesDoSlot(dia.weekday, periodo.id);
-                  const total = entries.filter(
-                    (entry) => !pesquisadorEhRemoto(entry.profileId),
-                  ).length;
+                  const total = getTotalPresencialDoSlot(dia.weekday, periodo.id);
+                  const totalHomeOffice = getTotalHomeOfficeDoSlot(dia.weekday, periodo.id);
+                  const totalAula = getTotalAulaDoSlot(dia.weekday, periodo.id);
 
                   return (
                     <article
@@ -523,6 +535,18 @@ export function AgendaLaboratorio() {
                         >
                           {total}/{limitePorHorario}
                         </button>
+                      </div>
+                      <div className="mt-auto flex flex-wrap gap-x-3 gap-y-1">
+                        {totalHomeOffice > 0 ? (
+                          <p className="text-sm font-semibold text-muted">
+                            {totalHomeOffice} home office
+                          </p>
+                        ) : null}
+                        {totalAula > 0 ? (
+                          <p className="text-sm font-semibold text-warning-dark">
+                            {totalAula} em aula
+                          </p>
+                        ) : null}
                       </div>
                     </article>
                   );
@@ -597,16 +621,16 @@ export function AgendaLaboratorio() {
                   )}
                 </div>
 
-                {popupEntriesRemotas.length > 0 ? (
+                {popupEntriesHomeOffice.length > 0 ? (
                   <div>
                     <p className="mb-2 text-sm font-bold uppercase tracking-wide text-muted">
-                      Remotos
+                      Home office
                     </p>
                     <ul className="grid gap-2">
-                      {popupEntriesRemotas.map((entry) => (
+                      {popupEntriesHomeOffice.map((entry) => (
                         <li
                           key={entry.id}
-                          className="flex items-center justify-between gap-3 rounded-md border border-warning-dark bg-warning-soft px-3 py-2 text-base font-semibold text-text"
+                          className="flex items-center justify-between gap-3 rounded-md border border-primary bg-primary-soft px-3 py-2 text-base font-semibold text-text"
                         >
                           <span className="min-w-0">
                             <span className="block truncate">
@@ -614,8 +638,45 @@ export function AgendaLaboratorio() {
                             </span>
                           </span>
                           <span className="flex shrink-0 items-center gap-2">
-                            <span className="rounded-full border border-warning-dark bg-warning px-2.5 py-1 text-xs font-bold text-text">
-                              Remoto
+                            <span className="rounded-full border border-primary bg-primary-soft px-2.5 py-1 text-xs font-bold text-primary">
+                              Home office
+                            </span>
+                            <button
+                              type="button"
+                              title="Excluir horario"
+                              aria-label={`Excluir horario de ${entry.pesquisador}`}
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted transition hover:bg-danger-soft hover:text-danger-dark disabled:opacity-50"
+                              disabled={salvando}
+                              onClick={() => excluirHorario(entry.id)}
+                            >
+                              <Trash2 className="h-4 w-4" aria-hidden="true" />
+                            </button>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+
+                {popupEntriesAula.length > 0 ? (
+                  <div>
+                    <p className="mb-2 text-sm font-bold uppercase tracking-wide text-muted">
+                      Em aula
+                    </p>
+                    <ul className="grid gap-2">
+                      {popupEntriesAula.map((entry) => (
+                        <li
+                          key={entry.id}
+                          className="flex items-center justify-between gap-3 rounded-md border border-warning bg-warning-soft px-3 py-2 text-base font-semibold text-text"
+                        >
+                          <span className="min-w-0">
+                            <span className="block truncate">
+                              {entry.pesquisador}
+                            </span>
+                          </span>
+                          <span className="flex shrink-0 items-center gap-2">
+                            <span className="rounded-full border border-warning bg-warning-soft px-2.5 py-1 text-xs font-bold text-warning-dark">
+                              Aula
                             </span>
                             <button
                               type="button"
@@ -657,7 +718,7 @@ export function AgendaLaboratorio() {
                 </h3>
                 <p className="mt-1 text-lg text-muted">
                   Escolha o pesquisador e marque todos os horarios em que ele
-                  vai ao laboratorio.
+                  trabalha.
                 </p>
               </div>
               <button
@@ -671,25 +732,43 @@ export function AgendaLaboratorio() {
             </div>
 
             <form onSubmit={registrarHorario}>
-              <label className="mb-5 flex max-w-md flex-col gap-2 text-base font-semibold text-text">
-                Pesquisador
-                <select
-                  name="pesquisador_id"
-                  className="min-h-11 rounded-lg border border-border bg-background px-3 text-lg"
-                  disabled={pesquisadoresOrdenados.length === 0}
-                  value={pesquisadorSelecionado}
-                  onChange={(event) => {
-                    setErro("");
-                    setPesquisadorSelecionado(event.target.value);
-                  }}
-                >
-                  {pesquisadoresOrdenados.map((pesquisador) => (
-                    <option key={pesquisador.id} value={pesquisador.id}>
-                      {pesquisador.nome} {pesquisador.sobrenome}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <div className="mb-5 grid gap-4 md:grid-cols-2">
+                <label className="flex flex-col gap-2 text-base font-semibold text-text">
+                  Pesquisador
+                  <select
+                    name="pesquisador_id"
+                    className="min-h-11 rounded-lg border border-border bg-background px-3 text-lg"
+                    disabled={pesquisadoresOrdenados.length === 0}
+                    value={pesquisadorSelecionado}
+                    onChange={(event) => {
+                      setErro("");
+                      setPesquisadorSelecionado(event.target.value);
+                    }}
+                  >
+                    {pesquisadoresOrdenados.map((pesquisador) => (
+                      <option key={pesquisador.id} value={pesquisador.id}>
+                        {pesquisador.nome} {pesquisador.sobrenome}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="flex flex-col gap-2 text-base font-semibold text-text">
+                  Tipo de trabalho
+                  <select
+                    className="min-h-11 rounded-lg border border-border bg-background px-3 text-lg"
+                    disabled={salvando}
+                    onChange={(event) => {
+                      setErro("");
+                      setModoTrabalhoSelecionado(event.target.value as WorkMode);
+                    }}
+                    value={modoTrabalhoSelecionado}
+                  >
+                    <option value="onsite">Presencial</option>
+                    <option value="remote">Home office</option>
+                  </select>
+                </label>
+              </div>
 
               <div className="grid gap-3 lg:grid-cols-5">
                 {semanaAtual.map((dia) => (
@@ -727,7 +806,7 @@ export function AgendaLaboratorio() {
                         const estaCheio =
                           totalPresencial >= limitePorHorario &&
                           !jaRegistrado &&
-                          pesquisadorAtual?.status !== "Remoto";
+                          modoTrabalhoSelecionado === "onsite";
                         const selecionado = slotEstaSelecionado(slot);
 
                         return (

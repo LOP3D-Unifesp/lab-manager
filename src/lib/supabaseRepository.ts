@@ -10,6 +10,7 @@ import {
   Profile,
   ProfileSkill,
   Skill,
+  WorkMode,
   mapProfile,
   periodoFromTimes,
   periodos,
@@ -30,10 +31,38 @@ function throwIfError(error: unknown) {
   }
 }
 
+const profileSelect = [
+  "id",
+  "full_name",
+  "email",
+  "role",
+  "academic_affiliation",
+  "birth_date",
+  "is_scholarship_holder",
+  "weekly_workload_hours",
+  "lattes_url",
+  "cpf",
+  "rg",
+  "postal_code",
+  "street",
+  "address_number",
+  "address_complement",
+  "neighborhood",
+  "city",
+  "state",
+  "country",
+  "phone",
+  "is_active",
+  "created_at",
+  "updated_at",
+].join(", ");
+
 export async function listProfiles() {
   const { data, error } = await client()
     .from("profiles")
-    .select("id, full_name, email, role, academic_affiliation, phone, is_active, created_at, updated_at")
+    .select(
+      "id, full_name, email, role, academic_affiliation, is_scholarship_holder, weekly_workload_hours, lattes_url, phone, is_active, created_at, updated_at",
+    )
     .eq("is_active", true)
     .order("full_name");
 
@@ -46,6 +75,20 @@ export async function updateMyProfile(
   params: {
     fullName: string;
     academicAffiliation: AcademicAffiliation | null;
+    birthDate: string | null;
+    isScholarshipHolder: boolean;
+    weeklyWorkloadHours: number | null;
+    lattesUrl: string | null;
+    cpf: string | null;
+    rg: string | null;
+    postalCode: string | null;
+    street: string | null;
+    addressNumber: string | null;
+    addressComplement: string | null;
+    neighborhood: string | null;
+    city: string | null;
+    state: string | null;
+    country: string | null;
     phone: string | null;
   },
 ) {
@@ -54,14 +97,28 @@ export async function updateMyProfile(
     .update({
       full_name: params.fullName,
       academic_affiliation: params.academicAffiliation,
+      birth_date: params.birthDate,
+      is_scholarship_holder: params.isScholarshipHolder,
+      weekly_workload_hours: params.weeklyWorkloadHours,
+      lattes_url: params.lattesUrl,
+      cpf: params.cpf,
+      rg: params.rg,
+      postal_code: params.postalCode,
+      street: params.street,
+      address_number: params.addressNumber,
+      address_complement: params.addressComplement,
+      neighborhood: params.neighborhood,
+      city: params.city,
+      state: params.state,
+      country: params.country,
       phone: params.phone,
     })
     .eq("id", profileId)
-    .select("id, full_name, email, role, academic_affiliation, phone, is_active, created_at, updated_at")
+    .select(profileSelect)
     .single();
 
   throwIfError(error);
-  return mapProfile(data as Omit<Profile, "first_name" | "last_name">);
+  return mapProfile(data as unknown as Omit<Profile, "first_name" | "last_name">);
 }
 
 export async function listSkills() {
@@ -104,7 +161,7 @@ export async function toggleMySkill(profileId: string, skillId: string, enabled:
 export async function listAvailability() {
   const { data, error } = await client()
     .from("availability_slots")
-    .select("id, profile_id, weekday, starts_at, ends_at")
+    .select("id, profile_id, weekday, starts_at, ends_at, work_mode")
     .order("weekday")
     .order("starts_at");
 
@@ -115,7 +172,10 @@ export async function listAvailability() {
   }));
 }
 
-export async function addAvailabilitySlots(profileId: string, slots: Array<{ weekday: number; periodo: PeriodoId }>) {
+export async function addAvailabilitySlots(
+  profileId: string,
+  slots: Array<{ weekday: number; periodo: PeriodoId; workMode?: WorkMode }>,
+) {
   const rows = slots.map((slot) => {
     const periodo = periodos.find((item) => item.id === slot.periodo);
 
@@ -128,12 +188,48 @@ export async function addAvailabilitySlots(profileId: string, slots: Array<{ wee
       weekday: slot.weekday,
       starts_at: periodo.starts_at,
       ends_at: periodo.ends_at,
+      work_mode: slot.workMode ?? ("onsite" satisfies WorkMode),
     };
   });
 
   const { error } = await client()
     .from("availability_slots")
-    .upsert(rows, { onConflict: "profile_id,weekday,starts_at,ends_at", ignoreDuplicates: true });
+    .upsert(rows, { onConflict: "profile_id,weekday,starts_at,ends_at" });
+  throwIfError(error);
+}
+
+export async function saveProfileAvailability(
+  profileId: string,
+  slots: Array<{ weekday: number; periodo: PeriodoId; workMode: WorkMode }>,
+) {
+  const db = client();
+  const { error: deleteError } = await db
+    .from("availability_slots")
+    .delete()
+    .eq("profile_id", profileId);
+  throwIfError(deleteError);
+
+  if (slots.length === 0) {
+    return;
+  }
+
+  const rows = slots.map((slot) => {
+    const periodo = periodos.find((item) => item.id === slot.periodo);
+
+    if (!periodo) {
+      throw new Error("Periodo invalido.");
+    }
+
+    return {
+      profile_id: profileId,
+      weekday: slot.weekday,
+      starts_at: periodo.starts_at,
+      ends_at: periodo.ends_at,
+      work_mode: slot.workMode,
+    };
+  });
+
+  const { error } = await db.from("availability_slots").insert(rows);
   throwIfError(error);
 }
 
@@ -266,7 +362,7 @@ export async function listBookings() {
       cancelled_by,
       printer:printers!printer_bookings_printer_id_fkey(id, name, model, location, status, notes, created_at, updated_at),
       material:materials!printer_bookings_material_id_fkey(id, name, description, is_active),
-      profile:profiles!printer_bookings_profile_id_fkey(id, full_name, email, role, academic_affiliation, phone, is_active, created_at, updated_at)
+      profile:profiles!printer_bookings_profile_id_fkey(id, full_name, email, role, academic_affiliation, is_scholarship_holder, weekly_workload_hours, lattes_url, phone, is_active, created_at, updated_at)
     `)
     .order("starts_at");
 

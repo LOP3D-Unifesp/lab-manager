@@ -10,6 +10,9 @@ export type Pesquisador = {
   status: string;
   email: string;
   telefone: string;
+  bolsista: boolean;
+  cargaHorariaSemanal: number | null;
+  lattesUrl: string;
   habilidades: string[];
 };
 
@@ -42,6 +45,9 @@ async function carregarPesquisadores() {
     status: "No laboratorio",
     email: profile.email,
     telefone: profile.phone ?? "",
+    bolsista: profile.is_scholarship_holder,
+    cargaHorariaSemanal: profile.weekly_workload_hours,
+    lattesUrl: profile.lattes_url ?? "",
     habilidades: [],
   }));
 }
