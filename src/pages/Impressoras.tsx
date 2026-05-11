@@ -1,70 +1,117 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { Pencil, Plus, X } from "lucide-react";
+import { PackagePlus, Pencil, Plus, X } from "lucide-react";
 
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
 import { StatusBadge } from "../components/ui/StatusBadge";
 import {
-  carregarLocalDatabase,
-  criarLocalPrinter,
-  observarLocalDatabase,
-  salvarLocalDatabase,
-  type LocalPrinter,
-} from "../lib/localDatabase";
+  getPrinterStatusLabel,
+  type Material,
+  type Printer,
+  type PrinterMaterial,
+  type PrinterStatus,
+} from "../lib/domain";
+import {
+  createMaterial,
+  createPrinter,
+  listMaterials,
+  listPrinterMaterials,
+  listPrinters,
+  setPrinterMaterials,
+  updatePrinter,
+} from "../lib/supabaseRepository";
 
-const filamentosDisponiveis = ["PLA", "PETG", "ABS", "TPU", "PA", "Resina"];
-
-type ImpressoraForm = {
+type PrinterForm = {
   name: string;
   model: string;
-  brand: string;
-  dimensions: string;
-  allowed_filaments: string[];
-  status: LocalPrinter["status"];
+  location: string;
+  notes: string;
+  status: PrinterStatus;
+  materialIds: string[];
 };
 
+const statusOptions: PrinterStatus[] = [
+  "active",
+  "maintenance",
+  "unavailable",
+  "disabled",
+];
+
+const emptyPrinterForm: PrinterForm = {
+  name: "",
+  model: "",
+  location: "",
+  notes: "",
+  status: "active",
+  materialIds: [],
+};
+
+function toNullable(value: string) {
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
+function materialIdsForPrinter(
+  printerId: string,
+  printerMaterials: PrinterMaterial[],
+) {
+  return printerMaterials
+    .filter((item) => item.printer_id === printerId)
+    .map((item) => item.material_id);
+}
+
 export function Impressoras() {
-  const [impressoras, setImpressoras] = useState<LocalPrinter[]>([]);
+  const [printers, setPrinters] = useState<Printer[]>([]);
+  const [materials, setMaterials] = useState<Material[]>([]);
+  const [printerMaterials, setPrinterMaterialsState] = useState<
+    PrinterMaterial[]
+  >([]);
   const [modalAberto, setModalAberto] = useState(false);
-  const [impressoraEmEdicao, setImpressoraEmEdicao] =
-    useState<LocalPrinter | null>(null);
-  const [novaImpressora, setNovaImpressora] = useState({
+  const [printerEmEdicao, setPrinterEmEdicao] = useState<Printer | null>(null);
+  const [form, setForm] = useState<PrinterForm>(emptyPrinterForm);
+  const [materialForm, setMaterialForm] = useState({
     name: "",
-    model: "",
-    brand: "",
-    dimensions: "",
-    allowed_filaments: [] as string[],
+    description: "",
   });
-  const [edicaoImpressora, setEdicaoImpressora] = useState<ImpressoraForm>({
-    name: "",
-    model: "",
-    brand: "",
-    dimensions: "",
-    allowed_filaments: [],
-    status: "Ativa",
-  });
+  const [erro, setErro] = useState("");
+  const [salvando, setSalvando] = useState(false);
+
+  async function carregarDados() {
+    const [printersData, materialsData, printerMaterialsData] =
+      await Promise.all([
+        listPrinters(),
+        listMaterials(),
+        listPrinterMaterials(),
+      ]);
+
+    setPrinters(printersData);
+    setMaterials(materialsData);
+    setPrinterMaterialsState(printerMaterialsData);
+  }
 
   useEffect(() => {
     let ativo = true;
 
-    const atualizarImpressoras = async () => {
-      const database = await carregarLocalDatabase();
-
+    carregarDados().catch((error) => {
       if (ativo) {
-        setImpressoras(database.printers);
+        setErro(error instanceof Error ? error.message : "Erro ao carregar.");
       }
-    };
-
-    atualizarImpressoras();
-    const pararObservacao = observarLocalDatabase(atualizarImpressoras);
+    });
 
     return () => {
       ativo = false;
-      pararObservacao();
     };
   }, []);
+
+  const materiaisPorImpressora = useMemo(() => {
+    return printers.reduce<Record<string, Material[]>>((mapa, printer) => {
+      const ids = new Set(materialIdsForPrinter(printer.id, printerMaterials));
+      mapa[printer.id] = materials.filter((material) => ids.has(material.id));
+      return mapa;
+    }, {});
+  }, [materials, printerMaterials, printers]);
 
   const estiloCamadaPopup = {
     position: "fixed",
@@ -77,198 +124,148 @@ export function Impressoras() {
     backdropFilter: "blur(4px)",
   } as const;
 
-  function toggleFilamento(filamento: string) {
-    setNovaImpressora((impressora) => {
-      const jaSelecionado =
-        impressora.allowed_filaments.includes(filamento);
-
-      return {
-        ...impressora,
-        allowed_filaments: jaSelecionado
-          ? impressora.allowed_filaments.filter((item) => item !== filamento)
-          : [...impressora.allowed_filaments, filamento],
-      };
-    });
+  function toggleMaterial(materialId: string) {
+    setForm((current) => ({
+      ...current,
+      materialIds: current.materialIds.includes(materialId)
+        ? current.materialIds.filter((id) => id !== materialId)
+        : [...current.materialIds, materialId],
+    }));
   }
 
-  function toggleFilamentoEdicao(filamento: string) {
-    setEdicaoImpressora((impressora) => {
-      const jaSelecionado = impressora.allowed_filaments.includes(filamento);
-
-      return {
-        ...impressora,
-        allowed_filaments: jaSelecionado
-          ? impressora.allowed_filaments.filter((item) => item !== filamento)
-          : [...impressora.allowed_filaments, filamento],
-      };
-    });
+  function abrirCadastro() {
+    setErro("");
+    setPrinterEmEdicao(null);
+    setForm(emptyPrinterForm);
+    setModalAberto(true);
   }
 
-  function abrirEdicaoImpressora(impressora: LocalPrinter) {
-    setImpressoraEmEdicao(impressora);
-    setEdicaoImpressora({
-      name: impressora.name,
-      model: impressora.model,
-      brand: impressora.brand,
-      dimensions: impressora.dimensions,
-      allowed_filaments: impressora.allowed_filaments,
-      status: impressora.status,
+  function abrirEdicao(printer: Printer) {
+    setErro("");
+    setPrinterEmEdicao(printer);
+    setForm({
+      name: printer.name,
+      model: printer.model ?? "",
+      location: printer.location ?? "",
+      notes: printer.notes ?? "",
+      status: printer.status,
+      materialIds: materialIdsForPrinter(printer.id, printerMaterials),
     });
+    setModalAberto(true);
   }
 
-  function fecharEdicaoImpressora() {
-    setImpressoraEmEdicao(null);
-  }
-
-  async function salvarNovaImpressora(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    const name = novaImpressora.name.trim();
-    const model = novaImpressora.model.trim();
-    const brand = novaImpressora.brand.trim();
-    const dimensions = novaImpressora.dimensions.trim();
-
-    if (!name || !model || !brand || !dimensions) {
-      return;
-    }
-
-    const database = await carregarLocalDatabase();
-
-    if (
-      database.printers.some(
-        (impressora) => impressora.name.trim().toLowerCase() === name.toLowerCase(),
-      )
-    ) {
-      return;
-    }
-
-    const printer = criarLocalPrinter({
-      name,
-      model,
-      brand,
-      dimensions,
-      allowed_filaments: novaImpressora.allowed_filaments,
-    });
-
-    await salvarLocalDatabase({
-      ...database,
-      printers: [...database.printers, printer],
-    });
-    setImpressoras((listaAtual) => [...listaAtual, printer]);
-    setNovaImpressora({
-      name: "",
-      model: "",
-      brand: "",
-      dimensions: "",
-      allowed_filaments: [],
-    });
+  function fecharModal() {
     setModalAberto(false);
+    setPrinterEmEdicao(null);
+    setForm(emptyPrinterForm);
+    setErro("");
   }
 
-  async function salvarEdicaoImpressora(event: FormEvent<HTMLFormElement>) {
+  async function salvarMaterial(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const name = materialForm.name.trim();
 
-    if (!impressoraEmEdicao) {
+    if (!name) {
+      setErro("Informe o nome do material.");
       return;
     }
 
-    const name = edicaoImpressora.name.trim();
-    const model = edicaoImpressora.model.trim();
-    const brand = edicaoImpressora.brand.trim();
-    const dimensions = edicaoImpressora.dimensions.trim();
-
-    if (!name || !model || !brand || !dimensions) {
-      return;
+    try {
+      setSalvando(true);
+      await createMaterial({
+        name,
+        description: toNullable(materialForm.description),
+      });
+      setMaterialForm({ name: "", description: "" });
+      await carregarDados();
+    } catch (error) {
+      setErro(
+        error instanceof Error ? error.message : "Nao foi possivel salvar.",
+      );
+    } finally {
+      setSalvando(false);
     }
-
-    const database = await carregarLocalDatabase();
-
-    if (
-      database.printers.some(
-        (impressora) =>
-          impressora.id !== impressoraEmEdicao.id &&
-          impressora.name.trim().toLowerCase() === name.toLowerCase(),
-      )
-    ) {
-      return;
-    }
-
-    const impressoraAtualizada: LocalPrinter = {
-      ...impressoraEmEdicao,
-      name,
-      model,
-      brand,
-      dimensions,
-      allowed_filaments: edicaoImpressora.allowed_filaments,
-      status: edicaoImpressora.status,
-      updated_at: new Date().toISOString(),
-    };
-
-    await salvarLocalDatabase({
-      ...database,
-      printers: database.printers.map((impressora) =>
-        impressora.id === impressoraAtualizada.id
-          ? impressoraAtualizada
-          : impressora,
-      ),
-    });
-    setImpressoras((listaAtual) =>
-      listaAtual.map((impressora) =>
-        impressora.id === impressoraAtualizada.id
-          ? impressoraAtualizada
-          : impressora,
-      ),
-    );
-    fecharEdicaoImpressora();
   }
 
-  const popupCadastro =
+  async function salvarPrinter(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const name = form.name.trim();
+
+    if (!name) {
+      setErro("Informe o nome da impressora.");
+      return;
+    }
+
+    try {
+      setSalvando(true);
+      const savedPrinter = printerEmEdicao
+        ? await updatePrinter(printerEmEdicao.id, {
+            name,
+            model: toNullable(form.model),
+            location: toNullable(form.location),
+            notes: toNullable(form.notes),
+            status: form.status,
+          })
+        : await createPrinter({
+            name,
+            model: toNullable(form.model),
+            location: toNullable(form.location),
+            notes: toNullable(form.notes),
+            status: form.status,
+          });
+
+      await setPrinterMaterials(savedPrinter.id, form.materialIds);
+      await carregarDados();
+      fecharModal();
+    } catch (error) {
+      setErro(
+        error instanceof Error ? error.message : "Nao foi possivel salvar.",
+      );
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  const popup =
     modalAberto && typeof document !== "undefined"
       ? createPortal(
           <div className="p-4" style={estiloCamadaPopup}>
             <div
               role="dialog"
               aria-modal="true"
-              aria-labelledby="titulo-cadastro-impressora"
-              className="rounded-lg border border-border bg-surface px-8 py-7 text-left shadow-2xl sm:px-10 sm:py-9"
-              style={{
-                boxSizing: "border-box",
-                padding: "2.25rem 3rem",
-                width: "min(94vw, 820px)",
-              }}
+              className="max-h-[92vh] w-[min(94vw,820px)] overflow-y-auto rounded-lg border border-border bg-surface px-8 py-7 text-left shadow-2xl sm:px-10 sm:py-9"
             >
               <div className="mb-5 flex items-start justify-between gap-4">
                 <div>
-                  <h3
-                    id="titulo-cadastro-impressora"
-                    className="text-[24px] font-bold leading-tight text-text"
-                  >
-                    Cadastrar impressora
+                  <h3 className="text-[24px] font-bold leading-tight text-text">
+                    {printerEmEdicao
+                      ? "Editar impressora"
+                      : "Cadastrar impressora"}
                   </h3>
                   <p className="mt-1.5 text-base leading-6 text-muted">
-                    Informe os dados principais e os filamentos permitidos.
+                    Dados reais gravados no Supabase.
                   </p>
                 </div>
                 <button
                   type="button"
                   title="Fechar"
-                  aria-label="Fechar cadastro"
-                  onClick={() => setModalAberto(false)}
+                  aria-label="Fechar"
+                  onClick={fecharModal}
                   className="inline-flex h-10 w-10 items-center justify-center rounded-md text-muted transition hover:bg-background hover:text-text"
                 >
                   <X className="h-5 w-5" aria-hidden="true" />
                 </button>
               </div>
 
-              <form className="grid gap-4" onSubmit={salvarNovaImpressora}>
+              <form className="grid gap-4" onSubmit={salvarPrinter}>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="grid gap-2 text-base font-semibold text-text">
                     Nome
                     <input
-                      value={novaImpressora.name}
+                      value={form.name}
                       onChange={(event) =>
-                        setNovaImpressora((impressora) => ({
-                          ...impressora,
+                        setForm((current) => ({
+                          ...current,
                           name: event.target.value,
                         }))
                       }
@@ -279,270 +276,118 @@ export function Impressoras() {
                   <label className="grid gap-2 text-base font-semibold text-text">
                     Modelo
                     <input
-                      value={novaImpressora.model}
+                      value={form.model}
                       onChange={(event) =>
-                        setNovaImpressora((impressora) => ({
-                          ...impressora,
+                        setForm((current) => ({
+                          ...current,
                           model: event.target.value,
                         }))
                       }
                       className="min-h-11 min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
-                      required
                     />
                   </label>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="grid gap-2 text-base font-semibold text-text">
-                    Marca
+                    Local
                     <input
-                      value={novaImpressora.brand}
+                      value={form.location}
                       onChange={(event) =>
-                        setNovaImpressora((impressora) => ({
-                          ...impressora,
-                          brand: event.target.value,
+                        setForm((current) => ({
+                          ...current,
+                          location: event.target.value,
                         }))
                       }
                       className="min-h-11 min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
-                      required
                     />
                   </label>
                   <label className="grid gap-2 text-base font-semibold text-text">
-                    Dimensoes
-                    <input
-                      value={novaImpressora.dimensions}
+                    Estado
+                    <select
+                      value={form.status}
                       onChange={(event) =>
-                        setNovaImpressora((impressora) => ({
-                          ...impressora,
-                          dimensions: event.target.value,
+                        setForm((current) => ({
+                          ...current,
+                          status: event.target.value as PrinterStatus,
                         }))
                       }
-                      className="min-h-11 min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
-                      placeholder="Ex.: 250 x 210 x 220 mm"
-                      required
-                    />
-                  </label>
-                </div>
-
-                <fieldset className="grid gap-3 rounded-lg border border-border bg-background p-4">
-                  <legend className="px-1 text-base font-semibold text-text">
-                    Filamentos permitidos
-                  </legend>
-                  <div className="flex flex-wrap gap-2">
-                    {filamentosDisponiveis.map((filamento) => {
-                      const selecionado =
-                        novaImpressora.allowed_filaments.includes(filamento);
-
-                      return (
-                        <label
-                          key={filamento}
-                          className={[
-                            "inline-flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold transition",
-                            selecionado
-                              ? "border-primary bg-primary-soft text-primary-dark"
-                              : "border-border bg-surface text-muted hover:border-primary",
-                          ].join(" ")}
-                        >
-                          <input
-                            checked={selecionado}
-                            className="h-4 w-4 accent-primary"
-                            onChange={() => toggleFilamento(filamento)}
-                            type="checkbox"
-                          />
-                          {filamento}
-                        </label>
-                      );
-                    })}
-                  </div>
-                </fieldset>
-
-                <div className="mt-4 flex flex-col-reverse items-center gap-3 sm:flex-row sm:justify-end">
-                  <Button
-                    variant="ghost"
-                    className="min-h-9 px-3 py-2 text-base"
-                    onClick={() => setModalAberto(false)}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    type="submit"
-                    className="min-h-9 px-3 py-2 text-base"
-                  >
-                    Salvar impressora
-                  </Button>
-                </div>
-              </form>
-            </div>
-          </div>,
-          document.body,
-        )
-      : null;
-
-  const popupEdicao =
-    impressoraEmEdicao && typeof document !== "undefined"
-      ? createPortal(
-          <div className="p-4" style={estiloCamadaPopup}>
-            <div
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="titulo-edicao-impressora"
-              className="rounded-lg border border-border bg-surface px-8 py-7 text-left shadow-2xl sm:px-10 sm:py-9"
-              style={{
-                boxSizing: "border-box",
-                padding: "2.25rem 3rem",
-                width: "min(94vw, 820px)",
-              }}
-            >
-              <div className="mb-5 flex items-start justify-between gap-4">
-                <div>
-                  <h3
-                    id="titulo-edicao-impressora"
-                    className="text-[24px] font-bold leading-tight text-text"
-                  >
-                    Editar impressora
-                  </h3>
-                  <p className="mt-1.5 text-base leading-6 text-muted">
-                    Atualize status, materiais e dados principais do equipamento.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  title="Fechar"
-                  aria-label="Fechar edicao"
-                  onClick={fecharEdicaoImpressora}
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-md text-muted transition hover:bg-background hover:text-text"
-                >
-                  <X className="h-5 w-5" aria-hidden="true" />
-                </button>
-              </div>
-
-              <form className="grid gap-4" onSubmit={salvarEdicaoImpressora}>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="grid gap-2 text-base font-semibold text-text">
-                    Nome
-                    <input
-                      value={edicaoImpressora.name}
-                      onChange={(event) =>
-                        setEdicaoImpressora((impressora) => ({
-                          ...impressora,
-                          name: event.target.value,
-                        }))
-                      }
-                      className="min-h-11 min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
-                      required
-                    />
-                  </label>
-                  <label className="grid gap-2 text-base font-semibold text-text">
-                    Modelo
-                    <input
-                      value={edicaoImpressora.model}
-                      onChange={(event) =>
-                        setEdicaoImpressora((impressora) => ({
-                          ...impressora,
-                          model: event.target.value,
-                        }))
-                      }
-                      className="min-h-11 min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
-                      required
-                    />
-                  </label>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="grid gap-2 text-base font-semibold text-text">
-                    Marca
-                    <input
-                      value={edicaoImpressora.brand}
-                      onChange={(event) =>
-                        setEdicaoImpressora((impressora) => ({
-                          ...impressora,
-                          brand: event.target.value,
-                        }))
-                      }
-                      className="min-h-11 min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
-                      required
-                    />
-                  </label>
-                  <label className="grid gap-2 text-base font-semibold text-text">
-                    Dimensoes
-                    <input
-                      value={edicaoImpressora.dimensions}
-                      onChange={(event) =>
-                        setEdicaoImpressora((impressora) => ({
-                          ...impressora,
-                          dimensions: event.target.value,
-                        }))
-                      }
-                      className="min-h-11 min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
-                      required
-                    />
+                      className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
+                    >
+                      {statusOptions.map((status) => (
+                        <option key={status} value={status}>
+                          {getPrinterStatusLabel(status)}
+                        </option>
+                      ))}
+                    </select>
                   </label>
                 </div>
 
                 <label className="grid gap-2 text-base font-semibold text-text">
-                  Estado
-                  <select
-                    value={edicaoImpressora.status}
+                  Observacoes
+                  <textarea
+                    value={form.notes}
                     onChange={(event) =>
-                      setEdicaoImpressora((impressora) => ({
-                        ...impressora,
-                        status: event.target.value as LocalPrinter["status"],
+                      setForm((current) => ({
+                        ...current,
+                        notes: event.target.value,
                       }))
                     }
-                    className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
-                  >
-                    <option value="Ativa">Ativa</option>
-                    <option value="Em manutencao">Em manutencao</option>
-                    <option value="Indisponivel">Indisponivel</option>
-                    <option value="Desativada">Desativada</option>
-                  </select>
+                    className="min-h-24 min-w-0 rounded-lg border border-border bg-background px-4 py-3 text-base font-normal text-text outline-none transition focus:border-primary"
+                  />
                 </label>
 
                 <fieldset className="grid gap-3 rounded-lg border border-border bg-background p-4">
                   <legend className="px-1 text-base font-semibold text-text">
-                    Filamentos permitidos
+                    Materiais compativeis
                   </legend>
-                  <div className="flex flex-wrap gap-2">
-                    {filamentosDisponiveis.map((filamento) => {
-                      const selecionado =
-                        edicaoImpressora.allowed_filaments.includes(filamento);
+                  {materials.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {materials.map((material) => {
+                        const selecionado = form.materialIds.includes(
+                          material.id,
+                        );
 
-                      return (
-                        <label
-                          key={filamento}
-                          className={[
-                            "inline-flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold transition",
-                            selecionado
-                              ? "border-primary bg-primary-soft text-primary-dark"
-                              : "border-border bg-surface text-muted hover:border-primary",
-                          ].join(" ")}
-                        >
-                          <input
-                            checked={selecionado}
-                            className="h-4 w-4 accent-primary"
-                            onChange={() => toggleFilamentoEdicao(filamento)}
-                            type="checkbox"
-                          />
-                          {filamento}
-                        </label>
-                      );
-                    })}
-                  </div>
+                        return (
+                          <label
+                            key={material.id}
+                            className={[
+                              "inline-flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold transition",
+                              selecionado
+                                ? "border-primary bg-primary-soft text-primary-dark"
+                                : "border-border bg-surface text-muted hover:border-primary",
+                            ].join(" ")}
+                          >
+                            <input
+                              checked={selecionado}
+                              className="h-4 w-4 accent-primary"
+                              onChange={() => toggleMaterial(material.id)}
+                              type="checkbox"
+                            />
+                            {material.name}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="rounded-md border border-dashed border-border bg-surface p-3 text-base text-muted">
+                      Cadastre materiais antes de definir compatibilidade.
+                    </p>
+                  )}
                 </fieldset>
 
+                {erro ? (
+                  <p className="rounded-lg border border-danger bg-danger-soft p-3 text-base font-semibold text-danger">
+                    {erro}
+                  </p>
+                ) : null}
+
                 <div className="mt-4 flex flex-col-reverse items-center gap-3 sm:flex-row sm:justify-end">
-                  <Button
-                    variant="ghost"
-                    className="min-h-9 px-3 py-2 text-base"
-                    onClick={fecharEdicaoImpressora}
-                  >
+                  <Button variant="ghost" onClick={fecharModal}>
                     Cancelar
                   </Button>
-                  <Button
-                    type="submit"
-                    className="min-h-9 px-3 py-2 text-base"
-                  >
-                    Salvar alteracoes
+                  <Button type="submit" disabled={salvando}>
+                    {salvando ? "Salvando..." : "Salvar impressora"}
                   </Button>
                 </div>
               </form>
@@ -556,69 +401,144 @@ export function Impressoras() {
     <div>
       <PageHeader
         title="Impressoras"
-        description="Lista inicial de equipamentos, status operacional e materiais compatÃ­veis demonstrativos."
+        description="Equipamentos, materiais e compatibilidades reais do Supabase."
         action={
-          <Button
-            fullWidth
-            variant="success"
-            onClick={() => setModalAberto(true)}
-          >
+          <Button fullWidth variant="success" onClick={abrirCadastro}>
             <Plus className="mr-2 h-5 w-5" aria-hidden="true" />
             Cadastrar impressora
           </Button>
         }
       />
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {impressoras.map((impressora) => (
-          <Card key={impressora.id} className="flex min-h-full flex-col">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="text-2xl font-bold text-text">
-                  {impressora.name}
-                </h3>
-                <p className="mt-2 text-lg text-muted">
-                  {impressora.brand} - {impressora.model}
-                </p>
-              </div>
-              <StatusBadge
-                label={impressora.status}
-                variant={impressora.status === "Ativa" ? "success" : "warning"}
-              />
-            </div>
-            <dl className="mt-4 grid gap-2 text-base leading-6 text-muted">
-              <div>
-                <dt className="font-semibold text-text">Dimensoes</dt>
-                <dd>{impressora.dimensions}</dd>
-              </div>
-              <div>
-                <dt className="font-semibold text-text">
-                  Filamentos permitidos
-                </dt>
-                <dd>
-                  {impressora.allowed_filaments.length > 0
-                    ? impressora.allowed_filaments.join(", ")
-                    : "Nenhum filamento cadastrado"}
-                </dd>
-              </div>
-            </dl>
-            <div className="mt-auto flex justify-end pt-5">
-              <button
-                type="button"
-                title="Editar impressora"
-                aria-label={`Editar ${impressora.name}`}
-                onClick={() => abrirEdicaoImpressora(impressora)}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted transition hover:bg-primary-soft hover:text-primary"
+      <section className="mb-5 rounded-lg border border-border bg-surface p-4">
+        <div className="mb-4 flex items-start gap-3">
+          <div className="rounded-lg bg-primary-soft p-3 text-primary">
+            <PackagePlus className="h-5 w-5" aria-hidden="true" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-text">Materiais</h3>
+            <p className="mt-1 text-base text-muted">
+              Materiais ativos usados nas compatibilidades das impressoras.
+            </p>
+          </div>
+        </div>
+        <form
+          className="grid gap-3 md:grid-cols-[1fr_1fr_auto]"
+          onSubmit={salvarMaterial}
+        >
+          <input
+            aria-label="Nome do material"
+            placeholder="Nome do material"
+            value={materialForm.name}
+            onChange={(event) =>
+              setMaterialForm((current) => ({
+                ...current,
+                name: event.target.value,
+              }))
+            }
+            className="min-h-11 rounded-lg border border-border bg-background px-4 text-base text-text outline-none transition focus:border-primary"
+          />
+          <input
+            aria-label="Descricao do material"
+            placeholder="Descricao opcional"
+            value={materialForm.description}
+            onChange={(event) =>
+              setMaterialForm((current) => ({
+                ...current,
+                description: event.target.value,
+              }))
+            }
+            className="min-h-11 rounded-lg border border-border bg-background px-4 text-base text-text outline-none transition focus:border-primary"
+          />
+          <Button type="submit" disabled={salvando}>
+            Adicionar material
+          </Button>
+        </form>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {materials.length > 0 ? (
+            materials.map((material) => (
+              <span
+                key={material.id}
+                className="rounded-md border border-border bg-background px-3 py-1.5 text-sm font-semibold text-muted"
               >
-                <Pencil className="h-4 w-4" aria-hidden="true" />
-              </button>
-            </div>
-          </Card>
-        ))}
+                {material.name}
+              </span>
+            ))
+          ) : (
+            <p className="text-base font-semibold text-muted">
+              Nenhum material cadastrado ainda.
+            </p>
+          )}
+        </div>
       </section>
 
-      {popupCadastro}
-      {popupEdicao}
+      {printers.length > 0 ? (
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {printers.map((printer) => {
+            const compatibilities = materiaisPorImpressora[printer.id] ?? [];
+
+            return (
+              <Card key={printer.id} className="flex min-h-full flex-col">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="text-2xl font-bold text-text">
+                      {printer.name}
+                    </h3>
+                    <p className="mt-2 text-lg text-muted">
+                      {printer.model ?? "Modelo nao informado"}
+                    </p>
+                  </div>
+                  <StatusBadge
+                    label={getPrinterStatusLabel(printer.status)}
+                    variant={printer.status === "active" ? "success" : "warning"}
+                  />
+                </div>
+                <dl className="mt-4 grid gap-2 text-base leading-6 text-muted">
+                  <div>
+                    <dt className="font-semibold text-text">Local</dt>
+                    <dd>{printer.location ?? "Nao informado"}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-semibold text-text">
+                      Materiais compativeis
+                    </dt>
+                    <dd>
+                      {compatibilities.length > 0
+                        ? compatibilities.map((material) => material.name).join(", ")
+                        : "Nenhum material compativel"}
+                    </dd>
+                  </div>
+                </dl>
+                <div className="mt-auto flex justify-end pt-5">
+                  <button
+                    type="button"
+                    title="Editar impressora"
+                    aria-label={`Editar ${printer.name}`}
+                    onClick={() => abrirEdicao(printer)}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted transition hover:bg-primary-soft hover:text-primary"
+                  >
+                    <Pencil className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                </div>
+              </Card>
+            );
+          })}
+        </section>
+      ) : (
+        <Card>
+          <p className="text-lg font-semibold text-muted">
+            Nenhuma impressora cadastrada ainda.
+          </p>
+        </Card>
+      )}
+
+      {erro && !modalAberto ? (
+        <p className="mt-4 rounded-lg border border-danger bg-danger-soft p-3 text-base font-semibold text-danger">
+          {erro}
+        </p>
+      ) : null}
+
+      {popup}
     </div>
   );
 }

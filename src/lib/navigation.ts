@@ -7,6 +7,7 @@ import {
   Sparkles,
   Users,
   ClipboardList,
+  UserRoundCog,
 } from "lucide-react";
 
 export type NavigationItem = {
@@ -59,6 +60,13 @@ export const navigationItems: NavigationItem[] = [
     path: "/reservas",
     icon: ClipboardList,
     mobilePriority: true,
+  },
+  {
+    desktopLabel: "Meu perfil",
+    mobileLabel: "Perfil",
+    path: "/perfil",
+    icon: UserRoundCog,
+    mobilePriority: false,
   },
   {
     desktopLabel: "Administração",

@@ -5,13 +5,16 @@ import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
 import {
-  carregarLocalDatabase,
-  criarLocalAvailabilitySlot,
-  observarLocalDatabase,
-  salvarLocalDatabase,
+  periodos,
+  type AvailabilitySlot,
   type PeriodoId,
-} from "../lib/localDatabase";
+} from "../lib/domain";
 import { usePesquisadoresCadastrados } from "../lib/pesquisadores";
+import {
+  addAvailabilitySlots,
+  deleteAvailabilitySlot,
+  listAvailability,
+} from "../lib/supabaseRepository";
 
 type AgendaEntry = {
   id: string;
@@ -35,38 +38,6 @@ type PopupSlot = {
 } | null;
 
 const limitePorHorario = 10;
-
-const periodos: Array<{
-  id: PeriodoId;
-  label: string;
-  horario: string;
-}> = [
-  { id: "manha", label: "Manha", horario: "08:00 - 12:00" },
-  { id: "tarde", label: "Tarde", horario: "13:00 - 17:00" },
-  { id: "noite", label: "Noite", horario: "18:00 - 21:00" },
-];
-
-async function carregarAgenda() {
-  const database = await carregarLocalDatabase();
-
-  return database.availability_slots.flatMap((slot) => {
-    const profile = database.profiles.find(
-      (item) => item.id === slot.profile_id && item.is_active,
-    );
-
-    if (!profile) {
-      return [];
-    }
-
-    return {
-      id: slot.id,
-      profileId: profile.id,
-      pesquisador: profile.full_name,
-      weekday: slot.weekday,
-      periodo: slot.periodo,
-    };
-  });
-}
 
 const diasDaSemana = [
   "Domingo",
@@ -132,6 +103,17 @@ export function AgendaLaboratorio() {
   const semanaAtual = useMemo(() => getSemanaAtual(), []);
   const calendarioRef = useRef<HTMLElement | null>(null);
   const { pesquisadores } = usePesquisadoresCadastrados();
+  const [availability, setAvailability] = useState<AvailabilitySlot[]>([]);
+  const [mostrarModal, setMostrarModal] = useState(false);
+  const [pesquisadorSelecionado, setPesquisadorSelecionado] = useState("");
+  const [slotsSelecionados, setSlotsSelecionados] = useState<SlotSelection[]>(
+    [],
+  );
+  const [vistaAgenda, setVistaAgenda] = useState<VistaAgenda>("hoje");
+  const [popupSlot, setPopupSlot] = useState<PopupSlot>(null);
+  const [erro, setErro] = useState("");
+  const [salvando, setSalvando] = useState(false);
+
   const pesquisadoresOrdenados = useMemo(
     () =>
       [...pesquisadores].sort((a, b) =>
@@ -142,6 +124,27 @@ export function AgendaLaboratorio() {
       ),
     [pesquisadores],
   );
+
+  const agenda = useMemo(() => {
+    return availability.flatMap<AgendaEntry>((slot) => {
+      const pesquisador = pesquisadores.find(
+        (item) => item.id === slot.profile_id,
+      );
+
+      if (!pesquisador) {
+        return [];
+      }
+
+      return {
+        id: slot.id,
+        profileId: pesquisador.id,
+        pesquisador: `${pesquisador.nome} ${pesquisador.sobrenome}`,
+        weekday: slot.weekday,
+        periodo: slot.periodo,
+      };
+    });
+  }, [availability, pesquisadores]);
+
   const nomesPesquisadores = useMemo(
     () =>
       pesquisadoresOrdenados.map(
@@ -149,33 +152,23 @@ export function AgendaLaboratorio() {
       ),
     [pesquisadoresOrdenados],
   );
-  const [agenda, setAgenda] = useState<AgendaEntry[]>([]);
-  const [mostrarModal, setMostrarModal] = useState(false);
-  const [pesquisadorSelecionado, setPesquisadorSelecionado] = useState("");
-  const [slotsSelecionados, setSlotsSelecionados] = useState<SlotSelection[]>(
-    [],
-  );
-  const [vistaAgenda, setVistaAgenda] = useState<VistaAgenda>("hoje");
-  const [popupSlot, setPopupSlot] = useState<PopupSlot>(null);
-  const [erro, setErro] = useState("");
+
+  async function carregarDisponibilidade() {
+    const slots = await listAvailability();
+    setAvailability(slots);
+  }
 
   useEffect(() => {
     let ativo = true;
 
-    const atualizarAgenda = async () => {
-      const agendaCarregada = await carregarAgenda();
-
+    carregarDisponibilidade().catch((error) => {
       if (ativo) {
-        setAgenda(agendaCarregada);
+        setErro(error instanceof Error ? error.message : "Erro ao carregar.");
       }
-    };
-
-    atualizarAgenda();
-    const pararObservacao = observarLocalDatabase(atualizarAgenda);
+    });
 
     return () => {
       ativo = false;
-      pararObservacao();
     };
   }, []);
 
@@ -270,27 +263,25 @@ export function AgendaLaboratorio() {
   }
 
   async function excluirHorario(slotId: string) {
-    const database = await carregarLocalDatabase();
+    try {
+      setSalvando(true);
+      await deleteAvailabilitySlot(slotId);
+      await carregarDisponibilidade();
+      setPopupSlot((slotAtual) => {
+        if (!slotAtual) {
+          return null;
+        }
 
-    await salvarLocalDatabase({
-      ...database,
-      availability_slots: database.availability_slots.filter(
-        (slot) => slot.id !== slotId,
-      ),
-    });
-
-    const agendaAtualizada = await carregarAgenda();
-    setAgenda(agendaAtualizada);
-    setPopupSlot((slotAtual) => {
-      if (!slotAtual) {
-        return null;
-      }
-
-      return {
-        ...slotAtual,
-        entries: slotAtual.entries.filter((entry) => entry.id !== slotId),
-      };
-    });
+        return {
+          ...slotAtual,
+          entries: slotAtual.entries.filter((entry) => entry.id !== slotId),
+        };
+      });
+    } catch (error) {
+      setErro(error instanceof Error ? error.message : "Nao foi possivel excluir.");
+    } finally {
+      setSalvando(false);
+    }
   }
 
   function fecharModal() {
@@ -311,9 +302,6 @@ export function AgendaLaboratorio() {
     const pesquisadorEscolhido = pesquisadoresOrdenados.find(
       (pesquisador) => pesquisador.id === profileIdSelecionado,
     );
-    const nomePesquisadorEscolhido = pesquisadorEscolhido
-      ? `${pesquisadorEscolhido.nome} ${pesquisadorEscolhido.sobrenome}`
-      : "";
     const pesquisadorSelecionadoEhRemoto =
       pesquisadorEscolhido?.status === "Remoto";
 
@@ -352,59 +340,31 @@ export function AgendaLaboratorio() {
       return;
     }
 
-    const novosHorarios = slotsSelecionados
-      .filter(
-        (slot) =>
-          !agenda.some(
-            (entry) =>
-              entry.profileId === profileIdSelecionado &&
-              entry.weekday === slot.weekday &&
-              entry.periodo === slot.periodo,
-          ),
-      )
-      .map((slot) => ({
-        id: "",
-        profileId: profileIdSelecionado,
-        pesquisador: nomePesquisadorEscolhido,
-        weekday: slot.weekday,
-        periodo: slot.periodo,
-      }));
-
-    if (novosHorarios.length === 0) {
-      setErro("Este pesquisador ja esta registrado nos horarios selecionados.");
-      return;
-    }
-
-    const database = await carregarLocalDatabase();
-    const slotsNovos = novosHorarios
-      .filter(
-        (slot) =>
-          !database.availability_slots.some(
-            (existente) =>
-              existente.profile_id === slot.profileId &&
-              existente.weekday === slot.weekday &&
-              existente.periodo === slot.periodo,
-          ),
-      )
-      .map((slot) => {
-        return criarLocalAvailabilitySlot({
-          profile_id: slot.profileId,
-          weekday: slot.weekday,
-          periodo: slot.periodo,
-        });
-      });
+    const slotsNovos = slotsSelecionados.filter(
+      (slot) =>
+        !agenda.some(
+          (entry) =>
+            entry.profileId === profileIdSelecionado &&
+            entry.weekday === slot.weekday &&
+            entry.periodo === slot.periodo,
+        ),
+    );
 
     if (slotsNovos.length === 0) {
       setErro("Este pesquisador ja esta registrado nos horarios selecionados.");
       return;
     }
 
-    await salvarLocalDatabase({
-      ...database,
-      availability_slots: [...database.availability_slots, ...slotsNovos],
-    });
-    setAgenda(await carregarAgenda());
-    fecharModal();
+    try {
+      setSalvando(true);
+      await addAvailabilitySlots(profileIdSelecionado, slotsNovos);
+      await carregarDisponibilidade();
+      fecharModal();
+    } catch (error) {
+      setErro(error instanceof Error ? error.message : "Nao foi possivel salvar.");
+    } finally {
+      setSalvando(false);
+    }
   }
 
   const popupEntriesPresenciais =
@@ -418,7 +378,7 @@ export function AgendaLaboratorio() {
     <div>
       <PageHeader
         title="Agenda do Laboratorio"
-        description="Semana atual organizada por dia e por horarios fixos do LO&P3D, com limite de 10 pesquisadores por periodo."
+        description="Disponibilidade semanal gravada em availability_slots no Supabase."
         action={
           <div className="flex w-full flex-col gap-2 sm:flex-row md:w-auto">
             <Button
@@ -444,6 +404,12 @@ export function AgendaLaboratorio() {
           </div>
         }
       />
+
+      {erro ? (
+        <p className="mb-5 rounded-lg border border-danger bg-danger-soft p-3 text-base font-semibold text-danger">
+          {erro}
+        </p>
+      ) : null}
 
       <section className="grid gap-4 md:grid-cols-3">
         <Card>
@@ -522,10 +488,7 @@ export function AgendaLaboratorio() {
                 }
               >
                 {periodos.map((periodo) => {
-                  const entries = getEntriesDoSlot(
-                    dia.weekday,
-                    periodo.id,
-                  );
+                  const entries = getEntriesDoSlot(dia.weekday, periodo.id);
                   const total = entries.filter(
                     (entry) => !pesquisadorEhRemoto(entry.profileId),
                   ).length;
@@ -618,7 +581,8 @@ export function AgendaLaboratorio() {
                             type="button"
                             title="Excluir horario"
                             aria-label={`Excluir horario de ${entry.pesquisador}`}
-                            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition hover:bg-danger-soft hover:text-danger-dark"
+                            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition hover:bg-danger-soft hover:text-danger-dark disabled:opacity-50"
+                            disabled={salvando}
                             onClick={() => excluirHorario(entry.id)}
                           >
                             <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -657,7 +621,8 @@ export function AgendaLaboratorio() {
                               type="button"
                               title="Excluir horario"
                               aria-label={`Excluir horario de ${entry.pesquisador}`}
-                              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted transition hover:bg-danger-soft hover:text-danger-dark"
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted transition hover:bg-danger-soft hover:text-danger-dark disabled:opacity-50"
+                              disabled={salvando}
                               onClick={() => excluirHorario(entry.id)}
                             >
                               <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -819,15 +784,14 @@ export function AgendaLaboratorio() {
                 <Button variant="ghost" onClick={fecharModal}>
                   Cancelar
                 </Button>
-                <Button type="submit" variant="success">
-                  Salvar horarios
+                <Button type="submit" variant="success" disabled={salvando}>
+                  {salvando ? "Salvando..." : "Salvar horarios"}
                 </Button>
               </div>
             </form>
           </Card>
         </div>
       ) : null}
-
     </div>
   );
 }

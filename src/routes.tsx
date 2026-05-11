@@ -12,6 +12,7 @@ import { Dashboard } from "./pages/Dashboard";
 import { Habilidades } from "./pages/Habilidades";
 import { Impressoras } from "./pages/Impressoras";
 import { Login } from "./pages/Login";
+import { MeuPerfil } from "./pages/MeuPerfil";
 import { NotFound } from "./pages/NotFound";
 import { Pesquisadores } from "./pages/Pesquisadores";
 import { ProfileRequired } from "./pages/ProfileRequired";
@@ -76,6 +77,7 @@ export const router = createBrowserRouter([
           { path: "agenda", element: <AgendaLaboratorio /> },
           { path: "impressoras", element: <Impressoras /> },
           { path: "reservas", element: <Reservas /> },
+          { path: "perfil", element: <MeuPerfil /> },
           { path: "administracao", element: <Administracao /> },
           { path: "*", element: <NotFound /> },
         ],

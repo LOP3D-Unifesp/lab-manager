@@ -1,10 +1,6 @@
 import { useEffect, useState } from "react";
-import {
-  carregarLocalDatabase,
-  criarLocalProfile,
-  observarLocalDatabase,
-  salvarLocalDatabase,
-} from "./localDatabase";
+
+import { listProfiles } from "./supabaseRepository";
 
 export type Pesquisador = {
   id: string;
@@ -17,101 +13,71 @@ export type Pesquisador = {
   habilidades: string[];
 };
 
-function formatarPresenca(status: string) {
-  if (status === "Remoto") {
-    return "Remoto";
-  }
+function getVinculoLabel(value: string | null) {
+  const labels: Record<string, string> = {
+    ic: "IC",
+    extension: "Extensao",
+    intern: "Estagiario",
+    tcc: "TCC",
+    masters: "Mestrado",
+    phd: "Doutorado",
+    postdoc: "Pos-doutorado",
+    visitor: "Visitante",
+    technician: "Tecnico",
+    faculty: "Docente",
+    other: "Outro",
+  };
 
-  return "No laboratorio";
+  return value ? labels[value] ?? value : "Nao informado";
 }
 
 async function carregarPesquisadores() {
-  const database = await carregarLocalDatabase();
+  const profiles = await listProfiles();
 
-  return database.profiles
-    .filter((profile) => profile.is_active)
-    .map((profile) => ({
-      id: profile.id,
-      nome: profile.first_name,
-      sobrenome: profile.last_name,
-      vinculo: profile.academic_affiliation,
-      status: formatarPresenca(profile.presence_status),
-      email: profile.email ?? "",
-      telefone: profile.phone ?? "",
-      habilidades: profile.skills ?? [],
-    }));
+  return profiles.map((profile) => ({
+    id: profile.id,
+    nome: profile.first_name,
+    sobrenome: profile.last_name,
+    vinculo: getVinculoLabel(profile.academic_affiliation),
+    status: "No laboratorio",
+    email: profile.email,
+    telefone: profile.phone ?? "",
+    habilidades: [],
+  }));
 }
 
 export function usePesquisadoresCadastrados() {
   const [pesquisadores, setPesquisadores] = useState<Pesquisador[]>([]);
 
-  useEffect(() => {
-    let ativo = true;
-
-    const atualizarPesquisadores = async () => {
-      const lista = await carregarPesquisadores();
-
-      if (ativo) {
-        setPesquisadores(lista);
-      }
-    };
-
-    atualizarPesquisadores();
-    const pararObservacao = observarLocalDatabase(atualizarPesquisadores);
-
-    return () => {
-      ativo = false;
-      pararObservacao();
-    };
-  }, []);
-
-  const adicionarPesquisador = async (
-    pesquisador: Omit<Pesquisador, "id">,
-  ) => {
-    const database = await carregarLocalDatabase();
-    const emailNormalizado = pesquisador.email.trim().toLowerCase();
-
-    if (
-      database.profiles.some(
-        (profile) =>
-          (profile.email ?? "").trim().toLowerCase() === emailNormalizado,
-      )
-    ) {
-      return;
-    }
-
-    const profile = criarLocalProfile({
-      first_name: pesquisador.nome,
-      last_name: pesquisador.sobrenome,
-      academic_affiliation: pesquisador.vinculo,
-      presence_status: pesquisador.status,
-      email: emailNormalizado,
-      phone: pesquisador.telefone,
-    });
-
-    await salvarLocalDatabase({
-      ...database,
-      profiles: [...database.profiles, profile],
-    });
+  const atualizarPesquisadores = async () => {
     setPesquisadores(await carregarPesquisadores());
   };
 
-  const excluirPesquisador = async (id: string) => {
-    const database = await carregarLocalDatabase();
+  useEffect(() => {
+    let ativo = true;
 
-    await salvarLocalDatabase({
-      ...database,
-      profiles: database.profiles.map((profile) =>
-        profile.id === id
-          ? { ...profile, is_active: false, updated_at: new Date().toISOString() }
-          : profile,
-      ),
+    carregarPesquisadores().then((lista) => {
+      if (ativo) {
+        setPesquisadores(lista);
+      }
     });
-    setPesquisadores(await carregarPesquisadores());
+
+    return () => {
+      ativo = false;
+    };
+  }, []);
+
+  const adicionarPesquisador = async () => {
+    throw new Error("Cadastro direto desativado. Use o fluxo de convites.");
+  };
+
+  const excluirPesquisador = async () => {
+    throw new Error("Inativacao direta desativada. Use administracao de usuarios.");
   };
 
   return {
     pesquisadores,
+    atualizarPesquisadores,
     adicionarPesquisador,
     excluirPesquisador,
   };

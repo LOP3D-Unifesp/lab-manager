@@ -9,12 +9,12 @@ import {
 import type { Session, User } from "@supabase/supabase-js";
 
 import { supabase } from "./supabaseClient";
-import type { LocalProfile } from "./localDatabase";
+import { mapProfile, type AcademicAffiliation, type Profile } from "./domain";
 
 type AuthContextValue = {
   session: Session | null;
   user: User | null;
-  profile: LocalProfile | null;
+  profile: Profile | null;
   loading: boolean;
   profileLoading: boolean;
   authConfigured: boolean;
@@ -28,7 +28,7 @@ type ProfileRow = {
   full_name: string;
   email: string;
   role: "coordinator" | "researcher";
-  academic_affiliation: string | null;
+  academic_affiliation: AcademicAffiliation | null;
   phone: string | null;
   is_active: boolean;
   created_at: string;
@@ -37,38 +37,9 @@ type ProfileRow = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-function splitName(fullName: string) {
-  const [firstName = fullName, ...lastParts] = fullName.trim().split(/\s+/);
-
-  return {
-    firstName,
-    lastName: lastParts.join(" "),
-  };
-}
-
-function mapProfileRow(row: ProfileRow): LocalProfile {
-  const { firstName, lastName } = splitName(row.full_name);
-
-  return {
-    id: row.id,
-    full_name: row.full_name,
-    first_name: firstName,
-    last_name: lastName,
-    academic_affiliation: row.academic_affiliation ?? "",
-    presence_status: "No laboratorio",
-    email: row.email,
-    phone: row.phone ?? "",
-    skills: [],
-    role: row.role,
-    is_active: row.is_active,
-    created_at: row.created_at,
-    updated_at: row.updated_at,
-  };
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
-  const [profile, setProfile] = useState<LocalProfile | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(true);
   const authConfigured = Boolean(supabase);
@@ -97,7 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    setProfile(mapProfileRow(data));
+    setProfile(mapProfile(data));
     setProfileLoading(false);
   };
 

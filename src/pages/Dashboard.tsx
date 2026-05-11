@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { CalendarDays, Clock, ClipboardList, Printer, Users } from "lucide-react";
+import { Clock, ClipboardList, Printer, Users } from "lucide-react";
 
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
@@ -7,28 +7,21 @@ import { StatCard } from "../components/ui/StatCard";
 import { StatusBadge } from "../components/ui/StatusBadge";
 import { useCurrentProfile } from "../lib/currentUser";
 import {
-  carregarLocalDatabase,
   criarDataLocalSegura,
-  observarLocalDatabase,
+  getPrinterStatusLabel,
+  periodos,
   reservaBloqueiaHorario,
-  type LocalDatabase,
-  type LocalPrintReservation,
-  type LocalPrinter,
-} from "../lib/localDatabase";
-
-const periodos = [
-  { id: "manha", label: "Manha" },
-  { id: "tarde", label: "Tarde" },
-  { id: "noite", label: "Noite" },
-];
-
-const databaseVazio: LocalDatabase = {
-  schema_version: 1,
-  profiles: [],
-  availability_slots: [],
-  printers: [],
-  print_reservations: [],
-};
+  type AvailabilitySlot,
+  type Printer as PrinterType,
+  type PrinterBooking,
+  type Profile,
+} from "../lib/domain";
+import {
+  listAvailability,
+  listBookings,
+  listPrinters,
+  listProfiles,
+} from "../lib/supabaseRepository";
 
 function getDataLocalPadrao() {
   const hoje = new Date();
@@ -59,11 +52,7 @@ function intervalosSeCruzam(
   return inicioA < fimB && inicioB < fimA;
 }
 
-function reservaEhDaData(reserva: LocalPrintReservation, data: string) {
-  if (!reserva.scheduled_start_at || !reserva.scheduled_end_at) {
-    return false;
-  }
-
+function reservaEhDaData(reserva: PrinterBooking, data: string) {
   const inicioDia = criarDataLocalSegura(data, "00:00");
 
   if (!inicioDia || !reservaBloqueiaHorario(reserva)) {
@@ -75,25 +64,22 @@ function reservaEhDaData(reserva: LocalPrintReservation, data: string) {
   return intervalosSeCruzam(
     inicioDia,
     fimDia,
-    new Date(reserva.scheduled_start_at),
-    new Date(reserva.scheduled_end_at),
+    new Date(reserva.starts_at),
+    new Date(reserva.ends_at),
   );
 }
 
-function reservaEstaEmAndamento(reserva: LocalPrintReservation, agora: Date) {
-  if (!reserva.scheduled_start_at || !reserva.scheduled_end_at) {
-    return false;
-  }
-
-  return (
-    new Date(reserva.scheduled_start_at) <= agora &&
-    agora < new Date(reserva.scheduled_end_at)
-  );
+function reservaEstaEmAndamento(reserva: PrinterBooking, agora: Date) {
+  return new Date(reserva.starts_at) <= agora && agora < new Date(reserva.ends_at);
 }
 
 export function Dashboard() {
   const { currentProfile } = useCurrentProfile();
-  const [database, setDatabase] = useState<LocalDatabase>(databaseVazio);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [availability, setAvailability] = useState<AvailabilitySlot[]>([]);
+  const [printers, setPrinters] = useState<PrinterType[]>([]);
+  const [bookings, setBookings] = useState<PrinterBooking[]>([]);
+  const [erro, setErro] = useState("");
   const dataHoje = getDataLocalPadrao();
   const agora = useMemo(() => new Date(), []);
   const weekdayHoje = agora.getDay();
@@ -101,79 +87,79 @@ export function Dashboard() {
   useEffect(() => {
     let ativo = true;
 
-    const atualizarDashboard = async () => {
-      const databaseAtual = await carregarLocalDatabase();
-
-      if (ativo) {
-        setDatabase(databaseAtual);
-      }
-    };
-
-    atualizarDashboard();
-    const pararObservacao = observarLocalDatabase(atualizarDashboard);
+    Promise.all([
+      listProfiles(),
+      listAvailability(),
+      listPrinters(),
+      listBookings(),
+    ])
+      .then(([profilesData, availabilityData, printersData, bookingsData]) => {
+        if (ativo) {
+          setErro("");
+          setProfiles(profilesData);
+          setAvailability(availabilityData);
+          setPrinters(printersData);
+          setBookings(bookingsData);
+        }
+      })
+      .catch((error) => {
+        if (ativo) {
+          setErro(
+            error instanceof Error
+              ? error.message
+              : "Nao foi possivel carregar o dashboard.",
+          );
+        }
+      });
 
     return () => {
       ativo = false;
-      pararObservacao();
     };
   }, []);
 
-  const pesquisadoresAtivos = database.profiles.filter(
-    (profile) => profile.is_active,
-  );
   const pesquisadoresHoje = new Set(
-    database.availability_slots
+    availability
       .filter((slot) => slot.weekday === weekdayHoje)
       .map((slot) => slot.profile_id),
   );
-  const pesquisadoresPresenciaisHoje = pesquisadoresAtivos.filter(
-    (profile) =>
-      pesquisadoresHoje.has(profile.id) && profile.presence_status !== "Remoto",
+  const pesquisadoresPresenciaisHoje = profiles.filter((profile) =>
+    pesquisadoresHoje.has(profile.id),
   );
-  const impressorasAtivas = database.printers.filter(
-    (impressora) => impressora.status === "Ativa",
+  const impressorasAtivas = printers.filter(
+    (impressora) => impressora.status === "active",
   );
-  const reservasHoje = database.print_reservations
+  const reservasHoje = bookings
     .filter((reserva) => reservaEhDaData(reserva, dataHoje))
     .sort(
       (a, b) =>
-        new Date(a.scheduled_start_at ?? "").getTime() -
-        new Date(b.scheduled_start_at ?? "").getTime(),
+        new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime(),
     );
   const reservasEmAndamento = reservasHoje.filter((reserva) =>
     reservaEstaEmAndamento(reserva, agora),
   );
   const meusSlotsHoje = currentProfile
-    ? database.availability_slots.filter(
+    ? availability.filter(
         (slot) =>
           slot.profile_id === currentProfile.id && slot.weekday === weekdayHoje,
       )
     : [];
   const proximasReservas = reservasHoje.filter((reserva) => {
-    if (!reserva.scheduled_start_at) {
-      return false;
-    }
-
-    return new Date(reserva.scheduled_start_at) >= agora;
+    return new Date(reserva.starts_at) >= agora;
   });
 
-  function getPrinterName(printerId: string) {
-    return (
-      database.printers.find((impressora) => impressora.id === printerId)
-        ?.name ?? "Impressora removida"
-    );
-  }
-
-  function getReservasDaImpressora(impressora: LocalPrinter) {
+  function getReservasDaImpressora(impressora: PrinterType) {
     return reservasHoje.filter((reserva) => reserva.printer_id === impressora.id);
   }
 
   return (
     <div>
-      <PageHeader
-        title="Dashboard"
-        description=""
-      />
+      <PageHeader title="Dashboard" description="" />
+
+      {erro ? (
+        <p className="mb-5 rounded-lg border border-danger bg-danger-soft p-3 text-base font-semibold text-danger">
+          {erro}
+        </p>
+      ) : null}
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
@@ -184,7 +170,7 @@ export function Dashboard() {
         />
         <StatCard
           title="Impressoras ativas"
-          value={`${impressorasAtivas.length}/${database.printers.length}`}
+          value={`${impressorasAtivas.length}/${printers.length}`}
           description="Equipamentos disponiveis para novas reservas."
           icon={Printer}
         />
@@ -196,12 +182,12 @@ export function Dashboard() {
         />
         <StatCard
           title="Proxima impressao"
-          value={proximasReservas[0] ? formatarHorario(proximasReservas[0].scheduled_start_at) : "--"}
+          value={proximasReservas[0] ? formatarHorario(proximasReservas[0].starts_at) : "--"}
           description={
             proximasReservas[0]
-              ? `${proximasReservas[0].print_name} em ${getPrinterName(
-                  proximasReservas[0].printer_id,
-                )}`
+              ? `${proximasReservas[0].project_name} em ${
+                  proximasReservas[0].printer?.name ?? "impressora removida"
+                }`
               : "Nenhuma reserva futura para hoje."
           }
           icon={Clock}
@@ -220,8 +206,8 @@ export function Dashboard() {
           </div>
 
           <div className="mt-5 grid gap-3">
-            {database.printers.length > 0 ? (
-              database.printers.map((impressora) => {
+            {printers.length > 0 ? (
+              printers.map((impressora) => {
                 const reservasDaImpressora = getReservasDaImpressora(impressora);
                 const emAndamento = reservasDaImpressora.find((reserva) =>
                   reservaEstaEmAndamento(reserva, agora),
@@ -243,14 +229,14 @@ export function Dashboard() {
                       </div>
                       <StatusBadge
                         label={
-                          impressora.status !== "Ativa"
-                            ? "Manutencao"
+                          impressora.status !== "active"
+                            ? getPrinterStatusLabel(impressora.status)
                             : emAndamento
                               ? "Imprimindo"
                               : "Disponivel"
                         }
                         variant={
-                          impressora.status !== "Ativa"
+                          impressora.status !== "active"
                             ? "warning"
                             : emAndamento
                               ? "info"
@@ -265,9 +251,9 @@ export function Dashboard() {
                             key={reserva.id}
                             className="text-sm font-semibold text-muted"
                           >
-                            {formatarHorario(reserva.scheduled_start_at)} ate{" "}
-                            {formatarHorario(reserva.scheduled_end_at)} -{" "}
-                            {reserva.print_name} ({reserva.material})
+                            {formatarHorario(reserva.starts_at)} ate{" "}
+                            {formatarHorario(reserva.ends_at)} -{" "}
+                            {reserva.project_name} ({reserva.material?.name ?? "material removido"})
                           </p>
                         ))}
                       </div>
@@ -303,7 +289,7 @@ export function Dashboard() {
           ) : null}
           <div className="mt-4 grid gap-3">
             {periodos.map((periodo) => {
-              const slotsDoPeriodo = database.availability_slots.filter(
+              const slotsDoPeriodo = availability.filter(
                 (slot) =>
                   slot.weekday === weekdayHoje && slot.periodo === periodo.id,
               );

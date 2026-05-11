@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { Clock, Plus, Printer, Trash2, X } from "lucide-react";
+import { Clock, Plus, Printer as PrinterIcon, Trash2, X } from "lucide-react";
 
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
@@ -7,20 +7,28 @@ import { PageHeader } from "../components/ui/PageHeader";
 import { StatusBadge } from "../components/ui/StatusBadge";
 import { useCurrentProfile } from "../lib/currentUser";
 import {
-  carregarLocalDatabase,
   calcularDuracaoMinutos,
-  criarLocalPrintReservation,
   criarDataLocalSegura,
-  observarLocalDatabase,
+  getBookingStatusLabel,
+  getPrinterStatusLabel,
   reservaBloqueiaHorario,
   reservaPodeSerCancelada,
-  salvarLocalDatabase,
-  type LocalProfile,
-  type LocalPrintReservation,
-  type LocalPrinter,
-} from "../lib/localDatabase";
+  type Material,
+  type Printer,
+  type PrinterBooking,
+  type PrinterMaterial,
+  type Profile,
+} from "../lib/domain";
+import {
+  cancelBooking,
+  createBooking,
+  listBookings,
+  listMaterials,
+  listPrinterMaterials,
+  listPrinters,
+  listProfiles,
+} from "../lib/supabaseRepository";
 
-const materiaisPadrao = ["PLA", "PETG", "ABS", "TPU", "PA", "Resina"];
 const horariosReserva = Array.from({ length: 19 }, (_, index) => {
   const minutosTotais = 9 * 60 + index * 30;
   const horas = Math.floor(minutosTotais / 60);
@@ -28,6 +36,19 @@ const horariosReserva = Array.from({ length: 19 }, (_, index) => {
 
   return `${String(horas).padStart(2, "0")}:${String(minutos).padStart(2, "0")}`;
 });
+
+const coresReserva = [
+  "border-blue-400 bg-blue-100 text-blue-950",
+  "border-rose-400 bg-rose-100 text-rose-950",
+  "border-lime-500 bg-lime-100 text-lime-950",
+  "border-indigo-400 bg-indigo-100 text-indigo-950",
+  "border-amber-500 bg-amber-100 text-amber-950",
+  "border-cyan-500 bg-cyan-100 text-cyan-950",
+  "border-violet-400 bg-violet-100 text-violet-950",
+  "border-orange-500 bg-orange-100 text-orange-950",
+  "border-emerald-500 bg-emerald-100 text-emerald-950",
+  "border-fuchsia-400 bg-fuchsia-100 text-fuchsia-950",
+];
 
 function getDataLocalPadrao() {
   const hoje = new Date();
@@ -62,40 +83,6 @@ function formatarHorario(valor?: string) {
   }).format(new Date(valor));
 }
 
-const coresReserva = [
-  "border-blue-400 bg-blue-100 text-blue-950",
-  "border-rose-400 bg-rose-100 text-rose-950",
-  "border-lime-500 bg-lime-100 text-lime-950",
-  "border-indigo-400 bg-indigo-100 text-indigo-950",
-  "border-amber-500 bg-amber-100 text-amber-950",
-  "border-cyan-500 bg-cyan-100 text-cyan-950",
-  "border-violet-400 bg-violet-100 text-violet-950",
-  "border-orange-500 bg-orange-100 text-orange-950",
-  "border-emerald-500 bg-emerald-100 text-emerald-950",
-  "border-fuchsia-400 bg-fuchsia-100 text-fuchsia-950",
-];
-
-function getMapaCoresReservas(reservas: LocalPrintReservation[]) {
-  return reservas.reduce<Record<string, string>>((mapa, reserva, index) => {
-    const indiceDistante = (index * 3) % coresReserva.length;
-
-    mapa[reserva.id] = coresReserva[indiceDistante];
-    return mapa;
-  }, {});
-}
-
-function getCorReserva(id: string, mapaCores?: Record<string, string>) {
-  if (mapaCores?.[id]) {
-    return mapaCores[id];
-  }
-
-  const soma = id.split("").reduce((total, caractere) => {
-    return total + caractere.charCodeAt(0);
-  }, 0);
-
-  return coresReserva[soma % coresReserva.length];
-}
-
 function intervalosSeCruzam(
   inicioA: Date,
   fimA: Date,
@@ -105,67 +92,131 @@ function intervalosSeCruzam(
   return inicioA < fimB && inicioB < fimA;
 }
 
+function getCorReserva(id: string, reservasDaData: PrinterBooking[]) {
+  const index = reservasDaData.findIndex((reserva) => reserva.id === id);
+  const fallback = id.split("").reduce((total, caractere) => {
+    return total + caractere.charCodeAt(0);
+  }, 0);
+
+  return coresReserva[(index >= 0 ? index * 3 : fallback) % coresReserva.length];
+}
+
+function getMensagemErroReserva(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+
+  if (message.includes("booking_conflict")) {
+    return "A impressora ja possui uma reserva nesse intervalo.";
+  }
+
+  if (message.includes("maintenance_conflict")) {
+    return "A impressora esta em manutencao nesse intervalo.";
+  }
+
+  if (message.includes("incompatible_material")) {
+    return "O material selecionado nao e compativel com a impressora.";
+  }
+
+  if (message.includes("printer_unavailable")) {
+    return "A impressora selecionada nao esta ativa.";
+  }
+
+  if (message.includes("invalid_start_time")) {
+    return "Escolha um horario futuro para a reserva.";
+  }
+
+  return message || "Nao foi possivel salvar a reserva.";
+}
+
 export function Reservas() {
   const { currentProfile } = useCurrentProfile();
-  const [reservas, setReservas] = useState<LocalPrintReservation[]>([]);
-  const [impressoras, setImpressoras] = useState<LocalPrinter[]>([]);
-  const [profiles, setProfiles] = useState<LocalProfile[]>([]);
+  const [bookings, setBookings] = useState<PrinterBooking[]>([]);
+  const [printers, setPrinters] = useState<Printer[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [materials, setMaterials] = useState<Material[]>([]);
+  const [printerMaterials, setPrinterMaterials] = useState<PrinterMaterial[]>(
+    [],
+  );
   const [dataAgenda, setDataAgenda] = useState(getDataLocalPadrao());
   const [modalAberto, setModalAberto] = useState(false);
-  const [reservaParaExcluir, setReservaParaExcluir] =
-    useState<LocalPrintReservation | null>(null);
+  const [reservaParaCancelar, setReservaParaCancelar] =
+    useState<PrinterBooking | null>(null);
   const [erro, setErro] = useState("");
+  const [salvando, setSalvando] = useState(false);
   const [novaReserva, setNovaReserva] = useState({
-    print_name: "",
-    material: "",
+    project_name: "",
+    material_id: "",
     duration_hours: "",
     reservation_date: "",
     starts_at: "",
     printer_id: "",
   });
 
+  async function carregarDados() {
+    const [
+      bookingsData,
+      printersData,
+      profilesData,
+      materialsData,
+      printerMaterialsData,
+    ] = await Promise.all([
+      listBookings(),
+      listPrinters(),
+      listProfiles(),
+      listMaterials(),
+      listPrinterMaterials(),
+    ]);
+
+    setBookings(bookingsData);
+    setPrinters(printersData);
+    setProfiles(profilesData);
+    setMaterials(materialsData);
+    setPrinterMaterials(printerMaterialsData);
+  }
+
   useEffect(() => {
     let ativo = true;
 
-    const atualizarReservas = async () => {
-      const database = await carregarLocalDatabase();
-
+    carregarDados().catch((error) => {
       if (ativo) {
-        setImpressoras(database.printers);
-        setProfiles(database.profiles);
-        setReservas(database.print_reservations);
+        setErro(error instanceof Error ? error.message : "Erro ao carregar.");
       }
-    };
-
-    atualizarReservas();
-    const pararObservacao = observarLocalDatabase(atualizarReservas);
+    });
 
     return () => {
       ativo = false;
-      pararObservacao();
     };
   }, []);
 
-  const materiaisDisponiveis = useMemo(() => {
-    const materiaisDasImpressoras = impressoras.flatMap(
-      (impressora) => impressora.allowed_filaments,
-    );
+  const impressorasAtivas = useMemo(
+    () => printers.filter((printer) => printer.status === "active"),
+    [printers],
+  );
 
-    return Array.from(new Set([...materiaisPadrao, ...materiaisDasImpressoras]));
-  }, [impressoras]);
-  const impressoraSelecionadaAtual = impressoras.find(
-    (impressora) => impressora.id === novaReserva.printer_id,
+  const materiaisAtivos = useMemo(
+    () => materials.filter((material) => material.is_active),
+    [materials],
   );
 
   const reservasPorImpressora = useMemo(() => {
-    return reservas.reduce<Record<string, LocalPrintReservation[]>>(
+    return bookings.reduce<Record<string, PrinterBooking[]>>(
       (mapa, reserva) => {
         mapa[reserva.printer_id] = [...(mapa[reserva.printer_id] ?? []), reserva];
         return mapa;
       },
       {},
     );
-  }, [reservas]);
+  }, [bookings]);
+
+  const duracaoMinutos = calcularDuracaoMinutos(novaReserva.duration_hours);
+  const inicioSelecionado =
+    novaReserva.reservation_date && novaReserva.starts_at
+      ? criarDataLocalSegura(novaReserva.reservation_date, novaReserva.starts_at)
+      : null;
+  const fimSelecionado =
+    inicioSelecionado && duracaoMinutos
+      ? new Date(inicioSelecionado.getTime() + duracaoMinutos * 60 * 1000)
+      : null;
+
   const minhasReservasDaData = useMemo(() => {
     if (!currentProfile) {
       return [];
@@ -179,69 +230,38 @@ export function Reservas() {
 
     const fimDia = new Date(inicioDia.getTime() + 24 * 60 * 60 * 1000);
 
-    return reservas
+    return bookings
       .filter((reserva) => {
-        if (
-          reserva.profile_id !== currentProfile.id ||
-          !reserva.scheduled_start_at ||
-          !reserva.scheduled_end_at
-        ) {
-          return false;
-        }
-
-        return intervalosSeCruzam(
-          inicioDia,
-          fimDia,
-          new Date(reserva.scheduled_start_at),
-          new Date(reserva.scheduled_end_at),
+        return (
+          reserva.profile_id === currentProfile.id &&
+          intervalosSeCruzam(
+            inicioDia,
+            fimDia,
+            new Date(reserva.starts_at),
+            new Date(reserva.ends_at),
+          )
         );
       })
       .sort(
         (a, b) =>
-          new Date(a.scheduled_start_at ?? "").getTime() -
-          new Date(b.scheduled_start_at ?? "").getTime(),
+          new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime(),
       );
-  }, [currentProfile, dataAgenda, reservas]);
+  }, [bookings, currentProfile, dataAgenda]);
 
-  function abrirModal() {
-    if (!currentProfile) {
-      setErro("Selecione um usuario ativo antes de criar uma reserva.");
-      return;
-    }
-
-    setErro("");
-    setModalAberto(true);
+  function impressoraAceitaMaterial(printerId: string, materialId: string) {
+    return printerMaterials.some(
+      (item) => item.printer_id === printerId && item.material_id === materialId,
+    );
   }
 
-  function fecharModal() {
-    setModalAberto(false);
-    setErro("");
-    setNovaReserva({
-      print_name: "",
-      material: "",
-      duration_hours: "",
-      reservation_date: "",
-      starts_at: "",
-      printer_id: "",
-    });
-  }
+  function getMateriaisDaImpressora(printerId: string) {
+    const materialIds = new Set(
+      printerMaterials
+        .filter((item) => item.printer_id === printerId)
+        .map((item) => item.material_id),
+    );
 
-  const duracaoMinutos = calcularDuracaoMinutos(novaReserva.duration_hours);
-  const inicioSelecionado =
-    novaReserva.reservation_date && novaReserva.starts_at
-      ? criarDataLocalSegura(novaReserva.reservation_date, novaReserva.starts_at)
-      : null;
-  const fimSelecionado =
-    inicioSelecionado && duracaoMinutos
-      ? new Date(inicioSelecionado.getTime() + duracaoMinutos * 60 * 1000)
-      : null;
-
-  function impressoraAceitaMaterial(impressora: LocalPrinter) {
-    return impressora.allowed_filaments.includes(novaReserva.material);
-  }
-
-  function impressoraLivreParaHorario(impressora: LocalPrinter) {
-    return impressora.status === "Ativa" && !getReservaConflitante(impressora.id);
+    return materials.filter((material) => materialIds.has(material.id));
   }
 
   function horarioSelecionadoJaPassou() {
@@ -253,53 +273,12 @@ export function Reservas() {
   }
 
   function horarioJaPassou(data: string, horario: string) {
-    if (!data) {
+    if (!data || !horario) {
       return false;
     }
 
     const dataHorario = criarDataLocalSegura(data, horario);
-
-    if (!dataHorario) {
-      return true;
-    }
-
-    return dataHorario.getTime() < Date.now();
-  }
-
-  function impressoraDisponivel(impressora: LocalPrinter) {
-    return (
-      impressoraLivreParaHorario(impressora) &&
-      impressora.allowed_filaments.length > 0 &&
-      impressoraAceitaMaterial(impressora) &&
-      !horarioSelecionadoJaPassou()
-    );
-  }
-
-  function selecionarImpressora(impressora: LocalPrinter) {
-    if (!novaReserva.material) {
-      setErro("Selecione um material antes de escolher a impressora.");
-      return;
-    }
-
-    if (!impressoraAceitaMaterial(impressora)) {
-      setErro("Esta impressora nao suporta o material selecionado.");
-      return;
-    }
-
-    if (horarioSelecionadoJaPassou()) {
-      setErro("Nao e possivel selecionar um horario que ja passou.");
-      return;
-    }
-
-    if (!impressoraDisponivel(impressora)) {
-      return;
-    }
-
-    setErro("");
-    setNovaReserva((reserva) => ({
-      ...reserva,
-      printer_id: impressora.id,
-    }));
+    return !dataHorario || dataHorario.getTime() < Date.now();
   }
 
   function getReservaConflitante(printerId: string) {
@@ -309,19 +288,14 @@ export function Reservas() {
 
     return (
       (reservasPorImpressora[printerId] ?? []).find((reserva) => {
-        if (
-          !reserva.scheduled_start_at ||
-          !reserva.scheduled_end_at ||
-          !reservaBloqueiaHorario(reserva)
-        ) {
-          return false;
-        }
-
-        return intervalosSeCruzam(
-          inicioSelecionado,
-          fimSelecionado,
-          new Date(reserva.scheduled_start_at),
-          new Date(reserva.scheduled_end_at),
+        return (
+          reservaBloqueiaHorario(reserva) &&
+          intervalosSeCruzam(
+            inicioSelecionado,
+            fimSelecionado,
+            new Date(reserva.starts_at),
+            new Date(reserva.ends_at),
+          )
         );
       }) ?? null
     );
@@ -338,19 +312,14 @@ export function Reservas() {
 
     return (
       (reservasPorImpressora[printerId] ?? []).find((reserva) => {
-        if (
-          !reserva.scheduled_start_at ||
-          !reserva.scheduled_end_at ||
-          !reservaBloqueiaHorario(reserva)
-        ) {
-          return false;
-        }
-
-        return intervalosSeCruzam(
-          inicioHorario,
-          fimHorario,
-          new Date(reserva.scheduled_start_at),
-          new Date(reserva.scheduled_end_at),
+        return (
+          reservaBloqueiaHorario(reserva) &&
+          intervalosSeCruzam(
+            inicioHorario,
+            fimHorario,
+            new Date(reserva.starts_at),
+            new Date(reserva.ends_at),
+          )
         );
       }) ?? null
     );
@@ -367,150 +336,17 @@ export function Reservas() {
 
     return (reservasPorImpressora[printerId] ?? [])
       .filter((reserva) => {
-        if (!reserva.scheduled_start_at || !reserva.scheduled_end_at) {
-          return false;
-        }
-
         return intervalosSeCruzam(
           inicioDia,
           fimDia,
-          new Date(reserva.scheduled_start_at),
-          new Date(reserva.scheduled_end_at),
+          new Date(reserva.starts_at),
+          new Date(reserva.ends_at),
         );
       })
       .sort(
         (a, b) =>
-          new Date(a.scheduled_start_at ?? "").getTime() -
-          new Date(b.scheduled_start_at ?? "").getTime(),
+          new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime(),
       );
-  }
-
-  async function salvarReserva(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    const printName = novaReserva.print_name.trim();
-    const impressoraSelecionada = impressoras.find(
-      (impressora) => impressora.id === novaReserva.printer_id,
-    );
-    const materialDaReserva =
-      impressoraSelecionada?.allowed_filaments.includes(novaReserva.material)
-        ? novaReserva.material
-        : "";
-
-    if (
-      !printName ||
-      !novaReserva.material ||
-      !novaReserva.reservation_date ||
-      !novaReserva.starts_at ||
-      !fimSelecionado ||
-      !inicioSelecionado ||
-      !duracaoMinutos
-    ) {
-      setErro(
-        "Preencha nome, material, data, horario e uma duracao entre 0,5h e 24h em intervalos de 0,5h.",
-      );
-      return;
-    }
-
-    if (!currentProfile) {
-      setErro("Selecione um usuario ativo antes de criar uma reserva.");
-      return;
-    }
-
-    if (!impressoraSelecionada) {
-      setErro("Selecione uma impressora disponivel para esta reserva.");
-      return;
-    }
-
-    if (horarioSelecionadoJaPassou()) {
-      setErro("Nao e possivel reservar um horario que ja passou.");
-      return;
-    }
-
-    if (!impressoraDisponivel(impressoraSelecionada)) {
-      setErro("A impressora selecionada nao esta livre nesse horario.");
-      return;
-    }
-
-    if (!materialDaReserva) {
-      if (impressoraSelecionada.allowed_filaments.length === 0) {
-        setErro("A impressora selecionada nao tem materiais cadastrados.");
-        return;
-      }
-
-      setErro("Selecione um material compativel com a impressora escolhida.");
-      return;
-    }
-
-    if (impressoraSelecionada.allowed_filaments.length === 0) {
-      setErro("A impressora selecionada nao tem materiais cadastrados.");
-      return;
-    }
-
-    const database = await carregarLocalDatabase();
-    const reserva = criarLocalPrintReservation({
-      printer_id: impressoraSelecionada.id,
-      profile_id: currentProfile.id,
-      print_name: printName,
-      material: materialDaReserva,
-      estimated_time: `${novaReserva.duration_hours}h`,
-      duration_minutes: duracaoMinutos,
-      reservation_date: novaReserva.reservation_date,
-      starts_at: novaReserva.starts_at,
-      scheduled_start_at: inicioSelecionado.toISOString(),
-      scheduled_end_at: fimSelecionado.toISOString(),
-    });
-
-    await salvarLocalDatabase({
-      ...database,
-      print_reservations: [...database.print_reservations, reserva],
-    });
-    setReservas((listaAtual) => [...listaAtual, reserva]);
-    setDataAgenda(novaReserva.reservation_date);
-    fecharModal();
-  }
-
-  async function excluirMinhaReserva(reservaId: string) {
-    const reserva = reservas.find((item) => item.id === reservaId);
-
-    if (!reserva) {
-      return;
-    }
-
-    const database = await carregarLocalDatabase();
-    const reservaPersistida = database.print_reservations.find(
-      (item) => item.id === reservaId,
-    );
-
-    if (
-      !reservaPersistida ||
-      !reservaPertenceAoUsuarioAtual(reservaPersistida) ||
-      !reservaPodeSerCancelada(reservaPersistida)
-    ) {
-      setReservaParaExcluir(null);
-      return;
-    }
-
-    const reservaCancelada: LocalPrintReservation = {
-      ...reservaPersistida,
-      status: "Cancelada",
-      updated_at: new Date().toISOString(),
-    };
-
-    await salvarLocalDatabase({
-      ...database,
-      print_reservations: database.print_reservations.map((item) =>
-        item.id === reservaId ? reservaCancelada : item,
-      ),
-    });
-    setReservas((listaAtual) =>
-      listaAtual.map((item) => (item.id === reservaId ? reservaCancelada : item)),
-    );
-    setReservaParaExcluir(null);
-  }
-
-  function reservaPertenceAoUsuarioAtual(reserva: LocalPrintReservation) {
-    return Boolean(currentProfile && reserva.profile_id === currentProfile.id);
   }
 
   function getNomeResponsavel(profileId?: string) {
@@ -524,29 +360,146 @@ export function Reservas() {
     );
   }
 
+  function abrirModal() {
+    if (!currentProfile) {
+      setErro("Entre com um perfil ativo antes de criar uma reserva.");
+      return;
+    }
+
+    if (impressorasAtivas.length === 0) {
+      setErro("Cadastre pelo menos uma impressora ativa antes de reservar.");
+      return;
+    }
+
+    if (materiaisAtivos.length === 0) {
+      setErro("Cadastre pelo menos um material antes de reservar.");
+      return;
+    }
+
+    if (printerMaterials.length === 0) {
+      setErro("Cadastre compatibilidades entre impressoras e materiais.");
+      return;
+    }
+
+    setErro("");
+    setModalAberto(true);
+  }
+
+  function fecharModal() {
+    setModalAberto(false);
+    setErro("");
+    setNovaReserva({
+      project_name: "",
+      material_id: "",
+      duration_hours: "",
+      reservation_date: "",
+      starts_at: "",
+      printer_id: "",
+    });
+  }
+
+  function selecionarImpressora(printer: Printer) {
+    if (!novaReserva.material_id) {
+      setErro("Selecione um material antes de escolher a impressora.");
+      return;
+    }
+
+    if (!impressoraAceitaMaterial(printer.id, novaReserva.material_id)) {
+      setErro("Esta impressora nao suporta o material selecionado.");
+      return;
+    }
+
+    if (horarioSelecionadoJaPassou()) {
+      setErro("Nao e possivel selecionar um horario que ja passou.");
+      return;
+    }
+
+    if (getReservaConflitante(printer.id)) {
+      setErro("A impressora selecionada nao esta livre nesse horario.");
+      return;
+    }
+
+    setErro("");
+    setNovaReserva((reserva) => ({ ...reserva, printer_id: printer.id }));
+  }
+
+  async function salvarReserva(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const projectName = novaReserva.project_name.trim();
+
+    if (
+      !projectName ||
+      !novaReserva.material_id ||
+      !novaReserva.reservation_date ||
+      !novaReserva.starts_at ||
+      !novaReserva.printer_id ||
+      !inicioSelecionado ||
+      !fimSelecionado ||
+      !duracaoMinutos
+    ) {
+      setErro(
+        "Preencha nome, material, data, horario e duracao entre 0,5h e 24h em passos de 0,5h.",
+      );
+      return;
+    }
+
+    if (horarioSelecionadoJaPassou()) {
+      setErro("Nao e possivel reservar um horario que ja passou.");
+      return;
+    }
+
+    if (!impressoraAceitaMaterial(novaReserva.printer_id, novaReserva.material_id)) {
+      setErro("Selecione uma impressora compativel com o material.");
+      return;
+    }
+
+    try {
+      setSalvando(true);
+      await createBooking({
+        printerId: novaReserva.printer_id,
+        materialId: novaReserva.material_id,
+        projectName,
+        startsAt: inicioSelecionado.toISOString(),
+        durationMinutes: duracaoMinutos,
+      });
+      setDataAgenda(novaReserva.reservation_date);
+      await carregarDados();
+      fecharModal();
+    } catch (error) {
+      setErro(getMensagemErroReserva(error));
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function cancelarReserva(reservaId: string) {
+    try {
+      setSalvando(true);
+      await cancelBooking(reservaId);
+      await carregarDados();
+      setReservaParaCancelar(null);
+    } catch (error) {
+      setErro(getMensagemErroReserva(error));
+      setReservaParaCancelar(null);
+    } finally {
+      setSalvando(false);
+    }
+  }
+
   const formularioReservaCompleto =
-    novaReserva.print_name.trim().length > 0 &&
-    novaReserva.material.length > 0 &&
+    novaReserva.project_name.trim().length > 0 &&
+    novaReserva.material_id.length > 0 &&
     novaReserva.reservation_date.length > 0 &&
     novaReserva.starts_at.length > 0 &&
+    novaReserva.printer_id.length > 0 &&
     Boolean(duracaoMinutos) &&
-    !horarioSelecionadoJaPassou() &&
-    Boolean(impressoraSelecionadaAtual) &&
-    Boolean(
-      impressoraSelecionadaAtual?.allowed_filaments.includes(
-        novaReserva.material,
-      ),
-    ) &&
-    Boolean(
-      impressoraSelecionadaAtual &&
-        impressoraDisponivel(impressoraSelecionadaAtual),
-    );
+    !horarioSelecionadoJaPassou();
 
   return (
     <div>
       <PageHeader
         title="Reservas"
-        description="Reservas de impressao com material, tempo estimado e disponibilidade das impressoras cadastradas."
+        description="Reservas gravadas no Supabase com validacao transacional no banco."
         action={
           <Button fullWidth onClick={abrirModal}>
             <Plus className="mr-2 h-5 w-5" aria-hidden="true" />
@@ -573,6 +526,12 @@ export function Reservas() {
         </label>
       </section>
 
+      {erro ? (
+        <p className="mb-5 rounded-lg border border-danger bg-danger-soft p-3 text-base font-semibold text-danger">
+          {erro}
+        </p>
+      ) : null}
+
       {currentProfile ? (
         <section className="mb-5 rounded-lg border border-border bg-surface p-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -591,78 +550,74 @@ export function Reservas() {
           </div>
           {minhasReservasDaData.length > 0 ? (
             <div className="mt-3 grid gap-2 md:grid-cols-2">
-              {minhasReservasDaData.map((reserva) => {
-                const impressora = impressoras.find(
-                  (item) => item.id === reserva.printer_id,
-                );
-
-                return (
-                  <div
-                    key={reserva.id}
-                    className="flex items-center justify-between gap-3 rounded-md border border-border bg-background px-3 py-2"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-base font-bold text-text">
-                        {reserva.print_name}
-                      </p>
-                      <p className="mt-1 text-sm font-semibold text-muted">
-                        {formatarHorario(reserva.scheduled_start_at)} ate{" "}
-                        {formatarHorario(reserva.scheduled_end_at)} -{" "}
-                        {impressora?.name ?? "Impressora removida"} -{" "}
-                        {reserva.material}
-                      </p>
-                    </div>
-                    {reservaPodeSerCancelada(reserva) ? (
-                      <button
-                        type="button"
-                        title="Cancelar reserva"
-                        aria-label={`Cancelar reserva ${reserva.print_name}`}
-                        onClick={() => setReservaParaExcluir(reserva)}
-                        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition hover:bg-danger-soft hover:text-danger-dark"
-                      >
-                        <Trash2 className="h-4 w-4" aria-hidden="true" />
-                      </button>
-                    ) : null}
+              {minhasReservasDaData.map((reserva) => (
+                <div
+                  key={reserva.id}
+                  className="flex items-center justify-between gap-3 rounded-md border border-border bg-background px-3 py-2"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-base font-bold text-text">
+                      {reserva.project_name}
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-muted">
+                      {formatarHorario(reserva.starts_at)} ate{" "}
+                      {formatarHorario(reserva.ends_at)} -{" "}
+                      {reserva.printer?.name ?? "Impressora removida"} -{" "}
+                      {reserva.material?.name ?? "Material removido"}
+                    </p>
                   </div>
-                );
-              })}
+                  {reservaPodeSerCancelada(reserva) ? (
+                    <button
+                      type="button"
+                      title="Cancelar reserva"
+                      aria-label={`Cancelar reserva ${reserva.project_name}`}
+                      onClick={() => setReservaParaCancelar(reserva)}
+                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition hover:bg-danger-soft hover:text-danger-dark"
+                    >
+                      <Trash2 className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  ) : null}
+                </div>
+              ))}
             </div>
           ) : null}
         </section>
       ) : null}
 
-      {impressoras.length > 0 ? (
+      {printers.length > 0 ? (
         <section className="grid gap-4 xl:grid-cols-2">
-          {impressoras.map((impressora) => {
-            const reservasDaData = getReservasDaData(impressora.id);
-            const mapaCoresReservas = getMapaCoresReservas(reservasDaData);
+          {printers.map((printer) => {
+            const reservasDaData = getReservasDaData(printer.id);
+            const materiaisDaImpressora = getMateriaisDaImpressora(printer.id);
 
             return (
-              <Card key={impressora.id}>
+              <Card key={printer.id}>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <h3 className="text-2xl font-bold text-text">
-                      {impressora.name}
+                      {printer.name}
                     </h3>
                     <p className="mt-1 text-base font-semibold text-muted">
-                      {impressora.brand} - {impressora.model}
+                      {printer.model ?? "Modelo nao informado"}
                     </p>
                     <p className="mt-1 line-clamp-2 text-xs font-semibold leading-5 text-muted">
                       Materiais:{" "}
-                      {impressora.allowed_filaments.length > 0
-                        ? impressora.allowed_filaments.join(", ")
-                        : "Nenhum material cadastrado"}
+                      {materiaisDaImpressora.length > 0
+                        ? materiaisDaImpressora
+                            .map((material) => material.name)
+                            .join(", ")
+                        : "Nenhum material compativel"}
                     </p>
                   </div>
                   <StatusBadge
-                    label={impressora.status === "Ativa" ? "Ativa" : impressora.status}
-                    variant={impressora.status === "Ativa" ? "success" : "warning"}
+                    label={getPrinterStatusLabel(printer.status)}
+                    variant={printer.status === "active" ? "success" : "warning"}
                   />
                 </div>
 
                 <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-6">
                   {horariosReserva.map((horario) => {
-                    const reserva = getReservaNoHorario(impressora.id, horario);
+                    const reserva = getReservaNoHorario(printer.id, horario);
 
                     return (
                       <div
@@ -670,7 +625,7 @@ export function Reservas() {
                         className={[
                           "min-h-16 rounded-md border px-2 py-2 text-left",
                           reserva
-                            ? getCorReserva(reserva.id, mapaCoresReservas)
+                            ? getCorReserva(reserva.id, reservasDaData)
                             : "border-border bg-background",
                         ].join(" ")}
                       >
@@ -684,7 +639,7 @@ export function Reservas() {
                         </p>
                         <p className="mt-1 truncate text-xs font-semibold opacity-80">
                           {reserva
-                            ? `${reserva.print_name} - ${getNomeResponsavel(
+                            ? `${reserva.project_name} - ${getNomeResponsavel(
                                 reserva.profile_id,
                               )}`
                             : "Livre"}
@@ -701,29 +656,30 @@ export function Reservas() {
                         key={reserva.id}
                         className={[
                           "flex flex-col gap-2 rounded-md border px-3 py-2 sm:flex-row sm:items-center sm:justify-between",
-                          getCorReserva(reserva.id, mapaCoresReservas),
+                          getCorReserva(reserva.id, reservasDaData),
                         ].join(" ")}
                       >
                         <div className="min-w-0">
                           <span className="block truncate text-sm font-bold">
-                            {reserva.print_name}
+                            {reserva.project_name}
                           </span>
                           <span className="block text-xs font-semibold opacity-80">
-                            {formatarHorario(reserva.scheduled_start_at)} ate{" "}
-                            {formatarHorario(reserva.scheduled_end_at)} -{" "}
-                            {reserva.material}
+                            {formatarHorario(reserva.starts_at)} ate{" "}
+                            {formatarHorario(reserva.ends_at)} -{" "}
+                            {reserva.material?.name ?? "Material removido"} -{" "}
+                            {getBookingStatusLabel(reserva.status)}
                           </span>
                           <span className="block truncate text-xs font-semibold opacity-80">
                             {getNomeResponsavel(reserva.profile_id)}
                           </span>
                         </div>
-                        {reservaPertenceAoUsuarioAtual(reserva) &&
+                        {currentProfile?.id === reserva.profile_id &&
                         reservaPodeSerCancelada(reserva) ? (
                           <button
                             type="button"
                             title="Cancelar reserva"
-                            aria-label={`Cancelar reserva ${reserva.print_name}`}
-                            onClick={() => setReservaParaExcluir(reserva)}
+                            aria-label={`Cancelar reserva ${reserva.project_name}`}
+                            onClick={() => setReservaParaCancelar(reserva)}
                             className="inline-flex h-8 w-8 shrink-0 items-center justify-center self-end rounded-md text-current opacity-70 transition hover:bg-white/60 hover:opacity-100 sm:self-center"
                           >
                             <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -759,8 +715,7 @@ export function Reservas() {
               <div>
                 <h3 className="text-2xl font-bold text-text">Criar reserva</h3>
                 <p className="mt-1 text-lg text-muted">
-                  Informe os dados da impressao e selecione uma impressora
-                  compativel.
+                  Informe os dados e escolha uma impressora compativel.
                 </p>
               </div>
               <button
@@ -780,11 +735,11 @@ export function Reservas() {
                   <input
                     className="min-h-11 min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
                     required
-                    value={novaReserva.print_name}
+                    value={novaReserva.project_name}
                     onChange={(event) =>
                       setNovaReserva((reserva) => ({
                         ...reserva,
-                        print_name: event.target.value,
+                        project_name: event.target.value,
                       }))
                     }
                   />
@@ -795,12 +750,12 @@ export function Reservas() {
                   <select
                     className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
                     required
-                    value={novaReserva.material}
+                    value={novaReserva.material_id}
                     onChange={(event) => {
                       setErro("");
                       setNovaReserva((reserva) => ({
                         ...reserva,
-                        material: event.target.value,
+                        material_id: event.target.value,
                         printer_id: "",
                       }));
                     }}
@@ -808,8 +763,10 @@ export function Reservas() {
                     <option value="" disabled>
                       Selecione
                     </option>
-                    {materiaisDisponiveis.map((material) => (
-                      <option key={material}>{material}</option>
+                    {materiaisAtivos.map((material) => (
+                      <option key={material.id} value={material.id}>
+                        {material.name}
+                      </option>
                     ))}
                   </select>
                 </label>
@@ -832,7 +789,9 @@ export function Reservas() {
                       setNovaReserva((reserva) => ({
                         ...reserva,
                         reservation_date: proximaData,
-                        starts_at: horarioAtualIndisponivel ? "" : reserva.starts_at,
+                        starts_at: horarioAtualIndisponivel
+                          ? ""
+                          : reserva.starts_at,
                         printer_id: "",
                       }));
                     }}
@@ -864,7 +823,7 @@ export function Reservas() {
                       );
 
                       return (
-                        <option key={horario} disabled={passou}>
+                        <option key={horario} value={horario} disabled={passou}>
                           {passou ? `${horario} - indisponivel` : horario}
                         </option>
                       );
@@ -877,6 +836,7 @@ export function Reservas() {
                   <input
                     className="min-h-11 min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
                     min="0.5"
+                    max="24"
                     step="0.5"
                     type="number"
                     required
@@ -902,7 +862,8 @@ export function Reservas() {
                       : "border-border bg-background text-muted",
                   ].join(" ")}
                 >
-                  Janela solicitada: {formatarDataHora(inicioSelecionado.toISOString())} ate{" "}
+                  Janela solicitada:{" "}
+                  {formatarDataHora(inicioSelecionado.toISOString())} ate{" "}
                   {formatarDataHora(fimSelecionado.toISOString())}
                   {horarioSelecionadoJaPassou()
                     ? " - horario ja passou"
@@ -912,31 +873,38 @@ export function Reservas() {
 
               <section>
                 <div className="mb-3 flex items-center gap-2">
-                  <Printer className="h-5 w-5 text-primary" aria-hidden="true" />
+                  <PrinterIcon
+                    className="h-5 w-5 text-primary"
+                    aria-hidden="true"
+                  />
                   <h4 className="text-xl font-bold text-text">
                     Disponibilidade das impressoras
                   </h4>
                 </div>
 
-                {impressoras.length > 0 ? (
+                {impressorasAtivas.length > 0 ? (
                   <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    {impressoras.map((impressora) => {
+                    {impressorasAtivas.map((printer) => {
                       const reservasDaImpressora =
-                        reservasPorImpressora[impressora.id] ?? [];
-                      const ativa = impressora.status === "Ativa";
-                      const compativel = impressoraAceitaMaterial(impressora);
+                        reservasPorImpressora[printer.id] ?? [];
+                      const compativel = novaReserva.material_id
+                        ? impressoraAceitaMaterial(
+                            printer.id,
+                            novaReserva.material_id,
+                          )
+                        : false;
+                      const conflito = getReservaConflitante(printer.id);
                       const disponivel =
-                        impressoraLivreParaHorario(impressora) &&
-                        impressora.allowed_filaments.length > 0 &&
                         compativel &&
+                        !conflito &&
                         !horarioSelecionadoJaPassou();
-                      const selecionada =
-                        novaReserva.printer_id === impressora.id;
-                      const conflito = getReservaConflitante(impressora.id);
+                      const selecionada = novaReserva.printer_id === printer.id;
+                      const materiaisDaImpressora =
+                        getMateriaisDaImpressora(printer.id);
 
                       return (
                         <label
-                          key={impressora.id}
+                          key={printer.id}
                           className={[
                             "grid cursor-pointer gap-3 rounded-lg border p-4 transition",
                             selecionada
@@ -946,15 +914,15 @@ export function Reservas() {
                               ? "hover:border-primary"
                               : "cursor-not-allowed opacity-65",
                           ].join(" ")}
-                          onClick={() => selecionarImpressora(impressora)}
+                          onClick={() => selecionarImpressora(printer)}
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div>
                               <p className="text-lg font-bold text-text">
-                                {impressora.name}
+                                {printer.name}
                               </p>
                               <p className="mt-1 text-sm font-semibold text-muted">
-                                {impressora.brand} - {impressora.model}
+                                {printer.model ?? "Modelo nao informado"}
                               </p>
                             </div>
                             <input
@@ -962,19 +930,16 @@ export function Reservas() {
                               className="mt-1 h-5 w-5 accent-primary"
                               disabled={!disponivel}
                               name="printer_id"
-                              onChange={() => selecionarImpressora(impressora)}
+                              onChange={() => selecionarImpressora(printer)}
                               type="radio"
                             />
                           </div>
 
                           <div className="flex flex-wrap gap-2">
-                            <StatusBadge
-                              label={ativa ? "Disponivel" : impressora.status}
-                              variant={ativa ? "success" : "warning"}
-                            />
+                            <StatusBadge label="Disponivel" variant="success" />
                             <StatusBadge
                               label={
-                                novaReserva.material
+                                novaReserva.material_id
                                   ? compativel
                                     ? "Material ok"
                                     : "Material incompativel"
@@ -983,7 +948,10 @@ export function Reservas() {
                               variant={compativel ? "info" : "neutral"}
                             />
                             {horarioSelecionadoJaPassou() ? (
-                              <StatusBadge label="Horario passado" variant="danger" />
+                              <StatusBadge
+                                label="Horario passado"
+                                variant="danger"
+                              />
                             ) : null}
                             <StatusBadge
                               label={conflito ? "Horario ocupado" : "Horario livre"}
@@ -993,15 +961,17 @@ export function Reservas() {
 
                           <p className="line-clamp-2 text-xs font-semibold leading-5 text-muted">
                             Materiais:{" "}
-                            {impressora.allowed_filaments.length > 0
-                              ? impressora.allowed_filaments.join(", ")
-                              : "Nenhum material cadastrado"}
+                            {materiaisDaImpressora.length > 0
+                              ? materiaisDaImpressora
+                                  .map((material) => material.name)
+                                  .join(", ")
+                              : "Nenhum material compativel"}
                           </p>
 
                           <p className="text-sm font-semibold text-muted">
                             {conflito
                               ? `Ocupada ate ${formatarDataHora(
-                                  conflito.scheduled_end_at,
+                                  conflito.ends_at,
                                 )}`
                               : `${reservasDaImpressora.length} reserva(s) cadastrada(s)`}
                           </p>
@@ -1011,7 +981,8 @@ export function Reservas() {
                   </div>
                 ) : (
                   <p className="rounded-lg border border-dashed border-border bg-background p-4 text-base text-muted">
-                    Cadastre pelo menos uma impressora antes de criar reservas.
+                    Cadastre pelo menos uma impressora ativa antes de criar
+                    reservas.
                   </p>
                 )}
               </section>
@@ -1029,9 +1000,9 @@ export function Reservas() {
                 <Button
                   type="submit"
                   variant="success"
-                  disabled={!formularioReservaCompleto}
+                  disabled={!formularioReservaCompleto || salvando}
                 >
-                  Salvar reserva
+                  {salvando ? "Salvando..." : "Salvar reserva"}
                 </Button>
               </div>
             </form>
@@ -1039,7 +1010,7 @@ export function Reservas() {
         </div>
       ) : null}
 
-      {reservaParaExcluir ? (
+      {reservaParaCancelar ? (
         <div
           aria-modal="true"
           className="fixed inset-0 z-50 flex items-center justify-center bg-text/40 px-4 py-6"
@@ -1055,18 +1026,20 @@ export function Reservas() {
               Cancelar reserva?
             </h3>
             <p className="mt-2 text-base leading-6 text-muted">
-              Tem certeza de que deseja cancelar {reservaParaExcluir.print_name}?
+              Tem certeza de que deseja cancelar{" "}
+              {reservaParaCancelar.project_name}?
             </p>
             <div className="mt-6 flex flex-col-reverse items-center justify-center gap-3 sm:flex-row">
               <Button
                 variant="ghost"
-                onClick={() => setReservaParaExcluir(null)}
+                onClick={() => setReservaParaCancelar(null)}
               >
-                Cancelar
+                Voltar
               </Button>
               <Button
                 variant="danger"
-                onClick={() => excluirMinhaReserva(reservaParaExcluir.id)}
+                disabled={salvando}
+                onClick={() => cancelarReserva(reservaParaCancelar.id)}
               >
                 Cancelar reserva
               </Button>
