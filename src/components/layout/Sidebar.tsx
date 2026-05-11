@@ -1,6 +1,7 @@
 import { NavLink } from "react-router-dom";
 
 import { navigationItems } from "../../lib/navigation";
+import { UserSwitcher } from "./UserSwitcher";
 
 export function Sidebar() {
   return (
@@ -35,6 +36,10 @@ export function Sidebar() {
           </NavLink>
         ))}
       </nav>
+
+      <div className="mt-6">
+        <UserSwitcher />
+      </div>
     </aside>
   );
 }

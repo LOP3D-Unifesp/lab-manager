@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 
 import { MobileNavigation } from "./MobileNavigation";
 import { Sidebar } from "./Sidebar";
+import { UserSwitcher } from "./UserSwitcher";
 
 type AppLayoutProps = {
   children: ReactNode;
@@ -24,6 +25,9 @@ export function AppLayout({ children }: AppLayoutProps) {
             <div className="rounded-lg border border-border bg-background px-3 py-2 text-base font-semibold text-muted">
               MVP
             </div>
+          </div>
+          <div className="mt-3">
+            <UserSwitcher />
           </div>
         </header>
 
