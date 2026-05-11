@@ -1,6 +1,7 @@
 import { FormEvent, useState } from "react";
 import { createPortal } from "react-dom";
 import { Trash2, UserPlus, X } from "lucide-react";
+
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
@@ -13,8 +14,8 @@ import {
 type Visualizacao = "cards" | "lista";
 type Ordenacao = "alfabetica" | "vinculo" | "presenca";
 
-const vinculos = ["IC", "Mestrado", "Doutorado", "Pós-doutorado", "Docente"];
-const presencas = ["No laboratório", "Remoto"];
+const vinculos = ["IC", "Mestrado", "Doutorado", "Pos-doutorado", "Docente"];
+const presencas = ["No laboratorio", "Remoto"];
 
 export function Pesquisadores() {
   const { pesquisadores, adicionarPesquisador, excluirPesquisador } =
@@ -27,43 +28,11 @@ export function Pesquisadores() {
   const [novoPesquisador, setNovoPesquisador] = useState({
     nome: "",
     sobrenome: "",
+    email: "",
+    telefone: "",
     vinculo: vinculos[0],
     status: presencas[0],
   });
-
-  const salvarNovoPesquisador = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    const nome = novoPesquisador.nome.trim();
-    const sobrenome = novoPesquisador.sobrenome.trim();
-
-    if (!nome || !sobrenome) {
-      return;
-    }
-
-    adicionarPesquisador({
-      nome,
-      sobrenome,
-      vinculo: novoPesquisador.vinculo,
-      status: novoPesquisador.status,
-    });
-    setNovoPesquisador({
-      nome: "",
-      sobrenome: "",
-      vinculo: vinculos[0],
-      status: presencas[0],
-    });
-    setModalCadastroAberto(false);
-  };
-
-  const confirmarExclusaoPesquisador = () => {
-    if (!pesquisadorParaExcluir) {
-      return;
-    }
-
-    excluirPesquisador(pesquisadorParaExcluir.id);
-    setPesquisadorParaExcluir(null);
-  };
 
   const pesquisadoresOrdenados = [...pesquisadores].sort((a, b) => {
     if (ordenacao === "vinculo") {
@@ -96,6 +65,47 @@ export function Pesquisadores() {
     backgroundColor: "rgb(16 32 51 / 0.45)",
     backdropFilter: "blur(4px)",
   } as const;
+
+  function salvarNovoPesquisador(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const nome = novoPesquisador.nome.trim();
+    const sobrenome = novoPesquisador.sobrenome.trim();
+    const email = novoPesquisador.email.trim();
+    const telefone = novoPesquisador.telefone.trim();
+
+    if (!nome || !sobrenome || !email || !telefone) {
+      return;
+    }
+
+    adicionarPesquisador({
+      nome,
+      sobrenome,
+      email,
+      telefone,
+      vinculo: novoPesquisador.vinculo,
+      status: novoPesquisador.status,
+      habilidades: [],
+    });
+    setNovoPesquisador({
+      nome: "",
+      sobrenome: "",
+      email: "",
+      telefone: "",
+      vinculo: vinculos[0],
+      status: presencas[0],
+    });
+    setModalCadastroAberto(false);
+  }
+
+  function confirmarExclusaoPesquisador() {
+    if (!pesquisadorParaExcluir) {
+      return;
+    }
+
+    excluirPesquisador(pesquisadorParaExcluir.id);
+    setPesquisadorParaExcluir(null);
+  }
 
   const popupCadastro =
     modalCadastroAberto && typeof document !== "undefined"
@@ -150,7 +160,7 @@ export function Pesquisadores() {
                           nome: event.target.value,
                         }))
                       }
-                    className="min-h-11 min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
+                      className="min-h-11 min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
                       required
                     />
                   </label>
@@ -169,8 +179,40 @@ export function Pesquisadores() {
                     />
                   </label>
                 </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="grid gap-2 text-base font-semibold text-text">
+                    Correo
+                    <input
+                      value={novoPesquisador.email}
+                      onChange={(event) =>
+                        setNovoPesquisador((pesquisador) => ({
+                          ...pesquisador,
+                          email: event.target.value,
+                        }))
+                      }
+                      className="min-h-11 min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
+                      required
+                      type="email"
+                    />
+                  </label>
+                  <label className="grid gap-2 text-base font-semibold text-text">
+                    Telefone
+                    <input
+                      value={novoPesquisador.telefone}
+                      onChange={(event) =>
+                        setNovoPesquisador((pesquisador) => ({
+                          ...pesquisador,
+                          telefone: event.target.value,
+                        }))
+                      }
+                      className="min-h-11 min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
+                      required
+                      type="tel"
+                    />
+                  </label>
+                </div>
                 <label className="grid gap-2 text-base font-semibold text-text">
-                  Vínculo
+                  Vinculo
                   <select
                     value={novoPesquisador.vinculo}
                     onChange={(event) =>
@@ -187,7 +229,7 @@ export function Pesquisadores() {
                   </select>
                 </label>
                 <label className="grid gap-2 text-base font-semibold text-text">
-                  Presença
+                  Presenca
                   <select
                     value={novoPesquisador.status}
                     onChange={(event) =>
@@ -203,14 +245,7 @@ export function Pesquisadores() {
                     ))}
                   </select>
                 </label>
-                <div
-                  className="mt-4 flex flex-col-reverse items-center gap-3 sm:flex-row"
-                  style={{
-                    display: "flex",
-                    justifyContent: "flex-end",
-                    width: "100%",
-                  }}
-                >
+                <div className="mt-4 flex flex-col-reverse items-center gap-3 sm:flex-row sm:justify-end">
                   <Button
                     variant="ghost"
                     className="min-h-9 px-3 py-2 text-base"
@@ -278,7 +313,7 @@ export function Pesquisadores() {
     <div>
       <PageHeader
         title="Pesquisadores"
-        description="Consulta inicial de pesquisadores, vínculos acadêmicos e presença planejada."
+        description="Consulta inicial de pesquisadores, vinculos academicos e presenca planejada."
         action={
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <label className="flex min-h-9 items-center gap-1 rounded-md border border-border bg-surface px-2 text-[11px] font-semibold text-muted">
@@ -290,9 +325,9 @@ export function Pesquisadores() {
                 }
                 className="min-h-7 rounded-md border border-border bg-background px-1.5 text-[11px] font-semibold text-text outline-none transition focus:border-primary"
               >
-                <option value="alfabetica">Ordem alfabética</option>
-                <option value="vinculo">Vínculo</option>
-                <option value="presenca">Presença</option>
+                <option value="alfabetica">Ordem alfabetica</option>
+                <option value="vinculo">Vinculo</option>
+                <option value="presenca">Presenca</option>
               </select>
             </label>
             <div className="flex min-h-9 items-center rounded-md border border-border bg-surface p-1">
@@ -349,31 +384,29 @@ export function Pesquisadores() {
                     {pesquisador.nome} {pesquisador.sobrenome}
                   </h3>
                   <p className="mt-2 text-lg text-muted">
-                    Vínculo: {pesquisador.vinculo}
+                    Vinculo: {pesquisador.vinculo}
+                  </p>
+                  <p className="mt-2 text-sm font-semibold leading-5 text-muted">
+                    {pesquisador.email}
+                  </p>
+                  <p className="mt-1 text-sm font-semibold leading-5 text-muted">
+                    {pesquisador.telefone}
                   </p>
                 </div>
                 <StatusBadge
                   label={pesquisador.status}
                   variant={
-                    pesquisador.status === "No laboratório" ? "success" : "info"
+                    pesquisador.status === "No laboratorio" ? "success" : "info"
                   }
                 />
               </div>
-              <div
-                className="mt-5"
-                style={{
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  width: "100%",
-                }}
-              >
+              <div className="mt-5 flex justify-end">
                 <button
                   type="button"
                   title="Excluir pesquisador"
                   aria-label={`Excluir ${pesquisador.nome} ${pesquisador.sobrenome}`}
                   onClick={() => setPesquisadorParaExcluir(pesquisador)}
                   className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted transition hover:bg-danger-soft hover:text-danger-dark"
-                  style={{ marginLeft: "auto" }}
                 >
                   <Trash2 className="h-4 w-4" aria-hidden="true" />
                 </button>
@@ -391,13 +424,16 @@ export function Pesquisadores() {
                     Pesquisador
                   </th>
                   <th className="px-5 py-3 text-sm font-semibold text-muted">
-                    Vínculo
+                    Vinculo
                   </th>
                   <th className="px-5 py-3 text-sm font-semibold text-muted">
-                    Presença
+                    Contato
+                  </th>
+                  <th className="px-5 py-3 text-sm font-semibold text-muted">
+                    Presenca
                   </th>
                   <th className="w-16 px-5 py-3 text-right text-sm font-semibold text-muted">
-                    Ações
+                    Acoes
                   </th>
                 </tr>
               </thead>
@@ -413,11 +449,19 @@ export function Pesquisadores() {
                     <td className="whitespace-nowrap px-5 py-3 text-base text-muted">
                       {pesquisador.vinculo}
                     </td>
+                    <td className="px-5 py-3 text-sm font-semibold leading-5 text-muted">
+                      <span className="block whitespace-nowrap">
+                        {pesquisador.email}
+                      </span>
+                      <span className="block whitespace-nowrap">
+                        {pesquisador.telefone}
+                      </span>
+                    </td>
                     <td className="whitespace-nowrap px-5 py-3">
                       <StatusBadge
                         label={pesquisador.status}
                         variant={
-                          pesquisador.status === "No laboratório"
+                          pesquisador.status === "No laboratorio"
                             ? "success"
                             : "info"
                         }

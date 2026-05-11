@@ -10,7 +10,7 @@ export function Administracao() {
     <div>
       <PageHeader
         title="Administração"
-        description="Área placeholder para futura gestão de cadastros e parâmetros do laboratório."
+        description=""
         action={<Button fullWidth variant="secondary">Abrir painel</Button>}
       />
 
@@ -20,9 +20,6 @@ export function Administracao() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h3 className="text-2xl font-bold text-text">{area}</h3>
-                <p className="mt-2 text-lg leading-7 text-muted">
-                  Módulo reservado para etapas futuras do MVP.
-                </p>
               </div>
               <StatusBadge label="Futuro" variant="neutral" />
             </div>

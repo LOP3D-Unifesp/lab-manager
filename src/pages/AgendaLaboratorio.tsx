@@ -1,16 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, Plus, Users, X } from "lucide-react";
+import { CalendarDays, Plus, Trash2, Users, X } from "lucide-react";
 
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
-import { StatusBadge } from "../components/ui/StatusBadge";
+import {
+  carregarLocalDatabase,
+  criarLocalAvailabilitySlot,
+  observarLocalDatabase,
+  salvarLocalDatabase,
+  type PeriodoId,
+} from "../lib/localDatabase";
 import { usePesquisadoresCadastrados } from "../lib/pesquisadores";
 
-type PeriodoId = "manha" | "tarde" | "noite";
-
 type AgendaEntry = {
-  id: number;
+  id: string;
+  profileId: string;
   pesquisador: string;
   weekday: number;
   periodo: PeriodoId;
@@ -20,6 +25,14 @@ type SlotSelection = {
   weekday: number;
   periodo: PeriodoId;
 };
+
+type VistaAgenda = "hoje" | "semana";
+
+type PopupSlot = {
+  titulo: string;
+  horario: string;
+  entries: AgendaEntry[];
+} | null;
 
 const limitePorHorario = 10;
 
@@ -33,11 +46,27 @@ const periodos: Array<{
   { id: "noite", label: "Noite", horario: "18:00 - 21:00" },
 ];
 
-const agendaInicial: AgendaEntry[] = [
-  { id: 1, pesquisador: "Ana Lima", weekday: 1, periodo: "manha" },
-  { id: 2, pesquisador: "Bruno Costa", weekday: 1, periodo: "manha" },
-  { id: 3, pesquisador: "Carla Mendes", weekday: 1, periodo: "tarde" },
-];
+async function carregarAgenda() {
+  const database = await carregarLocalDatabase();
+
+  return database.availability_slots.flatMap((slot) => {
+    const profile = database.profiles.find(
+      (item) => item.id === slot.profile_id && item.is_active,
+    );
+
+    if (!profile) {
+      return [];
+    }
+
+    return {
+      id: slot.id,
+      profileId: profile.id,
+      pesquisador: profile.full_name,
+      weekday: slot.weekday,
+      periodo: slot.periodo,
+    };
+  });
+}
 
 const diasDaSemana = [
   "Domingo",
@@ -79,51 +108,136 @@ function isSameSlot(a: SlotSelection, b: SlotSelection) {
   return a.weekday === b.weekday && a.periodo === b.periodo;
 }
 
+function getCorDia(weekday: number) {
+  return weekday % 2 === 1 ? "!bg-sky-50" : "!bg-white";
+}
+
+function getClasseContador(total: number) {
+  if (total === 0) {
+    return "border-border bg-background text-muted hover:bg-surface";
+  }
+
+  if (total <= 5) {
+    return "border-success bg-success-soft text-success-dark hover:bg-surface";
+  }
+
+  if (total <= 8) {
+    return "border-warning-dark bg-warning text-text hover:bg-warning-soft";
+  }
+
+  return "border-danger bg-danger-soft text-danger-dark hover:bg-surface";
+}
+
 export function AgendaLaboratorio() {
   const semanaAtual = useMemo(() => getSemanaAtual(), []);
   const calendarioRef = useRef<HTMLElement | null>(null);
   const { pesquisadores } = usePesquisadoresCadastrados();
-  const nomesPesquisadores = useMemo(
+  const pesquisadoresOrdenados = useMemo(
     () =>
-      pesquisadores
-        .map((pesquisador) => `${pesquisador.nome} ${pesquisador.sobrenome}`)
-        .sort((a, b) => a.localeCompare(b, "pt-BR")),
+      [...pesquisadores].sort((a, b) =>
+        `${a.nome} ${a.sobrenome}`.localeCompare(
+          `${b.nome} ${b.sobrenome}`,
+          "pt-BR",
+        ),
+      ),
     [pesquisadores],
   );
-  const [agenda, setAgenda] = useState(agendaInicial);
+  const nomesPesquisadores = useMemo(
+    () =>
+      pesquisadoresOrdenados.map(
+        (pesquisador) => `${pesquisador.nome} ${pesquisador.sobrenome}`,
+      ),
+    [pesquisadoresOrdenados],
+  );
+  const [agenda, setAgenda] = useState<AgendaEntry[]>([]);
   const [mostrarModal, setMostrarModal] = useState(false);
   const [pesquisadorSelecionado, setPesquisadorSelecionado] = useState("");
   const [slotsSelecionados, setSlotsSelecionados] = useState<SlotSelection[]>(
     [],
   );
+  const [vistaAgenda, setVistaAgenda] = useState<VistaAgenda>("hoje");
+  const [popupSlot, setPopupSlot] = useState<PopupSlot>(null);
   const [erro, setErro] = useState("");
 
   useEffect(() => {
-    if (
-      nomesPesquisadores.length > 0 &&
-      !nomesPesquisadores.includes(pesquisadorSelecionado)
-    ) {
-      setPesquisadorSelecionado(nomesPesquisadores[0]);
-    }
-  }, [nomesPesquisadores, pesquisadorSelecionado]);
+    let ativo = true;
 
+    const atualizarAgenda = async () => {
+      const agendaCarregada = await carregarAgenda();
+
+      if (ativo) {
+        setAgenda(agendaCarregada);
+      }
+    };
+
+    atualizarAgenda();
+    const pararObservacao = observarLocalDatabase(atualizarAgenda);
+
+    return () => {
+      ativo = false;
+      pararObservacao();
+    };
+  }, []);
+
+  useEffect(() => {
+    const idsPesquisadores = pesquisadoresOrdenados.map(
+      (pesquisador) => pesquisador.id,
+    );
+
+    if (
+      idsPesquisadores.length > 0 &&
+      !idsPesquisadores.includes(pesquisadorSelecionado)
+    ) {
+      setPesquisadorSelecionado(idsPesquisadores[0]);
+    }
+  }, [pesquisadoresOrdenados, pesquisadorSelecionado]);
+
+  const pesquisadorAtual = pesquisadoresOrdenados.find(
+    (pesquisador) => pesquisador.id === pesquisadorSelecionado,
+  );
+  const nomePesquisadorSelecionado = pesquisadorAtual
+    ? `${pesquisadorAtual.nome} ${pesquisadorAtual.sobrenome}`
+    : "";
+
+  const hoje = new Date().getDay();
+  const diaAtual = semanaAtual.find((dia) => dia.weekday === hoje);
+  const diasVisiveis =
+    vistaAgenda === "hoje" && diaAtual ? [diaAtual] : semanaAtual;
   const totalPesquisadores = new Set(
-    agenda.map((entry) => entry.pesquisador),
+    agenda
+      .map((entry) => entry.pesquisador)
+      .filter((nome) => nomesPesquisadores.includes(nome)),
   ).size;
   const totalSlots = semanaAtual.length * periodos.length;
   const slotsCheios = semanaAtual.reduce((total, dia) => {
     const cheiosDoDia = periodos.filter(
-      (periodo) => getPesquisadoresDoSlot(dia.weekday, periodo.id).length >= 10,
+      (periodo) =>
+        getTotalPresencialDoSlot(dia.weekday, periodo.id) >= limitePorHorario,
     ).length;
 
     return total + cheiosDoDia;
   }, 0);
 
   function getPesquisadoresDoSlot(weekday: number, periodo: PeriodoId) {
+    return getEntriesDoSlot(weekday, periodo).map((entry) => entry.pesquisador);
+  }
+
+  function getEntriesDoSlot(weekday: number, periodo: PeriodoId) {
     return agenda
       .filter((entry) => entry.weekday === weekday && entry.periodo === periodo)
-      .map((entry) => entry.pesquisador)
-      .sort((a, b) => a.localeCompare(b));
+      .sort((a, b) => a.pesquisador.localeCompare(b.pesquisador));
+  }
+
+  function getTotalPresencialDoSlot(weekday: number, periodo: PeriodoId) {
+    return getEntriesDoSlot(weekday, periodo).filter(
+      (entry) => !pesquisadorEhRemoto(entry.profileId),
+    ).length;
+  }
+
+  function pesquisadorEhRemoto(profileId: string) {
+    const pesquisador = pesquisadores.find((item) => item.id === profileId);
+
+    return pesquisador?.status === "Remoto";
   }
 
   function slotEstaSelecionado(slot: SlotSelection) {
@@ -145,42 +259,88 @@ export function AgendaLaboratorio() {
     });
   }
 
+  function trocarVista(novaVista: VistaAgenda) {
+    setVistaAgenda(novaVista);
+    calendarioRef.current?.scrollIntoView({ behavior: "smooth" });
+  }
+
   function abrirModal() {
     setErro("");
     setMostrarModal(true);
+  }
+
+  async function excluirHorario(slotId: string) {
+    const database = await carregarLocalDatabase();
+
+    await salvarLocalDatabase({
+      ...database,
+      availability_slots: database.availability_slots.filter(
+        (slot) => slot.id !== slotId,
+      ),
+    });
+
+    const agendaAtualizada = await carregarAgenda();
+    setAgenda(agendaAtualizada);
+    setPopupSlot((slotAtual) => {
+      if (!slotAtual) {
+        return null;
+      }
+
+      return {
+        ...slotAtual,
+        entries: slotAtual.entries.filter((entry) => entry.id !== slotId),
+      };
+    });
   }
 
   function fecharModal() {
     setMostrarModal(false);
     setErro("");
     setSlotsSelecionados([]);
-    setPesquisadorSelecionado(nomesPesquisadores[0] ?? "");
+    setPesquisadorSelecionado(pesquisadoresOrdenados[0]?.id ?? "");
   }
 
-  function registrarHorario(event: React.FormEvent<HTMLFormElement>) {
+  async function registrarHorario(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const profileIdSelecionado =
+      String(formData.get("pesquisador_id") ?? "") ||
+      pesquisadorSelecionado ||
+      pesquisadoresOrdenados[0]?.id ||
+      "";
+    const pesquisadorEscolhido = pesquisadoresOrdenados.find(
+      (pesquisador) => pesquisador.id === profileIdSelecionado,
+    );
+    const nomePesquisadorEscolhido = pesquisadorEscolhido
+      ? `${pesquisadorEscolhido.nome} ${pesquisadorEscolhido.sobrenome}`
+      : "";
+    const pesquisadorSelecionadoEhRemoto =
+      pesquisadorEscolhido?.status === "Remoto";
 
     if (slotsSelecionados.length === 0) {
       setErro("Selecione pelo menos um horario da semana.");
       return;
     }
 
-    if (!pesquisadorSelecionado) {
+    if (!profileIdSelecionado) {
       setErro("Cadastre pelo menos um pesquisador antes de registrar horario.");
       return;
     }
 
     const slotCheio = slotsSelecionados.find((slot) => {
-      const totalAtual = getPesquisadoresDoSlot(slot.weekday, slot.periodo)
-        .length;
+      const totalAtual = getTotalPresencialDoSlot(slot.weekday, slot.periodo);
       const jaRegistrado = agenda.some(
         (entry) =>
-          entry.pesquisador === pesquisadorSelecionado &&
+          entry.profileId === profileIdSelecionado &&
           entry.weekday === slot.weekday &&
           entry.periodo === slot.periodo,
       );
 
-      return totalAtual >= limitePorHorario && !jaRegistrado;
+      return (
+        totalAtual >= limitePorHorario &&
+        !jaRegistrado &&
+        !pesquisadorSelecionadoEhRemoto
+      );
     });
 
     if (slotCheio) {
@@ -197,14 +357,15 @@ export function AgendaLaboratorio() {
         (slot) =>
           !agenda.some(
             (entry) =>
-              entry.pesquisador === pesquisadorSelecionado &&
+              entry.profileId === profileIdSelecionado &&
               entry.weekday === slot.weekday &&
               entry.periodo === slot.periodo,
           ),
       )
-      .map((slot, index) => ({
-        id: Date.now() + index,
-        pesquisador: pesquisadorSelecionado,
+      .map((slot) => ({
+        id: "",
+        profileId: profileIdSelecionado,
+        pesquisador: nomePesquisadorEscolhido,
         weekday: slot.weekday,
         periodo: slot.periodo,
       }));
@@ -214,9 +375,29 @@ export function AgendaLaboratorio() {
       return;
     }
 
-    setAgenda((agendaAtual) => [...agendaAtual, ...novosHorarios]);
+    const database = await carregarLocalDatabase();
+    const slotsNovos = novosHorarios.map((slot) => {
+      return criarLocalAvailabilitySlot({
+        profile_id: slot.profileId,
+        weekday: slot.weekday,
+        periodo: slot.periodo,
+      });
+    });
+
+    await salvarLocalDatabase({
+      ...database,
+      availability_slots: [...database.availability_slots, ...slotsNovos],
+    });
+    setAgenda(await carregarAgenda());
     fecharModal();
   }
+
+  const popupEntriesPresenciais =
+    popupSlot?.entries.filter((entry) => !pesquisadorEhRemoto(entry.profileId)) ??
+    [];
+  const popupEntriesRemotas =
+    popupSlot?.entries.filter((entry) => pesquisadorEhRemoto(entry.profileId)) ??
+    [];
 
   return (
     <div>
@@ -227,10 +408,16 @@ export function AgendaLaboratorio() {
           <div className="flex w-full flex-col gap-2 sm:flex-row md:w-auto">
             <Button
               fullWidth
-              variant="secondary"
-              onClick={() =>
-                calendarioRef.current?.scrollIntoView({ behavior: "smooth" })
-              }
+              variant={vistaAgenda === "hoje" ? "primary" : "secondary"}
+              onClick={() => trocarVista("hoje")}
+            >
+              <CalendarDays aria-hidden="true" className="mr-2 h-5 w-5" />
+              Ver hoje
+            </Button>
+            <Button
+              fullWidth
+              variant={vistaAgenda === "semana" ? "primary" : "secondary"}
+              onClick={() => trocarVista("semana")}
             >
               <CalendarDays aria-hidden="true" className="mr-2 h-5 w-5" />
               Ver semana
@@ -250,8 +437,8 @@ export function AgendaLaboratorio() {
               <CalendarDays aria-hidden="true" className="h-6 w-6" />
             </div>
             <div>
-              <p className="text-base font-semibold text-muted">Semana atual</p>
-              <p className="text-2xl font-bold text-text">
+              <p className="text-sm font-semibold text-muted">Semana atual</p>
+              <p className="text-xl font-bold text-text">
                 {semanaAtual[0].numero} - {semanaAtual[4].numero}
               </p>
             </div>
@@ -263,11 +450,11 @@ export function AgendaLaboratorio() {
               <Users aria-hidden="true" className="h-6 w-6" />
             </div>
             <div>
-              <p className="text-base font-semibold text-muted">
+              <p className="text-sm font-semibold text-muted">
                 Pesquisadores
               </p>
-              <p className="text-2xl font-bold text-text">
-                {totalPesquisadores} com horario
+              <p className="text-xl font-bold text-text">
+                {totalPesquisadores} de {nomesPesquisadores.length} com horario
               </p>
             </div>
           </div>
@@ -278,10 +465,10 @@ export function AgendaLaboratorio() {
               <Users aria-hidden="true" className="h-6 w-6" />
             </div>
             <div>
-              <p className="text-base font-semibold text-muted">
+              <p className="text-sm font-semibold text-muted">
                 Horarios cheios
               </p>
-              <p className="text-2xl font-bold text-text">
+              <p className="text-xl font-bold text-text">
                 {slotsCheios} de {totalSlots}
               </p>
             </div>
@@ -290,58 +477,75 @@ export function AgendaLaboratorio() {
       </section>
 
       <section ref={calendarioRef} className="mt-5 scroll-mt-24">
-        <div className="grid gap-4 xl:grid-cols-5">
-          {semanaAtual.map((dia) => (
-            <Card key={dia.weekday} className="flex min-h-[520px] flex-col">
-              <div className="mb-4 border-b border-border pb-3">
-                <h3 className="text-2xl font-bold text-text">{dia.label}</h3>
-                <p className="mt-1 text-lg text-muted">{dia.numero}</p>
+        <div
+          className={
+            vistaAgenda === "hoje"
+              ? "grid gap-4 lg:grid-cols-3"
+              : "grid gap-4 md:grid-cols-2 xl:grid-cols-5"
+          }
+        >
+          {diasVisiveis.map((dia) => (
+            <Card
+              key={dia.weekday}
+              className={[
+                getCorDia(dia.weekday),
+                vistaAgenda === "hoje"
+                  ? "lg:col-span-3"
+                  : "flex min-h-[420px] flex-col",
+              ].join(" ")}
+            >
+              <div className="mb-3 border-b border-border pb-3">
+                <h3 className="text-xl font-bold text-text">{dia.label}</h3>
+                <p className="mt-1 text-base text-muted">{dia.numero}</p>
               </div>
 
-              <div className="flex flex-1 flex-col gap-3">
+              <div
+                className={
+                  vistaAgenda === "hoje"
+                    ? "grid gap-3 md:grid-cols-3"
+                    : "flex flex-1 flex-col gap-3"
+                }
+              >
                 {periodos.map((periodo) => {
-                  const nomes = getPesquisadoresDoSlot(
+                  const entries = getEntriesDoSlot(
                     dia.weekday,
                     periodo.id,
                   );
-                  const estaCheio = nomes.length >= limitePorHorario;
+                  const total = entries.filter(
+                    (entry) => !pesquisadorEhRemoto(entry.profileId),
+                  ).length;
 
                   return (
                     <article
                       key={periodo.id}
-                      className="flex min-h-36 flex-col rounded-lg border border-border bg-background p-4"
+                      className="flex min-h-28 flex-col rounded-lg border border-border bg-white/80 p-3"
                     >
-                      <div className="mb-3 flex items-start justify-between gap-3">
+                      <div className="mb-2 flex items-start justify-between gap-3">
                         <div>
-                          <p className="text-xl font-bold text-text">
+                          <p className="text-lg font-bold text-text">
                             {periodo.label}
                           </p>
-                          <p className="mt-1 text-base font-semibold text-muted">
+                          <p className="mt-1 text-sm font-semibold text-muted">
                             {periodo.horario}
                           </p>
                         </div>
-                        <StatusBadge
-                          label={`${nomes.length}/${limitePorHorario}`}
-                          variant={estaCheio ? "warning" : "success"}
-                        />
+                        <button
+                          type="button"
+                          className={[
+                            "inline-flex min-h-8 items-center rounded-full border px-3 py-1 text-base font-semibold leading-none transition",
+                            getClasseContador(total),
+                          ].join(" ")}
+                          onClick={() =>
+                            setPopupSlot({
+                              titulo: `${dia.label} - ${periodo.label}`,
+                              horario: periodo.horario,
+                              entries,
+                            })
+                          }
+                        >
+                          {total}/{limitePorHorario}
+                        </button>
                       </div>
-
-                      {nomes.length > 0 ? (
-                        <ul className="flex flex-wrap gap-2">
-                          {nomes.map((nome) => (
-                            <li
-                              key={nome}
-                              className="rounded-lg border border-border bg-surface px-3 py-2 text-base font-semibold text-text"
-                            >
-                              {nome}
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="rounded-lg border border-dashed border-border bg-surface p-3 text-base text-muted">
-                          Nenhum pesquisador registrado.
-                        </p>
-                      )}
                     </article>
                   );
                 })}
@@ -350,6 +554,114 @@ export function AgendaLaboratorio() {
           ))}
         </div>
       </section>
+
+      {popupSlot ? (
+        <div
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-text/40 px-4 py-6"
+          role="dialog"
+        >
+          <Card className="w-full max-w-md shadow-soft">
+            <div className="mb-4 flex items-start justify-between gap-4 border-b border-border pb-4">
+              <div>
+                <h3 className="text-2xl font-bold text-text">
+                  {popupSlot.titulo}
+                </h3>
+                <p className="mt-1 text-base font-semibold text-muted">
+                  {popupSlot.horario}
+                </p>
+              </div>
+              <button
+                aria-label="Fechar lista"
+                className="rounded-lg p-2 text-muted transition hover:bg-background hover:text-text"
+                onClick={() => setPopupSlot(null)}
+                type="button"
+              >
+                <X aria-hidden="true" className="h-6 w-6" />
+              </button>
+            </div>
+
+            {popupSlot.entries.length > 0 ? (
+              <div className="grid gap-4">
+                <div>
+                  <p className="mb-2 text-sm font-bold uppercase tracking-wide text-muted">
+                    Presenciais
+                  </p>
+                  {popupEntriesPresenciais.length > 0 ? (
+                    <ul className="grid gap-2">
+                      {popupEntriesPresenciais.map((entry) => (
+                        <li
+                          key={entry.id}
+                          className="flex items-center justify-between gap-3 rounded-md border border-border bg-background px-3 py-2 text-base font-semibold text-text"
+                        >
+                          <span className="min-w-0">
+                            <span className="block truncate">
+                              {entry.pesquisador}
+                            </span>
+                          </span>
+                          <button
+                            type="button"
+                            title="Excluir horario"
+                            aria-label={`Excluir horario de ${entry.pesquisador}`}
+                            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition hover:bg-danger-soft hover:text-danger-dark"
+                            onClick={() => excluirHorario(entry.id)}
+                          >
+                            <Trash2 className="h-4 w-4" aria-hidden="true" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="rounded-md border border-dashed border-border bg-background px-3 py-3 text-base text-muted">
+                      Nenhum pesquisador presencial.
+                    </p>
+                  )}
+                </div>
+
+                {popupEntriesRemotas.length > 0 ? (
+                  <div>
+                    <p className="mb-2 text-sm font-bold uppercase tracking-wide text-muted">
+                      Remotos
+                    </p>
+                    <ul className="grid gap-2">
+                      {popupEntriesRemotas.map((entry) => (
+                        <li
+                          key={entry.id}
+                          className="flex items-center justify-between gap-3 rounded-md border border-warning-dark bg-warning-soft px-3 py-2 text-base font-semibold text-text"
+                        >
+                          <span className="min-w-0">
+                            <span className="block truncate">
+                              {entry.pesquisador}
+                            </span>
+                          </span>
+                          <span className="flex shrink-0 items-center gap-2">
+                            <span className="rounded-full border border-warning-dark bg-warning px-2.5 py-1 text-xs font-bold text-text">
+                              Remoto
+                            </span>
+                            <button
+                              type="button"
+                              title="Excluir horario"
+                              aria-label={`Excluir horario de ${entry.pesquisador}`}
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted transition hover:bg-danger-soft hover:text-danger-dark"
+                              onClick={() => excluirHorario(entry.id)}
+                            >
+                              <Trash2 className="h-4 w-4" aria-hidden="true" />
+                            </button>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <p className="rounded-md border border-dashed border-border bg-background px-3 py-4 text-base text-muted">
+                Nenhum pesquisador registrado.
+              </p>
+            )}
+          </Card>
+        </div>
+      ) : null}
 
       {mostrarModal ? (
         <div
@@ -382,16 +694,19 @@ export function AgendaLaboratorio() {
               <label className="mb-5 flex max-w-md flex-col gap-2 text-base font-semibold text-text">
                 Pesquisador
                 <select
+                  name="pesquisador_id"
                   className="min-h-11 rounded-lg border border-border bg-background px-3 text-lg"
-                  disabled={nomesPesquisadores.length === 0}
+                  disabled={pesquisadoresOrdenados.length === 0}
                   value={pesquisadorSelecionado}
                   onChange={(event) => {
                     setErro("");
                     setPesquisadorSelecionado(event.target.value);
                   }}
                 >
-                  {nomesPesquisadores.map((pesquisador) => (
-                    <option key={pesquisador}>{pesquisador}</option>
+                  {pesquisadoresOrdenados.map((pesquisador) => (
+                    <option key={pesquisador.id} value={pesquisador.id}>
+                      {pesquisador.nome} {pesquisador.sobrenome}
+                    </option>
                   ))}
                 </select>
               </label>
@@ -400,7 +715,10 @@ export function AgendaLaboratorio() {
                 {semanaAtual.map((dia) => (
                   <div
                     key={dia.weekday}
-                    className="rounded-lg border border-border bg-background p-3"
+                    className={[
+                      "rounded-lg border border-border p-3",
+                      getCorDia(dia.weekday),
+                    ].join(" ")}
                   >
                     <div className="mb-3">
                       <p className="text-xl font-bold text-text">
@@ -419,11 +737,17 @@ export function AgendaLaboratorio() {
                           dia.weekday,
                           periodo.id,
                         );
+                        const totalPresencial = getTotalPresencialDoSlot(
+                          dia.weekday,
+                          periodo.id,
+                        );
                         const jaRegistrado = nomes.includes(
-                          pesquisadorSelecionado,
+                          nomePesquisadorSelecionado,
                         );
                         const estaCheio =
-                          nomes.length >= limitePorHorario && !jaRegistrado;
+                          totalPresencial >= limitePorHorario &&
+                          !jaRegistrado &&
+                          pesquisadorAtual?.status !== "Remoto";
                         const selecionado = slotEstaSelecionado(slot);
 
                         return (
@@ -442,7 +766,7 @@ export function AgendaLaboratorio() {
                             <input
                               checked={selecionado}
                               className="mt-1 h-5 w-5 accent-primary"
-                              disabled={estaCheio}
+                              disabled={estaCheio && !selecionado}
                               onChange={() => toggleSlot(slot)}
                               type="checkbox"
                             />
@@ -453,8 +777,13 @@ export function AgendaLaboratorio() {
                               <span className="block text-base text-muted">
                                 {periodo.horario}
                               </span>
-                              <span className="mt-1 block text-base font-semibold text-primary">
-                                {nomes.length}/{limitePorHorario} registrados
+                              <span
+                                className={[
+                                  "mt-2 inline-flex min-h-7 items-center rounded-full border px-2.5 py-1 text-sm font-semibold leading-none",
+                                  getClasseContador(totalPresencial),
+                                ].join(" ")}
+                              >
+                                {totalPresencial}/{limitePorHorario}
                               </span>
                             </span>
                           </label>

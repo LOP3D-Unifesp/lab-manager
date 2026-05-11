@@ -1,100 +1,101 @@
 import { useEffect, useState } from "react";
+import {
+  carregarLocalDatabase,
+  criarLocalProfile,
+  observarLocalDatabase,
+  salvarLocalDatabase,
+} from "./localDatabase";
 
 export type Pesquisador = {
-  id: number;
+  id: string;
   nome: string;
   sobrenome: string;
   vinculo: string;
   status: string;
+  email: string;
+  telefone: string;
+  habilidades: string[];
 };
 
-const STORAGE_KEY = "lab-manager:pesquisadores";
-const STORAGE_EVENT = "lab-manager:pesquisadores-atualizados";
-
-export const pesquisadoresIniciais: Pesquisador[] = [
-  {
-    id: 1,
-    nome: "Ana",
-    sobrenome: "Lima",
-    vinculo: "Mestrado",
-    status: "No laboratório",
-  },
-  {
-    id: 2,
-    nome: "Bruno",
-    sobrenome: "Costa",
-    vinculo: "IC",
-    status: "Remoto",
-  },
-  {
-    id: 3,
-    nome: "Carla",
-    sobrenome: "Mendes",
-    vinculo: "Doutorado",
-    status: "No laboratório",
-  },
-];
-
-function carregarPesquisadores() {
-  if (typeof window === "undefined") {
-    return pesquisadoresIniciais;
+function formatarPresenca(status: string) {
+  if (status === "Remoto") {
+    return "Remoto";
   }
 
-  const pesquisadoresSalvos = window.localStorage.getItem(STORAGE_KEY);
-
-  if (!pesquisadoresSalvos) {
-    return pesquisadoresIniciais;
-  }
-
-  try {
-    return JSON.parse(pesquisadoresSalvos) as Pesquisador[];
-  } catch {
-    return pesquisadoresIniciais;
-  }
+  return "No laboratorio";
 }
 
-function salvarPesquisadores(pesquisadores: Pesquisador[]) {
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(pesquisadores));
-  window.dispatchEvent(new Event(STORAGE_EVENT));
+async function carregarPesquisadores() {
+  const database = await carregarLocalDatabase();
+
+  return database.profiles
+    .filter((profile) => profile.is_active)
+    .map((profile) => ({
+      id: profile.id,
+      nome: profile.first_name,
+      sobrenome: profile.last_name,
+      vinculo: profile.academic_affiliation,
+      status: formatarPresenca(profile.presence_status),
+      email: profile.email ?? "",
+      telefone: profile.phone ?? "",
+      habilidades: profile.skills ?? [],
+    }));
 }
 
 export function usePesquisadoresCadastrados() {
-  const [pesquisadores, setPesquisadores] = useState(carregarPesquisadores);
+  const [pesquisadores, setPesquisadores] = useState<Pesquisador[]>([]);
 
   useEffect(() => {
-    const atualizarPesquisadores = () => {
-      setPesquisadores(carregarPesquisadores());
+    let ativo = true;
+
+    const atualizarPesquisadores = async () => {
+      const lista = await carregarPesquisadores();
+
+      if (ativo) {
+        setPesquisadores(lista);
+      }
     };
 
-    window.addEventListener(STORAGE_EVENT, atualizarPesquisadores);
-    window.addEventListener("storage", atualizarPesquisadores);
+    atualizarPesquisadores();
+    const pararObservacao = observarLocalDatabase(atualizarPesquisadores);
 
     return () => {
-      window.removeEventListener(STORAGE_EVENT, atualizarPesquisadores);
-      window.removeEventListener("storage", atualizarPesquisadores);
+      ativo = false;
+      pararObservacao();
     };
   }, []);
 
-  const adicionarPesquisador = (pesquisador: Omit<Pesquisador, "id">) => {
-    const listaAtualizada = [
-      ...carregarPesquisadores(),
-      {
-        id: Date.now(),
-        ...pesquisador,
-      },
-    ];
+  const adicionarPesquisador = async (
+    pesquisador: Omit<Pesquisador, "id">,
+  ) => {
+    const database = await carregarLocalDatabase();
+    const profile = criarLocalProfile({
+      first_name: pesquisador.nome,
+      last_name: pesquisador.sobrenome,
+      academic_affiliation: pesquisador.vinculo,
+      presence_status: pesquisador.status,
+      email: pesquisador.email,
+      phone: pesquisador.telefone,
+    });
 
-    salvarPesquisadores(listaAtualizada);
-    setPesquisadores(listaAtualizada);
+    await salvarLocalDatabase({
+      ...database,
+      profiles: [...database.profiles, profile],
+    });
+    setPesquisadores(await carregarPesquisadores());
   };
 
-  const excluirPesquisador = (id: number) => {
-    const listaAtualizada = carregarPesquisadores().filter(
-      (pesquisador) => pesquisador.id !== id,
-    );
+  const excluirPesquisador = async (id: string) => {
+    const database = await carregarLocalDatabase();
 
-    salvarPesquisadores(listaAtualizada);
-    setPesquisadores(listaAtualizada);
+    await salvarLocalDatabase({
+      ...database,
+      profiles: database.profiles.filter((profile) => profile.id !== id),
+      availability_slots: database.availability_slots.filter(
+        (slot) => slot.profile_id !== id,
+      ),
+    });
+    setPesquisadores(await carregarPesquisadores());
   };
 
   return {
