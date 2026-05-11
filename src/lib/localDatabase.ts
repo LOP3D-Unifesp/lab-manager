@@ -16,6 +16,14 @@ export type LocalProfile = {
   updated_at: string;
 };
 
+export type LocalUser = {
+  id: string;
+  username: string;
+  password: string; // In a real app, hash this
+  profile_id: string;
+  created_at: string;
+};
+
 export type LocalAvailabilitySlot = {
   id: string;
   profile_id: string;
@@ -62,6 +70,7 @@ export type LocalDatabase = {
   availability_slots: LocalAvailabilitySlot[];
   printers: LocalPrinter[];
   print_reservations: LocalPrintReservation[];
+  users: LocalUser[];
 };
 
 const API_URL = "/api/local-database";
@@ -84,6 +93,7 @@ const databaseInicial: LocalDatabase = {
   availability_slots: [],
   printers: [],
   print_reservations: [],
+  users: [],
 };
 
 function agora() {
@@ -148,6 +158,7 @@ function normalizarDatabase(database: Partial<LocalDatabase>): LocalDatabase {
     print_reservations: Array.isArray(database.print_reservations)
       ? database.print_reservations.map(normalizarReserva)
       : [],
+    users: Array.isArray(database.users) ? database.users : [],
   };
 }
 
@@ -262,6 +273,22 @@ export function criarIdLocal() {
   }
 
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+export function criarLocalUser(params: {
+  username: string;
+  password: string;
+  profile_id: string;
+}) {
+  const timestamp = agora();
+
+  return {
+    id: criarIdLocal(),
+    username: params.username,
+    password: params.password,
+    profile_id: params.profile_id,
+    created_at: timestamp,
+  } satisfies LocalUser;
 }
 
 export function criarLocalProfile(params: {

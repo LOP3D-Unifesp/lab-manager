@@ -26,6 +26,7 @@ const databaseVazio: LocalDatabase = {
   availability_slots: [],
   printers: [],
   print_reservations: [],
+  users: [],
 };
 
 function getDataLocalPadrao() {

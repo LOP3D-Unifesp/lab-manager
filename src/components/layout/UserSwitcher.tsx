@@ -1,31 +1,27 @@
-import { User } from "lucide-react";
+import { LogOut, User } from "lucide-react";
 
-import { useCurrentProfile } from "../../lib/currentUser";
+import { useAuth } from "../../lib/auth";
 
 export function UserSwitcher() {
-  const { currentProfileId, profiles, setCurrentProfileId } = useCurrentProfile();
+  const { user, logout } = useAuth();
 
-  if (profiles.length === 0) {
+  if (!user) {
     return null;
   }
 
   return (
-    <label className="grid gap-2 rounded-lg border border-border bg-background p-3 text-sm font-semibold text-muted">
+    <div className="grid gap-2 rounded-lg border border-border bg-background p-3 text-sm font-semibold text-muted">
       <span className="flex items-center gap-2">
         <User className="h-4 w-4 text-primary" aria-hidden="true" />
-        Usuario atual
+        {user.first_name} {user.last_name}
       </span>
-      <select
-        value={currentProfileId}
-        onChange={(event) => setCurrentProfileId(event.target.value)}
-        className="min-h-9 rounded-md border border-border bg-surface px-2 text-sm font-semibold text-text outline-none transition focus:border-primary"
+      <button
+        onClick={logout}
+        className="flex items-center gap-2 rounded-md border border-border bg-surface px-2 py-1 text-sm font-semibold text-text outline-none transition hover:bg-surface/80 focus:border-primary"
       >
-        {profiles.map((profile) => (
-          <option key={profile.id} value={profile.id}>
-            {profile.full_name}
-          </option>
-        ))}
-      </select>
-    </label>
+        <LogOut className="h-4 w-4" />
+        Sair
+      </button>
+    </div>
   );
 }

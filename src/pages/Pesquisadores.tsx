@@ -1,6 +1,6 @@
-import { FormEvent, useState } from "react";
+import { useState } from "react";
 import { createPortal } from "react-dom";
-import { Trash2, UserPlus, X } from "lucide-react";
+import { Trash2, X } from "lucide-react";
 
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
@@ -14,25 +14,13 @@ import {
 type Visualizacao = "cards" | "lista";
 type Ordenacao = "alfabetica" | "vinculo" | "presenca";
 
-const vinculos = ["IC", "Mestrado", "Doutorado", "Pos-doutorado", "Docente"];
-const presencas = ["No laboratorio", "Remoto"];
-
 export function Pesquisadores() {
-  const { pesquisadores, adicionarPesquisador, excluirPesquisador } =
+  const { pesquisadores, excluirPesquisador } =
     usePesquisadoresCadastrados();
   const [visualizacao, setVisualizacao] = useState<Visualizacao>("cards");
   const [ordenacao, setOrdenacao] = useState<Ordenacao>("alfabetica");
-  const [modalCadastroAberto, setModalCadastroAberto] = useState(false);
   const [pesquisadorParaExcluir, setPesquisadorParaExcluir] =
     useState<Pesquisador | null>(null);
-  const [novoPesquisador, setNovoPesquisador] = useState({
-    nome: "",
-    sobrenome: "",
-    email: "",
-    telefone: "",
-    vinculo: vinculos[0],
-    status: presencas[0],
-  });
 
   const pesquisadoresOrdenados = [...pesquisadores].sort((a, b) => {
     if (ordenacao === "vinculo") {
@@ -66,38 +54,6 @@ export function Pesquisadores() {
     backdropFilter: "blur(4px)",
   } as const;
 
-  function salvarNovoPesquisador(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    const nome = novoPesquisador.nome.trim();
-    const sobrenome = novoPesquisador.sobrenome.trim();
-    const email = novoPesquisador.email.trim();
-    const telefone = novoPesquisador.telefone.trim();
-
-    if (!nome || !sobrenome || !email || !telefone) {
-      return;
-    }
-
-    adicionarPesquisador({
-      nome,
-      sobrenome,
-      email,
-      telefone,
-      vinculo: novoPesquisador.vinculo,
-      status: novoPesquisador.status,
-      habilidades: [],
-    });
-    setNovoPesquisador({
-      nome: "",
-      sobrenome: "",
-      email: "",
-      telefone: "",
-      vinculo: vinculos[0],
-      status: presencas[0],
-    });
-    setModalCadastroAberto(false);
-  }
-
   function confirmarExclusaoPesquisador() {
     if (!pesquisadorParaExcluir) {
       return;
@@ -106,166 +62,6 @@ export function Pesquisadores() {
     excluirPesquisador(pesquisadorParaExcluir.id);
     setPesquisadorParaExcluir(null);
   }
-
-  const popupCadastro =
-    modalCadastroAberto && typeof document !== "undefined"
-      ? createPortal(
-          <div className="p-4" style={estiloCamadaPopup}>
-            <div
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="titulo-cadastro-pesquisador"
-              className="rounded-lg border border-border bg-surface px-8 py-7 text-center shadow-2xl sm:px-10 sm:py-9"
-              style={{
-                boxSizing: "border-box",
-                padding: "2.25rem 3rem",
-                width: "min(94vw, 760px)",
-              }}
-            >
-              <div className="mb-5 flex items-start justify-between gap-4 text-left">
-                <div>
-                  <h3
-                    id="titulo-cadastro-pesquisador"
-                    className="text-[24px] font-bold leading-tight text-text"
-                  >
-                    Adicionar pesquisador
-                  </h3>
-                  <p className="mt-1.5 text-base leading-6 text-muted">
-                    Informe os dados principais do pesquisador.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  title="Fechar"
-                  aria-label="Fechar cadastro"
-                  onClick={() => setModalCadastroAberto(false)}
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-md text-muted transition hover:bg-background hover:text-text"
-                >
-                  <X className="h-5 w-5" aria-hidden="true" />
-                </button>
-              </div>
-
-              <form
-                className="grid gap-4 text-left"
-                onSubmit={salvarNovoPesquisador}
-              >
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="grid gap-2 text-base font-semibold text-text">
-                    Nome
-                    <input
-                      value={novoPesquisador.nome}
-                      onChange={(event) =>
-                        setNovoPesquisador((pesquisador) => ({
-                          ...pesquisador,
-                          nome: event.target.value,
-                        }))
-                      }
-                      className="min-h-11 min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
-                      required
-                    />
-                  </label>
-                  <label className="grid gap-2 text-base font-semibold text-text">
-                    Sobrenome
-                    <input
-                      value={novoPesquisador.sobrenome}
-                      onChange={(event) =>
-                        setNovoPesquisador((pesquisador) => ({
-                          ...pesquisador,
-                          sobrenome: event.target.value,
-                        }))
-                      }
-                      className="min-h-11 min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
-                      required
-                    />
-                  </label>
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="grid gap-2 text-base font-semibold text-text">
-                    Correo
-                    <input
-                      value={novoPesquisador.email}
-                      onChange={(event) =>
-                        setNovoPesquisador((pesquisador) => ({
-                          ...pesquisador,
-                          email: event.target.value,
-                        }))
-                      }
-                      className="min-h-11 min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
-                      required
-                      type="email"
-                    />
-                  </label>
-                  <label className="grid gap-2 text-base font-semibold text-text">
-                    Telefone
-                    <input
-                      value={novoPesquisador.telefone}
-                      onChange={(event) =>
-                        setNovoPesquisador((pesquisador) => ({
-                          ...pesquisador,
-                          telefone: event.target.value,
-                        }))
-                      }
-                      className="min-h-11 min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
-                      required
-                      type="tel"
-                    />
-                  </label>
-                </div>
-                <label className="grid gap-2 text-base font-semibold text-text">
-                  Vinculo
-                  <select
-                    value={novoPesquisador.vinculo}
-                    onChange={(event) =>
-                      setNovoPesquisador((pesquisador) => ({
-                        ...pesquisador,
-                        vinculo: event.target.value,
-                      }))
-                    }
-                    className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
-                  >
-                    {vinculos.map((vinculo) => (
-                      <option key={vinculo}>{vinculo}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="grid gap-2 text-base font-semibold text-text">
-                  Presenca
-                  <select
-                    value={novoPesquisador.status}
-                    onChange={(event) =>
-                      setNovoPesquisador((pesquisador) => ({
-                        ...pesquisador,
-                        status: event.target.value,
-                      }))
-                    }
-                    className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
-                  >
-                    {presencas.map((presenca) => (
-                      <option key={presenca}>{presenca}</option>
-                    ))}
-                  </select>
-                </label>
-                <div className="mt-4 flex flex-col-reverse items-center gap-3 sm:flex-row sm:justify-end">
-                  <Button
-                    variant="ghost"
-                    className="min-h-9 px-3 py-2 text-base"
-                    onClick={() => setModalCadastroAberto(false)}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    type="submit"
-                    className="min-h-9 px-3 py-2 text-base"
-                  >
-                    Salvar pesquisador
-                  </Button>
-                </div>
-              </form>
-            </div>
-          </div>,
-          document.body,
-        )
-      : null;
 
   const popupExclusao =
     pesquisadorParaExcluir && typeof document !== "undefined"
@@ -362,14 +158,6 @@ export function Pesquisadores() {
                 Lista
               </button>
             </div>
-            <Button
-              fullWidth
-              variant="secondary"
-              onClick={() => setModalCadastroAberto(true)}
-            >
-              <UserPlus className="mr-2 h-5 w-5" aria-hidden="true" />
-              Adicionar pesquisador
-            </Button>
           </div>
         }
       />
@@ -486,7 +274,6 @@ export function Pesquisadores() {
         </section>
       )}
 
-      {popupCadastro}
       {popupExclusao}
     </div>
   );
