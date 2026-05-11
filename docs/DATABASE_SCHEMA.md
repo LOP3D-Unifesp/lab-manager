@@ -43,6 +43,7 @@ Vinculo academico ou institucional do pesquisador. Nao altera permissoes.
 
 - `ic`
 - `extension`
+- `intern`
 - `tcc`
 - `masters`
 - `phd`
@@ -51,6 +52,10 @@ Vinculo academico ou institucional do pesquisador. Nao altera permissoes.
 - `technician`
 - `faculty`
 - `other`
+
+Observacao:
+
+- `intern` representa Estagiario.
 
 ### `invitation_status`
 
@@ -217,6 +222,16 @@ Indices recomendados:
 Regras de integridade:
 
 - O token puro nunca deve ser persistido.
+- O sistema nao tera cadastro publico aberto.
+- O coordenador cria um convite para um email especifico.
+- O sistema gera um link de convite com token, mas salva apenas `token_hash`.
+- O pesquisador acessa o link de convite antes de criar conta.
+- Antes de permitir cadastro, o sistema valida `token_hash`, `status`, `expires_at` e o email associado ao convite.
+- Se o convite for valido, o pesquisador pode criar sua conta no Supabase Auth.
+- Apos a conta ser criada e autenticada, o sistema cria o `profile` vinculado a `auth.users.id`.
+- O `profile` deve herdar ou validar o email do convite.
+- Sem convite valido, o sistema nao deve permitir criacao de perfil.
+- Usuarios autenticados sem `profile` valido nao devem acessar areas internas do sistema.
 - Todo convite deve ter expiracao obrigatoria em `expires_at`.
 - Apenas convites `pending` e nao expirados podem ser aceitos.
 - Convites aceitos nao podem ser reutilizados.
@@ -317,6 +332,8 @@ Regras de integridade:
 
 Finalidade: armazenar o catalogo de idiomas que pesquisadores podem associar aos seus perfis. Idiomas nao devem ser tratados como `skills`, porque representam capacidade de comunicacao, nao habilidade tecnica.
 
+Idiomas fazem parte do schema inicial do MVP para suportar pesquisadores internacionais. A interface inicial pode ser simples, mas o modelo de dados ja deve permitir associar idiomas falados aos perfis.
+
 Campos sugeridos:
 
 | Campo | Tipo PostgreSQL | Obrigatorio | Descricao |
@@ -364,6 +381,8 @@ Regras de integridade:
 ### 3.6 `profile_languages`
 
 Finalidade: representar a relacao muitos-para-muitos entre perfis e idiomas falados.
+
+Esta tabela faz parte do schema inicial do MVP para que perfis de pesquisadores internacionais possam registrar idiomas desde a primeira versao do banco, mesmo que a interface de gerenciamento seja simples.
 
 Campos sugeridos:
 
@@ -618,7 +637,7 @@ Campos sugeridos:
 | `project_name` | `text` | Sim | Nome ou identificacao do projeto. |
 | `starts_at` | `timestamptz` | Sim | Inicio da reserva. |
 | `ends_at` | `timestamptz` | Sim | Fim calculado da reserva. |
-| `estimated_duration_minutes` | `integer` | Nao | Duracao estimada informada ou derivada. |
+| `estimated_duration_minutes` | `integer` | Sim | Duracao estimada informada no MVP para calcular `ends_at`. |
 | `status` | `booking_status` | Sim | Status da reserva. |
 | `notes` | `text` | Nao | Observacoes da reserva. |
 | `cancelled_at` | `timestamptz` | Nao | Data de cancelamento. |
@@ -646,13 +665,13 @@ Campos obrigatorios:
 - `project_name`
 - `starts_at`
 - `ends_at`
+- `estimated_duration_minutes`
 - `status`
 - `created_at`
 - `updated_at`
 
 Campos opcionais:
 
-- `estimated_duration_minutes`
 - `notes`
 - `cancelled_at`
 - `cancelled_by`
@@ -670,6 +689,7 @@ Indices recomendados:
 Regras de integridade:
 
 - `starts_at` deve ser anterior a `ends_at`.
+- `estimated_duration_minutes` e obrigatorio no MVP, porque a reserva manual exige duracao estimada para calcular `ends_at`.
 - No MVP, novas reservas devem iniciar com status `approved`.
 - `pending` deve permanecer disponivel para fluxo futuro de aprovacao manual.
 - Reservas com status `pending`, `approved` ou `in_progress` bloqueiam o horario.
@@ -790,7 +810,9 @@ Regras obrigatorias:
 - impressoras `disabled`, `unavailable` ou `maintenance` nao devem aceitar novas reservas;
 - impressoras `disabled` permanecem disponiveis para historico, mas nao para novas reservas.
 
-Observacao para migrations futuras: a prevencao de conflito deve ser garantida no banco, nao apenas no frontend. A implementacao pode usar constraint de exclusao com ranges ou funcao transacional, a ser definida na etapa de migrations.
+Estrategia preferencial para o MVP: a prevencao de conflito deve ser garantida no banco por funcao transacional/RPC no Supabase/PostgreSQL, nao apenas no frontend. A funcao deve validar conflitos com `printer_bookings` ativos e `maintenance_blocks` da mesma impressora antes de inserir ou alterar uma reserva.
+
+Melhoria futura: uma constraint de exclusao com ranges pode substituir ou complementar a funcao transacional, mas nao e obrigatoria para o MVP inicial.
 
 ## 6. Estrategia geral de Row Level Security
 
@@ -799,6 +821,7 @@ Esta secao descreve a estrategia de RLS em nivel conceitual. Nenhuma politica SQ
 Regras gerais:
 
 - Apenas usuarios autenticados podem acessar dados do sistema.
+- Usuarios autenticados sem `profile` valido nao devem acessar areas internas do sistema.
 - `auth.uid()` deve ser comparado a `profiles.id` para identificar o usuario atual.
 - Permissoes administrativas devem consultar `profiles.role = 'coordinator'`.
 - Pesquisadores nao podem alterar o proprio `role`.
@@ -867,20 +890,29 @@ Validacoes a cobrir quando migrations, policies e camada de aplicacao forem impl
 ## 9. Assumptions fechadas
 
 - `profiles.id` sera igual a `auth.users.id`.
+- O sistema nao tera cadastro publico aberto.
 - Convites usarao `email` e `token_hash`.
 - Token puro de convite nunca sera salvo no banco.
 - Convites terao expiracao obrigatoria via `expires_at`.
+- Antes do cadastro, o sistema validara `token_hash`, status, expiracao e email associado ao convite.
+- Contas no Supabase Auth so poderao gerar `profile` quando houver convite valido.
+- O `profile` criado no aceite deve herdar ou validar o email do convite.
+- Usuarios sem `profile` valido nao acessam areas internas do sistema.
 - `weekday` sera inteiro de `0` a `6`.
 - Reservas e bloqueios usarao `starts_at timestamptz` e `ends_at timestamptz`.
+- `estimated_duration_minutes` sera obrigatorio em `printer_bookings` no MVP.
 - No MVP, novas reservas comecam como `approved`.
 - `pending` fica reservado para fluxo futuro de aprovacao.
 - Manutencao nao pode coexistir com reservas ativas no mesmo periodo.
+- A estrategia preferencial inicial de conflito sera funcao transacional/RPC no Supabase/PostgreSQL.
+- Exclusion constraint com ranges fica como melhoria futura, nao obrigatoria para o MVP.
 - Materiais serao catalogo tecnico simples no MVP, sem controle de estoque.
 - `materials` continua sendo usado por `printer_materials` e `printer_bookings`.
 - Cadastro de rolos, lotes fisicos, fabricante, cor, peso e secagem fica fora do MVP.
 - Impressoras `disabled` nao aparecem para novas reservas, mas permanecem no historico.
 - O MVP registra nacionalidade ou pais principal em `nationality_country_code`, nao residencia ou instituicao.
 - Idiomas indicam apenas quais idiomas a pessoa fala.
+- Idiomas entram no schema inicial do MVP para suportar pesquisadores internacionais, ainda que a interface inicial seja simples.
 - Nao havera `proficiency_level` no MVP.
 - `proficiency_level` fica reservado como evolucao futura em `profile_languages`.
 - Idiomas nao sao habilidades tecnicas e nao entram em `skills`.
