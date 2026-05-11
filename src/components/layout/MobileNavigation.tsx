@@ -6,10 +6,18 @@ import {
   mobilePrimaryNavigationItems,
   mobileSecondaryNavigationItems,
 } from "../../lib/navigation";
+import { useAuth } from "../../lib/auth";
 
 export function MobileNavigation() {
+  const { profile } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const secondaryNavigationId = "mobile-secondary-navigation";
+  const primaryItems = mobilePrimaryNavigationItems.filter((item) => {
+    return item.path !== "/administracao" || profile?.role === "coordinator";
+  });
+  const secondaryItems = mobileSecondaryNavigationItems.filter((item) => {
+    return item.path !== "/administracao" || profile?.role === "coordinator";
+  });
 
   return (
     <nav
@@ -21,7 +29,7 @@ export function MobileNavigation() {
           id={secondaryNavigationId}
           className="mb-2 rounded-lg border border-border bg-background p-2"
         >
-          {mobileSecondaryNavigationItems.map((item) => (
+          {secondaryItems.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
@@ -41,7 +49,7 @@ export function MobileNavigation() {
       ) : null}
 
       <div className="grid grid-cols-5 gap-1">
-        {mobilePrimaryNavigationItems.map((item) => (
+        {primaryItems.map((item) => (
           <NavLink
             key={item.path}
             to={item.path}

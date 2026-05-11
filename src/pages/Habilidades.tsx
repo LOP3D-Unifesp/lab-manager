@@ -75,11 +75,19 @@ export function Habilidades() {
   }
 
   async function alternarMinhaHabilidade(habilidade: string) {
-    if (!currentProfile) {
+    if (!currentProfile || !habilidadesDefinidas.includes(habilidade)) {
       return;
     }
 
     const database = await carregarLocalDatabase();
+    const profileAtualizadoExiste = database.profiles.some(
+      (profile) => profile.id === currentProfile.id && profile.is_active,
+    );
+
+    if (!profileAtualizadoExiste) {
+      return;
+    }
+
     const profilesAtualizados = database.profiles.map((profile) => {
       if (profile.id !== currentProfile.id) {
         return profile;

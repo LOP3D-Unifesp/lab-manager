@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 
 import { MobileNavigation } from "./MobileNavigation";
 import { Sidebar } from "./Sidebar";
-import { UserSwitcher } from "./UserSwitcher";
+import { AuthUserMenu } from "./AuthUserMenu";
 
 type AppLayoutProps = {
   children: ReactNode;
@@ -27,7 +27,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             </div>
           </div>
           <div className="mt-3">
-            <UserSwitcher />
+            <AuthUserMenu />
           </div>
         </header>
 

@@ -1,9 +1,15 @@
 import { NavLink } from "react-router-dom";
 
+import { useAuth } from "../../lib/auth";
 import { navigationItems } from "../../lib/navigation";
-import { UserSwitcher } from "./UserSwitcher";
+import { AuthUserMenu } from "./AuthUserMenu";
 
 export function Sidebar() {
+  const { profile } = useAuth();
+  const visibleNavigationItems = navigationItems.filter((item) => {
+    return item.path !== "/administracao" || profile?.role === "coordinator";
+  });
+
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 border-r border-border bg-surface px-5 py-6 lg:block">
       <div className="mb-8 border-b border-border pb-6">
@@ -17,7 +23,7 @@ export function Sidebar() {
       </div>
 
       <nav aria-label="Navegação principal" className="space-y-2">
-        {navigationItems.map((item) => (
+        {visibleNavigationItems.map((item) => (
           <NavLink
             key={item.path}
             to={item.path}
@@ -38,7 +44,7 @@ export function Sidebar() {
       </nav>
 
       <div className="mt-6">
-        <UserSwitcher />
+        <AuthUserMenu />
       </div>
     </aside>
   );

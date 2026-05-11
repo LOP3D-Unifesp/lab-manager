@@ -8,7 +8,9 @@ import { StatusBadge } from "../components/ui/StatusBadge";
 import { useCurrentProfile } from "../lib/currentUser";
 import {
   carregarLocalDatabase,
+  criarDataLocalSegura,
   observarLocalDatabase,
+  reservaBloqueiaHorario,
   type LocalDatabase,
   type LocalPrintReservation,
   type LocalPrinter,
@@ -37,13 +39,6 @@ function getDataLocalPadrao() {
   return `${ano}-${mes}-${dia}`;
 }
 
-function criarDataLocal(data: string, horario: string) {
-  const [ano, mes, dia] = data.split("-").map(Number);
-  const [hora, minuto] = horario.split(":").map(Number);
-
-  return new Date(ano, mes - 1, dia, hora, minuto);
-}
-
 function formatarHorario(valor?: string) {
   if (!valor) {
     return "";
@@ -69,7 +64,12 @@ function reservaEhDaData(reserva: LocalPrintReservation, data: string) {
     return false;
   }
 
-  const inicioDia = criarDataLocal(data, "00:00");
+  const inicioDia = criarDataLocalSegura(data, "00:00");
+
+  if (!inicioDia || !reservaBloqueiaHorario(reserva)) {
+    return false;
+  }
+
   const fimDia = new Date(inicioDia.getTime() + 24 * 60 * 60 * 1000);
 
   return intervalosSeCruzam(

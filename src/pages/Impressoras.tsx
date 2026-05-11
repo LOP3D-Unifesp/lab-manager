@@ -133,6 +133,15 @@ export function Impressoras() {
     }
 
     const database = await carregarLocalDatabase();
+
+    if (
+      database.printers.some(
+        (impressora) => impressora.name.trim().toLowerCase() === name.toLowerCase(),
+      )
+    ) {
+      return;
+    }
+
     const printer = criarLocalPrinter({
       name,
       model,
@@ -173,6 +182,17 @@ export function Impressoras() {
     }
 
     const database = await carregarLocalDatabase();
+
+    if (
+      database.printers.some(
+        (impressora) =>
+          impressora.id !== impressoraEmEdicao.id &&
+          impressora.name.trim().toLowerCase() === name.toLowerCase(),
+      )
+    ) {
+      return;
+    }
+
     const impressoraAtualizada: LocalPrinter = {
       ...impressoraEmEdicao,
       name,
@@ -473,6 +493,8 @@ export function Impressoras() {
                   >
                     <option value="Ativa">Ativa</option>
                     <option value="Em manutencao">Em manutencao</option>
+                    <option value="Indisponivel">Indisponivel</option>
+                    <option value="Desativada">Desativada</option>
                   </select>
                 </label>
 

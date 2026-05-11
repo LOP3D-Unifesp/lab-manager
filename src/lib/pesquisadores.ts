@@ -69,12 +69,23 @@ export function usePesquisadoresCadastrados() {
     pesquisador: Omit<Pesquisador, "id">,
   ) => {
     const database = await carregarLocalDatabase();
+    const emailNormalizado = pesquisador.email.trim().toLowerCase();
+
+    if (
+      database.profiles.some(
+        (profile) =>
+          (profile.email ?? "").trim().toLowerCase() === emailNormalizado,
+      )
+    ) {
+      return;
+    }
+
     const profile = criarLocalProfile({
       first_name: pesquisador.nome,
       last_name: pesquisador.sobrenome,
       academic_affiliation: pesquisador.vinculo,
       presence_status: pesquisador.status,
-      email: pesquisador.email,
+      email: emailNormalizado,
       phone: pesquisador.telefone,
     });
 
@@ -90,9 +101,10 @@ export function usePesquisadoresCadastrados() {
 
     await salvarLocalDatabase({
       ...database,
-      profiles: database.profiles.filter((profile) => profile.id !== id),
-      availability_slots: database.availability_slots.filter(
-        (slot) => slot.profile_id !== id,
+      profiles: database.profiles.map((profile) =>
+        profile.id === id
+          ? { ...profile, is_active: false, updated_at: new Date().toISOString() }
+          : profile,
       ),
     });
     setPesquisadores(await carregarPesquisadores());

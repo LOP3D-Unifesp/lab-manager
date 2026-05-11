@@ -376,13 +376,28 @@ export function AgendaLaboratorio() {
     }
 
     const database = await carregarLocalDatabase();
-    const slotsNovos = novosHorarios.map((slot) => {
-      return criarLocalAvailabilitySlot({
-        profile_id: slot.profileId,
-        weekday: slot.weekday,
-        periodo: slot.periodo,
+    const slotsNovos = novosHorarios
+      .filter(
+        (slot) =>
+          !database.availability_slots.some(
+            (existente) =>
+              existente.profile_id === slot.profileId &&
+              existente.weekday === slot.weekday &&
+              existente.periodo === slot.periodo,
+          ),
+      )
+      .map((slot) => {
+        return criarLocalAvailabilitySlot({
+          profile_id: slot.profileId,
+          weekday: slot.weekday,
+          periodo: slot.periodo,
+        });
       });
-    });
+
+    if (slotsNovos.length === 0) {
+      setErro("Este pesquisador ja esta registrado nos horarios selecionados.");
+      return;
+    }
 
     await salvarLocalDatabase({
       ...database,
