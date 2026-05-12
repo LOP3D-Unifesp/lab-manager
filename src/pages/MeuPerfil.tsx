@@ -78,7 +78,30 @@ function validarLattes(value: string | null) {
 }
 
 function getInputClassName() {
-  return "min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary";
+  return "min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary";
+}
+
+function getWorkModeLabel(mode: WorkMode | undefined) {
+  if (mode === "onsite") return "Presencial";
+  if (mode === "remote") return "Home office";
+  if (mode === "aula") return "Aula";
+  return "-";
+}
+
+function getSlotColorClassName(mode: WorkMode | undefined) {
+  if (mode === "onsite") {
+    return "border-success bg-success-soft text-success-dark";
+  }
+
+  if (mode === "remote") {
+    return "border-primary bg-primary-soft text-primary";
+  }
+
+  if (mode === "aula") {
+    return "border-warning bg-warning-soft text-warning-dark";
+  }
+
+  return "border-border bg-background text-muted hover:border-primary hover:text-primary";
 }
 
 export function MeuPerfil() {
@@ -105,6 +128,9 @@ export function MeuPerfil() {
   const [phone, setPhone] = useState("");
   const [bio, setBio] = useState("");
   const [agenda, setAgenda] = useState<AgendaState>({});
+  const [mobileAgendaWeekday, setMobileAgendaWeekday] = useState(
+    diasDaSemana[0].weekday,
+  );
   const [allSlots, setAllSlots] = useState<Array<{ profile_id: string; weekday: number; periodo: PeriodoId; work_mode: WorkMode }>>([]);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -121,6 +147,10 @@ export function MeuPerfil() {
       return total + (endH * 60 + endM - startH * 60 - startM) / 60;
     }, 0);
   }, [agenda]);
+
+  const mobileAgendaDay =
+    diasDaSemana.find((dia) => dia.weekday === mobileAgendaWeekday) ??
+    diasDaSemana[0];
 
   useEffect(() => {
     if (!profile) {
@@ -359,20 +389,20 @@ export function MeuPerfil() {
   }
 
   return (
-    <div>
+    <div className="min-w-0">
       <PageHeader
         title="Meu perfil"
         description="Atualize seus dados usados pelo laboratorio."
       />
 
-      <form className="grid gap-5" onSubmit={handleSubmit}>
-        <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
-          <Card>
-            <div className="mb-5 flex items-center gap-3">
-              <div className="inline-flex h-11 w-11 items-center justify-center rounded-lg bg-primary-soft text-primary">
+      <form className="grid min-w-0 gap-5" onSubmit={handleSubmit}>
+        <section className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+          <Card className="min-w-0 p-4 sm:p-5">
+            <div className="mb-5 flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
                 <UserRoundCog className="h-5 w-5" aria-hidden="true" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <h2 className="text-2xl font-bold text-text">
                   Dados do usuario
                 </h2>
@@ -510,7 +540,7 @@ export function MeuPerfil() {
             </div>
           </Card>
 
-          <Card>
+          <Card className="min-w-0 p-4 sm:p-5">
             <h2 className="text-2xl font-bold text-text">Acesso</h2>
             <dl className="mt-4 grid gap-4 text-base">
               <div>
@@ -532,8 +562,8 @@ export function MeuPerfil() {
           </Card>
         </section>
 
-        <section className="grid gap-5 lg:grid-cols-2">
-          <Card>
+        <section className="grid min-w-0 gap-5 lg:grid-cols-2">
+          <Card className="min-w-0 p-4 sm:p-5">
             <h2 className="text-2xl font-bold text-text">Documentos</h2>
             <div className="mt-4 grid gap-4">
               <div className="grid gap-4 md:grid-cols-2">
@@ -563,7 +593,7 @@ export function MeuPerfil() {
             </div>
           </Card>
 
-          <Card>
+          <Card className="min-w-0 p-4 sm:p-5">
             <h2 className="text-2xl font-bold text-text">Endereco</h2>
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <label className="grid gap-2 text-base font-semibold text-text">
@@ -659,13 +689,13 @@ export function MeuPerfil() {
           </Card>
         </section>
 
-        <Card>
-          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-success-soft p-3 text-success-dark">
+        <Card className="min-w-0 p-4 sm:p-5">
+          <div className="mb-4 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="shrink-0 rounded-lg bg-success-soft p-3 text-success-dark">
                 <CalendarDays className="h-6 w-6" aria-hidden="true" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <h2 className="text-2xl font-bold text-text">
                   Agenda semanal
                 </h2>
@@ -699,11 +729,96 @@ export function MeuPerfil() {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
+          <div className="md:hidden">
+            <div
+              aria-label="Selecionar dia da agenda"
+              className="mb-3 flex gap-2 overflow-x-auto pb-1"
+              role="tablist"
+            >
+              {diasDaSemana.map((dia) => {
+                const selected = dia.weekday === mobileAgendaDay.weekday;
+                return (
+                  <button
+                    aria-selected={selected}
+                    className={[
+                      "shrink-0 rounded-lg border px-3 py-2 text-sm font-bold transition",
+                      selected
+                        ? "border-primary bg-primary text-white"
+                        : "border-border bg-background text-text hover:border-primary hover:text-primary",
+                    ].join(" ")}
+                    disabled={submitting}
+                    key={dia.weekday}
+                    onClick={() => setMobileAgendaWeekday(dia.weekday)}
+                    role="tab"
+                    type="button"
+                  >
+                    {dia.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="grid gap-3">
+              {periodos.map((periodo) => {
+                const key = getSlotKey(mobileAgendaDay.weekday, periodo.id);
+                const mode = agenda[key];
+                const presencialCount = countPresencial(
+                  mobileAgendaDay.weekday,
+                  periodo.id,
+                );
+
+                return (
+                  <button
+                    aria-label={`${mobileAgendaDay.label} ${periodo.label}: ${getWorkModeLabel(mode)}`}
+                    className={[
+                      "grid min-h-20 w-full grid-cols-[1fr_auto] items-center gap-3 rounded-lg border px-4 py-3 text-left transition",
+                      getSlotColorClassName(mode),
+                    ].join(" ")}
+                    disabled={submitting}
+                    key={key}
+                    onClick={() =>
+                      cycleSlot(mobileAgendaDay.weekday, periodo.id)
+                    }
+                    type="button"
+                  >
+                    <span className="min-w-0">
+                      <span className="block text-base font-bold text-text">
+                        {periodo.label}
+                      </span>
+                      <span className="mt-1 block text-sm font-semibold opacity-75">
+                        {periodo.horario}
+                      </span>
+                    </span>
+                    <span className="text-right">
+                      <span className="block text-base font-bold">
+                        {getWorkModeLabel(mode)}
+                      </span>
+                      <span className="mt-1 block text-sm font-semibold opacity-80">
+                        {presencialCount} presencial
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="hidden overflow-x-auto md:block">
+            <table className="min-w-[760px] w-full table-fixed border-collapse">
+              <colgroup>
+                <col className="w-36" />
+                {diasDaSemana.map((dia) => (
+                  <col
+                    key={dia.weekday}
+                    style={{
+                      width: `calc((100% - 9rem) / ${diasDaSemana.length})`,
+                    }}
+                  />
+                ))}
+              </colgroup>
               <thead>
                 <tr>
-                  <th className="w-36 pb-2 pr-2" />
+                  <th className="pb-2 pr-2" />
                   {diasDaSemana.map((dia) => (
                     <th key={dia.weekday} className="pb-2 text-center">
                       <button
@@ -740,23 +855,17 @@ export function MeuPerfil() {
                       return (
                         <td key={key} className="py-1 px-1 text-center">
                           <button
-                            aria-label={`${dia.label} ${periodo.label}: ${mode === "onsite" ? "Presencial" : mode === "remote" ? "Home office" : "Nao disponivel"}`}
+                            aria-label={`${dia.label} ${periodo.label}: ${getWorkModeLabel(mode)}`}
                             className={[
-                              "w-full rounded-lg border py-2 px-1 text-xs font-bold transition",
-                              mode === "onsite"
-                                ? "border-success bg-success-soft text-success-dark"
-                                : mode === "remote"
-                                  ? "border-primary bg-primary-soft text-primary"
-                                  : mode === "aula"
-                                    ? "border-warning bg-warning-soft text-warning-dark"
-                                    : "border-border bg-background text-muted hover:border-primary hover:text-primary",
+                              "w-full rounded-lg border py-2 px-1 text-sm font-bold transition",
+                              getSlotColorClassName(mode),
                             ].join(" ")}
                             disabled={submitting}
                             onClick={() => cycleSlot(dia.weekday, periodo.id)}
                             type="button"
                           >
                             {mode === "onsite" ? "Presencial" : mode === "remote" ? "Home office" : mode === "aula" ? "Aula" : "—"}
-                            <span className="block text-[10px] font-normal opacity-60">
+                            <span className="mt-0.5 block text-sm font-semibold opacity-75">
                               {countPresencial(dia.weekday, periodo.id)} presencial
                             </span>
                           </button>
@@ -767,8 +876,9 @@ export function MeuPerfil() {
                 ))}
               </tbody>
             </table>
+          </div>
 
-            <div className="mt-3 flex flex-wrap gap-4 text-xs font-semibold text-muted">
+          <div className="mt-3 flex flex-wrap gap-4 text-xs font-semibold text-muted">
               <span className="flex items-center gap-1.5">
                 <span className="inline-block h-3 w-3 rounded-sm bg-success-soft border border-success" />
                 Presencial
@@ -785,7 +895,6 @@ export function MeuPerfil() {
                 <span className="inline-block h-3 w-3 rounded-sm bg-background border border-border" />
                 Nao disponivel
               </span>
-            </div>
           </div>
         </Card>
 
