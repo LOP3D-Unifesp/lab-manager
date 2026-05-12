@@ -101,6 +101,10 @@ function getClasseContador(total: number) {
   return "border-danger bg-danger-soft text-danger-dark hover:bg-surface";
 }
 
+function getDiaAbreviado(label: string) {
+  return label.slice(0, 3);
+}
+
 export function AgendaLaboratorio() {
   const semanaAtual = useMemo(() => getSemanaAtual(), []);
   const calendarioRef = useRef<HTMLElement | null>(null);
@@ -114,9 +118,13 @@ export function AgendaLaboratorio() {
   const [modoTrabalhoSelecionado, setModoTrabalhoSelecionado] =
     useState<WorkMode>("onsite");
   const [vistaAgenda, setVistaAgenda] = useState<VistaAgenda>("semana");
-  const [mobileAgendaWeekday, setMobileAgendaWeekday] = useState(
-    semanaAtual[0].weekday,
-  );
+  const [mobileAgendaWeekday, setMobileAgendaWeekday] = useState(() => {
+    const weekdayHoje = new Date().getDay();
+    return (
+      semanaAtual.find((dia) => dia.weekday === weekdayHoje)?.weekday ??
+      semanaAtual[0].weekday
+    );
+  });
   const [popupSlot, setPopupSlot] = useState<PopupSlot>(null);
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
@@ -627,7 +635,7 @@ export function AgendaLaboratorio() {
           </div>
         </Card>
 
-        <Card className="min-w-0 p-4 lg:hidden">
+        <Card className="min-w-0 p-3 sm:p-4 lg:hidden">
           <div className="mb-4 border-b border-border pb-3">
             <h3 className="text-xl font-bold text-text">Agenda da semana</h3>
             <p className="mt-1 text-base text-muted">
@@ -637,7 +645,10 @@ export function AgendaLaboratorio() {
 
           <div
             aria-label="Selecionar dia da agenda do laboratorio"
-            className="mb-3 flex gap-2 overflow-x-auto pb-1"
+            className={[
+              "mb-3 grid gap-1",
+              diasMobileVisiveis.length === 1 ? "grid-cols-1" : "grid-cols-5",
+            ].join(" ")}
             role="tablist"
           >
             {diasMobileVisiveis.map((dia) => {
@@ -645,9 +656,10 @@ export function AgendaLaboratorio() {
 
               return (
                 <button
+                  aria-label={dia.label}
                   aria-selected={selected}
                   className={[
-                    "shrink-0 rounded-lg border px-3 py-2 text-sm font-bold transition",
+                    "min-w-0 rounded-lg border px-1 py-2 text-center text-xs font-bold leading-tight transition",
                     selected
                       ? "border-primary bg-primary text-white"
                       : "border-border bg-background text-text hover:border-primary hover:text-primary",
@@ -655,9 +667,10 @@ export function AgendaLaboratorio() {
                   key={dia.weekday}
                   onClick={() => setMobileAgendaWeekday(dia.weekday)}
                   role="tab"
+                  title={dia.label}
                   type="button"
                 >
-                  {dia.label}
+                  {getDiaAbreviado(dia.label)}
                 </button>
               );
             })}

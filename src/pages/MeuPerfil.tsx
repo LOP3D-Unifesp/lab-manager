@@ -104,6 +104,19 @@ function getSlotColorClassName(mode: WorkMode | undefined) {
   return "border-border bg-background text-muted hover:border-primary hover:text-primary";
 }
 
+function getDiaAbreviado(label: string) {
+  return label.slice(0, 3);
+}
+
+function getDuracaoPeriodoEmHoras(periodoId: PeriodoId) {
+  const periodo = periodos.find((item) => item.id === periodoId);
+  if (!periodo) return 0;
+
+  const [startH, startM] = periodo.starts_at.split(":").map(Number);
+  const [endH, endM] = periodo.ends_at.split(":").map(Number);
+  return (endH * 60 + endM - startH * 60 - startM) / 60;
+}
+
 export function MeuPerfil() {
   const { profile, refreshProfile } = useAuth();
   const [fullName, setFullName] = useState("");
@@ -136,17 +149,37 @@ export function MeuPerfil() {
   const [successMessage, setSuccessMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const horasAgendadas = useMemo(() => {
-    return Object.entries(agenda).reduce((total, [key, mode]) => {
-      if (mode === "aula") return total;
+  const resumoHorasAgenda = useMemo(() => {
+    const totais = {
+      presencial: 0,
+      homeOffice: 0,
+      aula: 0,
+      totalAgendado: 0,
+    };
+
+    Object.entries(agenda).forEach(([key, mode]) => {
       const periodoId = key.split("-")[1] as PeriodoId;
-      const periodo = periodos.find((p) => p.id === periodoId);
-      if (!periodo) return total;
-      const [startH, startM] = periodo.starts_at.split(":").map(Number);
-      const [endH, endM] = periodo.ends_at.split(":").map(Number);
-      return total + (endH * 60 + endM - startH * 60 - startM) / 60;
-    }, 0);
+      const horas = getDuracaoPeriodoEmHoras(periodoId);
+
+      if (mode === "onsite") {
+        totais.presencial += horas;
+        totais.totalAgendado += horas;
+      }
+
+      if (mode === "remote") {
+        totais.homeOffice += horas;
+        totais.totalAgendado += horas;
+      }
+
+      if (mode === "aula") {
+        totais.aula += horas;
+      }
+    });
+
+    return totais;
   }, [agenda]);
+
+  const horasAgendadas = resumoHorasAgenda.totalAgendado;
 
   const mobileAgendaDay =
     diasDaSemana.find((dia) => dia.weekday === mobileAgendaWeekday) ??
@@ -725,6 +758,19 @@ export function MeuPerfil() {
                     {horasAgendadas > 0 ? `${horasAgendadas}h agendadas.` : "Nenhum horario cadastrado."}
                   </p>
                 )}
+                {Object.keys(agenda).length > 0 ? (
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs font-bold">
+                    <span className="inline-flex min-h-7 items-center rounded-full border border-success bg-success-soft px-2.5 py-1 text-success-dark">
+                      Presencial: {resumoHorasAgenda.presencial}h
+                    </span>
+                    <span className="inline-flex min-h-7 items-center rounded-full border border-primary bg-primary-soft px-2.5 py-1 text-primary">
+                      Home office: {resumoHorasAgenda.homeOffice}h
+                    </span>
+                    <span className="inline-flex min-h-7 items-center rounded-full border border-warning bg-warning-soft px-2.5 py-1 text-warning-dark">
+                      Aula: {resumoHorasAgenda.aula}h
+                    </span>
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>
@@ -732,16 +778,17 @@ export function MeuPerfil() {
           <div className="md:hidden">
             <div
               aria-label="Selecionar dia da agenda"
-              className="mb-3 flex gap-2 overflow-x-auto pb-1"
+              className="mb-3 grid grid-cols-5 gap-1"
               role="tablist"
             >
               {diasDaSemana.map((dia) => {
                 const selected = dia.weekday === mobileAgendaDay.weekday;
                 return (
                   <button
+                    aria-label={dia.label}
                     aria-selected={selected}
                     className={[
-                      "shrink-0 rounded-lg border px-3 py-2 text-sm font-bold transition",
+                      "min-w-0 rounded-lg border px-1 py-2 text-center text-xs font-bold leading-tight transition",
                       selected
                         ? "border-primary bg-primary text-white"
                         : "border-border bg-background text-text hover:border-primary hover:text-primary",
@@ -750,9 +797,10 @@ export function MeuPerfil() {
                     key={dia.weekday}
                     onClick={() => setMobileAgendaWeekday(dia.weekday)}
                     role="tab"
+                    title={dia.label}
                     type="button"
                   >
-                    {dia.label}
+                    {getDiaAbreviado(dia.label)}
                   </button>
                 );
               })}
