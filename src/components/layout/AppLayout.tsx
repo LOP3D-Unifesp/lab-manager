@@ -1,8 +1,9 @@
 import { ReactNode } from "react";
+import { Link } from "react-router-dom";
 
 import { MobileNavigation } from "./MobileNavigation";
 import { Sidebar } from "./Sidebar";
-import { AuthUserMenu } from "./AuthUserMenu";
+import { MobileAccountMenu } from "./MobileAccountMenu";
 
 type AppLayoutProps = {
   children: ReactNode;
@@ -14,22 +15,21 @@ export function AppLayout({ children }: AppLayoutProps) {
       <Sidebar />
 
       <div className="flex min-h-screen flex-col lg:pl-72">
-        <header className="sticky top-0 z-20 border-b border-border bg-surface/95 px-4 py-3 backdrop-blur lg:hidden">
+        <header className="sticky top-0 z-20 border-b border-border bg-surface/95 px-4 py-2.5 backdrop-blur lg:hidden">
           <div className="flex items-center justify-between gap-3">
-            <div>
+            <Link
+              to="/"
+              aria-label="Ir para o início"
+              className="min-w-0 rounded-md transition hover:text-primary focus-visible:outline-offset-4"
+            >
               <p className="text-sm font-bold leading-none text-primary">
                 LO&P3D
               </p>
-              <h1 className="mt-1 text-[20px] font-bold leading-none text-text">
+              <h1 className="mt-1 truncate text-[20px] font-bold leading-none text-text">
                 Lab Manager
               </h1>
-            </div>
-            <div className="rounded-md border border-border bg-background px-2.5 py-1.5 text-sm font-bold text-muted">
-              MVP
-            </div>
-          </div>
-          <div className="mt-2">
-            <AuthUserMenu />
+            </Link>
+            <MobileAccountMenu />
           </div>
         </header>
 

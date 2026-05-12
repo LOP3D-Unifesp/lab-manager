@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 
 import { useAuth } from "../../lib/auth";
 import { navigationItems } from "../../lib/navigation";
@@ -13,10 +13,16 @@ export function Sidebar() {
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 border-r border-border bg-surface px-5 py-6 lg:block">
       <div className="mb-8 border-b border-border pb-6">
-        <p className="text-lg font-semibold text-primary">LO&P3D</p>
-        <h1 className="mt-1 text-[28px] font-bold leading-tight text-text">
-          Lab Manager
-        </h1>
+        <Link
+          to="/"
+          aria-label="Ir para o início"
+          className="block rounded-md transition hover:text-primary focus-visible:outline-offset-4"
+        >
+          <p className="text-lg font-semibold text-primary">LO&P3D</p>
+          <h1 className="mt-1 text-[28px] font-bold leading-tight text-text">
+            Lab Manager
+          </h1>
+        </Link>
         <p className="mt-2 text-base leading-6 text-muted">
           Gestão interna para agenda, habilidades e impressoras 3D.
         </p>

@@ -15,7 +15,7 @@ export type NavigationItem = {
   mobileLabel: string;
   path: string;
   icon: LucideIcon;
-  mobilePlacement: "primary" | "action" | "secondary";
+  mobilePlacement: "primary" | "action" | "secondary" | "hidden";
   mobileOrder: number;
   mobileRole?: "coordinator";
 };
@@ -75,7 +75,7 @@ export const navigationItems: NavigationItem[] = [
     mobileLabel: "Perfil",
     path: "/perfil",
     icon: UserRoundCog,
-    mobilePlacement: "secondary",
+    mobilePlacement: "hidden",
     mobileOrder: 1,
   },
   {
