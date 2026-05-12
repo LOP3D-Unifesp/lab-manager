@@ -114,6 +114,9 @@ export function AgendaLaboratorio() {
   const [modoTrabalhoSelecionado, setModoTrabalhoSelecionado] =
     useState<WorkMode>("onsite");
   const [vistaAgenda, setVistaAgenda] = useState<VistaAgenda>("semana");
+  const [mobileAgendaWeekday, setMobileAgendaWeekday] = useState(
+    semanaAtual[0].weekday,
+  );
   const [popupSlot, setPopupSlot] = useState<PopupSlot>(null);
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
@@ -209,6 +212,12 @@ export function AgendaLaboratorio() {
   const diaAtual = semanaAtual.find((dia) => dia.weekday === hoje);
   const diasVisiveis =
     vistaAgenda === "hoje" && diaAtual ? [diaAtual] : semanaAtual;
+  const diasMobileVisiveis =
+    vistaAgenda === "hoje" && diaAtual ? [diaAtual] : semanaAtual;
+  const diaMobileAtivo =
+    diasMobileVisiveis.find((dia) => dia.weekday === mobileAgendaWeekday) ??
+    diasMobileVisiveis[0] ??
+    semanaAtual[0];
   const totalPesquisadores = new Set(
     agenda
       .map((entry) => entry.pesquisador)
@@ -328,6 +337,13 @@ export function AgendaLaboratorio() {
 
   function trocarVista(novaVista: VistaAgenda) {
     setVistaAgenda(novaVista);
+    if (novaVista === "hoje") {
+      setMobileAgendaWeekday(diaAtual?.weekday ?? semanaAtual[0].weekday);
+    } else if (
+      !semanaAtual.some((dia) => dia.weekday === mobileAgendaWeekday)
+    ) {
+      setMobileAgendaWeekday(semanaAtual[0].weekday);
+    }
     calendarioRef.current?.scrollIntoView({ behavior: "smooth" });
   }
 
@@ -611,67 +627,93 @@ export function AgendaLaboratorio() {
           </div>
         </Card>
 
-        <div className="grid gap-4 lg:hidden">
-          {diasVisiveis.map((dia) => (
-            <Card
-              key={dia.weekday}
-              className={[
-                dia.weekday === hoje
-                  ? "border-primary bg-primary-soft"
-                  : "bg-surface",
-                "flex min-h-[420px] flex-col",
-              ].join(" ")}
-            >
-              <div className="mb-3 border-b border-border pb-3">
-                <h3 className="text-xl font-bold text-text">{dia.label}</h3>
-                <p className="mt-1 text-base text-muted">{dia.numero}</p>
-              </div>
+        <Card className="min-w-0 p-4 lg:hidden">
+          <div className="mb-4 border-b border-border pb-3">
+            <h3 className="text-xl font-bold text-text">Agenda da semana</h3>
+            <p className="mt-1 text-base text-muted">
+              {diaMobileAtivo.label}, {diaMobileAtivo.numero}
+            </p>
+          </div>
 
-              <div
-                className={
-                  vistaAgenda === "hoje"
-                    ? "grid gap-3 md:grid-cols-3"
-                    : "flex flex-1 flex-col gap-3"
-                }
-              >
-                {periodos.map((periodo) => {
-                  const total = getTotalPresencialDoSlot(dia.weekday, periodo.id);
-                  const totalHomeOffice = getTotalHomeOfficeDoSlot(dia.weekday, periodo.id);
-                  const totalAula = getTotalAulaDoSlot(dia.weekday, periodo.id);
+          <div
+            aria-label="Selecionar dia da agenda do laboratorio"
+            className="mb-3 flex gap-2 overflow-x-auto pb-1"
+            role="tablist"
+          >
+            {diasMobileVisiveis.map((dia) => {
+              const selected = dia.weekday === diaMobileAtivo.weekday;
 
-                  return (
-                    <article
-                      key={periodo.id}
-                      className="flex min-h-28 flex-col rounded-lg border border-border bg-white/80 p-3"
+              return (
+                <button
+                  aria-selected={selected}
+                  className={[
+                    "shrink-0 rounded-lg border px-3 py-2 text-sm font-bold transition",
+                    selected
+                      ? "border-primary bg-primary text-white"
+                      : "border-border bg-background text-text hover:border-primary hover:text-primary",
+                  ].join(" ")}
+                  key={dia.weekday}
+                  onClick={() => setMobileAgendaWeekday(dia.weekday)}
+                  role="tab"
+                  type="button"
+                >
+                  {dia.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="grid gap-3">
+            {periodos.map((periodo) => {
+              const total = getTotalPresencialDoSlot(
+                diaMobileAtivo.weekday,
+                periodo.id,
+              );
+              const totalHomeOffice = getTotalHomeOfficeDoSlot(
+                diaMobileAtivo.weekday,
+                periodo.id,
+              );
+              const totalAula = getTotalAulaDoSlot(
+                diaMobileAtivo.weekday,
+                periodo.id,
+              );
+
+              return (
+                <article
+                  key={periodo.id}
+                  className={[
+                    "flex min-h-28 flex-col rounded-lg border p-3",
+                    diaMobileAtivo.weekday === hoje
+                      ? "border-primary bg-primary-soft"
+                      : "border-border bg-white/80",
+                  ].join(" ")}
+                >
+                  <div className="mb-2 flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-lg font-bold text-text">
+                        {periodo.label}
+                      </p>
+                      <p className="mt-1 text-sm font-semibold text-muted">
+                        {periodo.horario}
+                      </p>
+                    </div>
+                    <button
+                      className={[
+                        "inline-flex min-h-9 shrink-0 items-center rounded-full border px-3 py-1 text-base font-semibold leading-none transition",
+                        getClasseContador(total),
+                      ].join(" ")}
+                      onClick={() => abrirDetalhesDoSlot(diaMobileAtivo, periodo)}
+                      type="button"
                     >
-                      <div className="mb-2 flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-lg font-bold text-text">
-                            {periodo.label}
-                          </p>
-                          <p className="mt-1 text-sm font-semibold text-muted">
-                            {periodo.horario}
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          className={[
-                            "inline-flex min-h-8 items-center rounded-full border px-3 py-1 text-base font-semibold leading-none transition",
-                            getClasseContador(total),
-                          ].join(" ")}
-                          onClick={() => abrirDetalhesDoSlot(dia, periodo)}
-                        >
-                          {total}/{limitePorHorario}
-                        </button>
-                      </div>
-                      {renderIndicadoresDoSlot(totalHomeOffice, totalAula)}
-                    </article>
-                  );
-                })}
-              </div>
-            </Card>
-          ))}
-        </div>
+                      {total}/{limitePorHorario}
+                    </button>
+                  </div>
+                  {renderIndicadoresDoSlot(totalHomeOffice, totalAula)}
+                </article>
+              );
+            })}
+          </div>
+        </Card>
       </section>
 
       {popupSlot ? (
