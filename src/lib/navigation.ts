@@ -12,6 +12,9 @@ import {
 
 export type NavigationItem = {
   desktopLabel: string;
+  desktopSection: "main" | "knowledge" | "management" | "account";
+  desktopOrder: number;
+  desktopRole?: "coordinator";
   mobileLabel: string;
   path: string;
   icon: LucideIcon;
@@ -23,6 +26,8 @@ export type NavigationItem = {
 export const navigationItems: NavigationItem[] = [
   {
     desktopLabel: "Dashboard",
+    desktopSection: "main",
+    desktopOrder: 1,
     mobileLabel: "Início",
     path: "/",
     icon: Gauge,
@@ -31,6 +36,8 @@ export const navigationItems: NavigationItem[] = [
   },
   {
     desktopLabel: "Pesquisadores",
+    desktopSection: "main",
+    desktopOrder: 4,
     mobileLabel: "Pessoas",
     path: "/pesquisadores",
     icon: Users,
@@ -39,6 +46,8 @@ export const navigationItems: NavigationItem[] = [
   },
   {
     desktopLabel: "Habilidades",
+    desktopSection: "knowledge",
+    desktopOrder: 5,
     mobileLabel: "Habilidades",
     path: "/habilidades",
     icon: Sparkles,
@@ -47,6 +56,8 @@ export const navigationItems: NavigationItem[] = [
   },
   {
     desktopLabel: "Agenda do Laboratório",
+    desktopSection: "main",
+    desktopOrder: 2,
     mobileLabel: "Agenda",
     path: "/agenda",
     icon: CalendarDays,
@@ -55,6 +66,9 @@ export const navigationItems: NavigationItem[] = [
   },
   {
     desktopLabel: "Impressoras",
+    desktopSection: "management",
+    desktopOrder: 6,
+    desktopRole: "coordinator",
     mobileLabel: "Impressoras",
     path: "/impressoras",
     icon: Printer,
@@ -64,6 +78,8 @@ export const navigationItems: NavigationItem[] = [
   },
   {
     desktopLabel: "Reservas",
+    desktopSection: "main",
+    desktopOrder: 3,
     mobileLabel: "Reservar",
     path: "/reservas",
     icon: CalendarPlus,
@@ -72,6 +88,8 @@ export const navigationItems: NavigationItem[] = [
   },
   {
     desktopLabel: "Meu perfil",
+    desktopSection: "account",
+    desktopOrder: 1,
     mobileLabel: "Perfil",
     path: "/perfil",
     icon: UserRoundCog,
@@ -80,6 +98,9 @@ export const navigationItems: NavigationItem[] = [
   },
   {
     desktopLabel: "Administração",
+    desktopSection: "management",
+    desktopOrder: 7,
+    desktopRole: "coordinator",
     mobileLabel: "Administração",
     path: "/administracao",
     icon: Settings,
