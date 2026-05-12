@@ -113,7 +113,7 @@ export function AgendaLaboratorio() {
   );
   const [modoTrabalhoSelecionado, setModoTrabalhoSelecionado] =
     useState<WorkMode>("onsite");
-  const [vistaAgenda, setVistaAgenda] = useState<VistaAgenda>("hoje");
+  const [vistaAgenda, setVistaAgenda] = useState<VistaAgenda>("semana");
   const [popupSlot, setPopupSlot] = useState<PopupSlot>(null);
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
@@ -250,6 +250,61 @@ export function AgendaLaboratorio() {
     return getEntriesDoSlot(weekday, periodo).filter(
       (entry) => entry.workMode === "aula",
     ).length;
+  }
+
+  function abrirDetalhesDoSlot(
+    dia: (typeof semanaAtual)[number],
+    periodo: (typeof periodos)[number],
+  ) {
+    setPopupSlot({
+      titulo: `${dia.label} - ${periodo.label}`,
+      horario: periodo.horario,
+      entries: getEntriesDoSlot(dia.weekday, periodo.id),
+    });
+  }
+
+  function renderIndicadoresDoSlot(
+    totalHomeOffice: number,
+    totalAula: number,
+    compacto = false,
+  ) {
+    if (totalHomeOffice === 0 && totalAula === 0) {
+      return null;
+    }
+
+    return (
+      <div
+        className={[
+          "flex flex-wrap gap-1.5",
+          compacto ? "mt-2" : "mt-auto gap-x-3 gap-y-1",
+        ].join(" ")}
+      >
+        {totalHomeOffice > 0 ? (
+          <span
+            className={[
+              "font-semibold text-primary",
+              compacto
+                ? "rounded-full border border-primary bg-primary-soft px-2 py-0.5 text-xs"
+                : "text-sm",
+            ].join(" ")}
+          >
+            {totalHomeOffice} home office
+          </span>
+        ) : null}
+        {totalAula > 0 ? (
+          <span
+            className={[
+              "font-semibold text-warning-dark",
+              compacto
+                ? "rounded-full border border-warning bg-warning-soft px-2 py-0.5 text-xs"
+                : "text-sm",
+            ].join(" ")}
+          >
+            {totalAula} aula
+          </span>
+        ) : null}
+      </div>
+    );
   }
 
   function slotEstaSelecionado(slot: SlotSelection) {
@@ -402,6 +457,7 @@ export function AgendaLaboratorio() {
         action={
           <div className="flex w-full flex-col gap-2 sm:flex-row md:w-auto">
             <Button
+              className="md:min-h-10 md:px-4 md:py-2 md:text-base"
               fullWidth
               variant={vistaAgenda === "hoje" ? "primary" : "secondary"}
               onClick={() => trocarVista("hoje")}
@@ -410,6 +466,7 @@ export function AgendaLaboratorio() {
               Ver hoje
             </Button>
             <Button
+              className="md:min-h-10 md:px-4 md:py-2 md:text-base"
               fullWidth
               variant={vistaAgenda === "semana" ? "primary" : "secondary"}
               onClick={() => trocarVista("semana")}
@@ -417,7 +474,11 @@ export function AgendaLaboratorio() {
               <CalendarDays aria-hidden="true" className="mr-2 h-5 w-5" />
               Ver semana
             </Button>
-            <Button fullWidth onClick={abrirModal}>
+            <Button
+              className="md:min-h-10 md:px-4 md:py-2 md:text-base"
+              fullWidth
+              onClick={abrirModal}
+            >
               <Plus aria-hidden="true" className="mr-2 h-5 w-5" />
               Registrar horario
             </Button>
@@ -431,68 +492,134 @@ export function AgendaLaboratorio() {
         </p>
       ) : null}
 
-      <section className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-primary-soft p-3 text-primary">
-              <CalendarDays aria-hidden="true" className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-muted">Semana atual</p>
-              <p className="text-xl font-bold text-text">
-                {semanaAtual[0].numero} - {semanaAtual[4].numero}
-              </p>
-            </div>
+      <section className="rounded-lg border border-border bg-surface px-4 py-3 shadow-sm">
+        <div className="grid gap-3 text-sm font-semibold text-muted md:grid-cols-3">
+          <div className="flex items-center gap-2">
+            <CalendarDays aria-hidden="true" className="h-4 w-4 text-primary" />
+            <span>Semana atual</span>
+            <strong className="ml-auto text-base text-text">
+              {semanaAtual[0].numero} - {semanaAtual[4].numero}
+            </strong>
           </div>
-        </Card>
-        <Card>
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-success-soft p-3 text-success-dark">
-              <Users aria-hidden="true" className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-muted">
-                Pesquisadores
-              </p>
-              <p className="text-xl font-bold text-text">
-                {totalPesquisadores} de {nomesPesquisadores.length} com horario
-              </p>
-            </div>
+          <div className="flex items-center gap-2">
+            <Users aria-hidden="true" className="h-4 w-4 text-success-dark" />
+            <span>Pesquisadores</span>
+            <strong className="ml-auto text-base text-text">
+              {totalPesquisadores} de {nomesPesquisadores.length}
+            </strong>
           </div>
-        </Card>
-        <Card>
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-warning-soft p-3 text-warning-dark">
-              <Users aria-hidden="true" className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-muted">
-                Horarios cheios
-              </p>
-              <p className="text-xl font-bold text-text">
-                {slotsCheios} de {totalSlots}
-              </p>
-            </div>
+          <div className="flex items-center gap-2">
+            <Users aria-hidden="true" className="h-4 w-4 text-warning-dark" />
+            <span>Horarios cheios</span>
+            <strong className="ml-auto text-base text-text">
+              {slotsCheios} de {totalSlots}
+            </strong>
           </div>
-        </Card>
+        </div>
       </section>
 
       <section ref={calendarioRef} className="mt-5 scroll-mt-24">
-        <div
-          className={
-            vistaAgenda === "hoje"
-              ? "grid gap-4 lg:grid-cols-3"
-              : "grid gap-4 md:grid-cols-2 xl:grid-cols-5"
-          }
-        >
+        <Card className="hidden overflow-hidden p-0 lg:block">
+          <div
+            className="grid border-b border-border bg-background"
+            style={{
+              gridTemplateColumns: `128px repeat(${diasVisiveis.length}, minmax(0, 1fr))`,
+            }}
+          >
+            <div className="border-r border-border px-4 py-3 text-sm font-bold uppercase text-muted">
+              Horario
+            </div>
+            {diasVisiveis.map((dia) => {
+              const ehHoje = dia.weekday === hoje;
+
+              return (
+                <div
+                  key={dia.weekday}
+                  className={[
+                    "border-r border-border px-4 py-3 last:border-r-0",
+                    ehHoje ? "bg-primary-soft" : "",
+                  ].join(" ")}
+                >
+                  <p className="text-base font-bold text-text">{dia.label}</p>
+                  <p className="mt-0.5 text-sm font-semibold text-muted">
+                    {dia.numero}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+
+          <div
+            className="grid"
+            style={{
+              gridTemplateColumns: `128px repeat(${diasVisiveis.length}, minmax(0, 1fr))`,
+            }}
+          >
+            {periodos.map((periodo) => (
+              <div key={periodo.id} className="contents">
+                <div className="border-b border-r border-border bg-background px-4 py-4 last:border-b-0">
+                  <p className="text-base font-bold text-text">
+                    {periodo.label}
+                  </p>
+                  <p className="mt-1 text-xs font-semibold text-muted">
+                    {periodo.horario}
+                  </p>
+                </div>
+                {diasVisiveis.map((dia) => {
+                  const total = getTotalPresencialDoSlot(
+                    dia.weekday,
+                    periodo.id,
+                  );
+                  const totalHomeOffice = getTotalHomeOfficeDoSlot(
+                    dia.weekday,
+                    periodo.id,
+                  );
+                  const totalAula = getTotalAulaDoSlot(
+                    dia.weekday,
+                    periodo.id,
+                  );
+                  const ehHoje = dia.weekday === hoje;
+
+                  return (
+                    <button
+                      key={`${dia.weekday}-${periodo.id}`}
+                      type="button"
+                      className={[
+                        "min-h-24 border-b border-r border-border p-3 text-left transition last:border-r-0 hover:bg-primary-soft focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary",
+                        ehHoje ? "bg-sky-50" : "bg-surface",
+                      ].join(" ")}
+                      onClick={() => abrirDetalhesDoSlot(dia, periodo)}
+                    >
+                      <span
+                        className={[
+                          "inline-flex min-h-7 items-center rounded-full border px-2.5 py-1 text-sm font-semibold leading-none",
+                          getClasseContador(total),
+                        ].join(" ")}
+                      >
+                        {total}/{limitePorHorario}
+                      </span>
+                      {renderIndicadoresDoSlot(
+                        totalHomeOffice,
+                        totalAula,
+                        true,
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <div className="grid gap-4 lg:hidden">
           {diasVisiveis.map((dia) => (
             <Card
               key={dia.weekday}
               className={[
-                getCorDia(dia.weekday),
-                vistaAgenda === "hoje"
-                  ? "lg:col-span-3"
-                  : "flex min-h-[420px] flex-col",
+                dia.weekday === hoje
+                  ? "border-primary bg-primary-soft"
+                  : "bg-surface",
+                "flex min-h-[420px] flex-col",
               ].join(" ")}
             >
               <div className="mb-3 border-b border-border pb-3">
@@ -508,7 +635,6 @@ export function AgendaLaboratorio() {
                 }
               >
                 {periodos.map((periodo) => {
-                  const entries = getEntriesDoSlot(dia.weekday, periodo.id);
                   const total = getTotalPresencialDoSlot(dia.weekday, periodo.id);
                   const totalHomeOffice = getTotalHomeOfficeDoSlot(dia.weekday, periodo.id);
                   const totalAula = getTotalAulaDoSlot(dia.weekday, periodo.id);
@@ -533,29 +659,12 @@ export function AgendaLaboratorio() {
                             "inline-flex min-h-8 items-center rounded-full border px-3 py-1 text-base font-semibold leading-none transition",
                             getClasseContador(total),
                           ].join(" ")}
-                          onClick={() =>
-                            setPopupSlot({
-                              titulo: `${dia.label} - ${periodo.label}`,
-                              horario: periodo.horario,
-                              entries,
-                            })
-                          }
+                          onClick={() => abrirDetalhesDoSlot(dia, periodo)}
                         >
                           {total}/{limitePorHorario}
                         </button>
                       </div>
-                      <div className="mt-auto flex flex-wrap gap-x-3 gap-y-1">
-                        {totalHomeOffice > 0 ? (
-                          <p className="text-sm font-semibold text-muted">
-                            {totalHomeOffice} home office
-                          </p>
-                        ) : null}
-                        {totalAula > 0 ? (
-                          <p className="text-sm font-semibold text-warning-dark">
-                            {totalAula} em aula
-                          </p>
-                        ) : null}
-                      </div>
+                      {renderIndicadoresDoSlot(totalHomeOffice, totalAula)}
                     </article>
                   );
                 })}
