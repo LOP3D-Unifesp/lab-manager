@@ -438,6 +438,7 @@ Campos sugeridos:
 | `weekday` | `integer` | Sim | Dia da semana, de `0` a `6`. |
 | `starts_at` | `time` | Sim | Horario inicial da faixa semanal. |
 | `ends_at` | `time` | Sim | Horario final da faixa semanal. |
+| `work_mode` | `text` | Sim | Modo da faixa: `onsite`, `remote` ou `aula`. |
 | `created_at` | `timestamptz` | Sim | Data de criacao. |
 | `updated_at` | `timestamptz` | Sim | Data da ultima atualizacao. |
 
@@ -456,6 +457,7 @@ Campos obrigatorios:
 - `weekday`
 - `starts_at`
 - `ends_at`
+- `work_mode`
 - `created_at`
 - `updated_at`
 
@@ -473,6 +475,8 @@ Regras de integridade:
 
 - `weekday` deve estar entre `0` e `6`.
 - `starts_at` deve ser anterior a `ends_at`.
+- `work_mode` deve ser `onsite`, `remote` ou `aula`.
+- Os blocos b1-b6 usados pela interface sao derivados de `starts_at` e `ends_at`; nao existe coluna `periodo` no banco.
 - O sistema deve evitar faixas duplicadas ou incoerentes para o mesmo pesquisador.
 - A disponibilidade representa planejamento, nao confirmacao real de presenca.
 - Pesquisadores so podem alterar a propria disponibilidade.
@@ -899,6 +903,7 @@ Validacoes a cobrir quando migrations, policies e camada de aplicacao forem impl
 - O `profile` criado no aceite deve herdar ou validar o email do convite.
 - Usuarios sem `profile` valido nao acessam areas internas do sistema.
 - `weekday` sera inteiro de `0` a `6`.
+- Disponibilidade semanal usara `starts_at time`, `ends_at time` e `work_mode`; `periodo` e apenas um identificador derivado na aplicacao.
 - Reservas e bloqueios usarao `starts_at timestamptz` e `ends_at timestamptz`.
 - `estimated_duration_minutes` sera obrigatorio em `printer_bookings` no MVP.
 - No MVP, novas reservas comecam como `approved`.
@@ -918,7 +923,7 @@ Validacoes a cobrir quando migrations, policies e camada de aplicacao forem impl
 - Idiomas nao sao habilidades tecnicas e nao entram em `skills`.
 - Nao havera upload `.gcode` ou `.3mf` no schema do MVP.
 - Nao havera historico detalhado de manutencao alem dos bloqueios.
-- Nao havera migrations ou SQL nesta etapa.
+- As migrations do MVP ficam consolidadas em uma baseline inicial versionada no repositorio.
 
 ## 10. Evolucao futura: controle de estoque de materiais
 

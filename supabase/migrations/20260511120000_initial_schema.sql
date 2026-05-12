@@ -35,6 +35,22 @@ create table public.profiles (
   email text not null unique check (position('@' in email) > 1),
   role public.user_role not null default 'researcher',
   academic_affiliation public.academic_affiliation,
+  birth_date date,
+  is_scholarship_holder boolean not null default false,
+  weekly_workload_hours integer check (
+    weekly_workload_hours is null or weekly_workload_hours between 1 and 60
+  ),
+  lattes_url text,
+  cpf text,
+  rg text,
+  postal_code text,
+  street text,
+  address_number text,
+  address_complement text,
+  neighborhood text,
+  city text,
+  state text,
+  country text,
   nationality_country_code char(2) check (
     nationality_country_code is null or nationality_country_code ~ '^[A-Z]{2}$'
   ),
@@ -67,6 +83,7 @@ create table public.availability_slots (
   weekday integer not null check (weekday between 0 and 6),
   starts_at time not null,
   ends_at time not null,
+  work_mode text not null default 'onsite' check (work_mode in ('onsite', 'remote', 'aula')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   check (starts_at < ends_at),
@@ -137,6 +154,7 @@ create table public.maintenance_blocks (
 create index profiles_role_idx on public.profiles(role);
 create index profiles_is_active_idx on public.profiles(is_active);
 create index availability_slots_weekday_idx on public.availability_slots(weekday, starts_at, ends_at);
+create index availability_slots_profile_weekday_idx on public.availability_slots(profile_id, weekday);
 create index printer_bookings_printer_interval_idx on public.printer_bookings(printer_id, starts_at, ends_at);
 create index printer_bookings_profile_starts_idx on public.printer_bookings(profile_id, starts_at);
 create index maintenance_blocks_printer_interval_idx on public.maintenance_blocks(printer_id, starts_at, ends_at);
@@ -288,6 +306,12 @@ on public.availability_slots for all
 to authenticated
 using (profile_id = auth.uid())
 with check (profile_id = auth.uid());
+
+create policy "coordinators manage availability"
+on public.availability_slots for all
+to authenticated
+using (public.is_coordinator())
+with check (public.is_coordinator());
 
 create policy "active users read printers"
 on public.printers for select
