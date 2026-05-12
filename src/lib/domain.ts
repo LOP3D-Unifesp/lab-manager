@@ -48,7 +48,9 @@ export type Profile = {
   city: string | null;
   state: string | null;
   country: string | null;
+  nationality_country_code: string | null;
   phone: string | null;
+  bio: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;

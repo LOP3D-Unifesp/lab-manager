@@ -51,7 +51,9 @@ const profileSelect = [
   "city",
   "state",
   "country",
+  "nationality_country_code",
   "phone",
+  "bio",
   "is_active",
   "created_at",
   "updated_at",
@@ -60,14 +62,12 @@ const profileSelect = [
 export async function listProfiles() {
   const { data, error } = await client()
     .from("profiles")
-    .select(
-      "id, full_name, email, role, academic_affiliation, is_scholarship_holder, weekly_workload_hours, lattes_url, phone, is_active, created_at, updated_at",
-    )
+    .select(profileSelect)
     .eq("is_active", true)
     .order("full_name");
 
   throwIfError(error);
-  return ((data ?? []) as Array<Omit<Profile, "first_name" | "last_name">>).map(mapProfile);
+  return ((data ?? []) as unknown as Array<Omit<Profile, "first_name" | "last_name">>).map(mapProfile);
 }
 
 export async function updateMyProfile(
@@ -89,7 +89,9 @@ export async function updateMyProfile(
     city: string | null;
     state: string | null;
     country: string | null;
+    nationalityCountryCode: string | null;
     phone: string | null;
+    bio: string | null;
   },
 ) {
   const { data, error } = await client()
@@ -111,7 +113,9 @@ export async function updateMyProfile(
       city: params.city,
       state: params.state,
       country: params.country,
+      nationality_country_code: params.nationalityCountryCode,
       phone: params.phone,
+      bio: params.bio,
     })
     .eq("id", profileId)
     .select(profileSelect)

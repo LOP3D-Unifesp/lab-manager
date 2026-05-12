@@ -43,7 +43,9 @@ type ProfileRow = {
   city: string | null;
   state: string | null;
   country: string | null;
+  nationality_country_code: string | null;
   phone: string | null;
+  bio: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -70,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data, error } = await supabase
       .from("profiles")
       .select(
-        "id, full_name, email, role, academic_affiliation, birth_date, is_scholarship_holder, weekly_workload_hours, lattes_url, cpf, rg, postal_code, street, address_number, address_complement, neighborhood, city, state, country, phone, is_active, created_at, updated_at",
+        "id, full_name, email, role, academic_affiliation, birth_date, is_scholarship_holder, weekly_workload_hours, lattes_url, cpf, rg, postal_code, street, address_number, address_complement, neighborhood, city, state, country, nationality_country_code, phone, bio, is_active, created_at, updated_at",
       )
       .eq("id", session.user.id)
       .eq("is_active", true)

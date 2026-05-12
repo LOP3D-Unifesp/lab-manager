@@ -101,7 +101,9 @@ export function MeuPerfil() {
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
   const [country, setCountry] = useState("");
+  const [nationalityCountryCode, setNationalityCountryCode] = useState("");
   const [phone, setPhone] = useState("");
+  const [bio, setBio] = useState("");
   const [agenda, setAgenda] = useState<AgendaState>({});
   const [allSlots, setAllSlots] = useState<Array<{ profile_id: string; weekday: number; periodo: PeriodoId; work_mode: WorkMode }>>([]);
   const [errorMessage, setErrorMessage] = useState("");
@@ -141,7 +143,9 @@ export function MeuPerfil() {
     setCity(profile.city ?? "");
     setState(profile.state ?? "");
     setCountry(profile.country ?? "");
+    setNationalityCountryCode(profile.nationality_country_code ?? "");
     setPhone(profile.phone ?? "");
+    setBio(profile.bio ?? "");
   }, [profile]);
 
   useEffect(() => {
@@ -248,6 +252,9 @@ export function MeuPerfil() {
     const lattesNormalizado = normalizarTextoOpcional(lattesUrl);
     const cpfNormalizado = normalizarCpf(cpf);
     const rgNormalizado = normalizarTextoOpcional(rg);
+    const nationalityNormalizada =
+      normalizarTextoOpcional(nationalityCountryCode)?.toUpperCase() ?? null;
+    const bioNormalizada = normalizarTextoOpcional(bio);
     const cargaHoraria = weeklyWorkloadHours
       ? Number(weeklyWorkloadHours)
       : null;
@@ -272,6 +279,19 @@ export function MeuPerfil() {
 
     if (cpfNormalizado && cpfNormalizado.length !== 11) {
       setErrorMessage("Informe um CPF com 11 digitos ou deixe em branco.");
+      return;
+    }
+
+    if (
+      nationalityNormalizada &&
+      !/^[A-Z]{2}$/.test(nationalityNormalizada)
+    ) {
+      setErrorMessage("Informe a nacionalidade com 2 letras, como BR ou CL.");
+      return;
+    }
+
+    if (bioNormalizada && bioNormalizada.length > 500) {
+      setErrorMessage("A bio deve ter no maximo 500 caracteres.");
       return;
     }
 
@@ -310,7 +330,9 @@ export function MeuPerfil() {
         city: normalizarTextoOpcional(city),
         state: normalizarTextoOpcional(state)?.toUpperCase() ?? null,
         country: normalizarTextoOpcional(country),
+        nationalityCountryCode: nationalityNormalizada,
         phone: telefoneNormalizado,
+        bio: bioNormalizada,
       });
       await saveProfileAvailability(
         profile.id,
@@ -419,6 +441,21 @@ export function MeuPerfil() {
               </label>
 
               <label className="grid gap-2 text-base font-semibold text-text">
+                Nacionalidade / pais principal
+                <input
+                  autoCapitalize="characters"
+                  className={getInputClassName()}
+                  disabled={submitting}
+                  maxLength={2}
+                  onChange={(event) =>
+                    setNationalityCountryCode(event.target.value.toUpperCase())
+                  }
+                  placeholder="BR"
+                  value={nationalityCountryCode}
+                />
+              </label>
+
+              <label className="grid gap-2 text-base font-semibold text-text">
                 Carga horaria semanal
                 <input
                   className={getInputClassName()}
@@ -443,6 +480,18 @@ export function MeuPerfil() {
                   placeholder="https://lattes.cnpq.br/..."
                   type="url"
                   value={lattesUrl}
+                />
+              </label>
+
+              <label className="grid gap-2 text-base font-semibold text-text md:col-span-2">
+                Bio / resumo do pesquisador
+                <textarea
+                  className={`${getInputClassName()} min-h-28 py-3`}
+                  disabled={submitting}
+                  maxLength={500}
+                  onChange={(event) => setBio(event.target.value)}
+                  placeholder="Resumo breve sobre sua atuacao no laboratorio."
+                  value={bio}
                 />
               </label>
 
@@ -529,7 +578,7 @@ export function MeuPerfil() {
               </label>
 
               <label className="grid gap-2 text-base font-semibold text-text">
-                Pais
+                Pais do endereco
                 <input
                   className={getInputClassName()}
                   disabled={submitting}
