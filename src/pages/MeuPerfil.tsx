@@ -103,6 +103,7 @@ export function MeuPerfil() {
   const [country, setCountry] = useState("");
   const [phone, setPhone] = useState("");
   const [agenda, setAgenda] = useState<AgendaState>({});
+  const [allSlots, setAllSlots] = useState<Array<{ profile_id: string; weekday: number; periodo: PeriodoId; work_mode: WorkMode }>>([]);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -156,6 +157,7 @@ export function MeuPerfil() {
           return;
         }
 
+        setAllSlots(slots);
         const agendaAtual = slots
           .filter((slot) => slot.profile_id === profile.id)
           .reduce<AgendaState>((acc, slot) => {
@@ -187,6 +189,18 @@ export function MeuPerfil() {
       const { [key]: _removed, ...rest } = prev;
       return rest;
     });
+  }
+
+  function countPresencial(weekday: number, periodoId: PeriodoId): number {
+    const othersCount = allSlots.filter(
+      (s) =>
+        s.profile_id !== profile?.id &&
+        s.weekday === weekday &&
+        s.periodo === periodoId &&
+        s.work_mode === "onsite",
+    ).length;
+    const myMode = agenda[getSlotKey(weekday, periodoId)];
+    return othersCount + (myMode === "onsite" ? 1 : 0);
   }
 
   function toggleDia(weekday: number) {
@@ -693,6 +707,9 @@ export function MeuPerfil() {
                             type="button"
                           >
                             {mode === "onsite" ? "Presencial" : mode === "remote" ? "Home office" : mode === "aula" ? "Aula" : "—"}
+                            <span className="block text-[10px] font-normal opacity-60">
+                              {countPresencial(dia.weekday, periodo.id)} presencial
+                            </span>
                           </button>
                         </td>
                       );

@@ -166,14 +166,22 @@ export function AgendaLaboratorio() {
   useEffect(() => {
     let ativo = true;
 
-    carregarDisponibilidade().catch((error) => {
-      if (ativo) {
-        setErro(error instanceof Error ? error.message : "Erro ao carregar.");
+    function recarregar() {
+      if (document.visibilityState === "visible") {
+        carregarDisponibilidade().catch((error) => {
+          if (ativo) {
+            setErro(error instanceof Error ? error.message : "Erro ao carregar.");
+          }
+        });
       }
-    });
+    }
+
+    recarregar();
+    document.addEventListener("visibilitychange", recarregar);
 
     return () => {
       ativo = false;
+      document.removeEventListener("visibilitychange", recarregar);
     };
   }, []);
 
