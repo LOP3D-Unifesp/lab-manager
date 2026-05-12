@@ -1,13 +1,13 @@
 import {
   CalendarDays,
+  CalendarPlus,
   Gauge,
   LucideIcon,
   Printer,
   Settings,
   Sparkles,
-  Users,
-  ClipboardList,
   UserRoundCog,
+  Users,
 } from "lucide-react";
 
 export type NavigationItem = {
@@ -15,72 +15,88 @@ export type NavigationItem = {
   mobileLabel: string;
   path: string;
   icon: LucideIcon;
-  mobilePriority: boolean;
+  mobilePlacement: "primary" | "action" | "secondary";
+  mobileOrder: number;
+  mobileRole?: "coordinator";
 };
 
 export const navigationItems: NavigationItem[] = [
   {
     desktopLabel: "Dashboard",
-    mobileLabel: "Dashboard",
+    mobileLabel: "Início",
     path: "/",
     icon: Gauge,
-    mobilePriority: true,
+    mobilePlacement: "primary",
+    mobileOrder: 1,
   },
   {
     desktopLabel: "Pesquisadores",
-    mobileLabel: "Pesquisadores",
+    mobileLabel: "Pessoas",
     path: "/pesquisadores",
     icon: Users,
-    mobilePriority: false,
+    mobilePlacement: "primary",
+    mobileOrder: 4,
   },
   {
     desktopLabel: "Habilidades",
     mobileLabel: "Habilidades",
     path: "/habilidades",
     icon: Sparkles,
-    mobilePriority: false,
+    mobilePlacement: "secondary",
+    mobileOrder: 2,
   },
   {
     desktopLabel: "Agenda do Laboratório",
     mobileLabel: "Agenda",
     path: "/agenda",
     icon: CalendarDays,
-    mobilePriority: true,
+    mobilePlacement: "primary",
+    mobileOrder: 2,
   },
   {
     desktopLabel: "Impressoras",
     mobileLabel: "Impressoras",
     path: "/impressoras",
     icon: Printer,
-    mobilePriority: true,
+    mobilePlacement: "secondary",
+    mobileOrder: 3,
+    mobileRole: "coordinator",
   },
   {
     desktopLabel: "Reservas",
-    mobileLabel: "Reservas",
+    mobileLabel: "Reservar",
     path: "/reservas",
-    icon: ClipboardList,
-    mobilePriority: true,
+    icon: CalendarPlus,
+    mobilePlacement: "action",
+    mobileOrder: 3,
   },
   {
     desktopLabel: "Meu perfil",
     mobileLabel: "Perfil",
     path: "/perfil",
     icon: UserRoundCog,
-    mobilePriority: false,
+    mobilePlacement: "secondary",
+    mobileOrder: 1,
   },
   {
     desktopLabel: "Administração",
     mobileLabel: "Administração",
     path: "/administracao",
     icon: Settings,
-    mobilePriority: false,
+    mobilePlacement: "secondary",
+    mobileOrder: 4,
+    mobileRole: "coordinator",
   },
 ];
 
-export const mobilePrimaryNavigationItems = navigationItems.filter(
-  (item) => item.mobilePriority,
+export const mobilePrimaryNavigationItems = navigationItems
+  .filter((item) => item.mobilePlacement === "primary")
+  .sort((a, b) => a.mobileOrder - b.mobileOrder);
+
+export const mobileActionNavigationItem = navigationItems.find(
+  (item) => item.mobilePlacement === "action",
 );
 
-export const mobileSecondaryNavigationItems = navigationItems.filter(
-  (item) => !item.mobilePriority,
-);
+export const mobileSecondaryNavigationItems = navigationItems
+  .filter((item) => item.mobilePlacement === "secondary")
+  .sort((a, b) => a.mobileOrder - b.mobileOrder);
