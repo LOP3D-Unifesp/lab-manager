@@ -111,6 +111,13 @@ const skillCatalog: Record<string, SkillCatalogInfo> = {
   },
 };
 
+const fallbackSkills: Skill[] = Object.entries(skillCatalog).map(([name, info], index) => ({
+  id: `fallback-${index}`,
+  name,
+  description: info.summary,
+  is_active: true,
+}));
+
 const filtrosCategoria: Array<{ id: FiltroCategoria; label: string }> = [
   { id: "todas", label: "Todas" },
   { id: "fabricacao", label: categoriaLabels.fabricacao },
@@ -190,6 +197,13 @@ export function Habilidades() {
     };
   }, []);
 
+  const skillsExibicao = useMemo(
+    () => (skills.length > 0 ? skills : fallbackSkills),
+    [skills],
+  );
+
+  const mostrarFallback = skills.length === 0;
+
   const pessoasDaHabilidade = useMemo(() => {
     if (!skillSelecionada) {
       return [];
@@ -213,7 +227,7 @@ export function Habilidades() {
   const skillsFiltradas = useMemo(() => {
     const termo = normalizarSkillName(busca);
 
-    return skills.filter((skill) => {
+    return skillsExibicao.filter((skill) => {
       const info = getSkillInfo(skill);
       const textoBusca = normalizarSkillName(
         `${skill.name} ${skill.description ?? ""} ${info.summary}`,
@@ -224,12 +238,12 @@ export function Habilidades() {
         (!termo || textoBusca.includes(termo))
       );
     });
-  }, [busca, filtroCategoria, skills]);
+  }, [busca, filtroCategoria, skillsExibicao]);
 
   const resumoCategorias = useMemo(
     () =>
       (Object.keys(categoriaLabels) as CategoriaHabilidade[]).map((category) => {
-        const skillsDaCategoria = skills.filter(
+        const skillsDaCategoria = skillsExibicao.filter(
           (skill) => getSkillInfo(skill).category === category,
         );
         const pessoas = new Set(
@@ -246,7 +260,7 @@ export function Habilidades() {
           quantidadePessoas: pessoas.size,
         };
       }),
-    [profileSkills, skills],
+    [profileSkills, skillsExibicao],
   );
 
   function abrirDetalhe(skill: Skill) {
@@ -294,8 +308,16 @@ export function Habilidades() {
         </p>
       ) : null}
 
-      {skills.length > 0 ? (
+      {skillsExibicao.length > 0 ? (
         <>
+          {mostrarFallback ? (
+            <Card className="mb-5 border-dashed border-primary/40 bg-primary-soft/40">
+              <p className="text-sm font-semibold text-primary">
+                Visualizacao base ativa: ainda nao ha habilidades cadastradas no Supabase, entao estou exibindo o catalogo inicial da pagina para manter a secao pronta.
+              </p>
+            </Card>
+          ) : null}
+
           <section className="mb-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {resumoCategorias.map((resumo) => (
               <button
