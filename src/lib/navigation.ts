@@ -68,13 +68,11 @@ export const navigationItems: NavigationItem[] = [
     desktopLabel: "Impressoras",
     desktopSection: "management",
     desktopOrder: 6,
-    desktopRole: "coordinator",
     mobileLabel: "Impressoras",
     path: "/impressoras",
     icon: Printer,
     mobilePlacement: "secondary",
     mobileOrder: 3,
-    mobileRole: "coordinator",
   },
   {
     desktopLabel: "Reservas",

@@ -8,6 +8,7 @@ import {
   PrinterMaterial,
   PrinterStatus,
   Profile,
+  ProfileRole,
   ProfileSkill,
   Skill,
   WorkMode,
@@ -26,9 +27,25 @@ function client() {
 }
 
 function throwIfError(error: unknown) {
-  if (error) {
+  if (!error) {
+    return;
+  }
+
+  if (error instanceof Error) {
     throw error;
   }
+
+  if (typeof error === "object" && error !== null) {
+    const typedError = error as Record<string, unknown>;
+    const message = typeof typedError.message === "string" ? typedError.message : null;
+    const details = typeof typedError.details === "string" ? typedError.details : null;
+    const hint = typeof typedError.hint === "string" ? typedError.hint : null;
+    const code = typeof typedError.code === "string" ? typedError.code : null;
+    const text = [message, details, hint, code].filter(Boolean).join(" | ");
+    throw new Error(text || JSON.stringify(typedError));
+  }
+
+  throw new Error(String(error));
 }
 
 const profileSelect = [
@@ -117,6 +134,97 @@ export async function updateMyProfile(
       phone: params.phone,
       bio: params.bio,
     })
+    .eq("id", profileId)
+    .select(profileSelect)
+    .single();
+
+  throwIfError(error);
+  return mapProfile(data as unknown as Omit<Profile, "first_name" | "last_name">);
+}
+
+export async function createMyProfile(params: {
+  profileId: string;
+  email: string;
+  fullName: string;
+  academicAffiliation: AcademicAffiliation | null;
+  birthDate: string | null;
+  isScholarshipHolder: boolean;
+  weeklyWorkloadHours: number | null;
+  lattesUrl: string | null;
+  cpf: string | null;
+  rg: string | null;
+  postalCode: string | null;
+  street: string | null;
+  addressNumber: string | null;
+  addressComplement: string | null;
+  neighborhood: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  nationalityCountryCode: string | null;
+  phone: string | null;
+  bio: string | null;
+}) {
+  const { data: sessionData, error: sessionError } = await client().auth.getSession();
+
+  if (sessionError) {
+    throw new Error("Erro ao verificar sessão: " + sessionError.message);
+  }
+
+  if (!sessionData?.session?.user?.id) {
+    throw new Error(
+      "Nenhuma sessão ativa encontrada. Faça login novamente e tente novamente."
+    );
+  }
+
+  if (sessionData.session.user.id !== params.profileId) {
+    throw new Error(
+      "O id do usuário autenticado não corresponde ao id do perfil a ser criado."
+    );
+  }
+
+  const { data, error } = await client()
+    .rpc("create_profile", {
+      p_full_name: params.fullName,
+      p_email: params.email,
+      p_academic_affiliation: params.academicAffiliation,
+      p_birth_date: params.birthDate,
+      p_is_scholarship_holder: params.isScholarshipHolder,
+      p_weekly_workload_hours: params.weeklyWorkloadHours,
+      p_lattes_url: params.lattesUrl,
+      p_cpf: params.cpf,
+      p_rg: params.rg,
+      p_postal_code: params.postalCode,
+      p_street: params.street,
+      p_address_number: params.addressNumber,
+      p_address_complement: params.addressComplement,
+      p_neighborhood: params.neighborhood,
+      p_city: params.city,
+      p_state: params.state,
+      p_country: params.country,
+      p_nationality_country_code: params.nationalityCountryCode,
+      p_phone: params.phone,
+      p_bio: params.bio,
+    })
+    .single();
+
+  throwIfError(error);
+  return mapProfile(data as unknown as Omit<Profile, "first_name" | "last_name">);
+}
+
+export async function inviteUser(email: string) {
+  const { data, error } = await client().auth.signInWithOtp({
+    email,
+  });
+
+  throwIfError(error);
+  return data;
+}
+
+export async function updateProfileRole(profileId: string, role: ProfileRole) {
+  const { data, error } = await client()
+    .from("profiles")
+    .update({ role })
     .eq("id", profileId)
     .select(profileSelect)
     .single();

@@ -6,6 +6,7 @@ import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
 import { StatusBadge } from "../components/ui/StatusBadge";
+import { useAuth } from "../lib/auth";
 import {
   getPrinterStatusLabel,
   type Material,
@@ -63,6 +64,8 @@ function materialIdsForPrinter(
 }
 
 export function Impressoras() {
+  const { profile } = useAuth();
+  const isCoordinator = profile?.role === "coordinator";
   const [printers, setPrinters] = useState<Printer[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [printerMaterials, setPrinterMaterialsState] = useState<
@@ -134,6 +137,9 @@ export function Impressoras() {
   }
 
   function abrirCadastro() {
+    if (!isCoordinator) {
+      return;
+    }
     setErro("");
     setPrinterEmEdicao(null);
     setForm(emptyPrinterForm);
@@ -163,6 +169,10 @@ export function Impressoras() {
 
   async function salvarMaterial(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!isCoordinator) {
+      setErro("Apenas coordenadores podem adicionar materiais.");
+      return;
+    }
     const name = materialForm.name.trim();
 
     if (!name) {
@@ -189,6 +199,10 @@ export function Impressoras() {
 
   async function salvarPrinter(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!isCoordinator) {
+      setErro("Apenas coordenadores podem adicionar ou editar impressoras.");
+      return;
+    }
     const name = form.name.trim();
 
     if (!name) {
@@ -403,10 +417,12 @@ export function Impressoras() {
         title="Impressoras"
         description="Equipamentos, materiais e compatibilidades reais do Supabase."
         action={
-          <Button fullWidth variant="success" onClick={abrirCadastro}>
+          isCoordinator ? (
+            <Button fullWidth variant="success" onClick={abrirCadastro}>
             <Plus className="mr-2 h-5 w-5" aria-hidden="true" />
             Cadastrar impressora
           </Button>
+          ) : undefined
         }
       />
 
@@ -422,7 +438,8 @@ export function Impressoras() {
             </p>
           </div>
         </div>
-        <form
+        {isCoordinator ? (
+          <form
           className="grid gap-3 md:grid-cols-[1fr_1fr_auto]"
           onSubmit={salvarMaterial}
         >
@@ -454,6 +471,11 @@ export function Impressoras() {
             Adicionar material
           </Button>
         </form>
+        ) : (
+          <div className="rounded-lg border border-border bg-surface p-4 text-base text-muted">
+            Apenas coordenadores podem cadastrar novos materiais.
+          </div>
+        )}
         <div className="mt-3 flex flex-wrap gap-2">
           {materials.length > 0 ? (
             materials.map((material) => (
@@ -514,6 +536,7 @@ export function Impressoras() {
                     type="button"
                     title="Editar impressora"
                     aria-label={`Editar ${printer.name}`}
+                    disabled={!isCoordinator}
                     onClick={() => abrirEdicao(printer)}
                     className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted transition hover:bg-primary-soft hover:text-primary"
                   >
