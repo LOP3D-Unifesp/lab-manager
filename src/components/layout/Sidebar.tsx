@@ -3,6 +3,7 @@ import { Link, NavLink } from "react-router-dom";
 import { useAuth } from "../../lib/auth";
 import { navigationItems, type NavigationItem } from "../../lib/navigation";
 import { AuthUserMenu } from "./AuthUserMenu";
+import { EnvironmentBadge } from "./EnvironmentBadge";
 
 function canShowDesktopItem(item: NavigationItem, role?: string) {
   return (
@@ -59,7 +60,7 @@ function SidebarNavItem({
 }
 
 export function Sidebar() {
-  const { profile } = useAuth();
+  const { labSettings, profile } = useAuth();
   const visibleNavigationItems = getVisibleDesktopItems(profile?.role);
 
   return (
@@ -71,15 +72,18 @@ export function Sidebar() {
             aria-label="Ir para o início"
             className="block rounded-md transition hover:text-primary focus-visible:outline-offset-4"
           >
-            <p className="text-base font-bold leading-none text-primary">
-              LO&P3D
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-base font-bold leading-none text-primary">
+                {labSettings?.acronym ?? "Lab"}
+              </p>
+              <EnvironmentBadge />
+            </div>
             <h1 className="mt-1 text-[24px] font-bold leading-tight text-text">
               Lab Manager
             </h1>
           </Link>
           <p className="mt-2 text-sm font-semibold leading-5 text-muted">
-            Gestão interna do laboratório.
+            {labSettings?.name ?? "Gestão interna do laboratório."}
           </p>
         </div>
 

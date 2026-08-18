@@ -12,6 +12,7 @@ import { Dashboard } from "./pages/Dashboard";
 import { Habilidades } from "./pages/Habilidades";
 import { Impressoras } from "./pages/Impressoras";
 import { Login } from "./pages/Login";
+import { InstallationWizard } from "./pages/InstallationWizard";
 import { MeuPerfil } from "./pages/MeuPerfil";
 import { NotFound } from "./pages/NotFound";
 import { Pesquisadores } from "./pages/Pesquisadores";
@@ -28,10 +29,19 @@ function LoadingScreen() {
 }
 
 function ProtectedApp() {
-  const { authConfigured, loading, profile, profileLoading, session } = useAuth();
+  const {
+    authConfigured,
+    installationLoading,
+    labSettings,
+    loading,
+    profile,
+    profileLoading,
+    session,
+    signOut,
+  } = useAuth();
   const location = useLocation();
 
-  if (loading || profileLoading) {
+  if (loading || profileLoading || installationLoading) {
     return <LoadingScreen />;
   }
 
@@ -47,6 +57,30 @@ function ProtectedApp() {
 
   if (!profile) {
     return <ProfileRequired />;
+  }
+
+  if (!labSettings?.setup_completed_at) {
+    if (profile.role !== "coordinator") {
+      return (
+        <main className="flex min-h-screen items-center justify-center bg-background px-5 text-text">
+          <div className="max-w-lg rounded-lg border border-border bg-surface p-6 text-center shadow-sm">
+            <h1 className="text-2xl font-bold">Instalação pendente</h1>
+            <p className="mt-3 text-muted">
+              O primeiro coordenador ainda precisa configurar este laboratório.
+            </p>
+            <button className="mt-5 font-semibold text-primary underline" onClick={signOut}>
+              Sair
+            </button>
+          </div>
+        </main>
+      );
+    }
+
+    if (location.pathname !== "/instalacao") {
+      return <Navigate to="/instalacao" replace />;
+    }
+  } else if (location.pathname === "/instalacao") {
+    return <Navigate to="/" replace />;
   }
 
   if (
@@ -68,6 +102,7 @@ export const router = createBrowserRouter([
     path: "/",
     element: <ProtectedApp />,
     children: [
+      { path: "instalacao", element: <InstallationWizard /> },
       {
         element: <App />,
         children: [

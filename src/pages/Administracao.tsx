@@ -1,13 +1,18 @@
 import { FormEvent, useEffect, useState } from "react";
-import { ArrowUpRight, Mail, Users, UserPlus } from "lucide-react";
+import { ArrowUpRight, Building2, Mail, Users, UserPlus } from "lucide-react";
 
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
 import { StatusBadge } from "../components/ui/StatusBadge";
 import { useAuth } from "../lib/auth";
-import type { Profile, ProfileRole } from "../lib/domain";
-import { inviteUser, listProfiles, updateProfileRole } from "../lib/supabaseRepository";
+import type { PublicProfile, ProfileRole } from "../lib/domain";
+import {
+  inviteUser,
+  listProfiles,
+  updateLabSettings,
+  updateProfileRole,
+} from "../lib/supabaseRepository";
 
 function getRoleLabel(role: ProfileRole) {
   return role === "coordinator" ? "Coordenador" : "Pesquisador";
@@ -18,8 +23,8 @@ function getRoleVariant(role: ProfileRole) {
 }
 
 export function Administracao() {
-  const { profile } = useAuth();
-  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const { labSettings, profile, refreshInstallation } = useAuth();
+  const [profiles, setProfiles] = useState<PublicProfile[]>([]);
   const [inviteEmail, setInviteEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [pageError, setPageError] = useState("");
@@ -28,6 +33,11 @@ export function Administracao() {
   const [roleError, setRoleError] = useState("");
   const [roleSuccess, setRoleSuccess] = useState("");
   const [savingRoleId, setSavingRoleId] = useState<string | null>(null);
+  const [labName, setLabName] = useState("");
+  const [labAcronym, setLabAcronym] = useState("");
+  const [labTimezone, setLabTimezone] = useState("America/Sao_Paulo");
+  const [labMessage, setLabMessage] = useState("");
+  const [savingLab, setSavingLab] = useState(false);
 
   const isCoordinator = profile?.role === "coordinator";
 
@@ -36,6 +46,29 @@ export function Administracao() {
       setPageError("Nao foi possivel carregar os usuarios.");
     });
   }, []);
+
+  useEffect(() => {
+    if (!labSettings) return;
+    setLabName(labSettings.name ?? "");
+    setLabAcronym(labSettings.acronym ?? "");
+    setLabTimezone(labSettings.timezone);
+  }, [labSettings]);
+
+  async function handleLabSettings(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setLabMessage("");
+    setSavingLab(true);
+
+    try {
+      await updateLabSettings({ name: labName, acronym: labAcronym, timezone: labTimezone });
+      await refreshInstallation();
+      setLabMessage("Configurações do laboratório atualizadas.");
+    } catch (error) {
+      setLabMessage(error instanceof Error ? error.message : "Não foi possível atualizar o laboratório.");
+    } finally {
+      setSavingLab(false);
+    }
+  }
 
   async function carregarPerfis() {
     setPageError("");
@@ -95,6 +128,36 @@ export function Administracao() {
           {pageError}
         </p>
       ) : null}
+
+      <Card className="mb-4">
+        <div className="mb-5 flex items-start gap-3">
+          <div className="rounded-lg bg-primary-soft p-3 text-primary">
+            <Building2 className="h-5 w-5" aria-hidden="true" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-text">Laboratório</h2>
+            <p className="mt-1 text-base text-muted">Atualize a identidade exibida no sistema.</p>
+          </div>
+        </div>
+        <form className="grid gap-4 md:grid-cols-[2fr_1fr_1.5fr_auto] md:items-end" onSubmit={handleLabSettings}>
+          <label className="grid gap-2 text-base font-semibold text-text">
+            Nome
+            <input className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal" required value={labName} onChange={(event) => setLabName(event.target.value)} />
+          </label>
+          <label className="grid gap-2 text-base font-semibold text-text">
+            Sigla
+            <input className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal uppercase" required value={labAcronym} onChange={(event) => setLabAcronym(event.target.value)} />
+          </label>
+          <label className="grid gap-2 text-base font-semibold text-text">
+            Fuso horário
+            <select className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal" value={labTimezone} onChange={(event) => setLabTimezone(event.target.value)}>
+              {["America/Sao_Paulo", "America/Manaus", "America/Recife", "America/Fortaleza", "UTC"].map((item) => <option key={item}>{item}</option>)}
+            </select>
+          </label>
+          <Button type="submit" disabled={savingLab || !isCoordinator}>{savingLab ? "Salvando..." : "Salvar"}</Button>
+        </form>
+        {labMessage ? <p className="mt-3 text-sm font-semibold text-muted">{labMessage}</p> : null}
+      </Card>
 
       <section className="grid gap-4 xl:grid-cols-[minmax(320px,400px)_1fr]">
         <Card>
