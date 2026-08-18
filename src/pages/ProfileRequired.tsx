@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { useAuth } from "../lib/auth";
-import { createMyProfile } from "../lib/supabaseRepository";
+import { createMyProfile, setMyPassword } from "../lib/supabaseRepository";
 import { AcademicAffiliation } from "../lib/domain";
 
 const academicAffiliationOptions: Array<{
@@ -39,6 +39,8 @@ export function ProfileRequired() {
   const { signOut, user, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const [fullName, setFullName] = useState("");
+  const [password, setPassword] = useState("");
+  const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [academicAffiliation, setAcademicAffiliation] = useState<AcademicAffiliation | "">("");
   const [birthDate, setBirthDate] = useState("");
   const [isScholarshipHolder, setIsScholarshipHolder] = useState(false);
@@ -71,10 +73,21 @@ export function ProfileRequired() {
       return;
     }
 
+    if (password.length < 8) {
+      setErrorMessage("A senha deve ter pelo menos 8 caracteres.");
+      setSubmitting(false);
+      return;
+    }
+
+    if (password !== passwordConfirmation) {
+      setErrorMessage("As senhas nao coincidem.");
+      setSubmitting(false);
+      return;
+    }
+
     try {
+      await setMyPassword(password);
       await createMyProfile({
-        profileId: user.id,
-        email: user.email,
         fullName: fullName.trim(),
         academicAffiliation: academicAffiliation || null,
         birthDate: normalizeOptionalText(birthDate),
@@ -156,6 +169,36 @@ export function ProfileRequired() {
                   required
                   type="text"
                   value={fullName}
+                />
+              </label>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="grid gap-2 text-base font-semibold">
+                Crie uma senha
+                <input
+                  autoComplete="new-password"
+                  className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
+                  disabled={submitting}
+                  minLength={8}
+                  onChange={(event) => setPassword(event.target.value)}
+                  required
+                  type="password"
+                  value={password}
+                />
+              </label>
+
+              <label className="grid gap-2 text-base font-semibold">
+                Confirme a senha
+                <input
+                  autoComplete="new-password"
+                  className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
+                  disabled={submitting}
+                  minLength={8}
+                  onChange={(event) => setPasswordConfirmation(event.target.value)}
+                  required
+                  type="password"
+                  value={passwordConfirmation}
                 />
               </label>
             </div>

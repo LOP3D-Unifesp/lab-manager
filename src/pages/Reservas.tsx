@@ -17,7 +17,7 @@ import {
   type Printer,
   type PrinterBooking,
   type PrinterMaterial,
-  type Profile,
+  type PublicProfile,
 } from "../lib/domain";
 import {
   cancelBooking,
@@ -131,7 +131,7 @@ export function Reservas() {
   const { currentProfile } = useCurrentProfile();
   const [bookings, setBookings] = useState<PrinterBooking[]>([]);
   const [printers, setPrinters] = useState<Printer[]>([]);
-  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [profiles, setProfiles] = useState<PublicProfile[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [printerMaterials, setPrinterMaterials] = useState<PrinterMaterial[]>(
     [],

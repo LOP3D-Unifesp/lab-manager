@@ -376,7 +376,7 @@ export function MeuPerfil() {
     setSubmitting(true);
 
     try {
-      await updateMyProfile(profile.id, {
+      await updateMyProfile({
         fullName: nomeNormalizado,
         academicAffiliation: academicAffiliation || null,
         birthDate: birthDateNormalizada,

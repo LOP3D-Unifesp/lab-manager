@@ -6,7 +6,7 @@ import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
 import { StatusBadge } from "../components/ui/StatusBadge";
 import { useCurrentProfile } from "../lib/currentUser";
-import type { Profile, ProfileSkill, Skill } from "../lib/domain";
+import type { PublicProfile, ProfileSkill, Skill } from "../lib/domain";
 import {
   listProfiles,
   listProfileSkills,
@@ -29,7 +29,7 @@ function profileTemHabilidade(
 
 export function Habilidades() {
   const { currentProfile } = useCurrentProfile();
-  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [profiles, setProfiles] = useState<PublicProfile[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [profileSkills, setProfileSkills] = useState<ProfileSkill[]>([]);
   const [skillSelecionada, setSkillSelecionada] = useState<Skill | null>(null);

@@ -9,55 +9,33 @@ import {
 import type { Session, User } from "@supabase/supabase-js";
 
 import { supabase } from "./supabaseClient";
-import { mapProfile, type AcademicAffiliation, type Profile } from "./domain";
+import { mergeMyProfile, type LabSettings, type MyProfile } from "./domain";
+import type { Tables } from "./database.types";
 
 type AuthContextValue = {
   session: Session | null;
   user: User | null;
-  profile: Profile | null;
+  profile: MyProfile | null;
+  labSettings: LabSettings | null;
   loading: boolean;
   profileLoading: boolean;
+  installationLoading: boolean;
   authConfigured: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
-};
-
-type ProfileRow = {
-  id: string;
-  full_name: string;
-  email: string;
-  role: "coordinator" | "researcher";
-  academic_affiliation: AcademicAffiliation | null;
-  birth_date: string | null;
-  is_scholarship_holder: boolean;
-  weekly_workload_hours: number | null;
-  lattes_url: string | null;
-  cpf: string | null;
-  rg: string | null;
-  postal_code: string | null;
-  street: string | null;
-  address_number: string | null;
-  address_complement: string | null;
-  neighborhood: string | null;
-  city: string | null;
-  state: string | null;
-  country: string | null;
-  nationality_country_code: string | null;
-  phone: string | null;
-  bio: string | null;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
+  refreshInstallation: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<MyProfile | null>(null);
+  const [labSettings, setLabSettings] = useState<LabSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(true);
+  const [installationLoading, setInstallationLoading] = useState(true);
   const authConfigured = Boolean(supabase);
 
   const refreshProfile = async () => {
@@ -69,23 +47,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     setProfileLoading(true);
 
-    const { data, error } = await supabase
-      .from("profiles")
-      .select(
-        "id, full_name, email, role, academic_affiliation, birth_date, is_scholarship_holder, weekly_workload_hours, lattes_url, cpf, rg, postal_code, street, address_number, address_complement, neighborhood, city, state, country, nationality_country_code, phone, bio, is_active, created_at, updated_at",
-      )
-      .eq("id", session.user.id)
-      .eq("is_active", true)
-      .maybeSingle<ProfileRow>();
+    const [publicResult, privateResult] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select(
+          "id, full_name, email, role, academic_affiliation, is_scholarship_holder, weekly_workload_hours, lattes_url, nationality_country_code, phone, bio, is_active, created_at, updated_at",
+        )
+        .eq("id", session.user.id)
+        .eq("is_active", true)
+        .maybeSingle(),
+      supabase
+        .from("profile_private_data")
+        .select(
+          "profile_id, birth_date, cpf, rg, postal_code, street, address_number, address_complement, neighborhood, city, state, country, created_at, updated_at",
+        )
+        .eq("profile_id", session.user.id)
+        .maybeSingle(),
+    ]);
 
-    if (error || !data) {
+    if (publicResult.error || privateResult.error || !publicResult.data || !privateResult.data) {
       setProfile(null);
       setProfileLoading(false);
       return;
     }
 
-    setProfile(mapProfile(data));
+    setProfile(
+      mergeMyProfile(
+        publicResult.data as Tables<"profiles">,
+        privateResult.data as Tables<"profile_private_data">,
+      ),
+    );
     setProfileLoading(false);
+  };
+
+  const refreshInstallation = async () => {
+    if (!supabase || !session?.user.id) {
+      setLabSettings(null);
+      setInstallationLoading(false);
+      return;
+    }
+
+    setInstallationLoading(true);
+    const { data, error } = await supabase
+      .from("lab_settings")
+      .select(
+        "id, name, acronym, timezone, setup_completed_at, created_by, updated_by, created_at, updated_at",
+      )
+      .eq("id", true)
+      .maybeSingle();
+
+    setLabSettings(error ? null : (data as LabSettings | null));
+    setInstallationLoading(false);
   };
 
   useEffect(() => {
@@ -119,6 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     refreshProfile();
+    refreshInstallation();
   }, [session?.user.id]);
 
   const value = useMemo<AuthContextValue>(
@@ -126,10 +139,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       user: session?.user ?? null,
       profile,
+      labSettings,
       loading,
       profileLoading,
+      installationLoading,
       authConfigured,
       refreshProfile,
+      refreshInstallation,
       signIn: async (email: string, password: string) => {
         if (!supabase) {
           throw new Error("Supabase nao esta configurado.");
@@ -151,9 +167,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         await supabase.auth.signOut();
         setProfile(null);
+        setLabSettings(null);
       },
     }),
-    [authConfigured, loading, profile, profileLoading, session],
+    [
+      authConfigured,
+      installationLoading,
+      labSettings,
+      loading,
+      profile,
+      profileLoading,
+      session,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

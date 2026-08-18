@@ -14,7 +14,7 @@ import {
   type AvailabilitySlot,
   type Printer as PrinterType,
   type PrinterBooking,
-  type Profile,
+  type PublicProfile,
 } from "../lib/domain";
 import {
   listAvailability,
@@ -75,7 +75,7 @@ function reservaEstaEmAndamento(reserva: PrinterBooking, agora: Date) {
 
 export function Dashboard() {
   const { currentProfile } = useCurrentProfile();
-  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [profiles, setProfiles] = useState<PublicProfile[]>([]);
   const [availability, setAvailability] = useState<AvailabilitySlot[]>([]);
   const [printers, setPrinters] = useState<PrinterType[]>([]);
   const [bookings, setBookings] = useState<PrinterBooking[]>([]);

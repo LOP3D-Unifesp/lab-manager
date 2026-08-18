@@ -26,7 +26,7 @@ export type BookingStatus =
   | "cancelled"
   | "failed";
 
-export type Profile = {
+export type PublicProfile = {
   id: string;
   full_name: string;
   first_name: string;
@@ -34,10 +34,20 @@ export type Profile = {
   email: string;
   role: ProfileRole;
   academic_affiliation: AcademicAffiliation | null;
-  birth_date: string | null;
   is_scholarship_holder: boolean;
   weekly_workload_hours: number | null;
   lattes_url: string | null;
+  nationality_country_code: string | null;
+  phone: string | null;
+  bio: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PrivateProfile = {
+  profile_id: string;
+  birth_date: string | null;
   cpf: string | null;
   rg: string | null;
   postal_code: string | null;
@@ -48,12 +58,45 @@ export type Profile = {
   city: string | null;
   state: string | null;
   country: string | null;
-  nationality_country_code: string | null;
-  phone: string | null;
-  bio: string | null;
-  is_active: boolean;
   created_at: string;
   updated_at: string;
+};
+
+export type MyProfile = PublicProfile & PrivateProfile;
+
+export type LabSettings = {
+  id: boolean;
+  name: string | null;
+  acronym: string | null;
+  timezone: string;
+  setup_completed_at: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type InstallationState = {
+  settings: LabSettings | null;
+  completed: boolean;
+};
+
+export type InitialMaterialInput = {
+  name: string;
+  description: string | null;
+};
+
+export type InitialPrinterInput = {
+  name: string;
+  model: string | null;
+  location: string | null;
+  notes: string | null;
+  materialNames: string[];
+};
+
+export type InitialCatalogInput = {
+  materials: InitialMaterialInput[];
+  printers: InitialPrinterInput[];
 };
 
 export type Skill = {
@@ -115,8 +158,20 @@ export type PrinterBooking = {
   cancelled_at: string | null;
   cancelled_by: string | null;
   printer?: Printer | null;
-  profile?: Profile | null;
+  profile?: PublicProfile | null;
   material?: Material | null;
+};
+
+export type MaintenanceBlock = {
+  id: string;
+  printer_id: string;
+  created_by: string;
+  starts_at: string;
+  ends_at: string;
+  reason: string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 export const DURACAO_MINIMA_RESERVA_MINUTOS = 30;
@@ -147,7 +202,9 @@ export function splitName(fullName: string) {
   };
 }
 
-export function mapProfile(row: Omit<Profile, "first_name" | "last_name">): Profile {
+export function mapPublicProfile(
+  row: Omit<PublicProfile, "first_name" | "last_name">,
+): PublicProfile {
   const { firstName, lastName } = splitName(row.full_name);
 
   return {
@@ -155,6 +212,13 @@ export function mapProfile(row: Omit<Profile, "first_name" | "last_name">): Prof
     first_name: firstName,
     last_name: lastName,
   };
+}
+
+export function mergeMyProfile(
+  profile: Omit<PublicProfile, "first_name" | "last_name">,
+  privateProfile: PrivateProfile,
+): MyProfile {
+  return { ...mapPublicProfile(profile), ...privateProfile };
 }
 
 function isDateOnly(value: string) {
