@@ -4,7 +4,19 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "node scripts/assert-environment.mjs local && vite --mode development",
+    "dev:remote": "node scripts/assert-environment.mjs remote && vite --mode remote",
+    "setup:local": "node scripts/local-supabase.mjs setup",
+    "db:start": "node scripts/local-supabase.mjs start",
+    "db:stop": "node scripts/local-supabase.mjs stop",
+    "db:reset:local": "node scripts/local-supabase.mjs reset",
+    "db:seed:demo": "node scripts/local-supabase.mjs seed-demo",
+    "bootstrap:remote": "node scripts/bootstrap-admin.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:db": "supabase test db",
+    "test:concurrency": "node scripts/test-booking-concurrency.mjs",
+    "db:types": "supabase gen types typescript --local > src/lib/database.types.ts",
     "build": "tsc -b && vite build",
     "preview": "vite preview"
   },
@@ -23,6 +35,7 @@
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.2",
-    "vite": "^6.0.1"
+    "vite": "^6.0.1",
+    "vitest": "^3.2.7"
   }
 }

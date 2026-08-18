@@ -5,6 +5,7 @@ import { Lock, LogIn } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { useAuth } from "../lib/auth";
+import { supabaseConfigurationError } from "../lib/supabaseClient";
 
 export function Login() {
   const { authConfigured, loading, session, signIn } = useAuth();
@@ -65,7 +66,8 @@ export function Login() {
 
           {!authConfigured ? (
             <p className="rounded-lg border border-danger bg-danger-soft p-3 text-base font-semibold text-danger">
-              Supabase nao esta configurado. Verifique o arquivo .env.
+              {supabaseConfigurationError ??
+                "Supabase nao esta configurado. Execute npm run setup:local."}
             </p>
           ) : null}
 
