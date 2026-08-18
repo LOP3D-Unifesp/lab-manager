@@ -16,7 +16,7 @@
     "test:watch": "vitest",
     "test:db": "supabase test db",
     "test:concurrency": "node scripts/test-booking-concurrency.mjs",
-    "db:types": "supabase gen types typescript --local > src/lib/database.types.ts",
+    "db:types": "node scripts/generate-database-types.mjs",
     "build": "tsc -b && vite build",
     "preview": "vite preview"
   },
