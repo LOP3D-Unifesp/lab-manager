@@ -18,8 +18,15 @@ O primeiro comando de setup recria o banco local, aplica a baseline e cria exclu
 - email: `admin@lab.local`
 - senha: `LabManager123!`
 
-Depois do login, o coordenador deve concluir o wizard com a identidade do laboratório e, se desejar,
-materiais, impressoras e compatibilidades iniciais.
+Depois do login, o coordenador deve concluir o wizard somente com a identidade do laboratório e
+um email institucional de contato para privacidade. Materiais, impressoras e compatibilidades são
+cadastrados depois, nas telas próprias da aplicação. Convites ficam bloqueados enquanto esse
+contato não estiver preenchido.
+
+Mensagens de convite locais não saem para a internet. Consulte-as em
+`http://127.0.0.1:55324` (Mailpit). O link abre `/convite/aceitar`, mas apenas o botão
+**Aceitar convite** confirma o token. Isso permite abrir ou pré-visualizar a mensagem sem criar
+sessão ou consumir o link.
 
 ## Rotina diária
 
@@ -72,7 +79,26 @@ CONFIRM_REMOTE_HOST
 ```
 
 Com essas variáveis definidas, execute `npm run bootstrap:remote`. O comando recusa localhost,
-hostname divergente, instalação concluída ou banco que já possua perfis.
+hostname divergente, instalação concluída ou banco que já possua perfis. Ele também registra no
+Vault os segredos usados pelo Cron de limpeza e agenda `cleanup-expired-invitations` a cada hora.
+
+## Promoção manual dos convites para o Supabase hospedado
+
+O projeto hospedado permanece intocado até esta sequência ser executada deliberadamente:
+
+1. aplicar a baseline em staging e publicar `invite-user`, `manage-invitation` e
+   `cleanup-invitations`;
+2. manter `verify_jwt=true` nas duas funções administrativas e `verify_jwt=false` apenas na limpeza,
+   que valida manualmente o bearer secreto;
+3. configurar `PUBLIC_SITE_URL` nas funções com a origem HTTPS da aplicação;
+4. no painel Auth, manter cadastro público desabilitado e configurar `Site URL`/redirects;
+5. promover `supabase/templates/invite.html` como template de convite. O link deve continuar usando
+   `{{ .TokenHash }}` e apontar primeiro para `/convite/aceitar`, nunca diretamente para
+   `{{ .ConfirmationURL }}`;
+6. executar `npm run bootstrap:remote` uma única vez e verificar o job horário em Cron;
+7. testar todo o fluxo em staging antes de repetir em produção.
+
+Não copie usuários, convites nem outros dados do Docker para o projeto hospedado.
 
 ## Migrations, seeds e promoção
 

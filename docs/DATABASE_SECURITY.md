@@ -36,7 +36,8 @@ fora do MVP e nao possuem tabelas nesta versao.
 | Impressoras/materiais | Nao | Nao | Leitura | Administracao |
 | Reservas | Nao | Nao | Leitura, criacao e cancelamento permitido via RPC | Mesmas RPCs com privilegio administrativo |
 | Manutencao | Nao | Nao | Leitura | Criacao/remocao via RPC |
-| Convites | Nao | Nao | Nao | Edge Function e leitura de auditoria |
+| Aviso de privacidade | Leitura minima | Leitura minima | Leitura minima | Leitura minima |
+| Convites | Nao | Nao | Nao | Edge Functions e leitura de auditoria |
 
 RLS continua sendo aplicada quando o navegador chama a Data API diretamente. Operacoes
 que alteram varias linhas ou validam concorrencia sao expostas somente como funcoes transacionais.
@@ -45,13 +46,22 @@ que alteram varias linhas ou validam concorrencia sao expostas somente como func
 
 1. Um coordenador autenticado chama a Edge Function `invite-user`.
 2. A funcao valida o JWT e o papel no banco usando o cliente administrativo.
-3. Ela cria uma linha `pending` em `invitations` e usa o Supabase Auth para enviar o email.
-4. O usuario autenticado chama `create_profile`; a funcao usa `auth.uid()` e o email do JWT.
-5. Perfil publico, dados privados e consumo do convite acontecem na mesma transacao.
+3. Ela exige contato institucional de privacidade, valida o papel solicitado, cria uma linha
+   `pending` com validade de 72 horas e usa o Supabase Auth para enviar o email.
+4. O template aponta para uma pagina intermediaria. Abertura ou pre-carga nao consome o token;
+   somente o botao de aceite chama `verifyOtp` e registra `opened_at`.
+5. O usuario autenticado chama `create_profile`; a funcao usa `auth.uid()`, o email do JWT e o papel
+   armazenado no convite, sem aceitar o papel enviado pelo navegador durante o cadastro.
+6. Perfil publico, dados privados e consumo do convite acontecem na mesma transacao. O email
+   duplicado e removido de `invitations`.
+7. `manage-invitation` invalida o usuario Auth anterior antes de reenviar ou revogar. Reenvios tem
+   intervalo minimo de cinco minutos.
+8. O Cron chama `cleanup-invitations` a cada hora. Ele anonimiza expirados e repete de forma
+   idempotente a exclusao definitiva de identidades incompletas.
 
 Segredos `SUPABASE_SERVICE_ROLE_KEY` nunca pertencem ao frontend. Configure na Edge Function
-`PUBLIC_SITE_URL` e, opcionalmente, `INVITATION_TTL_HOURS` (padrao: 24). No projeto hospedado,
-mantenha cadastro publico desabilitado em Auth.
+`PUBLIC_SITE_URL`. O bearer do Cron e a URL da funcao ficam criptografados no Supabase Vault. No
+projeto hospedado, mantenha cadastro publico desabilitado em Auth.
 
 ## Aplicar e validar
 
@@ -73,7 +83,8 @@ tipos depois de alterar o schema, execute `npm run db:types` e revise o diff ger
 1. Gere backup do banco remoto antes de aplicar a migration.
 2. Valide a migration em um projeto Supabase de staging recriado do zero.
 3. Aplique com `supabase db push` apenas depois do CI verde.
-4. Publique a Edge Function `invite-user` e configure seus segredos.
+4. Publique as Edge Functions `invite-user`, `manage-invitation` e `cleanup-invitations`, configure
+   `PUBLIC_SITE_URL`, o template com `TokenHash` e o Cron.
 5. Teste convite, cadastro, perfil privado e duas reservas conflitantes em staging.
 
 Migrations aplicadas nao devem ser editadas. Se houver falha antes do commit da migration, o

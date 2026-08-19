@@ -65,6 +65,17 @@ Observacao:
 
 - `intern` representa Estagiario.
 
+### `funding_agency`
+
+Agencia responsavel pela bolsa de fomento.
+
+- `cnpq`
+- `fapesp`
+- `capes`
+- `sus`
+- `fap`
+- `other`
+
 ### `invitation_status`
 
 Status de um convite.
@@ -125,6 +136,9 @@ Campos sugeridos:
 | `email` | `text` | Sim | Email principal do usuario. |
 | `role` | `user_role` | Sim | Papel de acesso no sistema. |
 | `academic_affiliation` | `academic_affiliation` | Nao | Vinculo academico ou institucional. |
+| `has_funding_grant` | `boolean` | Sim | Indica se a pessoa possui bolsa de fomento. |
+| `funding_agency` | `funding_agency` | Quando houver bolsa | Agencia de fomento: CNPq, FAPESP, CAPES, SUS, FAP ou outra. |
+| `funding_agency_other` | `text` | Para agencia `other` | Nome da agencia quando a opcao selecionada for outra. |
 | `nationality_country_code` | `char(2)` | Nao | Codigo ISO 3166-1 alpha-2 da nacionalidade ou pais principal do pesquisador. Exemplos: `CL`, `BR`, `DE`. |
 | `phone` | `text` | Nao | Telefone de contato. |
 | `bio` | `text` | Nao | Resumo do pesquisador. |
@@ -146,6 +160,7 @@ Campos obrigatorios:
 - `full_name`
 - `email`
 - `role`
+- `has_funding_grant`
 - `is_active`
 - `created_at`
 - `updated_at`
@@ -153,6 +168,8 @@ Campos obrigatorios:
 Campos opcionais:
 
 - `academic_affiliation`
+- `funding_agency`, quando nao houver bolsa de fomento
+- `funding_agency_other`, exceto quando a agencia for `other`
 - `nationality_country_code`
 - `phone`
 - `bio`
@@ -170,6 +187,8 @@ Regras de integridade:
 - `profiles.id` deve ser igual ao `auth.users.id`.
 - `email` deve ser unico.
 - `role` deve ser `coordinator` ou `researcher`.
+- Quando `has_funding_grant` for verdadeiro, `funding_agency` e obrigatoria.
+- Quando `funding_agency` for `other`, `funding_agency_other` e obrigatorio; nos demais casos ele deve ficar vazio.
 - `nationality_country_code` deve usar dois caracteres no padrao ISO 3166-1 alpha-2.
 - `nationality_country_code` representa nacionalidade ou pais principal do pesquisador, nao residencia atual nem instituicao de vinculo.
 - Pesquisadores nao podem alterar o proprio `role`.
@@ -212,6 +231,7 @@ Nao existe `lab_id` nas demais tabelas porque multitenancy fica fora do MVP.
 | `name` | `text` | Apos setup | Nome institucional do laboratorio. |
 | `acronym` | `text` | Apos setup | Sigla exibida na navegacao. |
 | `timezone` | `text` | Sim | Fuso IANA usado pela instalacao. |
+| `privacy_contact_email` | `text` | Apos setup | Contato institucional exibido no convite e no aviso publico de privacidade. |
 | `setup_completed_at` | `timestamptz` | Nao | Preenchido somente pela conclusao atomica do wizard. |
 | `created_by` | `uuid` | Nao | Primeiro coordenador que concluiu o setup. |
 | `updated_by` | `uuid` | Nao | Ultimo coordenador que alterou a configuracao. |
@@ -224,19 +244,24 @@ na mesma transacao.
 
 ### 3.2 `invitations`
 
-Finalidade: registrar convites criados por coordenadores para entrada de pesquisadores no sistema.
+Finalidade: registrar convites criados por coordenadores para entrada de pesquisadores ou novos
+coordenadores no sistema.
 
 Campos sugeridos:
 
 | Campo | Tipo PostgreSQL | Obrigatorio | Descricao |
 | --- | --- | --- | --- |
 | `id` | `uuid` | Sim | Identificador do convite. |
-| `email` | `text` | Sim | Email da pessoa convidada. |
+| `email` | `text` | Enquanto pendente | Email da pessoa convidada; removido ao aceitar, expirar ou revogar. |
+| `role` | `user_role` | Sim | Papel que sera aplicado ao perfil no aceite. |
 | `status` | `invitation_status` | Sim | Status do convite. |
 | `invited_by` | `uuid` | Sim | Coordenador que criou o convite. |
 | `auth_user_id` | `uuid` | Nao | Usuario criado pelo Supabase Auth ao enviar o convite. |
 | `accepted_by` | `uuid` | Nao | Perfil criado ao aceitar o convite. |
 | `expires_at` | `timestamptz` | Sim | Data obrigatoria de expiracao. |
+| `opened_at` | `timestamptz` | Nao | Momento da confirmacao explicita do link, antes do cadastro. |
+| `last_sent_at` | `timestamptz` | Sim | Ultimo envio, usado no prazo e no limite de reenvio. |
+| `send_count` | `integer` | Sim | Quantidade de envios do convite. |
 | `accepted_at` | `timestamptz` | Nao | Data de aceite. |
 | `created_at` | `timestamptz` | Sim | Data de criacao. |
 | `updated_at` | `timestamptz` | Sim | Data da ultima atualizacao. |
@@ -253,10 +278,12 @@ Chaves estrangeiras:
 Campos obrigatorios:
 
 - `id`
-- `email`
+- `role`
 - `status`
 - `invited_by`
 - `expires_at`
+- `last_sent_at`
+- `send_count`
 - `created_at`
 - `updated_at`
 
@@ -265,6 +292,8 @@ Campos opcionais:
 - `accepted_by`
 - `accepted_at`
 - `auth_user_id`
+- `email` depois que o convite deixa de estar pendente
+- `opened_at`
 
 Indices recomendados:
 
@@ -279,18 +308,23 @@ Regras de integridade:
 - O sistema nao tera cadastro publico aberto.
 - O coordenador cria um convite para um email especifico.
 - A Edge Function solicita ao Supabase Auth o link de convite e salva apenas o estado de auditoria.
-- O pesquisador acessa o link de convite antes de criar conta.
+- O Auth provisiona uma identidade pendente, mas nenhum perfil e criado antes do aceite.
+- Abrir a pagina intermediaria nao confirma o token; `verifyOtp` roda somente apos o botao de aceite.
 - Antes de permitir o perfil, o sistema valida `status`, `expires_at`, `auth_user_id` e o email obtido do JWT.
 - Se o convite for valido, o pesquisador pode criar sua conta no Supabase Auth.
 - Apos a conta ser criada e autenticada, o sistema cria o `profile` vinculado a `auth.users.id`.
 - O `profile` deve herdar ou validar o email do convite.
 - Sem convite valido, o sistema nao deve permitir criacao de perfil.
 - Usuarios autenticados sem `profile` valido nao devem acessar areas internas do sistema.
-- Todo convite deve ter expiracao obrigatoria em `expires_at`.
+- Todo convite expira 72 horas depois do ultimo envio.
 - Apenas convites `pending` e nao expirados podem ser aceitos.
 - Convites aceitos nao podem ser reutilizados.
 - Nao deve existir mais de um convite `pending` ativo para o mesmo email.
 - `accepted_by` e `accepted_at` devem ser preenchidos quando o convite for aceito.
+- Convites aceitos removem o email duplicado e usam `accepted_by` para identificacao historica.
+- Convites expirados ou revogados removem o email e a identidade Auth incompleta; a limpeza horaria
+  e idempotente e repete exclusoes que falharam.
+- Reenvio so ocorre depois de cinco minutos, invalida o token anterior e incrementa `send_count`.
 - Apenas coordenadores podem criar, revogar ou gerenciar convites.
 
 ### 3.3 `skills`

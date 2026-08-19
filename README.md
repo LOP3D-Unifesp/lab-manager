@@ -14,6 +14,8 @@ O projeto centraliza informações operacionais do laboratório para que pesquis
 - Cadastro e acompanhamento de impressoras 3D.
 - Reservas manuais de impressoras.
 - Área de administração para coordenadores.
+- Convites com papel predefinido, validade de 72 horas, aceite explícito e revogação.
+- Aviso público de privacidade e descarte automático de identidades incompletas.
 
 ## Stack
 
@@ -54,6 +56,9 @@ npm run dev
 O acesso inicial é `admin@lab.local` / `LabManager123!`. O navegador será direcionado ao wizard de
 instalação. Nos dias seguintes, use `npm run db:start`; os dados só são apagados quando
 `npm run db:reset:local` é executado explicitamente.
+
+Convites de desenvolvimento são entregues somente no Mailpit local em
+`http://127.0.0.1:55324`; nenhum email real é enviado pelo Docker.
 
 4. Gere uma build de produção:
 

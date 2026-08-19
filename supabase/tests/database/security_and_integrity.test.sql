@@ -1,13 +1,14 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(39);
+select plan(54);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
 set name = null,
     acronym = null,
     timezone = 'America/Sao_Paulo',
+    privacy_contact_email = null,
     setup_completed_at = null,
     created_by = null,
     updated_by = null
@@ -41,12 +42,12 @@ insert into public.profile_private_data (profile_id, cpf) values
   ('00000000-0000-0000-0000-000000000103', '33333333333'),
   ('00000000-0000-0000-0000-000000000104', '44444444444');
 
-insert into public.invitations (email, invited_by, auth_user_id, expires_at, created_at) values
-  ('invited@example.com', '00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000106', now() + interval '1 day', now()),
-  ('other-email@example.com', '00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000107', now() + interval '1 day', now()),
-  ('expired@example.com', '00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000108', now() - interval '1 minute', now() - interval '1 day'),
-  ('revoked@example.com', '00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000109', now() + interval '1 day', now());
-update public.invitations set status = 'revoked'
+insert into public.invitations (email, role, invited_by, auth_user_id, expires_at, last_sent_at, created_at) values
+  ('invited@example.com', 'coordinator', '00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000106', now() + interval '1 day', now(), now()),
+  ('other-email@example.com', 'researcher', '00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000107', now() + interval '1 day', now(), now()),
+  ('expired@example.com', 'researcher', '00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000108', now() - interval '1 minute', now() - interval '1 day', now() - interval '1 day'),
+  ('revoked@example.com', 'researcher', '00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000109', now() + interval '1 day', now(), now());
+update public.invitations set status = 'revoked', email = null
 where email = 'revoked@example.com';
 
 insert into public.skills (id, name) values
@@ -73,6 +74,15 @@ select throws_ok(
   '42501', 'permission denied for table lab_settings',
   'anonymous user cannot read installation settings'
 );
+select lives_ok(
+  $$ select * from public.get_public_lab_identity() $$,
+  'anonymous user can read the minimal public laboratory identity'
+);
+select is(
+  has_function_privilege('anon', 'public.configure_invitation_cleanup(text,text)', 'EXECUTE'),
+  false,
+  'anonymous user cannot configure invitation cleanup'
+);
 
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000104","email":"inactive@example.com","role":"authenticated"}', true);
@@ -88,14 +98,19 @@ select results_eq(
 );
 select is((select count(*) from public.lab_settings), 1::bigint, 'active researcher reads installation state');
 select throws_ok(
-  $$ select public.complete_lab_installation('Forbidden Lab', 'FL', 'America/Sao_Paulo') $$,
+  $$ select public.complete_lab_installation('Forbidden Lab', 'FL', 'America/Sao_Paulo', 'privacy@example.com') $$,
   'P0001', 'coordinator_required',
   'researcher cannot complete installation'
 );
 select throws_ok(
-  $$ select public.update_lab_settings('Forbidden Lab', 'FL', 'America/Sao_Paulo') $$,
+  $$ select public.update_lab_settings('Forbidden Lab', 'FL', 'America/Sao_Paulo', 'privacy@example.com') $$,
   'P0001', 'coordinator_required',
   'researcher cannot update laboratory settings'
+);
+select throws_ok(
+  $$ select public.record_invitation_opened() $$,
+  'P0001', 'valid_invitation_required',
+  'user without a matching invitation cannot mark one as opened'
 );
 
 update public.profiles set role = 'coordinator'
@@ -128,28 +143,28 @@ select is(
   'coordinator reads all private fixture records'
 );
 select throws_ok(
-  $$ select public.complete_lab_installation(
-    'Atomic Lab', 'AL', 'America/Sao_Paulo', '[]'::jsonb,
-    '[{"name":"Rolled Back Printer","material_names":["Missing"]}]'::jsonb
-  ) $$,
-  'P0001', 'unknown_initial_material: Missing',
-  'invalid wizard catalog fails atomically'
+  $$ select public.complete_lab_installation('Atomic Lab', 'AL', 'America/Sao_Paulo', 'invalid') $$,
+  'P0001', 'invalid_privacy_contact_email',
+  'wizard requires a valid institutional privacy contact'
 );
 select is(
   (select setup_completed_at is null from public.lab_settings where id),
   true,
-  'failed wizard leaves installation incomplete'
+  'invalid wizard input leaves installation incomplete'
 );
 select is(
-  (select count(*) from public.printers where name = 'Rolled Back Printer'),
-  0::bigint,
-  'failed wizard rolls catalog changes back'
+  (select count(*) from public.materials),
+  2::bigint,
+  'wizard does not add materials to the existing fixtures'
+);
+select is(
+  (select count(*) from public.printers),
+  2::bigint,
+  'wizard does not add printers to the existing fixtures'
 );
 select lives_ok(
   $$ select public.complete_lab_installation(
-    'Laboratório Teste', 'LT', 'America/Sao_Paulo',
-    '[{"name":"Resina","description":"Inicial"}]'::jsonb,
-    '[{"name":"Printer Setup","model":"M1","location":"Sala","material_names":["Resina"]}]'::jsonb
+    'Laboratório Teste', 'LT', 'America/Sao_Paulo', 'privacy@example.com'
   ) $$,
   'coordinator completes installation'
 );
@@ -158,8 +173,27 @@ select is(
   'Laboratório Teste',
   'wizard persists laboratory identity'
 );
+select throws_ok(
+  $$ update public.profiles set has_funding_grant = true where id = '00000000-0000-0000-0000-000000000101' $$,
+  '23514', null,
+  'funding grant requires an agency'
+);
+select throws_ok(
+  $$ update public.profiles set has_funding_grant = true, funding_agency = 'other' where id = '00000000-0000-0000-0000-000000000101' $$,
+  '23514', null,
+  'other funding agency requires its name'
+);
 select lives_ok(
-  $$ select public.update_lab_settings('Laboratório Atualizado', 'LA', 'America/Recife') $$,
+  $$ update public.profiles set has_funding_grant = true, funding_agency = 'cnpq' where id = '00000000-0000-0000-0000-000000000101' $$,
+  'known funding agency is accepted'
+);
+select is(
+  (select funding_agency from public.profiles where id = '00000000-0000-0000-0000-000000000101'),
+  'cnpq'::public.funding_agency,
+  'funding agency is persisted'
+);
+select lives_ok(
+  $$ select public.update_lab_settings('Laboratório Atualizado', 'LA', 'America/Recife', 'dados@example.com') $$,
   'coordinator updates laboratory identity'
 );
 select is(
@@ -167,8 +201,13 @@ select is(
   'Laboratório Atualizado',
   'laboratory update is persisted'
 );
+select is(
+  (select privacy_contact_email from public.get_public_lab_identity()),
+  'dados@example.com',
+  'public privacy notice exposes only the configured contact'
+);
 select throws_ok(
-  $$ select public.complete_lab_installation('Again', 'AG', 'America/Sao_Paulo') $$,
+  $$ select public.complete_lab_installation('Again', 'AG', 'America/Sao_Paulo', 'privacy@example.com') $$,
   'P0001', 'installation_already_completed',
   'installation cannot be completed twice'
 );
@@ -177,12 +216,35 @@ select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000
 select is((select count(*) from public.profiles), 0::bigint, 'authenticated user without profile cannot read directory');
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000106","email":"invited@example.com","role":"authenticated"}', true);
+select lives_ok($$ select public.record_invitation_opened() $$, 'explicit acceptance marks the invitation link as confirmed');
+set local role postgres;
+select ok(
+  (select opened_at is not null from public.invitations where auth_user_id = '00000000-0000-0000-0000-000000000106'),
+  'opened timestamp is stored before profile completion'
+);
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000106","email":"invited@example.com","role":"authenticated"}', true);
 select lives_ok($$ select public.create_profile('Invited User') $$, 'valid invitation creates profile');
 set local role postgres;
 select is(
-  (select status::text from public.invitations where email = 'invited@example.com'),
+  (select role::text from public.profiles where email = 'invited@example.com'),
+  'coordinator',
+  'profile receives the role stored in the invitation'
+);
+select is(
+  (select status::text from public.invitations where accepted_by = '00000000-0000-0000-0000-000000000106'),
   'accepted',
   'invitation is consumed atomically'
+);
+select is(
+  (select email from public.invitations where accepted_by = '00000000-0000-0000-0000-000000000106'),
+  null,
+  'accepted invitation removes the duplicate recipient email'
+);
+select is(
+  (select auth_user_id from public.invitations where accepted_by = '00000000-0000-0000-0000-000000000106'),
+  null,
+  'accepted invitation keeps identification through the linked profile only'
 );
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000106","email":"invited@example.com","role":"authenticated"}', true);
@@ -205,6 +267,12 @@ select throws_ok(
   'P0001', 'valid_invitation_required',
   'expired invitation is rejected'
 );
+set local role postgres;
+select ok(
+  (select status = 'expired' and email is null from public.invitations where auth_user_id = '00000000-0000-0000-0000-000000000108'),
+  'expiration preserves anonymous history and removes the email'
+);
+set local role authenticated;
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000109","email":"revoked@example.com","role":"authenticated"}', true);
 select throws_ok(
