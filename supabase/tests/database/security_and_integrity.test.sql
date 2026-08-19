@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(54);
+select plan(80);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -153,12 +153,24 @@ select is(
   'invalid wizard input leaves installation incomplete'
 );
 select is(
-  (select count(*) from public.materials),
+  (
+    select count(*) from public.materials
+    where id in (
+      '30000000-0000-0000-0000-000000000001',
+      '30000000-0000-0000-0000-000000000002'
+    )
+  ),
   2::bigint,
   'wizard does not add materials to the existing fixtures'
 );
 select is(
-  (select count(*) from public.printers),
+  (
+    select count(*) from public.printers
+    where id in (
+      '20000000-0000-0000-0000-000000000001',
+      '20000000-0000-0000-0000-000000000002'
+    )
+  ),
   2::bigint,
   'wizard does not add printers to the existing fixtures'
 );
@@ -391,6 +403,163 @@ select throws_ok(
   ) $$,
   'P0001', 'booking_forbidden',
   'researcher cannot cancel another profile booking'
+);
+
+select lives_ok(
+  $$ select public.update_printer_booking(
+    (select id from public.printer_bookings where project_name = 'First booking'),
+    '20000000-0000-0000-0000-000000000001',
+    '30000000-0000-0000-0000-000000000001',
+    'First booking updated', now() + interval '1 day 2 hours', 90, 'Updated notes'
+  ) $$,
+  'researcher edits their active booking through RPC'
+);
+select is(
+  (select project_name from public.printer_bookings where notes = 'Updated notes'),
+  'First booking updated',
+  'booking edit persists the new operational data'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000103","email":"other@example.com","role":"authenticated"}', true);
+select throws_ok(
+  $$ select public.update_printer_booking(
+    (select id from public.printer_bookings where project_name = 'First booking updated'),
+    '20000000-0000-0000-0000-000000000001',
+    '30000000-0000-0000-0000-000000000001',
+    'Forbidden update', now() + interval '5 days', 60, null
+  ) $$,
+  'P0001', 'booking_forbidden',
+  'researcher cannot edit another profile booking'
+);
+select throws_ok(
+  $$ select public.set_printer_booking_status(
+    (select id from public.printer_bookings where project_name = 'First booking updated'),
+    'in_progress'
+  ) $$,
+  'P0001', 'coordinator_required',
+  'researcher cannot manage the booking lifecycle'
+);
+select throws_ok(
+  $$ select public.create_maintenance_block(
+    '20000000-0000-0000-0000-000000000001',
+    now() + interval '6 days', now() + interval '6 days 1 hour',
+    'Forbidden maintenance', null
+  ) $$,
+  'P0001', 'coordinator_required',
+  'researcher cannot create maintenance blocks'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
+select lives_ok(
+  $$ select public.set_printer_booking_status(
+    (select id from public.printer_bookings where project_name = 'First booking updated'),
+    'in_progress'
+  ) $$,
+  'coordinator starts an approved booking'
+);
+select is(
+  (select status::text from public.printer_bookings where project_name = 'First booking updated'),
+  'in_progress',
+  'booking lifecycle status is persisted'
+);
+select throws_ok(
+  $$ select public.update_printer_booking(
+    (select id from public.printer_bookings where project_name = 'First booking updated'),
+    '20000000-0000-0000-0000-000000000001',
+    '30000000-0000-0000-0000-000000000001',
+    'Late edit', now() + interval '7 days', 60, null
+  ) $$,
+  'P0001', 'booking_not_editable',
+  'in-progress booking data is immutable'
+);
+select lives_ok(
+  $$ select public.set_printer_booking_status(
+    (select id from public.printer_bookings where project_name = 'First booking updated'),
+    'completed'
+  ) $$,
+  'coordinator completes an in-progress booking'
+);
+select throws_ok(
+  $$ select public.set_printer_booking_status(
+    (select id from public.printer_bookings where project_name = 'First booking updated'),
+    'in_progress'
+  ) $$,
+  'P0001', 'invalid_booking_status_transition',
+  'terminal booking status cannot move backwards'
+);
+
+select lives_ok(
+  $$ select public.update_lab_configuration(
+    'Configurable Lab', 'CL', 'Europe/Lisbon', 'privacy@example.com', 12, array[1,2,3,4,5,6]
+  ) $$,
+  'coordinator updates capacity, weekdays and any valid IANA timezone'
+);
+select is((select workspace_capacity from public.lab_settings where id), 12, 'configured capacity is persisted');
+select is((select operating_weekdays from public.lab_settings where id), array[1,2,3,4,5,6], 'operating weekdays are persisted');
+select throws_ok(
+  $$ select public.update_lab_configuration(
+    'Configurable Lab', 'CL', 'Europe/Lisbon', 'privacy@example.com', 12, array[]::integer[]
+  ) $$,
+  'P0001', 'invalid_operating_weekdays',
+  'laboratory must keep at least one operating day'
+);
+select lives_ok(
+  $$ select public.save_lab_schedule_period(null, '23:00', '23:30', 70, true) $$,
+  'coordinator creates a non-overlapping schedule period'
+);
+select throws_ok(
+  $$ select public.save_lab_schedule_period(null, '09:00', '11:00', 80, true) $$,
+  'P0001', 'schedule_period_overlap',
+  'active schedule periods cannot overlap'
+);
+select is((select count(*) from public.lab_schedule_periods where is_active), 7::bigint, 'new period appears in active schedule');
+select lives_ok(
+  $$ select public.update_lab_breaks('12:00', '13:00', '18:00', '19:00') $$,
+  'coordinator configures lunch and dinner intervals'
+);
+select is((select lunch_ends_at from public.lab_settings where id), '13:00'::time, 'configured lunch interval is persisted');
+select throws_ok(
+  $$ select public.update_lab_breaks('09:00', '09:30', '18:00', '19:00') $$,
+  'P0001', 'meal_break_overlap',
+  'meal intervals cannot overlap active schedule periods'
+);
+select throws_ok(
+  $$ select public.save_lab_schedule_period(null, '12:15', '12:45', 80, true) $$,
+  'P0001', 'schedule_period_break_overlap',
+  'active schedule periods cannot overlap a meal interval'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
+select throws_ok(
+  $$ select public.save_lab_schedule_period(null, '23:30', '23:45', 80, true) $$,
+  'P0001', 'coordinator_required',
+  'researcher cannot configure schedule periods'
+);
+select throws_ok(
+  $$ select public.update_lab_breaks('12:00', '13:00', '18:00', '19:00') $$,
+  'P0001', 'coordinator_required',
+  'researcher cannot configure meal intervals'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
+select throws_ok(
+  $$ select public.update_lab_breaks('12:00', '14:00', '13:00', '15:00') $$,
+  'P0001', 'invalid_meal_breaks',
+  'lunch and dinner intervals cannot overlap each other'
+);
+select lives_ok(
+  $$ select public.update_lab_configuration(
+    'Configurable Lab', 'CL', 'America/Sao_Paulo', 'privacy@example.com', 1, array[1,2,3,4,5]
+  ) $$,
+  'capacity can match current maximum occupancy'
+);
+select throws_ok(
+  $$ select public.replace_profile_availability(
+    '00000000-0000-0000-0000-000000000103',
+    '[{"weekday":1,"schedule_period_id":"00000000-0000-0000-0000-0000000000b1","work_mode":"onsite"}]'::jsonb
+  ) $$,
+  'P0001', 'workspace_capacity_reached',
+  'transactional availability enforces configured workspace capacity'
 );
 
 select * from finish();

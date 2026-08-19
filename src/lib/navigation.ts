@@ -2,7 +2,6 @@ import {
   CalendarDays,
   CalendarPlus,
   Gauge,
-  Mail,
   LucideIcon,
   Printer,
   Settings,
@@ -23,6 +22,19 @@ export type NavigationItem = {
   mobileOrder: number;
   mobileRole?: "coordinator";
 };
+
+export function getSafeInternalRedirect(value: unknown) {
+  if (typeof value !== "string" || !value.startsWith("/") || value.startsWith("//")) {
+    return "/";
+  }
+
+  const normalized = value.toLowerCase();
+  if (value.includes("\\") || normalized.includes("%5c") || /[\u0000-\u001f]/.test(value)) {
+    return "/";
+  }
+
+  return value;
+}
 
 export const navigationItems: NavigationItem[] = [
   {
@@ -96,13 +108,13 @@ export const navigationItems: NavigationItem[] = [
     mobileOrder: 1,
   },
   {
-    desktopLabel: "Convites",
+    desktopLabel: "Usuários",
     desktopSection: "management",
     desktopOrder: 7,
     desktopRole: "coordinator",
-    mobileLabel: "Convites",
-    path: "/administracao/convites",
-    icon: Mail,
+    mobileLabel: "Usuários",
+    path: "/usuarios",
+    icon: Users,
     mobilePlacement: "secondary",
     mobileOrder: 4,
     mobileRole: "coordinator",

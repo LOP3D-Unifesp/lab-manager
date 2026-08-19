@@ -147,3 +147,5 @@ supabase/snippets/
 
 # Local browser automation artifacts.
 .playwright-cli/
+test-results/
+playwright-report/

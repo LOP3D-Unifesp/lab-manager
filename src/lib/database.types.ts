@@ -40,6 +40,7 @@ export type Database = {
           ends_at: string
           id: string
           profile_id: string
+          schedule_period_id: string
           starts_at: string
           updated_at: string
           weekday: number
@@ -50,6 +51,7 @@ export type Database = {
           ends_at: string
           id?: string
           profile_id: string
+          schedule_period_id: string
           starts_at: string
           updated_at?: string
           weekday: number
@@ -60,6 +62,7 @@ export type Database = {
           ends_at?: string
           id?: string
           profile_id?: string
+          schedule_period_id?: string
           starts_at?: string
           updated_at?: string
           weekday?: number
@@ -71,6 +74,13 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "availability_slots_schedule_period_id_fkey"
+            columns: ["schedule_period_id"]
+            isOneToOne: false
+            referencedRelation: "lab_schedule_periods"
             referencedColumns: ["id"]
           },
         ]
@@ -141,42 +151,111 @@ export type Database = {
           },
         ]
       }
+      lab_schedule_periods: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          ends_at: string
+          id: string
+          is_active: boolean
+          sort_order: number
+          starts_at: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          ends_at: string
+          id?: string
+          is_active?: boolean
+          sort_order: number
+          starts_at: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          ends_at?: string
+          id?: string
+          is_active?: boolean
+          sort_order?: number
+          starts_at?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_schedule_periods_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_schedule_periods_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lab_settings: {
         Row: {
           acronym: string | null
           created_at: string
           created_by: string | null
+          dinner_ends_at: string
+          dinner_starts_at: string
           id: boolean
+          lunch_ends_at: string
+          lunch_starts_at: string
           name: string | null
+          operating_weekdays: number[]
           privacy_contact_email: string | null
           setup_completed_at: string | null
           timezone: string
           updated_at: string
           updated_by: string | null
+          workspace_capacity: number
         }
         Insert: {
           acronym?: string | null
           created_at?: string
           created_by?: string | null
+          dinner_ends_at?: string
+          dinner_starts_at?: string
           id?: boolean
+          lunch_ends_at?: string
+          lunch_starts_at?: string
           name?: string | null
+          operating_weekdays?: number[]
           privacy_contact_email?: string | null
           setup_completed_at?: string | null
           timezone?: string
           updated_at?: string
           updated_by?: string | null
+          workspace_capacity?: number
         }
         Update: {
           acronym?: string | null
           created_at?: string
           created_by?: string | null
+          dinner_ends_at?: string
+          dinner_starts_at?: string
           id?: boolean
+          lunch_ends_at?: string
+          lunch_starts_at?: string
           name?: string | null
+          operating_weekdays?: number[]
           privacy_contact_email?: string | null
           setup_completed_at?: string | null
           timezone?: string
           updated_at?: string
           updated_by?: string | null
+          workspace_capacity?: number
         }
         Relationships: [
           {
@@ -642,13 +721,19 @@ export type Database = {
           acronym: string | null
           created_at: string
           created_by: string | null
+          dinner_ends_at: string
+          dinner_starts_at: string
           id: boolean
+          lunch_ends_at: string
+          lunch_starts_at: string
           name: string | null
+          operating_weekdays: number[]
           privacy_contact_email: string | null
           setup_completed_at: string | null
           timezone: string
           updated_at: string
           updated_by: string | null
+          workspace_capacity: number
         }
         SetofOptions: {
           from: "*"
@@ -805,6 +890,7 @@ export type Database = {
           ends_at: string
           id: string
           profile_id: string
+          schedule_period_id: string
           starts_at: string
           updated_at: string
           weekday: number
@@ -815,6 +901,126 @@ export type Database = {
           to: "availability_slots"
           isOneToOne: false
           isSetofReturn: true
+        }
+      }
+      save_lab_schedule_period: {
+        Args: {
+          p_ends_at: string
+          p_id: string
+          p_is_active: boolean
+          p_sort_order: number
+          p_starts_at: string
+        }
+        Returns: {
+          created_at: string
+          created_by: string | null
+          ends_at: string
+          id: string
+          is_active: boolean
+          sort_order: number
+          starts_at: string
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "lab_schedule_periods"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_printer_booking_status: {
+        Args: {
+          p_booking_id: string
+          p_status: Database["public"]["Enums"]["booking_status"]
+        }
+        Returns: {
+          cancelled_at: string | null
+          cancelled_by: string | null
+          created_at: string
+          ends_at: string
+          estimated_duration_minutes: number
+          id: string
+          material_id: string
+          notes: string | null
+          printer_id: string
+          profile_id: string
+          project_name: string
+          starts_at: string
+          status: Database["public"]["Enums"]["booking_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "printer_bookings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      update_lab_breaks: {
+        Args: {
+          p_dinner_ends_at: string
+          p_dinner_starts_at: string
+          p_lunch_ends_at: string
+          p_lunch_starts_at: string
+        }
+        Returns: {
+          acronym: string | null
+          created_at: string
+          created_by: string | null
+          dinner_ends_at: string
+          dinner_starts_at: string
+          id: boolean
+          lunch_ends_at: string
+          lunch_starts_at: string
+          name: string | null
+          operating_weekdays: number[]
+          privacy_contact_email: string | null
+          setup_completed_at: string | null
+          timezone: string
+          updated_at: string
+          updated_by: string | null
+          workspace_capacity: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "lab_settings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      update_lab_configuration: {
+        Args: {
+          p_acronym: string
+          p_name: string
+          p_operating_weekdays: number[]
+          p_privacy_contact_email: string
+          p_timezone: string
+          p_workspace_capacity: number
+        }
+        Returns: {
+          acronym: string | null
+          created_at: string
+          created_by: string | null
+          dinner_ends_at: string
+          dinner_starts_at: string
+          id: boolean
+          lunch_ends_at: string
+          lunch_starts_at: string
+          name: string | null
+          operating_weekdays: number[]
+          privacy_contact_email: string | null
+          setup_completed_at: string | null
+          timezone: string
+          updated_at: string
+          updated_by: string | null
+          workspace_capacity: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "lab_settings"
+          isOneToOne: true
+          isSetofReturn: false
         }
       }
       update_lab_settings: {
@@ -828,13 +1034,19 @@ export type Database = {
           acronym: string | null
           created_at: string
           created_by: string | null
+          dinner_ends_at: string
+          dinner_starts_at: string
           id: boolean
+          lunch_ends_at: string
+          lunch_starts_at: string
           name: string | null
+          operating_weekdays: number[]
           privacy_contact_email: string | null
           setup_completed_at: string | null
           timezone: string
           updated_at: string
           updated_by: string | null
+          workspace_capacity: number
         }
         SetofOptions: {
           from: "*"
@@ -890,6 +1102,39 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      update_printer_booking: {
+        Args: {
+          p_booking_id: string
+          p_estimated_duration_minutes: number
+          p_material_id: string
+          p_notes?: string
+          p_printer_id: string
+          p_project_name: string
+          p_starts_at: string
+        }
+        Returns: {
+          cancelled_at: string | null
+          cancelled_by: string | null
+          created_at: string
+          ends_at: string
+          estimated_duration_minutes: number
+          id: string
+          material_id: string
+          notes: string | null
+          printer_id: string
+          profile_id: string
+          project_name: string
+          starts_at: string
+          status: Database["public"]["Enums"]["booking_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "printer_bookings"
           isOneToOne: true
           isSetofReturn: false
         }

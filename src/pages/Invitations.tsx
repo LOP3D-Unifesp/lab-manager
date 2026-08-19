@@ -4,7 +4,6 @@ import { Link } from "react-router-dom";
 
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
-import { PageHeader } from "../components/ui/PageHeader";
 import { StatusBadge, type StatusVariant } from "../components/ui/StatusBadge";
 import type { InvitationStage, InvitationSummary, ProfileRole } from "../lib/domain";
 import { appEnvironment } from "../lib/supabaseClient";
@@ -96,7 +95,6 @@ export function Invitations() {
 
   return (
     <div>
-      <PageHeader title="Gestão de convites" description="Acompanhe o aceite e descarte identidades pendentes com segurança." />
       <Card className="mb-5">
         <div className="mb-5 flex items-start gap-3"><div className="rounded-lg bg-primary-soft p-3 text-primary"><UserPlus className="h-5 w-5" /></div><div><h2 className="text-2xl font-bold">Novo convite</h2><p className="mt-1 text-muted">O papel fica vinculado ao convite e não pode ser alterado pelo destinatário.</p></div></div>
         <form className="grid gap-4 lg:grid-cols-[2fr_1fr_auto] lg:items-end" onSubmit={createInvitation}>

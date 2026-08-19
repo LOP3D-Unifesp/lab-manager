@@ -36,3 +36,5 @@ jobs:
       - run: npm run test:concurrency
       - run: npm run db:types
       - run: git diff --exit-code -- src/lib/database.types.ts
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e

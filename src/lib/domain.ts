@@ -1,4 +1,4 @@
-export type PeriodoId = "b1" | "b2" | "b3" | "b4" | "b5" | "b6";
+export type PeriodoId = string;
 export type ProfileRole = "coordinator" | "researcher";
 export type WorkMode = "onsite" | "remote" | "aula";
 export type AcademicAffiliation =
@@ -96,6 +96,12 @@ export type LabSettings = {
   name: string | null;
   acronym: string | null;
   timezone: string;
+  workspace_capacity: number;
+  operating_weekdays: number[];
+  lunch_starts_at: string;
+  lunch_ends_at: string;
+  dinner_starts_at: string;
+  dinner_ends_at: string;
   privacy_contact_email: string | null;
   setup_completed_at: string | null;
   created_by: string | null;
@@ -150,6 +156,7 @@ export type AvailabilitySlot = {
   weekday: number;
   starts_at: string;
   ends_at: string;
+  schedule_period_id: string;
   periodo: PeriodoId;
   work_mode: WorkMode;
 };
@@ -195,6 +202,36 @@ export type PrinterBooking = {
   material?: Material | null;
 };
 
+export type LabSchedulePeriod = {
+  id: string;
+  starts_at: string;
+  ends_at: string;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type LabSchedulePeriodItem = {
+  kind: "period";
+  id: string;
+  starts_at: string;
+  ends_at: string;
+  label: string;
+  horario: string;
+};
+
+export type LabScheduleBreakItem = {
+  kind: "break";
+  id: "lunch" | "dinner";
+  label: "Almoço" | "Jantar";
+  starts_at: string;
+  ends_at: string;
+  horario: string;
+};
+
+export type LabScheduleTimelineItem = LabSchedulePeriodItem | LabScheduleBreakItem;
+
 export type MaintenanceBlock = {
   id: string;
   printer_id: string;
@@ -211,20 +248,26 @@ export const DURACAO_MINIMA_RESERVA_MINUTOS = 30;
 export const DURACAO_MAXIMA_RESERVA_MINUTOS = 24 * 60;
 export const INCREMENTO_RESERVA_MINUTOS = 30;
 
-export const periodos: Array<{
-  id: PeriodoId;
-  label: string;
-  starts_at: string;
-  ends_at: string;
-  horario: string;
-}> = [
-  { id: "b1", label: "08h - 10h", starts_at: "08:00", ends_at: "10:00", horario: "08:00 - 10:00" },
-  { id: "b2", label: "10h - 12h", starts_at: "10:00", ends_at: "12:00", horario: "10:00 - 12:00" },
-  { id: "b3", label: "13h30 - 15h30", starts_at: "13:30", ends_at: "15:30", horario: "13:30 - 15:30" },
-  { id: "b4", label: "15h30 - 17h30", starts_at: "15:30", ends_at: "17:30", horario: "15:30 - 17:30" },
-  { id: "b5", label: "19h - 21h", starts_at: "19:00", ends_at: "21:00", horario: "19:00 - 21:00" },
-  { id: "b6", label: "21h - 23h", starts_at: "21:00", ends_at: "23:00", horario: "21:00 - 23:00" },
-];
+export function formatSchedulePeriod(startsAt: string, endsAt: string) {
+  const format = (value: string) => {
+    const [hour = "0", minute = "00"] = value.slice(0, 5).split(":");
+    return minute === "00" ? `${Number(hour)}h` : `${Number(hour)}h${minute}`;
+  };
+  return `${format(startsAt)}–${format(endsAt)}`;
+}
+
+export function getScheduleSortOrder(startsAt: string) {
+  const [hour = 0, minute = 0] = startsAt.slice(0, 5).split(":").map(Number);
+  return hour * 60 + minute;
+}
+
+export function buildLabScheduleTimeline(
+  periods: LabSchedulePeriodItem[],
+  breaks: LabScheduleBreakItem[],
+): LabScheduleTimelineItem[] {
+  return [...periods, ...breaks].sort((left, right) =>
+    left.starts_at.localeCompare(right.starts_at) || left.ends_at.localeCompare(right.ends_at));
+}
 
 export function splitName(fullName: string) {
   const [firstName = fullName, ...lastParts] = fullName.trim().split(/\s+/);
@@ -300,14 +343,6 @@ export function calcularDuracaoMinutos(durationHours: string) {
   return duracaoMinutos;
 }
 
-export function periodoFromTimes(startsAt: string, endsAt: string): PeriodoId {
-  return (
-    periodos.find(
-      (periodo) => periodo.starts_at === startsAt.slice(0, 5) && periodo.ends_at === endsAt.slice(0, 5),
-    )?.id ?? "b1"
-  );
-}
-
 export function reservaBloqueiaHorario(reserva: PrinterBooking) {
   return ["pending", "approved", "in_progress"].includes(reserva.status);
 }
@@ -316,10 +351,27 @@ export function reservaPodeSerCancelada(reserva: PrinterBooking) {
   return ["pending", "approved"].includes(reserva.status);
 }
 
+export function reservaPodeSerEditada(reserva: PrinterBooking) {
+  return ["pending", "approved"].includes(reserva.status);
+}
+
+export function getProximosStatusReserva(status: BookingStatus): BookingStatus[] {
+  const transitions: Record<BookingStatus, BookingStatus[]> = {
+    pending: ["approved", "cancelled"],
+    approved: ["in_progress", "cancelled"],
+    in_progress: ["completed", "failed"],
+    completed: [],
+    cancelled: [],
+    failed: [],
+  };
+
+  return transitions[status];
+}
+
 export function getPrinterStatusLabel(status: PrinterStatus) {
   const labels: Record<PrinterStatus, string> = {
     active: "Ativa",
-    maintenance: "Em manutencao",
+    maintenance: "Em manutenção",
     unavailable: "Indisponivel",
     disabled: "Desativada",
   };
@@ -332,7 +384,7 @@ export function getBookingStatusLabel(status: BookingStatus) {
     pending: "Pendente",
     approved: "Aprovada",
     in_progress: "Em andamento",
-    completed: "Concluida",
+    completed: "Concluída",
     cancelled: "Cancelada",
     failed: "Falhou",
   };

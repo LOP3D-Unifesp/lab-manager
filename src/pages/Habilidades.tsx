@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { Mail, Phone, UserCheck, Users, X } from "lucide-react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { Mail, Pencil, Phone, Plus, UserCheck, Users, X } from "lucide-react";
 
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
@@ -8,10 +8,12 @@ import { StatusBadge } from "../components/ui/StatusBadge";
 import { useCurrentProfile } from "../lib/currentUser";
 import type { PublicProfile, ProfileSkill, Skill } from "../lib/domain";
 import {
+  createSkill,
   listProfiles,
   listProfileSkills,
   listSkills,
   toggleMySkill,
+  updateSkill,
 } from "../lib/supabaseRepository";
 
 function profileTemHabilidade(
@@ -29,17 +31,23 @@ function profileTemHabilidade(
 
 export function Habilidades() {
   const { currentProfile } = useCurrentProfile();
+  const isCoordinator = currentProfile?.role === "coordinator";
   const [profiles, setProfiles] = useState<PublicProfile[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [profileSkills, setProfileSkills] = useState<ProfileSkill[]>([]);
   const [skillSelecionada, setSkillSelecionada] = useState<Skill | null>(null);
   const [detalheAberto, setDetalheAberto] = useState(false);
+  const [gerenciamentoAberto, setGerenciamentoAberto] = useState(false);
+  const [skillEmEdicao, setSkillEmEdicao] = useState<Skill | null>(null);
+  const [skillForm, setSkillForm] = useState({ name: "", description: "", isActive: true });
   const [erro, setErro] = useState("");
+  const [sucesso, setSucesso] = useState("");
+  const [salvando, setSalvando] = useState(false);
 
   async function carregarDados() {
     const [profilesData, skillsData, profileSkillsData] = await Promise.all([
       listProfiles(),
-      listSkills(),
+      listSkills(isCoordinator),
       listProfileSkills(),
     ]);
 
@@ -62,6 +70,63 @@ export function Habilidades() {
       ativo = false;
     };
   }, []);
+
+  function abrirCadastro() {
+    setSkillEmEdicao(null);
+    setSkillForm({ name: "", description: "", isActive: true });
+    setErro("");
+    setGerenciamentoAberto(true);
+  }
+
+  function abrirEdicao(skill: Skill) {
+    setSkillEmEdicao(skill);
+    setSkillForm({
+      name: skill.name,
+      description: skill.description ?? "",
+      isActive: skill.is_active,
+    });
+    setErro("");
+    setGerenciamentoAberto(true);
+  }
+
+  function fecharGerenciamento() {
+    setGerenciamentoAberto(false);
+    setSkillEmEdicao(null);
+    setErro("");
+  }
+
+  async function salvarSkill(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const name = skillForm.name.trim();
+    if (!name) {
+      setErro("Informe o nome da habilidade.");
+      return;
+    }
+
+    try {
+      setSalvando(true);
+      setErro("");
+      if (skillEmEdicao) {
+        await updateSkill(skillEmEdicao.id, {
+          name,
+          description: skillForm.description.trim() || null,
+          isActive: skillForm.isActive,
+        });
+      } else {
+        await createSkill({
+          name,
+          description: skillForm.description.trim() || null,
+        });
+      }
+      await carregarDados();
+      setSucesso(skillEmEdicao ? "Habilidade atualizada." : "Habilidade cadastrada.");
+      fecharGerenciamento();
+    } catch (error) {
+      setErro(error instanceof Error ? error.message : "Não foi possível salvar.");
+    } finally {
+      setSalvando(false);
+    }
+  }
 
   const pessoasDaHabilidade = useMemo(() => {
     if (!skillSelecionada) {
@@ -119,12 +184,24 @@ export function Habilidades() {
     <div>
       <PageHeader
         title="Habilidades"
-        description="Competencias tecnicas cadastradas no Supabase."
+        description="Competências técnicas cadastradas no Supabase."
+        action={isCoordinator ? (
+          <Button fullWidth onClick={abrirCadastro}>
+            <Plus className="mr-2 h-5 w-5" aria-hidden="true" />
+            Nova habilidade
+          </Button>
+        ) : undefined}
       />
 
       {erro ? (
         <p className="mb-5 rounded-lg border border-danger bg-danger-soft p-3 text-base font-semibold text-danger">
           {erro}
+        </p>
+      ) : null}
+
+      {sucesso ? (
+        <p className="mb-5 rounded-lg border border-success bg-success-soft p-3 text-base font-semibold text-success">
+          {sucesso}
         </p>
       ) : null}
 
@@ -147,8 +224,8 @@ export function Habilidades() {
                 <div className="flex items-start justify-between gap-4">
                   <h3 className="text-2xl font-bold text-text">{skill.name}</h3>
                   <StatusBadge
-                    label={`${quantidade} pessoa(s)`}
-                    variant={quantidade > 0 ? "info" : "neutral"}
+                    label={skill.is_active ? `${quantidade} pessoa(s)` : "Inativa"}
+                    variant={!skill.is_active ? "neutral" : quantidade > 0 ? "info" : "neutral"}
                   />
                 </div>
                 {skill.description ? (
@@ -163,18 +240,33 @@ export function Habilidades() {
                       {registrada ? "Voce participa" : "Nao registrado"}
                     </span>
                   </div>
-                  <Button
-                    className="min-h-9 px-3 py-2 text-sm"
-                    variant={registrada ? "secondary" : "primary"}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      alternarMinhaHabilidade(skill);
-                    }}
-                    disabled={!currentProfile}
-                  >
-                    <UserCheck className="mr-2 h-4 w-4" aria-hidden="true" />
-                    {registrada ? "Sair" : "Registrar"}
-                  </Button>
+                  <div className="flex gap-2">
+                    {isCoordinator ? (
+                      <Button
+                        className="min-h-9 px-3 py-2 text-sm"
+                        variant="secondary"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          abrirEdicao(skill);
+                        }}
+                      >
+                        <Pencil className="mr-2 h-4 w-4" aria-hidden="true" />
+                        Editar
+                      </Button>
+                    ) : null}
+                    <Button
+                      className="min-h-9 px-3 py-2 text-sm"
+                      variant={registrada ? "secondary" : "primary"}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        alternarMinhaHabilidade(skill);
+                      }}
+                      disabled={!currentProfile || !skill.is_active}
+                    >
+                      <UserCheck className="mr-2 h-4 w-4" aria-hidden="true" />
+                      {registrada ? "Sair" : "Registrar"}
+                    </Button>
+                  </div>
                 </div>
               </Card>
             );
@@ -185,8 +277,85 @@ export function Habilidades() {
           <p className="text-lg font-semibold text-muted">
             Nenhuma habilidade cadastrada ainda.
           </p>
+          {isCoordinator ? (
+            <Button className="mt-4" onClick={abrirCadastro}>
+              Cadastrar primeira habilidade
+            </Button>
+          ) : (
+            <p className="mt-2 text-base text-muted">
+              Solicite ao coordenador o cadastro das competências do laboratório.
+            </p>
+          )}
         </Card>
       )}
+
+      {gerenciamentoAberto && isCoordinator ? (
+        <div
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-text/40 px-4 py-6 sm:items-center"
+          role="dialog"
+        >
+          <Card className="w-full max-w-xl shadow-soft">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-2xl font-bold text-text">
+                  {skillEmEdicao ? "Editar habilidade" : "Nova habilidade"}
+                </h3>
+                <p className="mt-1 text-base text-muted">
+                  Competências ativas podem ser selecionadas pelos pesquisadores.
+                </p>
+              </div>
+              <button
+                type="button"
+                title="Fechar"
+                aria-label="Fechar gerenciamento de habilidade"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-md text-muted hover:bg-background hover:text-text"
+                onClick={fecharGerenciamento}
+              >
+                <X className="h-5 w-5" aria-hidden="true" />
+              </button>
+            </div>
+
+            <form className="mt-5 grid gap-4" onSubmit={salvarSkill}>
+              <label className="grid gap-2 font-semibold text-text">
+                Nome
+                <input
+                  className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal"
+                  value={skillForm.name}
+                  onChange={(event) => setSkillForm((current) => ({ ...current, name: event.target.value }))}
+                  required
+                />
+              </label>
+              <label className="grid gap-2 font-semibold text-text">
+                Descrição
+                <textarea
+                  className="min-h-24 rounded-lg border border-border bg-background px-4 py-3 font-normal"
+                  value={skillForm.description}
+                  onChange={(event) => setSkillForm((current) => ({ ...current, description: event.target.value }))}
+                />
+              </label>
+              {skillEmEdicao ? (
+                <label className="flex items-center gap-3 rounded-lg border border-border bg-background p-4 font-semibold text-text">
+                  <input
+                    type="checkbox"
+                    checked={skillForm.isActive}
+                    onChange={(event) => setSkillForm((current) => ({ ...current, isActive: event.target.checked }))}
+                  />
+                  Habilidade ativa
+                </label>
+              ) : null}
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                <Button type="button" variant="ghost" onClick={fecharGerenciamento}>
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={salvando}>
+                  {salvando ? "Salvando..." : "Salvar habilidade"}
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      ) : null}
 
       {detalheAberto && skillSelecionada ? (
         <div

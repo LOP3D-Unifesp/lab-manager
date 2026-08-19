@@ -231,6 +231,10 @@ Nao existe `lab_id` nas demais tabelas porque multitenancy fica fora do MVP.
 | `name` | `text` | Apos setup | Nome institucional do laboratorio. |
 | `acronym` | `text` | Apos setup | Sigla exibida na navegacao. |
 | `timezone` | `text` | Sim | Fuso IANA usado pela instalacao. |
+| `workspace_capacity` | `integer` | Sim | Limite de pessoas presenciais por turno. |
+| `operating_weekdays` | `integer[]` | Sim | Dias da semana em que a agenda recorrente fica ativa. |
+| `lunch_starts_at` / `lunch_ends_at` | `time` | Sim | Intervalo configurável de almoço. |
+| `dinner_starts_at` / `dinner_ends_at` | `time` | Sim | Intervalo configurável de jantar. |
 | `privacy_contact_email` | `text` | Apos setup | Contato institucional exibido no convite e no aviso publico de privacidade. |
 | `setup_completed_at` | `timestamptz` | Nao | Preenchido somente pela conclusao atomica do wizard. |
 | `created_by` | `uuid` | Nao | Primeiro coordenador que concluiu o setup. |
@@ -239,8 +243,14 @@ Nao existe `lab_id` nas demais tabelas porque multitenancy fica fora do MVP.
 | `updated_at` | `timestamptz` | Sim | Data da ultima atualizacao. |
 
 Usuarios ativos podem consultar a configuracao. Somente coordenadores podem conclui-la ou altera-la,
-sempre pelas RPCs protegidas. A conclusao inclui materiais, impressoras e compatibilidades iniciais
-na mesma transacao.
+sempre pelas RPCs protegidas.
+
+### 3.1.3 `lab_schedule_periods`
+
+Catálogo ordenado dos turnos recorrentes do laboratório. Cada disponibilidade referencia um
+identificador estável; alterações de início e fim são propagadas sem perder as seleções dos
+pesquisadores. Turnos inativos permanecem preservados e não aparecem na agenda. Turnos ativos
+não podem se sobrepor aos intervalos de almoço e jantar configurados em `lab_settings`.
 
 ### 3.2 `invitations`
 

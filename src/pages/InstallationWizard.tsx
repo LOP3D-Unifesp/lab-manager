@@ -4,16 +4,9 @@ import { useNavigate } from "react-router-dom";
 
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
+import { TimezoneSelect } from "../components/ui/TimezoneSelect";
 import { useAuth } from "../lib/auth";
 import { completeInstallation } from "../lib/supabaseRepository";
-
-const timezones = [
-  "America/Sao_Paulo",
-  "America/Manaus",
-  "America/Recife",
-  "America/Fortaleza",
-  "UTC",
-];
 
 export function InstallationWizard() {
   const { refreshInstallation } = useAuth();
@@ -114,13 +107,7 @@ export function InstallationWizard() {
                   </label>
                   <label className="grid gap-2 font-semibold">
                     Fuso horário
-                    <select
-                      className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal"
-                      value={timezone}
-                      onChange={(event) => setTimezone(event.target.value)}
-                    >
-                      {timezones.map((item) => <option key={item}>{item}</option>)}
-                    </select>
+                    <TimezoneSelect id="installation-timezone" value={timezone} onChange={setTimezone} />
                   </label>
                 </div>
                 <label className="grid gap-2 font-semibold">

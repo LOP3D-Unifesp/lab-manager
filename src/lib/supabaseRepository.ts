@@ -6,6 +6,7 @@ import {
   InvitationStage,
   InvitationSummary,
   InstallationState,
+  LabSchedulePeriod,
   LabSettings,
   MaintenanceBlock,
   Material,
@@ -20,8 +21,7 @@ import {
   Skill,
   WorkMode,
   mapPublicProfile,
-  periodoFromTimes,
-  periodos,
+  getScheduleSortOrder,
   type PeriodoId,
 } from "./domain";
 
@@ -243,7 +243,7 @@ export async function getInstallationState(): Promise<InstallationState> {
   const { data, error } = await client()
     .from("lab_settings")
     .select(
-      "id, name, acronym, timezone, privacy_contact_email, setup_completed_at, created_by, updated_by, created_at, updated_at",
+      "id, name, acronym, timezone, workspace_capacity, operating_weekdays, lunch_starts_at, lunch_ends_at, dinner_starts_at, dinner_ends_at, privacy_contact_email, setup_completed_at, created_by, updated_by, created_at, updated_at",
     )
     .eq("id", true)
     .maybeSingle();
@@ -275,14 +275,52 @@ export async function updateLabSettings(params: {
   acronym: string;
   timezone: string;
   privacyContactEmail: string;
+  workspaceCapacity: number;
+  operatingWeekdays: number[];
 }) {
-  const { data, error } = await client().rpc("update_lab_settings", {
+  const { data, error } = await client().rpc("update_lab_configuration", {
     p_name: params.name.trim(),
     p_acronym: params.acronym.trim(),
     p_timezone: params.timezone,
     p_privacy_contact_email: params.privacyContactEmail.trim().toLowerCase(),
+    p_workspace_capacity: params.workspaceCapacity,
+    p_operating_weekdays: params.operatingWeekdays,
   });
 
+  throwIfError(error);
+  return data as LabSettings;
+}
+
+export async function listLabSchedulePeriods(includeInactive = false) {
+  let query = client().from("lab_schedule_periods")
+    .select("id, starts_at, ends_at, sort_order, is_active, created_at, updated_at")
+    .order("starts_at").order("ends_at");
+  if (!includeInactive) query = query.eq("is_active", true);
+  const { data, error } = await query;
+  throwIfError(error);
+  return (data ?? []) as LabSchedulePeriod[];
+}
+
+export async function saveLabSchedulePeriod(params: {
+  id?: string; startsAt: string; endsAt: string; isActive: boolean;
+}) {
+  const { data, error } = await client().rpc("save_lab_schedule_period", {
+    p_id: params.id ?? (null as unknown as string), p_starts_at: params.startsAt, p_ends_at: params.endsAt,
+    p_sort_order: getScheduleSortOrder(params.startsAt), p_is_active: params.isActive,
+  });
+  throwIfError(error);
+  return data as LabSchedulePeriod;
+}
+
+export async function updateLabBreaks(params: {
+  lunchStartsAt: string; lunchEndsAt: string; dinnerStartsAt: string; dinnerEndsAt: string;
+}) {
+  const { data, error } = await client().rpc("update_lab_breaks", {
+    p_lunch_starts_at: params.lunchStartsAt,
+    p_lunch_ends_at: params.lunchEndsAt,
+    p_dinner_starts_at: params.dinnerStartsAt,
+    p_dinner_ends_at: params.dinnerEndsAt,
+  });
   throwIfError(error);
   return data as LabSettings;
 }
@@ -299,14 +337,47 @@ export async function updateProfileRole(profileId: string, role: ProfileRole) {
   return mapPublicProfile(data as unknown as Omit<PublicProfile, "first_name" | "last_name">);
 }
 
-export async function listSkills() {
-  const { data, error } = await client()
+export async function listSkills(includeInactive = false) {
+  let query = client()
     .from("skills")
     .select("id, name, description, is_active")
-    .eq("is_active", true)
     .order("name");
+
+  if (!includeInactive) {
+    query = query.eq("is_active", true);
+  }
+
+  const { data, error } = await query;
   throwIfError(error);
   return (data ?? []) as Skill[];
+}
+
+export async function createSkill(params: { name: string; description: string | null }) {
+  const { data, error } = await client()
+    .from("skills")
+    .insert({ name: params.name.trim(), description: params.description, is_active: true })
+    .select("id, name, description, is_active")
+    .single();
+  throwIfError(error);
+  return data as Skill;
+}
+
+export async function updateSkill(
+  id: string,
+  params: { name: string; description: string | null; isActive: boolean },
+) {
+  const { data, error } = await client()
+    .from("skills")
+    .update({
+      name: params.name.trim(),
+      description: params.description,
+      is_active: params.isActive,
+    })
+    .eq("id", id)
+    .select("id, name, description, is_active")
+    .single();
+  throwIfError(error);
+  return data as Skill;
 }
 
 export async function listProfileSkills() {
@@ -335,14 +406,14 @@ export async function toggleMySkill(profileId: string, skillId: string, enabled:
 export async function listAvailability() {
   const { data, error } = await client()
     .from("availability_slots")
-    .select("id, profile_id, weekday, starts_at, ends_at, work_mode")
+    .select("id, profile_id, weekday, starts_at, ends_at, schedule_period_id, work_mode")
     .order("weekday")
     .order("starts_at");
   throwIfError(error);
 
   return ((data ?? []) as Omit<AvailabilitySlot, "periodo">[]).map((slot) => ({
     ...slot,
-    periodo: periodoFromTimes(slot.starts_at, slot.ends_at),
+    periodo: slot.schedule_period_id,
   }));
 }
 
@@ -350,38 +421,32 @@ export async function addAvailabilitySlots(
   profileId: string,
   slots: Array<{ weekday: number; periodo: PeriodoId; workMode?: WorkMode }>,
 ) {
-  const rows = slots.map((slot) => {
-    const periodo = periodos.find((item) => item.id === slot.periodo);
-    if (!periodo) throw new Error("Periodo invalido.");
-    return {
-      profile_id: profileId,
-      weekday: slot.weekday,
-      starts_at: periodo.starts_at,
-      ends_at: periodo.ends_at,
-      work_mode: slot.workMode ?? ("onsite" satisfies WorkMode),
-    };
-  });
-
-  const { error } = await client()
-    .from("availability_slots")
-    .upsert(rows, { onConflict: "profile_id,weekday,starts_at,ends_at" });
-  throwIfError(error);
+  const [availability, activePeriods, installation] = await Promise.all([
+    listAvailability(), listLabSchedulePeriods(), getInstallationState(),
+  ]);
+  const activeIds = new Set(activePeriods.map((period) => period.id));
+  const openDays = installation.settings?.operating_weekdays ?? [1, 2, 3, 4, 5];
+  const current = availability.filter((item) => item.profile_id === profileId
+    && activeIds.has(item.periodo) && openDays.includes(item.weekday));
+  const byKey = new Map(current.map((slot) => [`${slot.weekday}-${slot.periodo}`, {
+    weekday: slot.weekday, periodo: slot.periodo, workMode: slot.work_mode,
+  }]));
+  slots.forEach((slot) => byKey.set(`${slot.weekday}-${slot.periodo}`, {
+    weekday: slot.weekday, periodo: slot.periodo,
+    workMode: slot.workMode ?? ("onsite" satisfies WorkMode),
+  }));
+  await saveProfileAvailability(profileId, [...byKey.values()]);
 }
 
 export async function saveProfileAvailability(
   profileId: string,
   slots: Array<{ weekday: number; periodo: PeriodoId; workMode: WorkMode }>,
 ) {
-  const rows = slots.map((slot) => {
-    const periodo = periodos.find((item) => item.id === slot.periodo);
-    if (!periodo) throw new Error("Periodo invalido.");
-    return {
-      weekday: slot.weekday,
-      starts_at: periodo.starts_at,
-      ends_at: periodo.ends_at,
-      work_mode: slot.workMode,
-    };
-  });
+  const rows = slots.map((slot) => ({
+    weekday: slot.weekday,
+    schedule_period_id: slot.periodo,
+    work_mode: slot.workMode,
+  }));
 
   const { error } = await client().rpc("replace_profile_availability", {
     p_profile_id: profileId,
@@ -391,8 +456,12 @@ export async function saveProfileAvailability(
 }
 
 export async function deleteAvailabilitySlot(slotId: string) {
-  const { error } = await client().from("availability_slots").delete().eq("id", slotId);
-  throwIfError(error);
+  const all = await listAvailability();
+  const target = all.find((slot) => slot.id === slotId);
+  if (!target) return;
+  await saveProfileAvailability(target.profile_id, all
+    .filter((slot) => slot.profile_id === target.profile_id && slot.id !== slotId)
+    .map((slot) => ({ weekday: slot.weekday, periodo: slot.periodo, workMode: slot.work_mode })));
 }
 
 export async function listPrinters() {
@@ -488,12 +557,22 @@ export async function listBookings() {
   ) as unknown as PrinterBooking[];
 }
 
+export async function listMaintenanceBlocks() {
+  const { data, error } = await client()
+    .from("maintenance_blocks")
+    .select("id, printer_id, created_by, starts_at, ends_at, reason, notes, created_at, updated_at")
+    .order("starts_at");
+  throwIfError(error);
+  return (data ?? []) as MaintenanceBlock[];
+}
+
 export async function createBooking(params: {
   printerId: string;
   materialId: string;
   projectName: string;
   startsAt: string;
   durationMinutes: number;
+  notes?: string | null;
 }) {
   const { data, error } = await client().rpc("create_printer_booking", {
     p_printer_id: params.printerId,
@@ -501,6 +580,40 @@ export async function createBooking(params: {
     p_project_name: params.projectName,
     p_starts_at: params.startsAt,
     p_estimated_duration_minutes: params.durationMinutes,
+    p_notes: params.notes ?? undefined,
+  });
+  throwIfError(error);
+  return data as PrinterBooking;
+}
+
+export async function updateBooking(
+  bookingId: string,
+  params: {
+    printerId: string;
+    materialId: string;
+    projectName: string;
+    startsAt: string;
+    durationMinutes: number;
+    notes?: string | null;
+  },
+) {
+  const { data, error } = await client().rpc("update_printer_booking", {
+    p_booking_id: bookingId,
+    p_printer_id: params.printerId,
+    p_material_id: params.materialId,
+    p_project_name: params.projectName,
+    p_starts_at: params.startsAt,
+    p_estimated_duration_minutes: params.durationMinutes,
+    p_notes: params.notes ?? undefined,
+  });
+  throwIfError(error);
+  return data as PrinterBooking;
+}
+
+export async function setBookingStatus(bookingId: string, status: PrinterBooking["status"]) {
+  const { data, error } = await client().rpc("set_printer_booking_status", {
+    p_booking_id: bookingId,
+    p_status: status,
   });
   throwIfError(error);
   return data as PrinterBooking;

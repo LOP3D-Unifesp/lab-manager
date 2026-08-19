@@ -2,13 +2,19 @@ import { describe, expect, it } from "vitest";
 
 import {
   calcularDuracaoMinutos,
+  buildLabScheduleTimeline,
   criarDataLocalSegura,
   getFundingAgencyLabel,
-  periodoFromTimes,
+  formatSchedulePeriod,
+  getScheduleSortOrder,
+  getProximosStatusReserva,
   reservaBloqueiaHorario,
   reservaPodeSerCancelada,
+  reservaPodeSerEditada,
   splitName,
   type PrinterBooking,
+  type LabScheduleBreakItem,
+  type LabSchedulePeriodItem,
 } from "./domain";
 
 function booking(status: PrinterBooking["status"]): PrinterBooking {
@@ -53,8 +59,32 @@ describe("regras de dominio", () => {
     expect(splitName("Pelé")).toEqual({ firstName: "Pelé", lastName: "" });
   });
 
-  it("mapeia horarios conhecidos para blocos", () => {
-    expect(periodoFromTimes("13:30:00", "15:30:00")).toBe("b3");
+  it("formata o turno em uma unica representacao", () => {
+    expect(formatSchedulePeriod("13:30:00", "15:30:00")).toBe("13h30–15h30");
+    expect(formatSchedulePeriod("08:00:00", "10:00:00")).toBe("8h–10h");
+  });
+
+  it("calcula a ordenacao tecnica a partir do horario inicial", () => {
+    expect(getScheduleSortOrder("08:00")).toBe(480);
+    expect(getScheduleSortOrder("13:30:00")).toBe(810);
+  });
+
+  it("intercala turnos e intervalos sem transformar intervalos em turnos", () => {
+    const periods: LabSchedulePeriodItem[] = [
+      { kind: "period", id: "afternoon", starts_at: "13:30", ends_at: "15:30", label: "13h30–15h30", horario: "13h30–15h30" },
+      { kind: "period", id: "morning", starts_at: "10:00", ends_at: "12:00", label: "10h–12h", horario: "10h–12h" },
+      { kind: "period", id: "evening", starts_at: "19:00", ends_at: "21:00", label: "19h–21h", horario: "19h–21h" },
+    ];
+    const breaks: LabScheduleBreakItem[] = [
+      { kind: "break", id: "dinner", label: "Jantar", starts_at: "17:30", ends_at: "19:00", horario: "17h30–19h" },
+      { kind: "break", id: "lunch", label: "Almoço", starts_at: "12:00", ends_at: "13:30", horario: "12h–13h30" },
+    ];
+
+    const timeline = buildLabScheduleTimeline(periods, breaks);
+
+    expect(timeline.map((item) => item.id)).toEqual(["morning", "lunch", "afternoon", "dinner", "evening"]);
+    expect(periods).toHaveLength(3);
+    expect(timeline.filter((item) => item.kind === "break")).toHaveLength(2);
   });
 
   it("exibe a agência de fomento conhecida ou informada manualmente", () => {
@@ -78,5 +108,18 @@ describe("regras de dominio", () => {
     expect(reservaPodeSerCancelada(booking("approved"))).toBe(true);
     expect(reservaPodeSerCancelada(booking("in_progress"))).toBe(false);
     expect(reservaPodeSerCancelada(booking("completed"))).toBe(false);
+  });
+
+  it("permite editar somente reservas pendentes ou aprovadas", () => {
+    expect(reservaPodeSerEditada(booking("pending"))).toBe(true);
+    expect(reservaPodeSerEditada(booking("approved"))).toBe(true);
+    expect(reservaPodeSerEditada(booking("in_progress"))).toBe(false);
+    expect(reservaPodeSerEditada(booking("cancelled"))).toBe(false);
+  });
+
+  it("define as transicoes operacionais sem reabrir estados terminais", () => {
+    expect(getProximosStatusReserva("approved")).toEqual(["in_progress", "cancelled"]);
+    expect(getProximosStatusReserva("in_progress")).toEqual(["completed", "failed"]);
+    expect(getProximosStatusReserva("completed")).toEqual([]);
   });
 });

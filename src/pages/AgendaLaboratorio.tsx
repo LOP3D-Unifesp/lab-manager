@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, Plus, Trash2, Users, X } from "lucide-react";
+import { CalendarDays, Plus, Trash2, Users, Utensils, X } from "lucide-react";
 
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
 import {
-  periodos,
   type AvailabilitySlot,
   type PeriodoId,
   type WorkMode,
 } from "../lib/domain";
+import { useLabSchedule } from "../lib/labSchedule";
 import { usePesquisadoresCadastrados } from "../lib/pesquisadores";
 import {
   addAvailabilitySlots,
@@ -39,8 +39,6 @@ type PopupSlot = {
   entries: AgendaEntry[];
 } | null;
 
-const limitePorHorario = 10;
-
 const diasDaSemana = [
   "Domingo",
   "Segunda",
@@ -51,15 +49,13 @@ const diasDaSemana = [
   "Sabado",
 ];
 
-function getSemanaAtual() {
+function getSemanaAtual(operatingWeekdays: number[]) {
   const hoje = new Date();
-  const segunda = new Date(hoje);
-  const distanciaDaSegunda = hoje.getDay() === 0 ? -6 : 1 - hoje.getDay();
-  segunda.setDate(hoje.getDate() + distanciaDaSegunda);
-
-  return Array.from({ length: 5 }, (_, index) => {
-    const data = new Date(segunda);
-    data.setDate(segunda.getDate() + index);
+  const domingo = new Date(hoje);
+  domingo.setDate(hoje.getDate() - hoje.getDay());
+  return [...operatingWeekdays].sort((a, b) => (a || 7) - (b || 7)).map((weekday) => {
+    const data = new Date(domingo);
+    data.setDate(domingo.getDate() + (weekday || 7));
 
     return {
       data,
@@ -106,7 +102,8 @@ function getDiaAbreviado(label: string) {
 }
 
 export function AgendaLaboratorio() {
-  const semanaAtual = useMemo(() => getSemanaAtual(), []);
+  const { periodos, timeline, operatingWeekdays, workspaceCapacity: limitePorHorario, loadingSchedule } = useLabSchedule();
+  const semanaAtual = useMemo(() => getSemanaAtual(operatingWeekdays), [operatingWeekdays]);
   const calendarioRef = useRef<HTMLElement | null>(null);
   const { pesquisadores } = usePesquisadoresCadastrados();
   const [availability, setAvailability] = useState<AvailabilitySlot[]>([]);
@@ -510,6 +507,10 @@ export function AgendaLaboratorio() {
         }
       />
 
+      {!loadingSchedule && periodos.length === 0 ? (
+        <Card><p className="font-semibold text-muted">Nenhum turno ativo. Um coordenador deve configurar o funcionamento em Administração.</p></Card>
+      ) : null}
+
       {erro ? (
         <p className="mb-5 rounded-lg border border-danger bg-danger-soft p-3 text-base font-semibold text-danger">
           {erro}
@@ -579,14 +580,26 @@ export function AgendaLaboratorio() {
               gridTemplateColumns: `128px repeat(${diasVisiveis.length}, minmax(0, 1fr))`,
             }}
           >
-            {periodos.map((periodo) => (
-              <div key={periodo.id} className="contents">
+            {timeline.map((item) => {
+              if (item.kind === "break") {
+                return (
+                  <div
+                    aria-label={`${item.label}: ${item.horario}`}
+                    className="flex items-center justify-center gap-2 border-b border-warning bg-warning-soft px-4 py-3 text-sm font-semibold text-warning-dark"
+                    key={item.id}
+                    role="separator"
+                    style={{ gridColumn: "1 / -1" }}
+                  >
+                    <Utensils aria-hidden="true" className="h-4 w-4" />
+                    <span>{item.label} · {item.horario}</span>
+                  </div>
+                );
+              }
+              const periodo = item;
+              return <div key={periodo.id} className="contents">
                 <div className="border-b border-r border-border bg-background px-4 py-4 last:border-b-0">
                   <p className="text-base font-bold text-text">
                     {periodo.label}
-                  </p>
-                  <p className="mt-1 text-xs font-semibold text-muted">
-                    {periodo.horario}
                   </p>
                 </div>
                 {diasVisiveis.map((dia) => {
@@ -630,8 +643,8 @@ export function AgendaLaboratorio() {
                     </button>
                   );
                 })}
-              </div>
-            ))}
+              </div>;
+            })}
           </div>
         </Card>
 
@@ -677,7 +690,21 @@ export function AgendaLaboratorio() {
           </div>
 
           <div className="grid gap-3">
-            {periodos.map((periodo) => {
+            {timeline.map((item) => {
+              if (item.kind === "break") {
+                return (
+                  <div
+                    aria-label={`${item.label}: ${item.horario}`}
+                    className="flex items-center justify-center gap-2 rounded-lg border border-warning bg-warning-soft px-4 py-3 font-semibold text-warning-dark"
+                    key={item.id}
+                    role="separator"
+                  >
+                    <Utensils aria-hidden="true" className="h-4 w-4" />
+                    <span>{item.label} · {item.horario}</span>
+                  </div>
+                );
+              }
+              const periodo = item;
               const total = getTotalPresencialDoSlot(
                 diaMobileAtivo.weekday,
                 periodo.id,
@@ -705,9 +732,6 @@ export function AgendaLaboratorio() {
                     <div className="min-w-0">
                       <p className="text-lg font-bold text-text">
                         {periodo.label}
-                      </p>
-                      <p className="mt-1 text-sm font-semibold text-muted">
-                        {periodo.horario}
                       </p>
                     </div>
                     <button
@@ -959,7 +983,21 @@ export function AgendaLaboratorio() {
                     </div>
 
                     <div className="space-y-2">
-                      {periodos.map((periodo) => {
+                      {timeline.map((item) => {
+                        if (item.kind === "break") {
+                          return (
+                            <div
+                              aria-label={`${item.label}: ${item.horario}`}
+                              className="flex items-center justify-center gap-2 rounded-lg border border-warning bg-warning-soft px-2 py-2 text-sm font-semibold text-warning-dark"
+                              key={item.id}
+                              role="separator"
+                            >
+                              <Utensils aria-hidden="true" className="h-4 w-4" />
+                              <span>{item.label} · {item.horario}</span>
+                            </div>
+                          );
+                        }
+                        const periodo = item;
                         const slot = {
                           weekday: dia.weekday,
                           periodo: periodo.id,
@@ -1004,9 +1042,6 @@ export function AgendaLaboratorio() {
                             <span>
                               <span className="block text-lg font-bold text-text">
                                 {periodo.label}
-                              </span>
-                              <span className="block text-base text-muted">
-                                {periodo.horario}
                               </span>
                               <span
                                 className={[

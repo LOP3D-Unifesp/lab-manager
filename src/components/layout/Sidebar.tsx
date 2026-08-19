@@ -38,7 +38,7 @@ function SidebarNavItem({
     <div className={showDivider ? "mt-3 border-t border-border pt-3" : ""}>
       <NavLink
         to={item.path}
-        end={item.path === "/"}
+        end={item.path === "/" || item.path === "/administracao"}
         className={({ isActive }) => getNavItemClass(isActive)}
       >
         {({ isActive }) => (

@@ -5,6 +5,7 @@ import { Lock, LogIn } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { useAuth } from "../lib/auth";
+import { getSafeInternalRedirect } from "../lib/navigation";
 import { supabaseConfigurationError } from "../lib/supabaseClient";
 
 export function Login() {
@@ -15,13 +16,14 @@ export function Login() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const redirectTo =
+  const redirectTo = getSafeInternalRedirect(
     typeof location.state === "object" &&
     location.state !== null &&
     "from" in location.state &&
     typeof location.state.from === "string"
       ? location.state.from
-      : "/";
+      : "/",
+  );
 
   if (!loading && session) {
     return <Navigate to={redirectTo} replace />;

@@ -34,13 +34,41 @@ fora do MVP e nao possuem tabelas nesta versao.
 | Habilidades proprias | Nao | Nao | Leitura e edicao propria | Administracao |
 | Disponibilidade | Nao | Nao | Leitura e edicao propria via RPC | Administracao via RPC |
 | Impressoras/materiais | Nao | Nao | Leitura | Administracao |
-| Reservas | Nao | Nao | Leitura, criacao e cancelamento permitido via RPC | Mesmas RPCs com privilegio administrativo |
+| Reservas | Nao | Nao | Leitura, criacao, edicao e cancelamento proprio via RPC | Edicao, cancelamento e ciclo operacional via RPC |
 | Manutencao | Nao | Nao | Leitura | Criacao/remocao via RPC |
 | Aviso de privacidade | Leitura minima | Leitura minima | Leitura minima | Leitura minima |
 | Convites | Nao | Nao | Nao | Edge Functions e leitura de auditoria |
+| Configuração de funcionamento | Leitura | Leitura | Gestão por RPC | Capacidade, turnos e intervalos validados transacionalmente |
+
+As escritas em `availability_slots` são realizadas pela RPC `replace_profile_availability`.
+Ela serializa alterações concorrentes, valida dias/turnos ativos e impede ocupação presencial
+acima de `workspace_capacity`.
+
+As RPCs `save_lab_schedule_period` e `update_lab_breaks` compartilham um bloqueio transacional e
+impedem sobreposição entre turnos ativos e os intervalos configuráveis de almoço e jantar.
 
 RLS continua sendo aplicada quando o navegador chama a Data API diretamente. Operacoes
 que alteram varias linhas ou validam concorrencia sao expostas somente como funcoes transacionais.
+
+## Revisao de minimizacao de dados
+
+O diretorio autenticado expoe apenas os campos usados na operacao do laboratorio: nome, email,
+papel, vinculo, fomento, carga horaria, Lattes, nacionalidade, telefone e bio. Nascimento,
+CPF, RG e endereco permanecem em `profile_private_data`, legiveis somente pelo titular e por
+coordenadores para suporte administrativo. Nenhum desses campos e exposto anonimamente.
+
+Antes da producao, o responsavel institucional deve registrar aceite explicito para:
+
+1. necessidade de telefone, nacionalidade e informacoes de fomento no diretorio compartilhado;
+2. necessidade de coordenadores lerem documentos e endereco;
+3. prazo de retencao e processo de correcao/exclusao desses dados;
+4. texto do aviso de privacidade e contato institucional configurado;
+5. uso de dados reais somente depois da validacao em staging.
+
+O frontend aceita redirecionamento pos-login apenas para caminhos internos sem barras invertidas.
+Essa validacao reduz o risco de redirecionamento aberto enquanto o projeto permanece no React
+Router 6. A atualizacao para React Router 7 deve ser tratada separadamente, pois e uma migracao
+incompativel; o projeto nao usa hidratacao SSR, relacionada ao segundo alerta moderado conhecido.
 
 ## Fluxo de convite
 

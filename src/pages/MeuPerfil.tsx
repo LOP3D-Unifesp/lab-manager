@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { CalendarDays, Save, UserRoundCog } from "lucide-react";
+import { CalendarDays, Save, UserRoundCog, Utensils } from "lucide-react";
 
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
@@ -8,13 +8,13 @@ import { StatusBadge } from "../components/ui/StatusBadge";
 import { useAuth } from "../lib/auth";
 import {
   fundingAgencyOptions,
-  periodos,
   type AcademicAffiliation,
   type FundingAgency,
   type PeriodoId,
   type ProfileRole,
   type WorkMode,
 } from "../lib/domain";
+import { useLabSchedule } from "../lib/labSchedule";
 import {
   listAvailability,
   saveProfileAvailability,
@@ -38,12 +38,14 @@ const academicAffiliationOptions: Array<{
   { value: "other", label: "Outro" },
 ];
 
-const diasDaSemana = [
+const allWeekdays = [
+  { weekday: 0, label: "Domingo" },
   { weekday: 1, label: "Segunda" },
-  { weekday: 2, label: "Terca" },
+  { weekday: 2, label: "Terça" },
   { weekday: 3, label: "Quarta" },
   { weekday: 4, label: "Quinta" },
   { weekday: 5, label: "Sexta" },
+  { weekday: 6, label: "Sábado" },
 ];
 
 type AgendaState = Record<string, WorkMode>;
@@ -53,7 +55,7 @@ function getRoleLabel(role: ProfileRole) {
 }
 
 function getSlotKey(weekday: number, periodo: PeriodoId) {
-  return `${weekday}-${periodo}`;
+  return `${weekday}|${periodo}`;
 }
 
 function normalizarTextoOpcional(value: string) {
@@ -110,7 +112,7 @@ function getDiaAbreviado(label: string) {
   return label.slice(0, 3);
 }
 
-function getDuracaoPeriodoEmHoras(periodoId: PeriodoId) {
+function getDuracaoPeriodoEmHoras(periodoId: PeriodoId, periodos: Array<{ id: string; starts_at: string; ends_at: string }>) {
   const periodo = periodos.find((item) => item.id === periodoId);
   if (!periodo) return 0;
 
@@ -121,6 +123,8 @@ function getDuracaoPeriodoEmHoras(periodoId: PeriodoId) {
 
 export function MeuPerfil() {
   const { profile, refreshProfile } = useAuth();
+  const { periodos, timeline, operatingWeekdays } = useLabSchedule();
+  const diasDaSemana = allWeekdays.filter((day) => operatingWeekdays.includes(day.weekday));
   const [fullName, setFullName] = useState("");
   const [academicAffiliation, setAcademicAffiliation] = useState<
     AcademicAffiliation | ""
@@ -146,7 +150,7 @@ export function MeuPerfil() {
   const [bio, setBio] = useState("");
   const [agenda, setAgenda] = useState<AgendaState>({});
   const [mobileAgendaWeekday, setMobileAgendaWeekday] = useState(
-    diasDaSemana[0].weekday,
+    1,
   );
   const [allSlots, setAllSlots] = useState<Array<{ profile_id: string; weekday: number; periodo: PeriodoId; work_mode: WorkMode }>>([]);
   const [errorMessage, setErrorMessage] = useState("");
@@ -162,8 +166,8 @@ export function MeuPerfil() {
     };
 
     Object.entries(agenda).forEach(([key, mode]) => {
-      const periodoId = key.split("-")[1] as PeriodoId;
-      const horas = getDuracaoPeriodoEmHoras(periodoId);
+      const periodoId = key.split("|")[1] as PeriodoId;
+      const horas = getDuracaoPeriodoEmHoras(periodoId, periodos);
 
       if (mode === "onsite") {
         totais.presencial += horas;
@@ -181,13 +185,19 @@ export function MeuPerfil() {
     });
 
     return totais;
-  }, [agenda]);
+  }, [agenda, periodos]);
 
   const horasAgendadas = resumoHorasAgenda.totalAgendado;
 
   const mobileAgendaDay =
     diasDaSemana.find((dia) => dia.weekday === mobileAgendaWeekday) ??
-    diasDaSemana[0];
+    diasDaSemana[0] ?? allWeekdays[1];
+
+  useEffect(() => {
+    if (diasDaSemana.length > 0 && !operatingWeekdays.includes(mobileAgendaWeekday)) {
+      setMobileAgendaWeekday(diasDaSemana[0].weekday);
+    }
+  }, [diasDaSemana, mobileAgendaWeekday, operatingWeekdays]);
 
   useEffect(() => {
     if (!profile) {
@@ -420,8 +430,11 @@ export function MeuPerfil() {
       });
       await saveProfileAvailability(
         profile.id,
-        Object.entries(agenda).map(([key, workMode]) => {
-          const [weekday, periodo] = key.split("-");
+        Object.entries(agenda).filter(([key]) => {
+          const [weekday, periodo] = key.split("|");
+          return operatingWeekdays.includes(Number(weekday)) && periodos.some((item) => item.id === periodo);
+        }).map(([key, workMode]) => {
+          const [weekday, periodo] = key.split("|");
           return {
             weekday: Number(weekday),
             periodo: periodo as PeriodoId,
@@ -871,7 +884,21 @@ export function MeuPerfil() {
             </div>
 
             <div className="grid gap-3">
-              {periodos.map((periodo) => {
+              {timeline.map((item) => {
+                if (item.kind === "break") {
+                  return (
+                    <div
+                      aria-label={`${item.label}: ${item.horario}`}
+                      className="flex items-center justify-center gap-2 rounded-lg border border-warning bg-warning-soft px-4 py-3 font-semibold text-warning-dark"
+                      key={item.id}
+                      role="separator"
+                    >
+                      <Utensils aria-hidden="true" className="h-4 w-4" />
+                      <span>{item.label} · {item.horario}</span>
+                    </div>
+                  );
+                }
+                const periodo = item;
                 const key = getSlotKey(mobileAgendaDay.weekday, periodo.id);
                 const mode = agenda[key];
                 const presencialCount = countPresencial(
@@ -896,9 +923,6 @@ export function MeuPerfil() {
                     <span className="min-w-0">
                       <span className="block text-base font-bold text-text">
                         {periodo.label}
-                      </span>
-                      <span className="mt-1 block text-sm font-semibold opacity-75">
-                        {periodo.horario}
                       </span>
                     </span>
                     <span className="text-right">
@@ -947,8 +971,25 @@ export function MeuPerfil() {
                 </tr>
               </thead>
               <tbody>
-                {periodos.map((periodo) => (
-                  <tr key={periodo.id}>
+                {timeline.map((item) => {
+                  if (item.kind === "break") {
+                    return (
+                      <tr key={item.id}>
+                        <td className="py-2" colSpan={diasDaSemana.length + 1}>
+                          <div
+                            aria-label={`${item.label}: ${item.horario}`}
+                            className="flex items-center justify-center gap-2 rounded-lg border border-warning bg-warning-soft px-4 py-2 text-sm font-semibold text-warning-dark"
+                            role="separator"
+                          >
+                            <Utensils aria-hidden="true" className="h-4 w-4" />
+                            <span>{item.label} · {item.horario}</span>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  }
+                  const periodo = item;
+                  return <tr key={periodo.id}>
                     <td className="pr-2 py-1">
                       <button
                         className="w-full rounded-lg px-2 py-2 text-left text-sm font-bold text-text transition hover:bg-background disabled:pointer-events-none"
@@ -958,7 +999,6 @@ export function MeuPerfil() {
                         type="button"
                       >
                         <span className="block">{periodo.label}</span>
-                        <span className="block text-xs font-normal text-muted">{periodo.horario}</span>
                       </button>
                     </td>
                     {diasDaSemana.map((dia) => {
@@ -984,8 +1024,8 @@ export function MeuPerfil() {
                         </td>
                       );
                     })}
-                  </tr>
-                ))}
+                  </tr>;
+                })}
               </tbody>
             </table>
           </div>

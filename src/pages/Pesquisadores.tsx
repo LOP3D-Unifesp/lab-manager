@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { UserPlus } from "lucide-react";
+import { Link } from "react-router-dom";
 
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
 import { StatusBadge } from "../components/ui/StatusBadge";
+import { useCurrentProfile } from "../lib/currentUser";
 import { usePesquisadoresCadastrados } from "../lib/pesquisadores";
 
 type Visualizacao = "cards" | "lista";
@@ -12,6 +14,7 @@ type Ordenacao = "alfabetica" | "vinculo" | "presenca";
 
 export function Pesquisadores() {
   const { pesquisadores } = usePesquisadoresCadastrados();
+  const { currentProfile } = useCurrentProfile();
   const [visualizacao, setVisualizacao] = useState<Visualizacao>("cards");
   const [ordenacao, setOrdenacao] = useState<Ordenacao>("alfabetica");
 
@@ -52,9 +55,9 @@ export function Pesquisadores() {
                 }
                 className="min-h-7 rounded-md border border-border bg-background px-1.5 text-[11px] font-semibold text-text outline-none transition focus:border-primary"
               >
-                <option value="alfabetica">Ordem alfabetica</option>
-                <option value="vinculo">Vinculo</option>
-                <option value="presenca">Presenca</option>
+                <option value="alfabetica">Ordem alfabética</option>
+                <option value="vinculo">Vínculo</option>
+                <option value="presenca">Presença</option>
               </select>
             </label>
             <div className="flex min-h-9 items-center rounded-md border border-border bg-surface p-1">
@@ -89,10 +92,14 @@ export function Pesquisadores() {
                 Lista
               </button>
             </div>
-            <Button fullWidth variant="secondary" disabled>
-              <UserPlus className="mr-2 h-5 w-5" aria-hidden="true" />
-              Convites em breve
-            </Button>
+            {currentProfile?.role === "coordinator" ? (
+              <Link to="/usuarios/convites">
+                <Button fullWidth variant="secondary">
+                  <UserPlus className="mr-2 h-5 w-5" aria-hidden="true" />
+                  Gerenciar convites
+                </Button>
+              </Link>
+            ) : null}
           </div>
         }
       />

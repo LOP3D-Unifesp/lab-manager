@@ -21,6 +21,7 @@ import { ProfileRequired } from "./pages/ProfileRequired";
 import { Reservas } from "./pages/Reservas";
 import { AcceptInvitation } from "./pages/AcceptInvitation";
 import { Privacy } from "./pages/Privacy";
+import { UsuariosAtivos, UsuariosLayout } from "./pages/Usuarios";
 import { useAuth } from "./lib/auth";
 
 function LoadingScreen() {
@@ -87,7 +88,7 @@ function ProtectedApp() {
   }
 
   if (
-    location.pathname.startsWith("/administracao") &&
+    (location.pathname.startsWith("/administracao") || location.pathname.startsWith("/usuarios")) &&
     profile.role !== "coordinator"
   ) {
     return <Navigate to="/" replace />;
@@ -119,7 +120,11 @@ export const router = createBrowserRouter([
           { path: "reservas", element: <Reservas /> },
           { path: "perfil", element: <MeuPerfil /> },
           { path: "administracao", element: <Administracao /> },
-          { path: "administracao/convites", element: <Invitations /> },
+          { path: "administracao/convites", element: <Navigate to="/usuarios/convites" replace /> },
+          { path: "usuarios", element: <UsuariosLayout />, children: [
+            { index: true, element: <UsuariosAtivos /> },
+            { path: "convites", element: <Invitations /> },
+          ] },
           { path: "*", element: <NotFound /> },
         ],
       },

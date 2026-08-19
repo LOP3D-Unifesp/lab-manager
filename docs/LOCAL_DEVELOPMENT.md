@@ -23,6 +23,10 @@ um email institucional de contato para privacidade. Materiais, impressoras e com
 cadastrados depois, nas telas próprias da aplicação. Convites ficam bloqueados enquanto esse
 contato não estiver preenchido.
 
+Após a instalação, capacidade, dias, turnos e intervalos de almoço e jantar podem ser ajustados
+em **Administração**. Perfis,
+papéis e convites ficam em **Usuários**.
+
 Mensagens de convite locais não saem para a internet. Consulte-as em
 `http://127.0.0.1:55324` (Mailpit). O link abre `/convite/aceitar`, mas apenas o botão
 **Aceitar convite** confirma o token. Isso permite abrir ou pré-visualizar a mensagem sem criar
@@ -41,7 +45,8 @@ npm run dev
 npm run db:reset:local
 ```
 
-Após concluir o wizard, dados fictícios podem ser adicionados de forma idempotente:
+Após concluir o wizard, um cenário operacional fictício (catálogos, habilidade,
+disponibilidade, reserva e manutenção) pode ser adicionado de forma idempotente:
 
 ```bash
 npm run db:seed:demo

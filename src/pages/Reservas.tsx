@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { Clock, Plus, Printer as PrinterIcon, Trash2, X } from "lucide-react";
+import { Clock, Pencil, Plus, Printer as PrinterIcon, Trash2, Wrench, X } from "lucide-react";
 
+import { BookingLifecycleActions } from "../components/reservas/BookingLifecycleActions";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
@@ -13,6 +14,9 @@ import {
   getPrinterStatusLabel,
   reservaBloqueiaHorario,
   reservaPodeSerCancelada,
+  reservaPodeSerEditada,
+  type BookingStatus,
+  type MaintenanceBlock,
   type Material,
   type Printer,
   type PrinterBooking,
@@ -21,12 +25,17 @@ import {
 } from "../lib/domain";
 import {
   cancelBooking,
+  createMaintenanceBlock,
   createBooking,
+  deleteMaintenanceBlock,
   listBookings,
+  listMaintenanceBlocks,
   listMaterials,
   listPrinterMaterials,
   listPrinters,
   listProfiles,
+  setBookingStatus,
+  updateBooking,
 } from "../lib/supabaseRepository";
 
 const horariosReserva = Array.from({ length: 19 }, (_, index) => {
@@ -57,6 +66,16 @@ function getDataLocalPadrao() {
   const dia = String(hoje.getDate()).padStart(2, "0");
 
   return `${ano}-${mes}-${dia}`;
+}
+
+function formatarDataInput(valor: string) {
+  const data = new Date(valor);
+  return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, "0")}-${String(data.getDate()).padStart(2, "0")}`;
+}
+
+function formatarHoraInput(valor: string) {
+  const data = new Date(valor);
+  return `${String(data.getHours()).padStart(2, "0")}:${String(data.getMinutes()).padStart(2, "0")}`;
 }
 
 function formatarDataHora(valor?: string) {
@@ -124,12 +143,22 @@ function getMensagemErroReserva(error: unknown) {
     return "Escolha um horario futuro para a reserva.";
   }
 
+  if (message.includes("booking_not_editable")) {
+    return "Somente reservas pendentes ou aprovadas podem ser editadas.";
+  }
+
+  if (message.includes("invalid_booking_status_transition")) {
+    return "Essa mudança de status não é permitida.";
+  }
+
   return message || "Nao foi possivel salvar a reserva.";
 }
 
 export function Reservas() {
   const { currentProfile } = useCurrentProfile();
+  const isCoordinator = currentProfile?.role === "coordinator";
   const [bookings, setBookings] = useState<PrinterBooking[]>([]);
+  const [maintenanceBlocks, setMaintenanceBlocks] = useState<MaintenanceBlock[]>([]);
   const [printers, setPrinters] = useState<Printer[]>([]);
   const [profiles, setProfiles] = useState<PublicProfile[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
@@ -138,10 +167,20 @@ export function Reservas() {
   );
   const [dataAgenda, setDataAgenda] = useState(getDataLocalPadrao());
   const [modalAberto, setModalAberto] = useState(false);
+  const [reservaEmEdicao, setReservaEmEdicao] = useState<PrinterBooking | null>(null);
+  const [modalManutencaoAberto, setModalManutencaoAberto] = useState(false);
   const [reservaParaCancelar, setReservaParaCancelar] =
     useState<PrinterBooking | null>(null);
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
+  const [manutencaoForm, setManutencaoForm] = useState({
+    printer_id: "",
+    date: getDataLocalPadrao(),
+    starts_at: "",
+    ends_at: "",
+    reason: "",
+    notes: "",
+  });
   const [novaReserva, setNovaReserva] = useState({
     project_name: "",
     material_id: "",
@@ -149,17 +188,20 @@ export function Reservas() {
     reservation_date: "",
     starts_at: "",
     printer_id: "",
+    notes: "",
   });
 
   async function carregarDados() {
     const [
       bookingsData,
+      maintenanceData,
       printersData,
       profilesData,
       materialsData,
       printerMaterialsData,
     ] = await Promise.all([
       listBookings(),
+      listMaintenanceBlocks(),
       listPrinters(),
       listProfiles(),
       listMaterials(),
@@ -167,6 +209,7 @@ export function Reservas() {
     ]);
 
     setBookings(bookingsData);
+    setMaintenanceBlocks(maintenanceData);
     setPrinters(printersData);
     setProfiles(profilesData);
     setMaterials(materialsData);
@@ -206,6 +249,13 @@ export function Reservas() {
       {},
     );
   }, [bookings]);
+
+  const manutencoesPorImpressora = useMemo(() => {
+    return maintenanceBlocks.reduce<Record<string, MaintenanceBlock[]>>((mapa, block) => {
+      mapa[block.printer_id] = [...(mapa[block.printer_id] ?? []), block];
+      return mapa;
+    }, {});
+  }, [maintenanceBlocks]);
 
   const duracaoMinutos = calcularDuracaoMinutos(novaReserva.duration_hours);
   const inicioSelecionado =
@@ -289,6 +339,7 @@ export function Reservas() {
     return (
       (reservasPorImpressora[printerId] ?? []).find((reserva) => {
         return (
+          reserva.id !== reservaEmEdicao?.id &&
           reservaBloqueiaHorario(reserva) &&
           intervalosSeCruzam(
             inicioSelecionado,
@@ -299,6 +350,36 @@ export function Reservas() {
         );
       }) ?? null
     );
+  }
+
+  function getManutencaoConflitante(printerId: string) {
+    if (!inicioSelecionado || !fimSelecionado) return null;
+    return (manutencoesPorImpressora[printerId] ?? []).find((block) =>
+      intervalosSeCruzam(
+        inicioSelecionado,
+        fimSelecionado,
+        new Date(block.starts_at),
+        new Date(block.ends_at),
+      ),
+    ) ?? null;
+  }
+
+  function getManutencaoNoHorario(printerId: string, horario: string) {
+    const inicioHorario = criarDataLocalSegura(dataAgenda, horario);
+    if (!inicioHorario) return null;
+    const fimHorario = new Date(inicioHorario.getTime() + 30 * 60 * 1000);
+    return (manutencoesPorImpressora[printerId] ?? []).find((block) =>
+      intervalosSeCruzam(inicioHorario, fimHorario, new Date(block.starts_at), new Date(block.ends_at)),
+    ) ?? null;
+  }
+
+  function getManutencoesDaData(printerId: string) {
+    const inicioDia = criarDataLocalSegura(dataAgenda, "00:00");
+    if (!inicioDia) return [];
+    const fimDia = new Date(inicioDia.getTime() + 24 * 60 * 60 * 1000);
+    return (manutencoesPorImpressora[printerId] ?? [])
+      .filter((block) => intervalosSeCruzam(inicioDia, fimDia, new Date(block.starts_at), new Date(block.ends_at)))
+      .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
   }
 
   function getReservaNoHorario(printerId: string, horario: string) {
@@ -382,11 +463,33 @@ export function Reservas() {
     }
 
     setErro("");
+    setReservaEmEdicao(null);
+    setModalAberto(true);
+  }
+
+  function podeGerenciarReserva(reserva: PrinterBooking) {
+    return isCoordinator || currentProfile?.id === reserva.profile_id;
+  }
+
+  function abrirEdicao(reserva: PrinterBooking) {
+    if (!podeGerenciarReserva(reserva) || !reservaPodeSerEditada(reserva)) return;
+    setReservaEmEdicao(reserva);
+    setNovaReserva({
+      project_name: reserva.project_name,
+      material_id: reserva.material_id,
+      duration_hours: String(reserva.estimated_duration_minutes / 60),
+      reservation_date: formatarDataInput(reserva.starts_at),
+      starts_at: formatarHoraInput(reserva.starts_at),
+      printer_id: reserva.printer_id,
+      notes: reserva.notes ?? "",
+    });
+    setErro("");
     setModalAberto(true);
   }
 
   function fecharModal() {
     setModalAberto(false);
+    setReservaEmEdicao(null);
     setErro("");
     setNovaReserva({
       project_name: "",
@@ -395,7 +498,62 @@ export function Reservas() {
       reservation_date: "",
       starts_at: "",
       printer_id: "",
+      notes: "",
     });
+  }
+
+  function abrirManutencao(printerId = "") {
+    setManutencaoForm({
+      printer_id: printerId,
+      date: dataAgenda,
+      starts_at: "",
+      ends_at: "",
+      reason: "",
+      notes: "",
+    });
+    setErro("");
+    setModalManutencaoAberto(true);
+  }
+
+  async function salvarManutencao(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const inicio = criarDataLocalSegura(manutencaoForm.date, manutencaoForm.starts_at);
+    const fim = criarDataLocalSegura(manutencaoForm.date, manutencaoForm.ends_at);
+    if (!manutencaoForm.printer_id || !inicio || !fim || inicio >= fim || !manutencaoForm.reason.trim()) {
+      setErro("Informe impressora, motivo e um intervalo válido para a manutenção.");
+      return;
+    }
+
+    try {
+      setSalvando(true);
+      setErro("");
+      await createMaintenanceBlock({
+        printerId: manutencaoForm.printer_id,
+        startsAt: inicio.toISOString(),
+        endsAt: fim.toISOString(),
+        reason: manutencaoForm.reason.trim(),
+        notes: manutencaoForm.notes.trim() || null,
+      });
+      setDataAgenda(manutencaoForm.date);
+      await carregarDados();
+      setModalManutencaoAberto(false);
+    } catch (error) {
+      setErro(getMensagemErroReserva(error));
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function removerManutencao(blockId: string) {
+    try {
+      setSalvando(true);
+      await deleteMaintenanceBlock(blockId);
+      await carregarDados();
+    } catch (error) {
+      setErro(getMensagemErroReserva(error));
+    } finally {
+      setSalvando(false);
+    }
   }
 
   function selecionarImpressora(printer: Printer) {
@@ -416,6 +574,11 @@ export function Reservas() {
 
     if (getReservaConflitante(printer.id)) {
       setErro("A impressora selecionada nao esta livre nesse horario.");
+      return;
+    }
+
+    if (getManutencaoConflitante(printer.id)) {
+      setErro("A impressora está bloqueada para manutenção nesse horário.");
       return;
     }
 
@@ -455,16 +618,39 @@ export function Reservas() {
 
     try {
       setSalvando(true);
-      await createBooking({
+      const bookingParams = {
         printerId: novaReserva.printer_id,
         materialId: novaReserva.material_id,
         projectName,
         startsAt: inicioSelecionado.toISOString(),
         durationMinutes: duracaoMinutos,
-      });
+        notes: novaReserva.notes.trim() || null,
+      };
+      if (reservaEmEdicao) {
+        await updateBooking(reservaEmEdicao.id, bookingParams);
+      } else {
+        await createBooking(bookingParams);
+      }
       setDataAgenda(novaReserva.reservation_date);
       await carregarDados();
       fecharModal();
+    } catch (error) {
+      setErro(getMensagemErroReserva(error));
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function alterarStatus(reserva: PrinterBooking, status: BookingStatus) {
+    if (status === "cancelled") {
+      setReservaParaCancelar(reserva);
+      return;
+    }
+    try {
+      setSalvando(true);
+      setErro("");
+      await setBookingStatus(reserva.id, status);
+      await carregarDados();
     } catch (error) {
       setErro(getMensagemErroReserva(error));
     } finally {
@@ -499,12 +685,20 @@ export function Reservas() {
     <div>
       <PageHeader
         title="Reservas"
-        description="Reservas gravadas no Supabase com validacao transacional no banco."
+        description="Reservas e manutenções com validação transacional no banco."
         action={
-          <Button fullWidth onClick={abrirModal}>
-            <Plus className="mr-2 h-5 w-5" aria-hidden="true" />
-            Criar reserva
-          </Button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            {isCoordinator ? (
+              <Button fullWidth variant="secondary" onClick={() => abrirManutencao()}>
+                <Wrench className="mr-2 h-5 w-5" aria-hidden="true" />
+                Bloquear manutenção
+              </Button>
+            ) : null}
+            <Button fullWidth onClick={abrirModal}>
+              <Plus className="mr-2 h-5 w-5" aria-hidden="true" />
+              Criar reserva
+            </Button>
+          </div>
         }
       />
 
@@ -512,7 +706,7 @@ export function Reservas() {
         <div>
           <h3 className="text-xl font-bold text-text">Agenda por impressora</h3>
           <p className="mt-1 text-base text-muted">
-            Horarios de reserva das 09:00 ate 18:00, separados por equipamento.
+            Horários de reserva e manutenção das 09:00 às 18:00, separados por equipamento.
           </p>
         </div>
         <label className="grid gap-2 text-base font-semibold text-text sm:w-56">
@@ -540,7 +734,7 @@ export function Reservas() {
                 Reservas de {currentProfile.first_name}
               </h3>
               <p className="mt-1 text-base text-muted">
-                Impressoes associadas ao usuario atual nesta data.
+                Impressões associadas ao usuário atual nesta data.
               </p>
             </div>
             <StatusBadge
@@ -566,17 +760,30 @@ export function Reservas() {
                       {reserva.material?.name ?? "Material removido"}
                     </p>
                   </div>
-                  {reservaPodeSerCancelada(reserva) ? (
-                    <button
-                      type="button"
-                      title="Cancelar reserva"
-                      aria-label={`Cancelar reserva ${reserva.project_name}`}
-                      onClick={() => setReservaParaCancelar(reserva)}
-                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition hover:bg-danger-soft hover:text-danger-dark"
-                    >
-                      <Trash2 className="h-4 w-4" aria-hidden="true" />
-                    </button>
-                  ) : null}
+                  <div className="flex shrink-0 gap-1">
+                    {reservaPodeSerEditada(reserva) ? (
+                      <button
+                        type="button"
+                        title="Editar reserva"
+                        aria-label={`Editar reserva ${reserva.project_name}`}
+                        onClick={() => abrirEdicao(reserva)}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted transition hover:bg-primary-soft hover:text-primary"
+                      >
+                        <Pencil className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                    ) : null}
+                    {reservaPodeSerCancelada(reserva) ? (
+                      <button
+                        type="button"
+                        title="Cancelar reserva"
+                        aria-label={`Cancelar reserva ${reserva.project_name}`}
+                        onClick={() => setReservaParaCancelar(reserva)}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted transition hover:bg-danger-soft hover:text-danger-dark"
+                      >
+                        <Trash2 className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
               ))}
             </div>
@@ -609,22 +816,37 @@ export function Reservas() {
                         : "Nenhum material compativel"}
                     </p>
                   </div>
-                  <StatusBadge
-                    label={getPrinterStatusLabel(printer.status)}
-                    variant={printer.status === "active" ? "success" : "warning"}
-                  />
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    <StatusBadge
+                      label={getPrinterStatusLabel(printer.status)}
+                      variant={printer.status === "active" ? "success" : "warning"}
+                    />
+                    {isCoordinator ? (
+                      <Button
+                        className="min-h-9 px-3 py-2 text-sm"
+                        variant="secondary"
+                        onClick={() => abrirManutencao(printer.id)}
+                      >
+                        <Wrench className="mr-2 h-4 w-4" aria-hidden="true" />
+                        Manutenção
+                      </Button>
+                    ) : null}
+                  </div>
                 </div>
 
                 <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-6">
                   {horariosReserva.map((horario) => {
                     const reserva = getReservaNoHorario(printer.id, horario);
+                    const manutencao = getManutencaoNoHorario(printer.id, horario);
 
                     return (
                       <div
                         key={horario}
                         className={[
                           "min-h-16 rounded-md border px-2 py-2 text-left",
-                          reserva
+                          manutencao
+                            ? "border-amber-500 bg-amber-100 text-amber-950"
+                            : reserva
                             ? getCorReserva(reserva.id, reservasDaData)
                             : "border-border bg-background",
                         ].join(" ")}
@@ -632,13 +854,15 @@ export function Reservas() {
                         <p
                           className={[
                             "text-sm font-bold",
-                            reserva ? "" : "text-text",
+                            reserva || manutencao ? "" : "text-text",
                           ].join(" ")}
                         >
                           {horario}
                         </p>
                         <p className="mt-1 truncate text-xs font-semibold opacity-80">
-                          {reserva
+                          {manutencao
+                            ? `Manutenção - ${manutencao.reason}`
+                            : reserva
                             ? `${reserva.project_name} - ${getNomeResponsavel(
                                 reserva.profile_id,
                               )}`
@@ -673,14 +897,57 @@ export function Reservas() {
                             {getNomeResponsavel(reserva.profile_id)}
                           </span>
                         </div>
-                        {currentProfile?.id === reserva.profile_id &&
-                        reservaPodeSerCancelada(reserva) ? (
+                        <div className="flex shrink-0 items-center gap-1 self-end sm:self-center">
+                          {podeGerenciarReserva(reserva) && reservaPodeSerEditada(reserva) ? (
+                            <button
+                              type="button"
+                              title="Editar reserva"
+                              aria-label={`Editar reserva ${reserva.project_name}`}
+                              onClick={() => abrirEdicao(reserva)}
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-current opacity-70 transition hover:bg-white/60 hover:opacity-100"
+                            >
+                              <Pencil className="h-4 w-4" aria-hidden="true" />
+                            </button>
+                          ) : null}
+                          {podeGerenciarReserva(reserva) && reservaPodeSerCancelada(reserva) ? (
+                            <button
+                              type="button"
+                              title="Cancelar reserva"
+                              aria-label={`Cancelar reserva ${reserva.project_name}`}
+                              onClick={() => setReservaParaCancelar(reserva)}
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-current opacity-70 transition hover:bg-white/60 hover:opacity-100"
+                            >
+                              <Trash2 className="h-4 w-4" aria-hidden="true" />
+                            </button>
+                          ) : null}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+
+                {getManutencoesDaData(printer.id).length > 0 ? (
+                  <div className="mt-4 grid gap-2 border-t border-border pt-3">
+                    {getManutencoesDaData(printer.id).map((block) => (
+                      <div
+                        key={block.id}
+                        className="flex items-center justify-between gap-3 rounded-md border border-amber-400 bg-amber-50 px-3 py-2 text-amber-950"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-bold">Manutenção: {block.reason}</p>
+                          <p className="text-xs font-semibold opacity-80">
+                            {formatarHorario(block.starts_at)} até {formatarHorario(block.ends_at)}
+                          </p>
+                          {block.notes ? <p className="mt-1 text-xs">{block.notes}</p> : null}
+                        </div>
+                        {isCoordinator ? (
                           <button
                             type="button"
-                            title="Cancelar reserva"
-                            aria-label={`Cancelar reserva ${reserva.project_name}`}
-                            onClick={() => setReservaParaCancelar(reserva)}
-                            className="inline-flex h-8 w-8 shrink-0 items-center justify-center self-end rounded-md text-current opacity-70 transition hover:bg-white/60 hover:opacity-100 sm:self-center"
+                            title="Remover bloqueio"
+                            aria-label={`Remover manutenção ${block.reason}`}
+                            onClick={() => removerManutencao(block.id)}
+                            disabled={salvando}
+                            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md hover:bg-white/60"
                           >
                             <Trash2 className="h-4 w-4" aria-hidden="true" />
                           </button>
@@ -688,6 +955,14 @@ export function Reservas() {
                       </div>
                     ))}
                   </div>
+                ) : null}
+
+                {isCoordinator ? (
+                  <BookingLifecycleActions
+                    bookings={reservasDaData}
+                    disabled={salvando}
+                    onChangeStatus={alterarStatus}
+                  />
                 ) : null}
               </Card>
             );
@@ -713,9 +988,11 @@ export function Reservas() {
           <Card className="max-h-[90vh] w-full max-w-5xl overflow-y-auto shadow-soft">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="text-2xl font-bold text-text">Criar reserva</h3>
+                <h3 className="text-2xl font-bold text-text">
+                  {reservaEmEdicao ? "Editar reserva" : "Criar reserva"}
+                </h3>
                 <p className="mt-1 text-lg text-muted">
-                  Informe os dados e escolha uma impressora compativel.
+                  Informe os dados e escolha uma impressora compatível.
                 </p>
               </div>
               <button
@@ -731,7 +1008,7 @@ export function Reservas() {
             <form className="mt-5 grid gap-5" onSubmit={salvarReserva}>
               <div className="grid gap-4 md:grid-cols-[1.4fr_1fr] xl:grid-cols-[1.3fr_0.8fr_0.8fr_0.8fr]">
                 <label className="grid gap-2 text-base font-semibold text-text">
-                  Nome da impressao
+                  Nome da impressão
                   <input
                     className="min-h-11 min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
                     required
@@ -853,6 +1130,16 @@ export function Reservas() {
                 </label>
               </div>
 
+              <label className="grid gap-2 text-base font-semibold text-text">
+                Observações
+                <textarea
+                  className="min-h-20 rounded-lg border border-border bg-background px-4 py-3 text-base font-normal text-text outline-none transition focus:border-primary"
+                  value={novaReserva.notes}
+                  onChange={(event) => setNovaReserva((reserva) => ({ ...reserva, notes: event.target.value }))}
+                  placeholder="Informações opcionais para a execução da impressão"
+                />
+              </label>
+
               {inicioSelecionado && fimSelecionado ? (
                 <p
                   className={[
@@ -894,9 +1181,11 @@ export function Reservas() {
                           )
                         : false;
                       const conflito = getReservaConflitante(printer.id);
+                      const manutencao = getManutencaoConflitante(printer.id);
                       const disponivel =
                         compativel &&
                         !conflito &&
+                        !manutencao &&
                         !horarioSelecionadoJaPassou();
                       const selecionada = novaReserva.printer_id === printer.id;
                       const materiaisDaImpressora =
@@ -954,8 +1243,8 @@ export function Reservas() {
                               />
                             ) : null}
                             <StatusBadge
-                              label={conflito ? "Horario ocupado" : "Horario livre"}
-                              variant={conflito ? "danger" : "success"}
+                              label={manutencao ? "Em manutenção" : conflito ? "Horário ocupado" : "Horário livre"}
+                              variant={conflito || manutencao ? "danger" : "success"}
                             />
                           </div>
 
@@ -969,7 +1258,9 @@ export function Reservas() {
                           </p>
 
                           <p className="text-sm font-semibold text-muted">
-                            {conflito
+                            {manutencao
+                              ? `Bloqueada até ${formatarDataHora(manutencao.ends_at)}`
+                              : conflito
                               ? `Ocupada ate ${formatarDataHora(
                                   conflito.ends_at,
                                 )}`
@@ -1002,7 +1293,107 @@ export function Reservas() {
                   variant="success"
                   disabled={!formularioReservaCompleto || salvando}
                 >
-                  {salvando ? "Salvando..." : "Salvar reserva"}
+                  {salvando ? "Salvando..." : reservaEmEdicao ? "Atualizar reserva" : "Salvar reserva"}
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      ) : null}
+
+      {modalManutencaoAberto && isCoordinator ? (
+        <div
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-text/40 px-4 py-6 sm:items-center"
+          role="dialog"
+        >
+          <Card className="max-h-[90vh] w-full max-w-2xl overflow-y-auto shadow-soft">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-2xl font-bold text-text">Bloquear para manutenção</h3>
+                <p className="mt-1 text-base text-muted">
+                  O intervalo ficará indisponível para novas reservas.
+                </p>
+              </div>
+              <button
+                type="button"
+                aria-label="Fechar manutenção"
+                className="rounded-lg p-2 text-muted hover:bg-background hover:text-text"
+                onClick={() => { setModalManutencaoAberto(false); setErro(""); }}
+              >
+                <X className="h-6 w-6" aria-hidden="true" />
+              </button>
+            </div>
+
+            <form className="mt-5 grid gap-4" onSubmit={salvarManutencao}>
+              <label className="grid gap-2 font-semibold text-text">
+                Impressora
+                <select
+                  required
+                  className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal"
+                  value={manutencaoForm.printer_id}
+                  onChange={(event) => setManutencaoForm((current) => ({ ...current, printer_id: event.target.value }))}
+                >
+                  <option value="" disabled>Selecione</option>
+                  {printers.map((printer) => <option key={printer.id} value={printer.id}>{printer.name}</option>)}
+                </select>
+              </label>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <label className="grid gap-2 font-semibold text-text">
+                  Data
+                  <input
+                    required
+                    type="date"
+                    className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal"
+                    value={manutencaoForm.date}
+                    onChange={(event) => setManutencaoForm((current) => ({ ...current, date: event.target.value }))}
+                  />
+                </label>
+                <label className="grid gap-2 font-semibold text-text">
+                  Início
+                  <input
+                    required
+                    type="time"
+                    className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal"
+                    value={manutencaoForm.starts_at}
+                    onChange={(event) => setManutencaoForm((current) => ({ ...current, starts_at: event.target.value }))}
+                  />
+                </label>
+                <label className="grid gap-2 font-semibold text-text">
+                  Fim
+                  <input
+                    required
+                    type="time"
+                    className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal"
+                    value={manutencaoForm.ends_at}
+                    onChange={(event) => setManutencaoForm((current) => ({ ...current, ends_at: event.target.value }))}
+                  />
+                </label>
+              </div>
+              <label className="grid gap-2 font-semibold text-text">
+                Motivo
+                <input
+                  required
+                  className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal"
+                  value={manutencaoForm.reason}
+                  onChange={(event) => setManutencaoForm((current) => ({ ...current, reason: event.target.value }))}
+                />
+              </label>
+              <label className="grid gap-2 font-semibold text-text">
+                Observações
+                <textarea
+                  className="min-h-20 rounded-lg border border-border bg-background px-4 py-3 font-normal"
+                  value={manutencaoForm.notes}
+                  onChange={(event) => setManutencaoForm((current) => ({ ...current, notes: event.target.value }))}
+                />
+              </label>
+              {erro ? <p className="rounded-lg border border-danger bg-danger-soft p-3 font-semibold text-danger">{erro}</p> : null}
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                <Button type="button" variant="ghost" onClick={() => { setModalManutencaoAberto(false); setErro(""); }}>
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={salvando}>
+                  {salvando ? "Salvando..." : "Criar bloqueio"}
                 </Button>
               </div>
             </form>

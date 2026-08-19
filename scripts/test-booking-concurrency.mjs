@@ -39,6 +39,7 @@ const emails = [`concurrent-a-${suffix}@lab.local`, `concurrent-b-${suffix}@lab.
 const userIds = [];
 let printerId;
 let materialId;
+let originalCapacity;
 
 try {
   for (const [index, email] of emails.entries()) {
@@ -86,6 +87,31 @@ try {
     if (error) throw error;
   }
 
+  const { data: settings, error: settingsError } = await service
+    .from("lab_settings").select("workspace_capacity").eq("id", true).single();
+  if (settingsError) throw settingsError;
+  originalCapacity = settings.workspace_capacity;
+  const { data: period, error: periodError } = await service
+    .from("lab_schedule_periods").select("id").eq("is_active", true)
+    .order("sort_order").limit(1).single();
+  if (periodError) throw periodError;
+  const { error: capacityError } = await service.from("lab_settings")
+    .update({ workspace_capacity: 1 }).eq("id", true);
+  if (capacityError) throw capacityError;
+
+  const availabilityResults = await Promise.all(clients.map((client, index) =>
+    client.rpc("replace_profile_availability", {
+      p_profile_id: userIds[index],
+      p_slots: [{ weekday: 1, schedule_period_id: period.id, work_mode: "onsite" }],
+    }),
+  ));
+  const availabilitySuccesses = availabilityResults.filter((result) => !result.error);
+  if (availabilitySuccesses.length !== 1) {
+    throw new Error(`Esperado exatamente um sucesso de capacidade; recebido ${availabilitySuccesses.length}.`);
+  }
+  await service.from("availability_slots").delete().in("profile_id", userIds);
+  await service.from("lab_settings").update({ workspace_capacity: originalCapacity }).eq("id", true);
+
   const startsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
   const results = await Promise.all(
     clients.map((client, index) => client.rpc("create_printer_booking", {
@@ -101,8 +127,9 @@ try {
   if (successes.length !== 1) {
     throw new Error(`Esperado exatamente um sucesso concorrente; recebido ${successes.length}.`);
   }
-  console.log("Concorrência validada: exatamente uma das duas reservas foi criada.");
+  console.log("Concorrência validada: capacidade e reserva aceitaram exatamente uma operação.");
 } finally {
+  if (originalCapacity) await service.from("lab_settings").update({ workspace_capacity: originalCapacity }).eq("id", true);
   if (printerId) await service.from("printer_bookings").delete().eq("printer_id", printerId);
   if (printerId) await service.from("printer_materials").delete().eq("printer_id", printerId);
   if (printerId) await service.from("printers").delete().eq("id", printerId);

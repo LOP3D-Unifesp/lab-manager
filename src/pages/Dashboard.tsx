@@ -9,13 +9,13 @@ import { useCurrentProfile } from "../lib/currentUser";
 import {
   criarDataLocalSegura,
   getPrinterStatusLabel,
-  periodos,
   reservaBloqueiaHorario,
   type AvailabilitySlot,
   type Printer as PrinterType,
   type PrinterBooking,
   type PublicProfile,
 } from "../lib/domain";
+import { useLabSchedule } from "../lib/labSchedule";
 import {
   listAvailability,
   listBookings,
@@ -74,6 +74,7 @@ function reservaEstaEmAndamento(reserva: PrinterBooking, agora: Date) {
 }
 
 export function Dashboard() {
+  const { periodos } = useLabSchedule();
   const { currentProfile } = useCurrentProfile();
   const [profiles, setProfiles] = useState<PublicProfile[]>([]);
   const [availability, setAvailability] = useState<AvailabilitySlot[]>([]);
