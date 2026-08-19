@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   calcularDuracaoMinutos,
   criarDataLocalSegura,
+  getFundingAgencyLabel,
   periodoFromTimes,
   reservaBloqueiaHorario,
   reservaPodeSerCancelada,
@@ -54,6 +55,12 @@ describe("regras de dominio", () => {
 
   it("mapeia horarios conhecidos para blocos", () => {
     expect(periodoFromTimes("13:30:00", "15:30:00")).toBe("b3");
+  });
+
+  it("exibe a agência de fomento conhecida ou informada manualmente", () => {
+    expect(getFundingAgencyLabel("cnpq")).toBe("CNPq");
+    expect(getFundingAgencyLabel("other", "Fundação Local")).toBe("Fundação Local");
+    expect(getFundingAgencyLabel(null)).toBeNull();
   });
 
   it.each(["pending", "approved", "in_progress"] as const)(

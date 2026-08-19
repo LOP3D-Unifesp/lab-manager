@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
-import { ArrowUpRight, Building2, Mail, Users, UserPlus } from "lucide-react";
+import { ArrowUpRight, Building2, Mail, Users } from "lucide-react";
+import { Link } from "react-router-dom";
 
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
@@ -7,44 +8,27 @@ import { PageHeader } from "../components/ui/PageHeader";
 import { StatusBadge } from "../components/ui/StatusBadge";
 import { useAuth } from "../lib/auth";
 import type { PublicProfile, ProfileRole } from "../lib/domain";
-import {
-  inviteUser,
-  listProfiles,
-  updateLabSettings,
-  updateProfileRole,
-} from "../lib/supabaseRepository";
+import { listProfiles, updateLabSettings, updateProfileRole } from "../lib/supabaseRepository";
 
 function getRoleLabel(role: ProfileRole) {
   return role === "coordinator" ? "Coordenador" : "Pesquisador";
 }
 
-function getRoleVariant(role: ProfileRole) {
-  return role === "coordinator" ? "success" : "neutral";
-}
-
 export function Administracao() {
   const { labSettings, profile, refreshInstallation } = useAuth();
   const [profiles, setProfiles] = useState<PublicProfile[]>([]);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [loading, setLoading] = useState(false);
   const [pageError, setPageError] = useState("");
-  const [inviteError, setInviteError] = useState("");
-  const [inviteSuccess, setInviteSuccess] = useState("");
-  const [roleError, setRoleError] = useState("");
-  const [roleSuccess, setRoleSuccess] = useState("");
+  const [roleMessage, setRoleMessage] = useState("");
   const [savingRoleId, setSavingRoleId] = useState<string | null>(null);
   const [labName, setLabName] = useState("");
   const [labAcronym, setLabAcronym] = useState("");
   const [labTimezone, setLabTimezone] = useState("America/Sao_Paulo");
+  const [privacyContactEmail, setPrivacyContactEmail] = useState("");
   const [labMessage, setLabMessage] = useState("");
   const [savingLab, setSavingLab] = useState(false);
 
-  const isCoordinator = profile?.role === "coordinator";
-
   useEffect(() => {
-    carregarPerfis().catch(() => {
-      setPageError("Nao foi possivel carregar os usuarios.");
-    });
+    listProfiles().then(setProfiles).catch(() => setPageError("Não foi possível carregar os usuários."));
   }, []);
 
   useEffect(() => {
@@ -52,15 +36,24 @@ export function Administracao() {
     setLabName(labSettings.name ?? "");
     setLabAcronym(labSettings.acronym ?? "");
     setLabTimezone(labSettings.timezone);
+    setPrivacyContactEmail(labSettings.privacy_contact_email ?? "");
   }, [labSettings]);
+
+  async function reloadProfiles() {
+    setProfiles(await listProfiles());
+  }
 
   async function handleLabSettings(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLabMessage("");
     setSavingLab(true);
-
     try {
-      await updateLabSettings({ name: labName, acronym: labAcronym, timezone: labTimezone });
+      await updateLabSettings({
+        name: labName,
+        acronym: labAcronym,
+        timezone: labTimezone,
+        privacyContactEmail,
+      });
       await refreshInstallation();
       setLabMessage("Configurações do laboratório atualizadas.");
     } catch (error) {
@@ -70,47 +63,15 @@ export function Administracao() {
     }
   }
 
-  async function carregarPerfis() {
-    setPageError("");
-    const profilesData = await listProfiles();
-    setProfiles(profilesData);
-  }
-
-  async function handleInvite(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setInviteError("");
-    setInviteSuccess("");
-
-    const email = inviteEmail.trim();
-    if (!email) {
-      setInviteError("Informe um email para convidar.");
-      return;
-    }
-
-    try {
-      await inviteUser(email);
-      setInviteSuccess(`Convite enviado para ${email}.`);
-      setInviteEmail("");
-    } catch (err) {
-      setInviteError(err instanceof Error ? err.message : "Nao foi possivel enviar o convite.");
-    }
-  }
-
-  async function mudarPapel(profileId: string, newRole: ProfileRole) {
+  async function changeRole(profileId: string, role: ProfileRole) {
     setSavingRoleId(profileId);
-    setRoleError("");
-    setRoleSuccess("");
-
+    setRoleMessage("");
     try {
-      await updateProfileRole(profileId, newRole);
-      await carregarPerfis();
-      setRoleSuccess(
-        newRole === "coordinator"
-          ? "Usuario promovido a coordenador."
-          : "Usuario rebaixado a pesquisador.",
-      );
-    } catch (err) {
-      setRoleError(err instanceof Error ? err.message : "Nao foi possivel atualizar o papel.");
+      await updateProfileRole(profileId, role);
+      await reloadProfiles();
+      setRoleMessage(role === "coordinator" ? "Usuário promovido a coordenador." : "Usuário alterado para pesquisador.");
+    } catch (error) {
+      setRoleMessage(error instanceof Error ? error.message : "Não foi possível atualizar o papel.");
     } finally {
       setSavingRoleId(null);
     }
@@ -120,170 +81,67 @@ export function Administracao() {
     <div>
       <PageHeader
         title="Administração"
-        description="Promova usuários, convide novos membros e mantenha o laboratório sob controle."
+        description="Gerencie a identidade do laboratório, os convites e os papéis dos usuários."
       />
 
-      {pageError ? (
-        <p className="mb-4 rounded-lg border border-danger bg-danger-soft p-4 text-base font-semibold text-danger">
-          {pageError}
-        </p>
-      ) : null}
+      {pageError ? <p className="mb-4 rounded-lg border border-danger bg-danger-soft p-4 font-semibold text-danger">{pageError}</p> : null}
 
       <Card className="mb-4">
         <div className="mb-5 flex items-start gap-3">
-          <div className="rounded-lg bg-primary-soft p-3 text-primary">
-            <Building2 className="h-5 w-5" aria-hidden="true" />
-          </div>
+          <div className="rounded-lg bg-primary-soft p-3 text-primary"><Building2 className="h-5 w-5" /></div>
           <div>
-            <h2 className="text-2xl font-bold text-text">Laboratório</h2>
-            <p className="mt-1 text-base text-muted">Atualize a identidade exibida no sistema.</p>
+            <h2 className="text-2xl font-bold">Laboratório</h2>
+            <p className="mt-1 text-muted">Atualize a identidade e o contato institucional de privacidade.</p>
           </div>
         </div>
-        <form className="grid gap-4 md:grid-cols-[2fr_1fr_1.5fr_auto] md:items-end" onSubmit={handleLabSettings}>
-          <label className="grid gap-2 text-base font-semibold text-text">
-            Nome
-            <input className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal" required value={labName} onChange={(event) => setLabName(event.target.value)} />
-          </label>
-          <label className="grid gap-2 text-base font-semibold text-text">
-            Sigla
-            <input className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal uppercase" required value={labAcronym} onChange={(event) => setLabAcronym(event.target.value)} />
-          </label>
-          <label className="grid gap-2 text-base font-semibold text-text">
-            Fuso horário
-            <select className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal" value={labTimezone} onChange={(event) => setLabTimezone(event.target.value)}>
-              {["America/Sao_Paulo", "America/Manaus", "America/Recife", "America/Fortaleza", "UTC"].map((item) => <option key={item}>{item}</option>)}
-            </select>
-          </label>
-          <Button type="submit" disabled={savingLab || !isCoordinator}>{savingLab ? "Salvando..." : "Salvar"}</Button>
+        <form className="grid gap-4 md:grid-cols-2 xl:grid-cols-[2fr_1fr_1.5fr_2fr_auto] xl:items-end" onSubmit={handleLabSettings}>
+          <label className="grid gap-2 font-semibold">Nome<input className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal" required value={labName} onChange={(event) => setLabName(event.target.value)} /></label>
+          <label className="grid gap-2 font-semibold">Sigla<input className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal uppercase" required value={labAcronym} onChange={(event) => setLabAcronym(event.target.value)} /></label>
+          <label className="grid gap-2 font-semibold">Fuso horário<select className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal" value={labTimezone} onChange={(event) => setLabTimezone(event.target.value)}>{["America/Sao_Paulo", "America/Manaus", "America/Recife", "America/Fortaleza", "UTC"].map((item) => <option key={item}>{item}</option>)}</select></label>
+          <label className="grid gap-2 font-semibold">Contato de privacidade<input className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal" required type="email" value={privacyContactEmail} onChange={(event) => setPrivacyContactEmail(event.target.value)} /></label>
+          <Button type="submit" disabled={savingLab}>{savingLab ? "Salvando..." : "Salvar"}</Button>
         </form>
         {labMessage ? <p className="mt-3 text-sm font-semibold text-muted">{labMessage}</p> : null}
       </Card>
 
-      <section className="grid gap-4 xl:grid-cols-[minmax(320px,400px)_1fr]">
+      <section className="grid gap-4 xl:grid-cols-[minmax(280px,360px)_1fr]">
         <Card>
           <div className="mb-5 flex items-start gap-3">
-            <div className="rounded-lg bg-primary-soft p-3 text-primary">
-              <Mail className="h-5 w-5" aria-hidden="true" />
-            </div>
+            <div className="rounded-lg bg-primary-soft p-3 text-primary"><Mail className="h-5 w-5" /></div>
             <div>
-              <h2 className="text-2xl font-bold text-text">Convidar novo usuário</h2>
-              <p className="mt-1 text-base text-muted">
-                Envie um convite por email. O usuário receberá o link para completar o cadastro.
-              </p>
+              <h2 className="text-2xl font-bold">Convites</h2>
+              <p className="mt-1 text-muted">Envie, acompanhe, reenvie ou revogue convites com validade de 72 horas.</p>
             </div>
           </div>
-
-          <form className="grid gap-4" onSubmit={handleInvite}>
-            <label className="grid gap-2 text-base font-semibold text-text">
-              Email
-              <input
-                className="min-h-11 rounded-lg border border-border bg-background px-4 text-base outline-none transition focus:border-primary"
-                onChange={(event) => setInviteEmail(event.target.value)}
-                placeholder="usuario@exemplo.com"
-                required
-                type="email"
-                value={inviteEmail}
-              />
-            </label>
-
-            {inviteError ? (
-              <p className="rounded-lg border border-danger bg-danger-soft p-3 text-base font-semibold text-danger">
-                {inviteError}
-              </p>
-            ) : null}
-
-            {inviteSuccess ? (
-              <p className="rounded-lg border border-success bg-success-soft p-3 text-base font-semibold text-success-dark">
-                {inviteSuccess}
-              </p>
-            ) : null}
-
-            <Button fullWidth type="submit" disabled={!isCoordinator}>
-              <UserPlus className="mr-2 h-5 w-5" aria-hidden="true" />
-              Enviar convite
-            </Button>
-          </form>
+          <Link className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-primary-dark px-5 py-3 text-lg font-semibold text-white transition hover:bg-primary" to="/administracao/convites">Abrir gestão de convites</Link>
+          <p className="mt-4 text-sm text-muted">Convites só são liberados quando o contato de privacidade está preenchido.</p>
         </Card>
 
         <Card>
           <div className="mb-5 flex items-start gap-3">
-            <div className="rounded-lg bg-primary-soft p-3 text-primary">
-              <Users className="h-5 w-5" aria-hidden="true" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold text-text">Usuários</h2>
-              <p className="mt-1 text-base text-muted">
-                Veja os perfis ativos e promova pesquisadores a coordenadores.
-              </p>
-            </div>
+            <div className="rounded-lg bg-primary-soft p-3 text-primary"><Users className="h-5 w-5" /></div>
+            <div><h2 className="text-2xl font-bold">Usuários</h2><p className="mt-1 text-muted">Perfis ativos e seus papéis atuais.</p></div>
           </div>
-
+          {roleMessage ? <p className="mb-4 rounded-lg border border-border bg-background p-3 font-semibold text-muted">{roleMessage}</p> : null}
           <div className="grid gap-4">
-            {roleError ? (
-              <p className="rounded-lg border border-danger bg-danger-soft p-3 text-base font-semibold text-danger">
-                {roleError}
-              </p>
-            ) : null}
-            {roleSuccess ? (
-              <p className="rounded-lg border border-success bg-success-soft p-3 text-base font-semibold text-success-dark">
-                {roleSuccess}
-              </p>
-            ) : null}
-            {profiles.length === 0 ? (
-              <p className="text-base font-semibold text-muted">
-                Nenhum usuário encontrado.
-              </p>
-            ) : (
-              profiles.map((user) => (
-                <div
-                  key={user.id}
-                  className="rounded-lg border border-border bg-background p-4"
-                >
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="text-lg font-bold text-text">{user.full_name}</p>
-                      <p className="text-sm text-muted">{user.email}</p>
-                    </div>
-                    <StatusBadge
-                      label={getRoleLabel(user.role)}
-                      variant={getRoleVariant(user.role)}
-                    />
-                  </div>
-
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {user.role === "researcher" ? (
-                      <Button
-                        className="min-h-9 px-3 py-2 text-sm"
-                        onClick={() => mudarPapel(user.id, "coordinator")}
-                        disabled={savingRoleId === user.id}
-                      >
-                        <ArrowUpRight className="mr-2 h-4 w-4" aria-hidden="true" />
-                        Promover a coordenador
-                      </Button>
-                    ) : user.id !== profile?.id ? (
-                      <Button
-                        className="min-h-9 px-3 py-2 text-sm"
-                        variant="secondary"
-                        onClick={() => mudarPapel(user.id, "researcher")}
-                        disabled={savingRoleId === user.id}
-                      >
-                        <ArrowUpRight className="mr-2 h-4 w-4 rotate-180" aria-hidden="true" />
-                        Rebaixar a pesquisador
-                      </Button>
-                    ) : null}
-                  </div>
+            {profiles.map((user) => (
+              <div key={user.id} className="rounded-lg border border-border bg-background p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div><p className="text-lg font-bold">{user.full_name}</p><p className="text-sm text-muted">{user.email}</p></div>
+                  <StatusBadge label={getRoleLabel(user.role)} variant={user.role === "coordinator" ? "success" : "neutral"} />
                 </div>
-              ))
-            )}
+                <div className="mt-4">
+                  {user.role === "researcher" ? (
+                    <Button className="min-h-9 px-3 py-2 text-sm" disabled={savingRoleId === user.id} onClick={() => changeRole(user.id, "coordinator")}><ArrowUpRight className="mr-2 h-4 w-4" />Promover a coordenador</Button>
+                  ) : user.id !== profile?.id ? (
+                    <Button className="min-h-9 px-3 py-2 text-sm" variant="secondary" disabled={savingRoleId === user.id} onClick={() => changeRole(user.id, "researcher")}><ArrowUpRight className="mr-2 h-4 w-4 rotate-180" />Alterar para pesquisador</Button>
+                  ) : null}
+                </div>
+              </div>
+            ))}
           </div>
         </Card>
       </section>
-
-      {!isCoordinator ? (
-        <p className="mt-6 rounded-lg border border-warning bg-warning-soft p-4 text-base text-warning-dark">
-          Você precisa ser coordenador para convidar novos usuários e promover pesquisadors.
-        </p>
-      ) : null}
     </div>
   );
 }

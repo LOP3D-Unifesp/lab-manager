@@ -122,7 +122,9 @@ export function Pesquisadores() {
                     {pesquisador.telefone || "Sem telefone"}
                   </p>
                   <p className="mt-2 text-sm font-semibold leading-5 text-muted">
-                    {pesquisador.bolsista ? "Bolsista" : "Nao bolsista"}
+                    {pesquisador.temBolsaFomento
+                      ? `Bolsa de fomento${pesquisador.agenciaFomento ? `: ${pesquisador.agenciaFomento}` : ""}`
+                      : "Sem bolsa de fomento"}
                     {pesquisador.cargaHorariaSemanal
                       ? ` - ${pesquisador.cargaHorariaSemanal}h/semana`
                       : ""}
@@ -167,7 +169,7 @@ export function Pesquisadores() {
                     Presenca
                   </th>
                   <th className="px-5 py-3 text-sm font-semibold text-muted">
-                    Bolsa/carga
+                    Fomento/carga
                   </th>
                 </tr>
               </thead>
@@ -212,7 +214,9 @@ export function Pesquisadores() {
                       />
                     </td>
                     <td className="whitespace-nowrap px-5 py-3 text-base text-muted">
-                      {pesquisador.bolsista ? "Bolsista" : "Nao bolsista"}
+                      {pesquisador.temBolsaFomento
+                        ? `Bolsa: ${pesquisador.agenciaFomento ?? "agência não informada"}`
+                        : "Sem bolsa de fomento"}
                       {pesquisador.cargaHorariaSemanal
                         ? ` - ${pesquisador.cargaHorariaSemanal}h`
                         : ""}

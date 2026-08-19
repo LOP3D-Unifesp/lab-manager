@@ -2,7 +2,9 @@ import { supabase } from "./supabaseClient";
 import {
   AvailabilitySlot,
   AcademicAffiliation,
-  InitialCatalogInput,
+  FundingAgency,
+  InvitationStage,
+  InvitationSummary,
   InstallationState,
   LabSettings,
   MaintenanceBlock,
@@ -12,6 +14,7 @@ import {
   PrinterMaterial,
   PrinterStatus,
   PublicProfile,
+  PublicLabIdentity,
   ProfileRole,
   ProfileSkill,
   Skill,
@@ -51,7 +54,9 @@ export const publicProfileSelect = [
   "email",
   "role",
   "academic_affiliation",
-  "is_scholarship_holder",
+  "has_funding_grant",
+  "funding_agency",
+  "funding_agency_other",
   "weekly_workload_hours",
   "lattes_url",
   "nationality_country_code",
@@ -66,7 +71,9 @@ export type ProfileInput = {
   fullName: string;
   academicAffiliation: AcademicAffiliation | null;
   birthDate: string | null;
-  isScholarshipHolder: boolean;
+  hasFundingGrant: boolean;
+  fundingAgency: FundingAgency | null;
+  fundingAgencyOther: string | null;
   weeklyWorkloadHours: number | null;
   lattesUrl: string | null;
   cpf: string | null;
@@ -89,7 +96,12 @@ function profileRpcArgs(params: ProfileInput) {
     p_full_name: params.fullName,
     p_academic_affiliation: params.academicAffiliation ?? undefined,
     p_birth_date: params.birthDate ?? undefined,
-    p_is_scholarship_holder: params.isScholarshipHolder,
+    p_has_funding_grant: params.hasFundingGrant,
+    p_funding_agency: params.hasFundingGrant ? params.fundingAgency ?? undefined : undefined,
+    p_funding_agency_other:
+      params.hasFundingGrant && params.fundingAgency === "other"
+        ? params.fundingAgencyOther ?? undefined
+        : undefined,
     p_weekly_workload_hours: params.weeklyWorkloadHours ?? undefined,
     p_lattes_url: params.lattesUrl ?? undefined,
     p_cpf: params.cpf ?? undefined,
@@ -133,12 +145,93 @@ export async function createMyProfile(params: ProfileInput) {
   return mapPublicProfile(data as unknown as Omit<PublicProfile, "first_name" | "last_name">);
 }
 
-export async function inviteUser(email: string) {
+export async function inviteUser(email: string, role: ProfileRole) {
   const { data, error } = await client().functions.invoke("invite-user", {
-    body: { email: email.trim().toLowerCase() },
+    body: { email: email.trim().toLowerCase(), role },
   });
   throwIfError(error);
   return data;
+}
+
+async function invitationFunction(action: "resend" | "revoke", invitationId: string) {
+  const { data, error } = await client().functions.invoke("manage-invitation", {
+    body: { action, invitationId },
+  });
+  throwIfError(error);
+  return data;
+}
+
+export async function resendInvitation(invitationId: string) {
+  return invitationFunction("resend", invitationId);
+}
+
+export async function revokeInvitation(invitationId: string) {
+  return invitationFunction("revoke", invitationId);
+}
+
+export async function markInvitationOpened() {
+  const { error } = await client().rpc("record_invitation_opened");
+  throwIfError(error);
+}
+
+export async function getPublicLabIdentity(): Promise<PublicLabIdentity | null> {
+  const { data, error } = await client().rpc("get_public_lab_identity");
+  throwIfError(error);
+  return ((data ?? [])[0] ?? null) as PublicLabIdentity | null;
+}
+
+export async function listInvitations(): Promise<InvitationSummary[]> {
+  const { data, error } = await client()
+    .from("invitations")
+    .select(
+      "id, email, role, status, invited_by, accepted_by, created_at, opened_at, accepted_at, expires_at, last_sent_at, send_count",
+    )
+    .order("created_at", { ascending: false });
+  throwIfError(error);
+
+  const invitations = (data ?? []) as Array<{
+    id: string;
+    email: string | null;
+    role: ProfileRole;
+    status: "pending" | "accepted" | "expired" | "revoked";
+    invited_by: string;
+    accepted_by: string | null;
+    created_at: string;
+    opened_at: string | null;
+    accepted_at: string | null;
+    expires_at: string;
+    last_sent_at: string;
+    send_count: number;
+  }>;
+  const profileIds = Array.from(
+    new Set(invitations.flatMap((item) => [item.invited_by, item.accepted_by].filter(Boolean))),
+  ) as string[];
+  const { data: profiles, error: profilesError } = profileIds.length
+    ? await client().from("profiles").select("id, full_name, email").in("id", profileIds)
+    : { data: [], error: null };
+  throwIfError(profilesError);
+  const byId = new Map((profiles ?? []).map((item) => [item.id, item]));
+
+  return invitations.map((invitation) => {
+    const stage: InvitationStage = invitation.status === "pending"
+      ? invitation.opened_at ? "opened" : "sent"
+      : invitation.status;
+    const acceptedProfile = invitation.accepted_by ? byId.get(invitation.accepted_by) : null;
+
+    return {
+      id: invitation.id,
+      role: invitation.role,
+      stage,
+      recipient: invitation.email ?? acceptedProfile?.email ?? acceptedProfile?.full_name ?? "Dados removidos",
+      invitedBy: byId.get(invitation.invited_by)?.full_name ?? "Coordenador não disponível",
+      createdAt: invitation.created_at,
+      openedAt: invitation.opened_at,
+      acceptedAt: invitation.accepted_at,
+      expiresAt: invitation.expires_at,
+      lastSentAt: invitation.last_sent_at,
+      sendCount: invitation.send_count,
+    };
+  });
 }
 
 export async function setMyPassword(password: string) {
@@ -150,7 +243,7 @@ export async function getInstallationState(): Promise<InstallationState> {
   const { data, error } = await client()
     .from("lab_settings")
     .select(
-      "id, name, acronym, timezone, setup_completed_at, created_by, updated_by, created_at, updated_at",
+      "id, name, acronym, timezone, privacy_contact_email, setup_completed_at, created_by, updated_by, created_at, updated_at",
     )
     .eq("id", true)
     .maybeSingle();
@@ -164,23 +257,13 @@ export async function completeInstallation(params: {
   name: string;
   acronym: string;
   timezone: string;
-  catalog: InitialCatalogInput;
+  privacyContactEmail: string;
 }) {
   const { data, error } = await client().rpc("complete_lab_installation", {
     p_name: params.name.trim(),
     p_acronym: params.acronym.trim(),
     p_timezone: params.timezone,
-    p_materials: params.catalog.materials.map((material) => ({
-      name: material.name.trim(),
-      description: material.description?.trim() || null,
-    })),
-    p_printers: params.catalog.printers.map((printer) => ({
-      name: printer.name.trim(),
-      model: printer.model?.trim() || null,
-      location: printer.location?.trim() || null,
-      notes: printer.notes?.trim() || null,
-      material_names: printer.materialNames,
-    })),
+    p_privacy_contact_email: params.privacyContactEmail.trim().toLowerCase(),
   });
 
   throwIfError(error);
@@ -191,11 +274,13 @@ export async function updateLabSettings(params: {
   name: string;
   acronym: string;
   timezone: string;
+  privacyContactEmail: string;
 }) {
   const { data, error } = await client().rpc("update_lab_settings", {
     p_name: params.name.trim(),
     p_acronym: params.acronym.trim(),
     p_timezone: params.timezone,
+    p_privacy_contact_email: params.privacyContactEmail.trim().toLowerCase(),
   });
 
   throwIfError(error);
@@ -393,7 +478,7 @@ export async function listBookings() {
       estimated_duration_minutes, status, notes, cancelled_at, cancelled_by,
       printer:printers!printer_bookings_printer_id_fkey(id, name, model, location, status, notes, created_at, updated_at),
       material:materials!printer_bookings_material_id_fkey(id, name, description, is_active),
-      profile:profiles!printer_bookings_profile_id_fkey(id, full_name, email, role, academic_affiliation, is_scholarship_holder, weekly_workload_hours, lattes_url, nationality_country_code, phone, bio, is_active, created_at, updated_at)
+      profile:profiles!printer_bookings_profile_id_fkey(id, full_name, email, role, academic_affiliation, has_funding_grant, funding_agency, funding_agency_other, weekly_workload_hours, lattes_url, nationality_country_code, phone, bio, is_active, created_at, updated_at)
     `)
     .order("starts_at");
   throwIfError(error);

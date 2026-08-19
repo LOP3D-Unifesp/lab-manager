@@ -7,8 +7,10 @@ import { PageHeader } from "../components/ui/PageHeader";
 import { StatusBadge } from "../components/ui/StatusBadge";
 import { useAuth } from "../lib/auth";
 import {
+  fundingAgencyOptions,
   periodos,
   type AcademicAffiliation,
+  type FundingAgency,
   type PeriodoId,
   type ProfileRole,
   type WorkMode,
@@ -124,7 +126,9 @@ export function MeuPerfil() {
     AcademicAffiliation | ""
   >("");
   const [birthDate, setBirthDate] = useState("");
-  const [isScholarshipHolder, setIsScholarshipHolder] = useState(false);
+  const [hasFundingGrant, setHasFundingGrant] = useState(false);
+  const [fundingAgency, setFundingAgency] = useState<FundingAgency | "">("");
+  const [fundingAgencyOther, setFundingAgencyOther] = useState("");
   const [weeklyWorkloadHours, setWeeklyWorkloadHours] = useState("");
   const [lattesUrl, setLattesUrl] = useState("");
   const [cpf, setCpf] = useState("");
@@ -193,7 +197,9 @@ export function MeuPerfil() {
     setFullName(profile.full_name);
     setAcademicAffiliation(profile.academic_affiliation ?? "");
     setBirthDate(profile.birth_date ?? "");
-    setIsScholarshipHolder(profile.is_scholarship_holder);
+    setHasFundingGrant(profile.has_funding_grant);
+    setFundingAgency(profile.funding_agency ?? "");
+    setFundingAgencyOther(profile.funding_agency_other ?? "");
     setWeeklyWorkloadHours(profile.weekly_workload_hours?.toString() ?? "");
     setLattesUrl(profile.lattes_url ?? "");
     setCpf(profile.cpf ?? "");
@@ -373,6 +379,16 @@ export function MeuPerfil() {
       return;
     }
 
+    if (hasFundingGrant && !fundingAgency) {
+      setErrorMessage("Informe a agência responsável pela bolsa de fomento.");
+      return;
+    }
+
+    if (hasFundingGrant && fundingAgency === "other" && !fundingAgencyOther.trim()) {
+      setErrorMessage("Informe o nome da outra agência de fomento.");
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -380,7 +396,12 @@ export function MeuPerfil() {
         fullName: nomeNormalizado,
         academicAffiliation: academicAffiliation || null,
         birthDate: birthDateNormalizada,
-        isScholarshipHolder,
+        hasFundingGrant,
+        fundingAgency: hasFundingGrant ? fundingAgency || null : null,
+        fundingAgencyOther:
+          hasFundingGrant && fundingAgency === "other"
+            ? normalizarTextoOpcional(fundingAgencyOther)
+            : null,
         weeklyWorkloadHours: cargaHoraria,
         lattesUrl: lattesNormalizado,
         cpf: cpfNormalizado,
@@ -558,18 +579,61 @@ export function MeuPerfil() {
                 />
               </label>
 
-              <label className="flex min-h-11 items-center gap-3 rounded-lg border border-border bg-background px-4 text-base font-semibold text-text md:col-span-2">
-                <input
-                  checked={isScholarshipHolder}
-                  className="h-5 w-5 accent-primary"
+              <label className="grid gap-2 text-base font-semibold text-text">
+                Bolsa de fomento
+                <select
+                  className={getInputClassName()}
                   disabled={submitting}
-                  onChange={(event) =>
-                    setIsScholarshipHolder(event.target.checked)
-                  }
-                  type="checkbox"
-                />
-                Bolsista
+                  onChange={(event) => {
+                    const enabled = event.target.value === "true";
+                    setHasFundingGrant(enabled);
+                    if (!enabled) {
+                      setFundingAgency("");
+                      setFundingAgencyOther("");
+                    }
+                  }}
+                  value={String(hasFundingGrant)}
+                >
+                  <option value="false">Não</option>
+                  <option value="true">Sim</option>
+                </select>
               </label>
+
+              {hasFundingGrant ? (
+                <label className="grid gap-2 text-base font-semibold text-text">
+                  Agência de fomento
+                  <select
+                    className={getInputClassName()}
+                    disabled={submitting}
+                    onChange={(event) => {
+                      const value = event.target.value as FundingAgency | "";
+                      setFundingAgency(value);
+                      if (value !== "other") setFundingAgencyOther("");
+                    }}
+                    required
+                    value={fundingAgency}
+                  >
+                    <option value="">Selecione</option>
+                    {fundingAgencyOptions.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+
+              {hasFundingGrant && fundingAgency === "other" ? (
+                <label className="grid gap-2 text-base font-semibold text-text md:col-span-2">
+                  Qual agência de fomento?
+                  <input
+                    className={getInputClassName()}
+                    disabled={submitting}
+                    maxLength={120}
+                    onChange={(event) => setFundingAgencyOther(event.target.value)}
+                    required
+                    value={fundingAgencyOther}
+                  />
+                </label>
+              ) : null}
             </div>
           </Card>
 

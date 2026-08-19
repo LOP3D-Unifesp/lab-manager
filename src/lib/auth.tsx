@@ -51,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       supabase
         .from("profiles")
         .select(
-          "id, full_name, email, role, academic_affiliation, is_scholarship_holder, weekly_workload_hours, lattes_url, nationality_country_code, phone, bio, is_active, created_at, updated_at",
+          "id, full_name, email, role, academic_affiliation, has_funding_grant, funding_agency, funding_agency_other, weekly_workload_hours, lattes_url, nationality_country_code, phone, bio, is_active, created_at, updated_at",
         )
         .eq("id", session.user.id)
         .eq("is_active", true)
@@ -91,7 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data, error } = await supabase
       .from("lab_settings")
       .select(
-        "id, name, acronym, timezone, setup_completed_at, created_by, updated_by, created_at, updated_at",
+        "id, name, acronym, timezone, privacy_contact_email, setup_completed_at, created_by, updated_by, created_at, updated_at",
       )
       .eq("id", true)
       .maybeSingle();

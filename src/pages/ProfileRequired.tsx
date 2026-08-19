@@ -6,7 +6,11 @@ import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { useAuth } from "../lib/auth";
 import { createMyProfile, setMyPassword } from "../lib/supabaseRepository";
-import { AcademicAffiliation } from "../lib/domain";
+import {
+  AcademicAffiliation,
+  fundingAgencyOptions,
+  type FundingAgency,
+} from "../lib/domain";
 
 const academicAffiliationOptions: Array<{
   value: AcademicAffiliation;
@@ -36,14 +40,16 @@ function normalizeCpf(value: string) {
 }
 
 export function ProfileRequired() {
-  const { signOut, user, refreshProfile } = useAuth();
+  const { signOut, user, refreshProfile, refreshInstallation } = useAuth();
   const navigate = useNavigate();
   const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [academicAffiliation, setAcademicAffiliation] = useState<AcademicAffiliation | "">("");
   const [birthDate, setBirthDate] = useState("");
-  const [isScholarshipHolder, setIsScholarshipHolder] = useState(false);
+  const [hasFundingGrant, setHasFundingGrant] = useState(false);
+  const [fundingAgency, setFundingAgency] = useState<FundingAgency | "">("");
+  const [fundingAgencyOther, setFundingAgencyOther] = useState("");
   const [weeklyWorkloadHours, setWeeklyWorkloadHours] = useState("");
   const [lattesUrl, setLattesUrl] = useState("");
   const [cpf, setCpf] = useState("");
@@ -85,13 +91,30 @@ export function ProfileRequired() {
       return;
     }
 
+    if (hasFundingGrant && !fundingAgency) {
+      setErrorMessage("Informe a agência responsável pela bolsa de fomento.");
+      setSubmitting(false);
+      return;
+    }
+
+    if (hasFundingGrant && fundingAgency === "other" && !fundingAgencyOther.trim()) {
+      setErrorMessage("Informe o nome da outra agência de fomento.");
+      setSubmitting(false);
+      return;
+    }
+
     try {
       await setMyPassword(password);
       await createMyProfile({
         fullName: fullName.trim(),
         academicAffiliation: academicAffiliation || null,
         birthDate: normalizeOptionalText(birthDate),
-        isScholarshipHolder,
+        hasFundingGrant,
+        fundingAgency: hasFundingGrant ? fundingAgency || null : null,
+        fundingAgencyOther:
+          hasFundingGrant && fundingAgency === "other"
+            ? normalizeOptionalText(fundingAgencyOther)
+            : null,
         weeklyWorkloadHours: weeklyWorkloadHours
           ? Number(weeklyWorkloadHours)
           : null,
@@ -112,6 +135,7 @@ export function ProfileRequired() {
       });
 
       await refreshProfile();
+      await refreshInstallation();
       navigate("/", { replace: true });
     } catch (error) {
       const message =
@@ -150,7 +174,7 @@ export function ProfileRequired() {
               <label className="grid gap-2 text-base font-semibold">
                 Email
                 <input
-                  className="min-h-11 rounded-lg border border-border bg-muted px-4 text-base font-normal outline-none transition focus:border-primary"
+                  className="min-h-11 cursor-not-allowed rounded-lg border border-border bg-primary-soft px-4 text-base font-semibold text-text opacity-100 outline-none disabled:opacity-100"
                   disabled
                   readOnly
                   type="email"
@@ -233,18 +257,62 @@ export function ProfileRequired() {
               </label>
 
               <label className="grid gap-2 text-base font-semibold">
-                Bolsa de estudo
+                Bolsa de fomento
                 <select
                   className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
                   disabled={submitting}
-                  onChange={(event) => setIsScholarshipHolder(event.target.value === "true")}
-                  value={String(isScholarshipHolder)}
+                  onChange={(event) => {
+                    const enabled = event.target.value === "true";
+                    setHasFundingGrant(enabled);
+                    if (!enabled) {
+                      setFundingAgency("");
+                      setFundingAgencyOther("");
+                    }
+                  }}
+                  value={String(hasFundingGrant)}
                 >
                   <option value="false">Não</option>
                   <option value="true">Sim</option>
                 </select>
               </label>
             </div>
+
+            {hasFundingGrant ? (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="grid gap-2 text-base font-semibold">
+                  Agência de fomento
+                  <select
+                    className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
+                    disabled={submitting}
+                    onChange={(event) => {
+                      const value = event.target.value as FundingAgency | "";
+                      setFundingAgency(value);
+                      if (value !== "other") setFundingAgencyOther("");
+                    }}
+                    required
+                    value={fundingAgency}
+                  >
+                    <option value="">Selecione</option>
+                    {fundingAgencyOptions.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </label>
+                {fundingAgency === "other" ? (
+                  <label className="grid gap-2 text-base font-semibold">
+                    Qual agência?
+                    <input
+                      className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
+                      disabled={submitting}
+                      maxLength={120}
+                      onChange={(event) => setFundingAgencyOther(event.target.value)}
+                      required
+                      value={fundingAgencyOther}
+                    />
+                  </label>
+                ) : null}
+              </div>
+            ) : null}
 
             <div className="grid gap-4 sm:grid-cols-3">
               <label className="grid gap-2 text-base font-semibold">

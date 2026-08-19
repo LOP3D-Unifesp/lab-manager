@@ -13,6 +13,31 @@ export type AcademicAffiliation =
   | "technician"
   | "faculty"
   | "other";
+export type FundingAgency =
+  | "cnpq"
+  | "fapesp"
+  | "capes"
+  | "sus"
+  | "fap"
+  | "other";
+
+export const fundingAgencyOptions: Array<{ value: FundingAgency; label: string }> = [
+  { value: "cnpq", label: "CNPq" },
+  { value: "fapesp", label: "FAPESP" },
+  { value: "capes", label: "CAPES" },
+  { value: "sus", label: "SUS" },
+  { value: "fap", label: "FAP" },
+  { value: "other", label: "Outro" },
+];
+
+export function getFundingAgencyLabel(
+  agency: FundingAgency | null,
+  other: string | null = null,
+) {
+  if (!agency) return null;
+  if (agency === "other") return other?.trim() || "Outra agência";
+  return fundingAgencyOptions.find((option) => option.value === agency)?.label ?? agency;
+}
 export type PrinterStatus =
   | "active"
   | "maintenance"
@@ -34,7 +59,9 @@ export type PublicProfile = {
   email: string;
   role: ProfileRole;
   academic_affiliation: AcademicAffiliation | null;
-  is_scholarship_holder: boolean;
+  has_funding_grant: boolean;
+  funding_agency: FundingAgency | null;
+  funding_agency_other: string | null;
   weekly_workload_hours: number | null;
   lattes_url: string | null;
   nationality_country_code: string | null;
@@ -69,6 +96,7 @@ export type LabSettings = {
   name: string | null;
   acronym: string | null;
   timezone: string;
+  privacy_contact_email: string | null;
   setup_completed_at: string | null;
   created_by: string | null;
   updated_by: string | null;
@@ -76,27 +104,32 @@ export type LabSettings = {
   updated_at: string;
 };
 
+export type PublicLabIdentity = {
+  name: string;
+  acronym: string;
+  privacy_contact_email: string;
+  invitation_ttl_hours: number;
+};
+
+export type InvitationStage = "sent" | "opened" | "accepted" | "expired" | "revoked";
+
+export type InvitationSummary = {
+  id: string;
+  role: ProfileRole;
+  stage: InvitationStage;
+  recipient: string;
+  invitedBy: string;
+  createdAt: string;
+  openedAt: string | null;
+  acceptedAt: string | null;
+  expiresAt: string;
+  lastSentAt: string;
+  sendCount: number;
+};
+
 export type InstallationState = {
   settings: LabSettings | null;
   completed: boolean;
-};
-
-export type InitialMaterialInput = {
-  name: string;
-  description: string | null;
-};
-
-export type InitialPrinterInput = {
-  name: string;
-  model: string | null;
-  location: string | null;
-  notes: string | null;
-  materialNames: string[];
-};
-
-export type InitialCatalogInput = {
-  materials: InitialMaterialInput[];
-  printers: InitialPrinterInput[];
 };
 
 export type Skill = {

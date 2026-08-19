@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import { getFundingAgencyLabel } from "./domain";
 import { listProfiles } from "./supabaseRepository";
 
 export type Pesquisador = {
@@ -10,7 +11,8 @@ export type Pesquisador = {
   status: string;
   email: string;
   telefone: string;
-  bolsista: boolean;
+  temBolsaFomento: boolean;
+  agenciaFomento: string | null;
   cargaHorariaSemanal: number | null;
   lattesUrl: string;
   habilidades: string[];
@@ -45,7 +47,11 @@ async function carregarPesquisadores() {
     status: "No laboratorio",
     email: profile.email,
     telefone: profile.phone ?? "",
-    bolsista: profile.is_scholarship_holder,
+    temBolsaFomento: profile.has_funding_grant,
+    agenciaFomento: getFundingAgencyLabel(
+      profile.funding_agency,
+      profile.funding_agency_other,
+    ),
     cargaHorariaSemanal: profile.weekly_workload_hours,
     lattesUrl: profile.lattes_url ?? "",
     habilidades: [],
