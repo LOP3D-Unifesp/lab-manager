@@ -23,12 +23,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
       - uses: supabase/setup-cli@v1
         with:
           version: latest
-      - run: supabase start
-      - run: supabase db reset
-      - run: supabase test db
+      - run: npm run setup:local
+      - run: npm run test:db
       - run: npm run test:concurrency
       - run: npm run db:types
       - run: git diff --exit-code -- src/lib/database.types.ts

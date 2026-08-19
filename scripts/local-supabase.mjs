@@ -37,7 +37,10 @@ function statusEnvironment() {
   }
   const url = values.API_URL;
   const publicKey = values.PUBLISHABLE_KEY ?? values.ANON_KEY;
-  const serviceKey = values.SECRET_KEY ?? values.SERVICE_ROLE_KEY;
+  // The cleanup Edge Function deliberately compares the bearer token with
+  // SUPABASE_SERVICE_ROLE_KEY, so prefer that exact legacy JWT when both the
+  // legacy and the newer sb_secret key are exposed by the CLI.
+  const serviceKey = values.SERVICE_ROLE_KEY ?? values.SECRET_KEY;
   if (!url || !publicKey || !serviceKey) throw new Error("O Supabase local não retornou as credenciais esperadas.");
   if (!isLoopbackUrl(url)) throw new Error("A automação local recusou uma URL não local.");
   return { url, publicKey, serviceKey };
@@ -59,7 +62,16 @@ async function bootstrapLocal(environment) {
     name: "Administrador Local",
     password: "LabManager123!",
   });
+  const client = createClient(environment.url, environment.serviceKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const { error } = await client.rpc("configure_invitation_cleanup", {
+    p_function_url: "http://host.docker.internal:55321/functions/v1/cleanup-invitations",
+    p_secret: environment.serviceKey,
+  });
+  if (error) throw error;
   console.log("Coordenador local criado: admin@lab.local / LabManager123!");
+  console.log("Limpeza horária de convites configurada no Supabase local.");
 }
 
 async function seedDemo(environment) {
@@ -89,6 +101,8 @@ async function main() {
     throw new Error("Comando local inválido.");
   }
 
+  // Auth templates and other config.toml changes require a full stack restart.
+  if (command === "setup" || command === "reset") supabase(["stop"]);
   if (command === "setup" || command === "start" || command === "reset") supabase(["start"]);
   if (command === "setup" || command === "reset") supabase(["db", "reset"]);
 
