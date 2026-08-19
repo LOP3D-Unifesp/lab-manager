@@ -1,69 +1,29 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-
-function jsonResponse(body: Record<string, unknown>, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
+import {
+  corsHeaders,
+  getFunctionClients,
+  invitationErrorStatus,
+  invitationExpiresAt,
+  jsonResponse,
+  requireCoordinator,
+  requireInstalledLab,
+  sendAuthInvitation,
+} from "../_shared/invitations.ts";
 
 Deno.serve(async (request) => {
-  if (request.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (request.method !== "POST") return jsonResponse({ error: "method_not_allowed" }, 405);
 
-  if (request.method !== "POST") {
-    return jsonResponse({ error: "method_not_allowed" }, 405);
-  }
+  const clients = getFunctionClients(request);
+  if ("error" in clients) return clients.error;
 
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const authorization = await requireCoordinator(
+    clients.accessToken,
+    clients.authClient,
+    clients.adminClient,
+  );
+  if (authorization.error || !authorization.user) return authorization.error!;
 
-  if (!supabaseUrl || !anonKey || !serviceRoleKey) {
-    return jsonResponse({ error: "function_not_configured" }, 500);
-  }
-
-  const authorization = request.headers.get("Authorization");
-  const accessToken = authorization?.replace(/^Bearer\s+/i, "");
-
-  if (!accessToken) {
-    return jsonResponse({ error: "not_authenticated" }, 401);
-  }
-
-  const authClient = createClient(supabaseUrl, anonKey, {
-    global: { headers: { Authorization: `Bearer ${accessToken}` } },
-    auth: { persistSession: false },
-  });
-  const adminClient = createClient(supabaseUrl, serviceRoleKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-
-  const { data: authData, error: authError } = await authClient.auth.getUser(accessToken);
-
-  if (authError || !authData.user) {
-    return jsonResponse({ error: "not_authenticated" }, 401);
-  }
-
-  const { data: coordinator } = await adminClient
-    .from("profiles")
-    .select("id")
-    .eq("id", authData.user.id)
-    .eq("role", "coordinator")
-    .eq("is_active", true)
-    .maybeSingle();
-
-  if (!coordinator) {
-    return jsonResponse({ error: "coordinator_required" }, 403);
-  }
-
-  let payload: { email?: unknown };
+  let payload: { email?: unknown; role?: unknown };
   try {
     payload = await request.json();
   } catch {
@@ -71,28 +31,36 @@ Deno.serve(async (request) => {
   }
 
   const email = typeof payload.email === "string" ? payload.email.trim().toLowerCase() : "";
+  const role = payload.role ?? "researcher";
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return jsonResponse({ error: "invalid_email" }, 400);
   }
+  if (role !== "researcher" && role !== "coordinator") {
+    return jsonResponse({ error: "invalid_role" }, 400);
+  }
 
-  const ttlHours = Number(Deno.env.get("INVITATION_TTL_HOURS") ?? "24");
-  const expiresAt = new Date(
-    Date.now() + (Number.isFinite(ttlHours) && ttlHours > 0 ? ttlHours : 24) * 60 * 60 * 1000,
-  ).toISOString();
+  const lab = await requireInstalledLab(clients.adminClient);
+  if ("error" in lab) {
+    return jsonResponse({ error: lab.error }, invitationErrorStatus(lab.error));
+  }
 
-  await adminClient
+  const expiresAt = invitationExpiresAt();
+  const now = new Date().toISOString();
+  await clients.adminClient
     .from("invitations")
-    .update({ status: "expired" })
+    .update({ status: "expired", email: null })
     .eq("status", "pending")
-    .lte("expires_at", new Date().toISOString());
+    .lte("expires_at", now);
 
-  const { data: invitation, error: invitationError } = await adminClient
+  const { data: invitation, error: invitationError } = await clients.adminClient
     .from("invitations")
     .insert({
       email,
-      invited_by: authData.user.id,
+      role,
+      invited_by: authorization.user.id,
       expires_at: expiresAt,
+      send_count: 1,
     })
     .select("id")
     .single();
@@ -105,33 +73,35 @@ Deno.serve(async (request) => {
     );
   }
 
-  const redirectTo = Deno.env.get("PUBLIC_SITE_URL");
-  const { data: invited, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(
+  const { data: invited, error: inviteError } = await sendAuthInvitation(
+    clients.adminClient,
     email,
-    redirectTo ? { redirectTo } : undefined,
+    { id: invitation.id, role, expiresAt },
+    lab.data,
   );
 
   if (inviteError || !invited.user) {
-    await adminClient
+    await clients.adminClient
       .from("invitations")
-      .update({ status: "revoked" })
+      .update({ status: "revoked", email: null })
       .eq("id", invitation.id);
-
     return jsonResponse({ error: "auth_invite_failed" }, 502);
   }
 
-  const { error: linkError } = await adminClient
+  const { error: linkError } = await clients.adminClient
     .from("invitations")
     .update({ auth_user_id: invited.user.id })
-    .eq("id", invitation.id);
+    .eq("id", invitation.id)
+    .eq("status", "pending");
 
   if (linkError) {
-    await adminClient
+    await clients.adminClient.auth.admin.deleteUser(invited.user.id, false);
+    await clients.adminClient
       .from("invitations")
-      .update({ status: "revoked" })
+      .update({ status: "revoked", email: null, auth_user_id: null })
       .eq("id", invitation.id);
     return jsonResponse({ error: "invitation_link_failed" }, 500);
   }
 
-  return jsonResponse({ invitationId: invitation.id, expiresAt }, 201);
+  return jsonResponse({ invitationId: invitation.id, expiresAt, role }, 201);
 });

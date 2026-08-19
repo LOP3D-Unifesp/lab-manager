@@ -4,6 +4,8 @@
 -- Immutable MVP baseline. Future schema changes must use new incremental migrations.
 CREATE SCHEMA IF NOT EXISTS "extensions";
 CREATE EXTENSION IF NOT EXISTS "btree_gist" WITH SCHEMA "extensions";
+CREATE EXTENSION IF NOT EXISTS "pg_cron" WITH SCHEMA "pg_catalog";
+CREATE EXTENSION IF NOT EXISTS "pg_net" WITH SCHEMA "extensions";
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -49,6 +51,19 @@ CREATE TYPE "public"."academic_affiliation" AS ENUM (
 
 
 ALTER TYPE "public"."academic_affiliation" OWNER TO "postgres";
+
+
+CREATE TYPE "public"."funding_agency" AS ENUM (
+    'cnpq',
+    'fapesp',
+    'capes',
+    'sus',
+    'fap',
+    'other'
+);
+
+
+ALTER TYPE "public"."funding_agency" OWNER TO "postgres";
 
 
 CREATE TYPE "public"."booking_status" AS ENUM (
@@ -276,7 +291,8 @@ CREATE OR REPLACE FUNCTION "private"."expire_pending_invitations"() RETURNS "voi
     SET "search_path" TO 'public'
     AS $$
   update public.invitations
-  set status = 'expired'
+  set status = 'expired',
+      email = null
   where status = 'pending'
     and expires_at <= now();
 $$;
@@ -335,7 +351,7 @@ $$;
 ALTER FUNCTION "private"."prevent_profile_role_self_change"() OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "private"."validate_lab_identity"("p_name" "text", "p_acronym" "text", "p_timezone" "text") RETURNS "void"
+CREATE OR REPLACE FUNCTION "private"."validate_lab_identity"("p_name" "text", "p_acronym" "text", "p_timezone" "text", "p_privacy_contact_email" "text") RETURNS "void"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'pg_catalog'
     AS $$
@@ -351,11 +367,15 @@ begin
   if not exists (select 1 from pg_timezone_names where name = p_timezone) then
     raise exception 'invalid_timezone' using errcode = 'P0001';
   end if;
+
+  if lower(btrim(coalesce(p_privacy_contact_email, ''))) !~ '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$' then
+    raise exception 'invalid_privacy_contact_email' using errcode = 'P0001';
+  end if;
 end;
 $$;
 
 
-ALTER FUNCTION "private"."validate_lab_identity"("p_name" "text", "p_acronym" "text", "p_timezone" "text") OWNER TO "postgres";
+ALTER FUNCTION "private"."validate_lab_identity"("p_name" "text", "p_acronym" "text", "p_timezone" "text", "p_privacy_contact_email" "text") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."cancel_printer_booking"("p_booking_id" "uuid") RETURNS "public"."printer_bookings"
@@ -374,12 +394,13 @@ CREATE TABLE IF NOT EXISTS "public"."lab_settings" (
     "name" "text",
     "acronym" "text",
     "timezone" "text" DEFAULT 'America/Sao_Paulo'::"text" NOT NULL,
+    "privacy_contact_email" "text",
     "setup_completed_at" timestamp with time zone,
     "created_by" "uuid",
     "updated_by" "uuid",
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    CONSTRAINT "lab_settings_check" CHECK ((("setup_completed_at" IS NULL) OR (("length"("btrim"(COALESCE("name", ''::"text"))) > 0) AND ("length"("btrim"(COALESCE("acronym", ''::"text"))) > 0)))),
+    CONSTRAINT "lab_settings_check" CHECK ((("setup_completed_at" IS NULL) OR (("length"("btrim"(COALESCE("name", ''::"text"))) > 0) AND ("length"("btrim"(COALESCE("acronym", ''::"text"))) > 0) AND ("privacy_contact_email" = "lower"("btrim"("privacy_contact_email"))) AND (POSITION(('@'::"text") IN "privacy_contact_email") > 1)))),
     CONSTRAINT "lab_settings_id_check" CHECK ("id")
 );
 
@@ -387,26 +408,18 @@ CREATE TABLE IF NOT EXISTS "public"."lab_settings" (
 ALTER TABLE "public"."lab_settings" OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."complete_lab_installation"("p_name" "text", "p_acronym" "text", "p_timezone" "text", "p_materials" "jsonb" DEFAULT '[]'::"jsonb", "p_printers" "jsonb" DEFAULT '[]'::"jsonb") RETURNS "public"."lab_settings"
+CREATE OR REPLACE FUNCTION "public"."complete_lab_installation"("p_name" "text", "p_acronym" "text", "p_timezone" "text", "p_privacy_contact_email" "text") RETURNS "public"."lab_settings"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'private', 'pg_catalog'
     AS $$
 declare
   v_settings public.lab_settings;
-  v_printer jsonb;
-  v_printer_id uuid;
-  v_material_name text;
 begin
   if not private.is_coordinator() then
     raise exception 'coordinator_required' using errcode = 'P0001';
   end if;
 
-  perform private.validate_lab_identity(p_name, p_acronym, p_timezone);
-
-  if jsonb_typeof(coalesce(p_materials, '[]'::jsonb)) <> 'array'
-    or jsonb_typeof(coalesce(p_printers, '[]'::jsonb)) <> 'array' then
-    raise exception 'invalid_initial_catalog' using errcode = 'P0001';
-  end if;
+  perform private.validate_lab_identity(p_name, p_acronym, p_timezone, p_privacy_contact_email);
 
   select * into v_settings
   from public.lab_settings
@@ -417,89 +430,11 @@ begin
     raise exception 'installation_already_completed' using errcode = 'P0001';
   end if;
 
-  if exists (
-    select 1
-    from jsonb_to_recordset(coalesce(p_materials, '[]'::jsonb))
-      as material(name text, description text)
-    where length(btrim(coalesce(name, ''))) = 0
-  ) or (
-    select count(*)
-    from jsonb_to_recordset(coalesce(p_materials, '[]'::jsonb))
-      as material(name text, description text)
-  ) <> (
-    select count(distinct lower(btrim(name)))
-    from jsonb_to_recordset(coalesce(p_materials, '[]'::jsonb))
-      as material(name text, description text)
-  ) then
-    raise exception 'invalid_initial_materials' using errcode = 'P0001';
-  end if;
-
-  if exists (
-    select 1
-    from jsonb_to_recordset(coalesce(p_printers, '[]'::jsonb))
-      as printer(name text, model text, location text, notes text, material_names jsonb)
-    where length(btrim(coalesce(name, ''))) = 0
-      or jsonb_typeof(coalesce(material_names, '[]'::jsonb)) <> 'array'
-  ) or (
-    select count(*)
-    from jsonb_to_recordset(coalesce(p_printers, '[]'::jsonb))
-      as printer(name text, model text, location text, notes text, material_names jsonb)
-  ) <> (
-    select count(distinct lower(btrim(name)))
-    from jsonb_to_recordset(coalesce(p_printers, '[]'::jsonb))
-      as printer(name text, model text, location text, notes text, material_names jsonb)
-  ) then
-    raise exception 'invalid_initial_printers' using errcode = 'P0001';
-  end if;
-
-  insert into public.materials (name, description, is_active)
-  select btrim(name), nullif(btrim(coalesce(description, '')), ''), true
-  from jsonb_to_recordset(coalesce(p_materials, '[]'::jsonb))
-    as material(name text, description text)
-  on conflict (name) do update set
-    description = excluded.description,
-    is_active = true;
-
-  for v_printer in
-    select value from jsonb_array_elements(coalesce(p_printers, '[]'::jsonb))
-  loop
-    insert into public.printers (name, model, location, status, notes)
-    values (
-      btrim(v_printer ->> 'name'),
-      nullif(btrim(coalesce(v_printer ->> 'model', '')), ''),
-      nullif(btrim(coalesce(v_printer ->> 'location', '')), ''),
-      'active',
-      nullif(btrim(coalesce(v_printer ->> 'notes', '')), '')
-    )
-    on conflict (name) do update set
-      model = excluded.model,
-      location = excluded.location,
-      status = 'active',
-      notes = excluded.notes
-    returning id into v_printer_id;
-
-    for v_material_name in
-      select jsonb_array_elements_text(coalesce(v_printer -> 'material_names', '[]'::jsonb))
-    loop
-      if not exists (
-        select 1 from public.materials
-        where lower(name) = lower(btrim(v_material_name)) and is_active
-      ) then
-        raise exception 'unknown_initial_material: %', v_material_name using errcode = 'P0001';
-      end if;
-
-      insert into public.printer_materials (printer_id, material_id)
-      select v_printer_id, id
-      from public.materials
-      where lower(name) = lower(btrim(v_material_name)) and is_active
-      on conflict do nothing;
-    end loop;
-  end loop;
-
   update public.lab_settings
   set name = btrim(p_name),
       acronym = upper(btrim(p_acronym)),
       timezone = p_timezone,
+      privacy_contact_email = lower(btrim(p_privacy_contact_email)),
       setup_completed_at = now(),
       created_by = auth.uid(),
       updated_by = auth.uid()
@@ -511,7 +446,7 @@ end;
 $$;
 
 
-ALTER FUNCTION "public"."complete_lab_installation"("p_name" "text", "p_acronym" "text", "p_timezone" "text", "p_materials" "jsonb", "p_printers" "jsonb") OWNER TO "postgres";
+ALTER FUNCTION "public"."complete_lab_installation"("p_name" "text", "p_acronym" "text", "p_timezone" "text", "p_privacy_contact_email" "text") OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."maintenance_blocks" (
@@ -615,7 +550,9 @@ CREATE TABLE IF NOT EXISTS "public"."profiles" (
     "email" "text" NOT NULL,
     "role" "public"."user_role" DEFAULT 'researcher'::"public"."user_role" NOT NULL,
     "academic_affiliation" "public"."academic_affiliation",
-    "is_scholarship_holder" boolean DEFAULT false NOT NULL,
+    "has_funding_grant" boolean DEFAULT false NOT NULL,
+    "funding_agency" "public"."funding_agency",
+    "funding_agency_other" "text",
     "weekly_workload_hours" integer,
     "lattes_url" "text",
     "nationality_country_code" character(2),
@@ -625,6 +562,7 @@ CREATE TABLE IF NOT EXISTS "public"."profiles" (
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     CONSTRAINT "profiles_email_check" CHECK ((POSITION(('@'::"text") IN ("email")) > 1)),
+    CONSTRAINT "profiles_funding_grant_check" CHECK (((NOT "has_funding_grant" AND "funding_agency" IS NULL AND "funding_agency_other" IS NULL) OR ("has_funding_grant" AND "funding_agency" IS NOT NULL AND (("funding_agency" = 'other'::"public"."funding_agency" AND "length"("btrim"(COALESCE("funding_agency_other", ''::"text"))) > 0) OR ("funding_agency" <> 'other'::"public"."funding_agency" AND "funding_agency_other" IS NULL))))),
     CONSTRAINT "profiles_full_name_check" CHECK (("length"("btrim"("full_name")) > 0)),
     CONSTRAINT "profiles_nationality_country_code_check" CHECK ((("nationality_country_code" IS NULL) OR ("nationality_country_code" ~ '^[A-Z]{2}$'::"text"))),
     CONSTRAINT "profiles_weekly_workload_hours_check" CHECK ((("weekly_workload_hours" IS NULL) OR (("weekly_workload_hours" >= 1) AND ("weekly_workload_hours" <= 60))))
@@ -634,7 +572,7 @@ CREATE TABLE IF NOT EXISTS "public"."profiles" (
 ALTER TABLE "public"."profiles" OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."create_profile"("p_full_name" "text", "p_academic_affiliation" "public"."academic_affiliation" DEFAULT NULL::"public"."academic_affiliation", "p_is_scholarship_holder" boolean DEFAULT false, "p_weekly_workload_hours" integer DEFAULT NULL::integer, "p_lattes_url" "text" DEFAULT NULL::"text", "p_nationality_country_code" character DEFAULT NULL::"bpchar", "p_phone" "text" DEFAULT NULL::"text", "p_bio" "text" DEFAULT NULL::"text", "p_birth_date" "date" DEFAULT NULL::"date", "p_cpf" "text" DEFAULT NULL::"text", "p_rg" "text" DEFAULT NULL::"text", "p_postal_code" "text" DEFAULT NULL::"text", "p_street" "text" DEFAULT NULL::"text", "p_address_number" "text" DEFAULT NULL::"text", "p_address_complement" "text" DEFAULT NULL::"text", "p_neighborhood" "text" DEFAULT NULL::"text", "p_city" "text" DEFAULT NULL::"text", "p_state" "text" DEFAULT NULL::"text", "p_country" "text" DEFAULT NULL::"text") RETURNS "public"."profiles"
+CREATE OR REPLACE FUNCTION "public"."create_profile"("p_full_name" "text", "p_academic_affiliation" "public"."academic_affiliation" DEFAULT NULL::"public"."academic_affiliation", "p_has_funding_grant" boolean DEFAULT false, "p_funding_agency" "public"."funding_agency" DEFAULT NULL::"public"."funding_agency", "p_funding_agency_other" "text" DEFAULT NULL::"text", "p_weekly_workload_hours" integer DEFAULT NULL::integer, "p_lattes_url" "text" DEFAULT NULL::"text", "p_nationality_country_code" character DEFAULT NULL::"bpchar", "p_phone" "text" DEFAULT NULL::"text", "p_bio" "text" DEFAULT NULL::"text", "p_birth_date" "date" DEFAULT NULL::"date", "p_cpf" "text" DEFAULT NULL::"text", "p_rg" "text" DEFAULT NULL::"text", "p_postal_code" "text" DEFAULT NULL::"text", "p_street" "text" DEFAULT NULL::"text", "p_address_number" "text" DEFAULT NULL::"text", "p_address_complement" "text" DEFAULT NULL::"text", "p_neighborhood" "text" DEFAULT NULL::"text", "p_city" "text" DEFAULT NULL::"text", "p_state" "text" DEFAULT NULL::"text", "p_country" "text" DEFAULT NULL::"text") RETURNS "public"."profiles"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'auth', 'private'
     AS $$
@@ -683,7 +621,9 @@ begin
     email,
     role,
     academic_affiliation,
-    is_scholarship_holder,
+    has_funding_grant,
+    funding_agency,
+    funding_agency_other,
     weekly_workload_hours,
     lattes_url,
     nationality_country_code,
@@ -694,9 +634,11 @@ begin
     auth.uid(),
     btrim(p_full_name),
     v_email,
-    'researcher',
+    v_invitation.role,
     p_academic_affiliation,
-    p_is_scholarship_holder,
+    p_has_funding_grant,
+    case when p_has_funding_grant then p_funding_agency else null end,
+    case when p_has_funding_grant and p_funding_agency = 'other' then nullif(btrim(coalesce(p_funding_agency_other, '')), '') else null end,
     p_weekly_workload_hours,
     nullif(btrim(coalesce(p_lattes_url, '')), ''),
     p_nationality_country_code,
@@ -735,7 +677,9 @@ begin
 
   update public.invitations
   set status = 'accepted',
-      auth_user_id = auth.uid(),
+      email = null,
+      auth_user_id = null,
+      opened_at = coalesce(opened_at, now()),
       accepted_by = auth.uid(),
       accepted_at = now()
   where id = v_invitation.id;
@@ -745,7 +689,7 @@ end;
 $$;
 
 
-ALTER FUNCTION "public"."create_profile"("p_full_name" "text", "p_academic_affiliation" "public"."academic_affiliation", "p_is_scholarship_holder" boolean, "p_weekly_workload_hours" integer, "p_lattes_url" "text", "p_nationality_country_code" character, "p_phone" "text", "p_bio" "text", "p_birth_date" "date", "p_cpf" "text", "p_rg" "text", "p_postal_code" "text", "p_street" "text", "p_address_number" "text", "p_address_complement" "text", "p_neighborhood" "text", "p_city" "text", "p_state" "text", "p_country" "text") OWNER TO "postgres";
+ALTER FUNCTION "public"."create_profile"("p_full_name" "text", "p_academic_affiliation" "public"."academic_affiliation", "p_has_funding_grant" boolean, "p_funding_agency" "public"."funding_agency", "p_funding_agency_other" "text", "p_weekly_workload_hours" integer, "p_lattes_url" "text", "p_nationality_country_code" character, "p_phone" "text", "p_bio" "text", "p_birth_date" "date", "p_cpf" "text", "p_rg" "text", "p_postal_code" "text", "p_street" "text", "p_address_number" "text", "p_address_complement" "text", "p_neighborhood" "text", "p_city" "text", "p_state" "text", "p_country" "text") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."delete_maintenance_block"("p_block_id" "uuid") RETURNS "void"
@@ -921,7 +865,7 @@ $$;
 ALTER FUNCTION "public"."touch_updated_at"() OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."update_lab_settings"("p_name" "text", "p_acronym" "text", "p_timezone" "text") RETURNS "public"."lab_settings"
+CREATE OR REPLACE FUNCTION "public"."update_lab_settings"("p_name" "text", "p_acronym" "text", "p_timezone" "text", "p_privacy_contact_email" "text") RETURNS "public"."lab_settings"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public', 'private', 'pg_catalog'
     AS $$
@@ -932,12 +876,13 @@ begin
     raise exception 'coordinator_required' using errcode = 'P0001';
   end if;
 
-  perform private.validate_lab_identity(p_name, p_acronym, p_timezone);
+  perform private.validate_lab_identity(p_name, p_acronym, p_timezone, p_privacy_contact_email);
 
   update public.lab_settings
   set name = btrim(p_name),
       acronym = upper(btrim(p_acronym)),
       timezone = p_timezone,
+      privacy_contact_email = lower(btrim(p_privacy_contact_email)),
       updated_by = auth.uid()
   where id and setup_completed_at is not null
   returning * into v_settings;
@@ -951,10 +896,112 @@ end;
 $$;
 
 
-ALTER FUNCTION "public"."update_lab_settings"("p_name" "text", "p_acronym" "text", "p_timezone" "text") OWNER TO "postgres";
+ALTER FUNCTION "public"."update_lab_settings"("p_name" "text", "p_acronym" "text", "p_timezone" "text", "p_privacy_contact_email" "text") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."update_my_profile"("p_full_name" "text", "p_academic_affiliation" "public"."academic_affiliation" DEFAULT NULL::"public"."academic_affiliation", "p_is_scholarship_holder" boolean DEFAULT false, "p_weekly_workload_hours" integer DEFAULT NULL::integer, "p_lattes_url" "text" DEFAULT NULL::"text", "p_nationality_country_code" character DEFAULT NULL::"bpchar", "p_phone" "text" DEFAULT NULL::"text", "p_bio" "text" DEFAULT NULL::"text", "p_birth_date" "date" DEFAULT NULL::"date", "p_cpf" "text" DEFAULT NULL::"text", "p_rg" "text" DEFAULT NULL::"text", "p_postal_code" "text" DEFAULT NULL::"text", "p_street" "text" DEFAULT NULL::"text", "p_address_number" "text" DEFAULT NULL::"text", "p_address_complement" "text" DEFAULT NULL::"text", "p_neighborhood" "text" DEFAULT NULL::"text", "p_city" "text" DEFAULT NULL::"text", "p_state" "text" DEFAULT NULL::"text", "p_country" "text" DEFAULT NULL::"text") RETURNS "public"."profiles"
+CREATE OR REPLACE FUNCTION "public"."get_public_lab_identity"() RETURNS TABLE("name" "text", "acronym" "text", "privacy_contact_email" "text", "invitation_ttl_hours" integer)
+    LANGUAGE "sql" STABLE SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+  select
+    lab_settings.name,
+    lab_settings.acronym,
+    lab_settings.privacy_contact_email,
+    72
+  from public.lab_settings
+  where id and setup_completed_at is not null;
+$$;
+
+
+ALTER FUNCTION "public"."get_public_lab_identity"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."record_invitation_opened"() RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public', 'auth', 'private'
+    AS $$
+declare
+  v_email text;
+begin
+  if auth.uid() is null then
+    raise exception 'not_authenticated' using errcode = 'P0001';
+  end if;
+
+  v_email := lower(btrim(coalesce(auth.jwt() ->> 'email', '')));
+  perform private.expire_pending_invitations();
+
+  update public.invitations
+  set opened_at = coalesce(opened_at, now())
+  where status = 'pending'
+    and expires_at > now()
+    and auth_user_id = auth.uid()
+    and email = v_email;
+
+  if not found then
+    raise exception 'valid_invitation_required' using errcode = 'P0001';
+  end if;
+end;
+$$;
+
+
+ALTER FUNCTION "public"."record_invitation_opened"() OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."configure_invitation_cleanup"("p_function_url" "text", "p_secret" "text") RETURNS "void"
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'vault', 'cron', 'public', 'pg_catalog'
+    AS $$
+declare
+  v_job_id bigint;
+  v_url_secret_id uuid;
+  v_auth_secret_id uuid;
+begin
+  if p_function_url !~ '^https?://' or length(btrim(coalesce(p_secret, ''))) < 16 then
+    raise exception 'invalid_cleanup_configuration' using errcode = 'P0001';
+  end if;
+
+  select id into v_url_secret_id from vault.secrets where name = 'invitation_cleanup_url';
+  if v_url_secret_id is null then
+    perform vault.create_secret(p_function_url, 'invitation_cleanup_url', 'Edge Function URL used by invitation cleanup cron');
+  else
+    perform vault.update_secret(v_url_secret_id, p_function_url);
+  end if;
+
+  select id into v_auth_secret_id from vault.secrets where name = 'invitation_cleanup_secret';
+  if v_auth_secret_id is null then
+    perform vault.create_secret(p_secret, 'invitation_cleanup_secret', 'Bearer secret used only by invitation cleanup cron');
+  else
+    perform vault.update_secret(v_auth_secret_id, p_secret);
+  end if;
+
+  select jobid into v_job_id from cron.job where jobname = 'cleanup-expired-invitations';
+  if v_job_id is not null then
+    perform cron.unschedule(v_job_id);
+  end if;
+
+  perform cron.schedule(
+    'cleanup-expired-invitations',
+    '0 * * * *',
+    $job$
+      select net.http_post(
+        url := (select decrypted_secret from vault.decrypted_secrets where name = 'invitation_cleanup_url'),
+        headers := jsonb_build_object(
+          'Content-Type', 'application/json',
+          'Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'invitation_cleanup_secret')
+        ),
+        body := '{}'::jsonb,
+        timeout_milliseconds := 10000
+      );
+    $job$
+  );
+end;
+$$;
+
+
+ALTER FUNCTION "public"."configure_invitation_cleanup"("p_function_url" "text", "p_secret" "text") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."update_my_profile"("p_full_name" "text", "p_academic_affiliation" "public"."academic_affiliation" DEFAULT NULL::"public"."academic_affiliation", "p_has_funding_grant" boolean DEFAULT false, "p_funding_agency" "public"."funding_agency" DEFAULT NULL::"public"."funding_agency", "p_funding_agency_other" "text" DEFAULT NULL::"text", "p_weekly_workload_hours" integer DEFAULT NULL::integer, "p_lattes_url" "text" DEFAULT NULL::"text", "p_nationality_country_code" character DEFAULT NULL::"bpchar", "p_phone" "text" DEFAULT NULL::"text", "p_bio" "text" DEFAULT NULL::"text", "p_birth_date" "date" DEFAULT NULL::"date", "p_cpf" "text" DEFAULT NULL::"text", "p_rg" "text" DEFAULT NULL::"text", "p_postal_code" "text" DEFAULT NULL::"text", "p_street" "text" DEFAULT NULL::"text", "p_address_number" "text" DEFAULT NULL::"text", "p_address_complement" "text" DEFAULT NULL::"text", "p_neighborhood" "text" DEFAULT NULL::"text", "p_city" "text" DEFAULT NULL::"text", "p_state" "text" DEFAULT NULL::"text", "p_country" "text" DEFAULT NULL::"text") RETURNS "public"."profiles"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO 'public'
     AS $$
@@ -972,7 +1019,9 @@ begin
   update public.profiles
   set full_name = btrim(p_full_name),
       academic_affiliation = p_academic_affiliation,
-      is_scholarship_holder = p_is_scholarship_holder,
+      has_funding_grant = p_has_funding_grant,
+      funding_agency = case when p_has_funding_grant then p_funding_agency else null end,
+      funding_agency_other = case when p_has_funding_grant and p_funding_agency = 'other' then nullif(btrim(coalesce(p_funding_agency_other, '')), '') else null end,
       weekly_workload_hours = p_weekly_workload_hours,
       lattes_url = nullif(btrim(coalesce(p_lattes_url, '')), ''),
       nationality_country_code = p_nationality_country_code,
@@ -1031,23 +1080,28 @@ end;
 $$;
 
 
-ALTER FUNCTION "public"."update_my_profile"("p_full_name" "text", "p_academic_affiliation" "public"."academic_affiliation", "p_is_scholarship_holder" boolean, "p_weekly_workload_hours" integer, "p_lattes_url" "text", "p_nationality_country_code" character, "p_phone" "text", "p_bio" "text", "p_birth_date" "date", "p_cpf" "text", "p_rg" "text", "p_postal_code" "text", "p_street" "text", "p_address_number" "text", "p_address_complement" "text", "p_neighborhood" "text", "p_city" "text", "p_state" "text", "p_country" "text") OWNER TO "postgres";
+ALTER FUNCTION "public"."update_my_profile"("p_full_name" "text", "p_academic_affiliation" "public"."academic_affiliation", "p_has_funding_grant" boolean, "p_funding_agency" "public"."funding_agency", "p_funding_agency_other" "text", "p_weekly_workload_hours" integer, "p_lattes_url" "text", "p_nationality_country_code" character, "p_phone" "text", "p_bio" "text", "p_birth_date" "date", "p_cpf" "text", "p_rg" "text", "p_postal_code" "text", "p_street" "text", "p_address_number" "text", "p_address_complement" "text", "p_neighborhood" "text", "p_city" "text", "p_state" "text", "p_country" "text") OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."invitations" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "email" "text" NOT NULL,
+    "email" "text",
+    "role" "public"."user_role" DEFAULT 'researcher'::"public"."user_role" NOT NULL,
     "status" "public"."invitation_status" DEFAULT 'pending'::"public"."invitation_status" NOT NULL,
     "invited_by" "uuid" NOT NULL,
     "auth_user_id" "uuid",
     "accepted_by" "uuid",
     "expires_at" timestamp with time zone NOT NULL,
+    "opened_at" timestamp with time zone,
+    "last_sent_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "send_count" integer DEFAULT 1 NOT NULL,
     "accepted_at" timestamp with time zone,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    CONSTRAINT "invitations_check" CHECK (("expires_at" > "created_at")),
+    CONSTRAINT "invitations_check" CHECK ((("expires_at" > "last_sent_at") AND ("last_sent_at" >= "created_at") AND ("send_count" >= 1))),
     CONSTRAINT "invitations_check1" CHECK (((("status" = 'accepted'::"public"."invitation_status") AND ("accepted_by" IS NOT NULL) AND ("accepted_at" IS NOT NULL)) OR (("status" <> 'accepted'::"public"."invitation_status") AND ("accepted_by" IS NULL) AND ("accepted_at" IS NULL)))),
-    CONSTRAINT "invitations_email_check" CHECK ((("email" = "lower"("btrim"("email"))) AND (POSITION(('@'::"text") IN ("email")) > 1)))
+    CONSTRAINT "invitations_email_check" CHECK ((("email" IS NULL) OR (("email" = "lower"("btrim"("email"))) AND (POSITION(('@'::"text") IN ("email")) > 1)))),
+    CONSTRAINT "invitations_pending_email_check" CHECK ((("status" <> 'pending'::"public"."invitation_status") OR ("email" IS NOT NULL)))
 );
 
 
@@ -1525,6 +1579,12 @@ GRANT USAGE ON SCHEMA "public" TO "service_role";
 
 
 
+REVOKE ALL ON ALL TABLES IN SCHEMA "public" FROM "anon", "authenticated";
+REVOKE ALL ON ALL SEQUENCES IN SCHEMA "public" FROM "anon", "authenticated";
+REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA "public" FROM PUBLIC;
+
+
+
 GRANT SELECT,REFERENCES,TRIGGER,TRUNCATE,MAINTAIN ON TABLE "public"."printer_bookings" TO "authenticated";
 GRANT ALL ON TABLE "public"."printer_bookings" TO "service_role";
 
@@ -1550,7 +1610,7 @@ GRANT ALL ON FUNCTION "private"."is_coordinator"() TO "authenticated";
 
 
 
-REVOKE ALL ON FUNCTION "private"."validate_lab_identity"("p_name" "text", "p_acronym" "text", "p_timezone" "text") FROM PUBLIC;
+REVOKE ALL ON FUNCTION "private"."validate_lab_identity"("p_name" "text", "p_acronym" "text", "p_timezone" "text", "p_privacy_contact_email" "text") FROM PUBLIC;
 
 
 
@@ -1564,8 +1624,23 @@ GRANT SELECT ON TABLE "public"."lab_settings" TO "authenticated";
 
 
 
-REVOKE ALL ON FUNCTION "public"."complete_lab_installation"("p_name" "text", "p_acronym" "text", "p_timezone" "text", "p_materials" "jsonb", "p_printers" "jsonb") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."complete_lab_installation"("p_name" "text", "p_acronym" "text", "p_timezone" "text", "p_materials" "jsonb", "p_printers" "jsonb") TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."complete_lab_installation"("p_name" "text", "p_acronym" "text", "p_timezone" "text", "p_privacy_contact_email" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."complete_lab_installation"("p_name" "text", "p_acronym" "text", "p_timezone" "text", "p_privacy_contact_email" "text") TO "authenticated";
+
+
+
+REVOKE ALL ON FUNCTION "public"."get_public_lab_identity"() FROM PUBLIC, "anon", "authenticated";
+GRANT EXECUTE ON FUNCTION "public"."get_public_lab_identity"() TO "anon", "authenticated";
+
+
+
+REVOKE ALL ON FUNCTION "public"."record_invitation_opened"() FROM PUBLIC, "anon", "authenticated";
+GRANT EXECUTE ON FUNCTION "public"."record_invitation_opened"() TO "authenticated";
+
+
+
+REVOKE ALL ON FUNCTION "public"."configure_invitation_cleanup"("p_function_url" "text", "p_secret" "text") FROM PUBLIC, "anon", "authenticated";
+GRANT EXECUTE ON FUNCTION "public"."configure_invitation_cleanup"("p_function_url" "text", "p_secret" "text") TO "service_role";
 
 
 
@@ -1589,8 +1664,8 @@ GRANT ALL ON TABLE "public"."profiles" TO "service_role";
 
 
 
-REVOKE ALL ON FUNCTION "public"."create_profile"("p_full_name" "text", "p_academic_affiliation" "public"."academic_affiliation", "p_is_scholarship_holder" boolean, "p_weekly_workload_hours" integer, "p_lattes_url" "text", "p_nationality_country_code" character, "p_phone" "text", "p_bio" "text", "p_birth_date" "date", "p_cpf" "text", "p_rg" "text", "p_postal_code" "text", "p_street" "text", "p_address_number" "text", "p_address_complement" "text", "p_neighborhood" "text", "p_city" "text", "p_state" "text", "p_country" "text") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."create_profile"("p_full_name" "text", "p_academic_affiliation" "public"."academic_affiliation", "p_is_scholarship_holder" boolean, "p_weekly_workload_hours" integer, "p_lattes_url" "text", "p_nationality_country_code" character, "p_phone" "text", "p_bio" "text", "p_birth_date" "date", "p_cpf" "text", "p_rg" "text", "p_postal_code" "text", "p_street" "text", "p_address_number" "text", "p_address_complement" "text", "p_neighborhood" "text", "p_city" "text", "p_state" "text", "p_country" "text") TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."create_profile"("p_full_name" "text", "p_academic_affiliation" "public"."academic_affiliation", "p_has_funding_grant" boolean, "p_funding_agency" "public"."funding_agency", "p_funding_agency_other" "text", "p_weekly_workload_hours" integer, "p_lattes_url" "text", "p_nationality_country_code" character, "p_phone" "text", "p_bio" "text", "p_birth_date" "date", "p_cpf" "text", "p_rg" "text", "p_postal_code" "text", "p_street" "text", "p_address_number" "text", "p_address_complement" "text", "p_neighborhood" "text", "p_city" "text", "p_state" "text", "p_country" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."create_profile"("p_full_name" "text", "p_academic_affiliation" "public"."academic_affiliation", "p_has_funding_grant" boolean, "p_funding_agency" "public"."funding_agency", "p_funding_agency_other" "text", "p_weekly_workload_hours" integer, "p_lattes_url" "text", "p_nationality_country_code" character, "p_phone" "text", "p_bio" "text", "p_birth_date" "date", "p_cpf" "text", "p_rg" "text", "p_postal_code" "text", "p_street" "text", "p_address_number" "text", "p_address_complement" "text", "p_neighborhood" "text", "p_city" "text", "p_state" "text", "p_country" "text") TO "authenticated";
 
 
 
@@ -1623,13 +1698,13 @@ REVOKE ALL ON FUNCTION "public"."touch_updated_at"() FROM PUBLIC;
 
 
 
-REVOKE ALL ON FUNCTION "public"."update_lab_settings"("p_name" "text", "p_acronym" "text", "p_timezone" "text") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."update_lab_settings"("p_name" "text", "p_acronym" "text", "p_timezone" "text") TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."update_lab_settings"("p_name" "text", "p_acronym" "text", "p_timezone" "text", "p_privacy_contact_email" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."update_lab_settings"("p_name" "text", "p_acronym" "text", "p_timezone" "text", "p_privacy_contact_email" "text") TO "authenticated";
 
 
 
-REVOKE ALL ON FUNCTION "public"."update_my_profile"("p_full_name" "text", "p_academic_affiliation" "public"."academic_affiliation", "p_is_scholarship_holder" boolean, "p_weekly_workload_hours" integer, "p_lattes_url" "text", "p_nationality_country_code" character, "p_phone" "text", "p_bio" "text", "p_birth_date" "date", "p_cpf" "text", "p_rg" "text", "p_postal_code" "text", "p_street" "text", "p_address_number" "text", "p_address_complement" "text", "p_neighborhood" "text", "p_city" "text", "p_state" "text", "p_country" "text") FROM PUBLIC;
-GRANT ALL ON FUNCTION "public"."update_my_profile"("p_full_name" "text", "p_academic_affiliation" "public"."academic_affiliation", "p_is_scholarship_holder" boolean, "p_weekly_workload_hours" integer, "p_lattes_url" "text", "p_nationality_country_code" character, "p_phone" "text", "p_bio" "text", "p_birth_date" "date", "p_cpf" "text", "p_rg" "text", "p_postal_code" "text", "p_street" "text", "p_address_number" "text", "p_address_complement" "text", "p_neighborhood" "text", "p_city" "text", "p_state" "text", "p_country" "text") TO "authenticated";
+REVOKE ALL ON FUNCTION "public"."update_my_profile"("p_full_name" "text", "p_academic_affiliation" "public"."academic_affiliation", "p_has_funding_grant" boolean, "p_funding_agency" "public"."funding_agency", "p_funding_agency_other" "text", "p_weekly_workload_hours" integer, "p_lattes_url" "text", "p_nationality_country_code" character, "p_phone" "text", "p_bio" "text", "p_birth_date" "date", "p_cpf" "text", "p_rg" "text", "p_postal_code" "text", "p_street" "text", "p_address_number" "text", "p_address_complement" "text", "p_neighborhood" "text", "p_city" "text", "p_state" "text", "p_country" "text") FROM PUBLIC;
+GRANT ALL ON FUNCTION "public"."update_my_profile"("p_full_name" "text", "p_academic_affiliation" "public"."academic_affiliation", "p_has_funding_grant" boolean, "p_funding_agency" "public"."funding_agency", "p_funding_agency_other" "text", "p_weekly_workload_hours" integer, "p_lattes_url" "text", "p_nationality_country_code" character, "p_phone" "text", "p_bio" "text", "p_birth_date" "date", "p_cpf" "text", "p_rg" "text", "p_postal_code" "text", "p_street" "text", "p_address_number" "text", "p_address_complement" "text", "p_neighborhood" "text", "p_city" "text", "p_state" "text", "p_country" "text") TO "authenticated";
 
 
 
@@ -1664,9 +1739,9 @@ GRANT ALL ON TABLE "public"."skills" TO "service_role";
 
 
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES TO "postgres";
-ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT UPDATE ON SEQUENCES TO "anon";
-ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT UPDATE ON SEQUENCES TO "authenticated";
-ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT UPDATE ON SEQUENCES TO "service_role";
+ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" REVOKE ALL ON SEQUENCES FROM "anon";
+ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" REVOKE ALL ON SEQUENCES FROM "authenticated";
+ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES TO "service_role";
 
 
 
@@ -1681,9 +1756,9 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUN
 
 
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "postgres";
-ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT REFERENCES,TRIGGER,TRUNCATE,MAINTAIN ON TABLES TO "anon";
-ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT REFERENCES,TRIGGER,TRUNCATE,MAINTAIN ON TABLES TO "authenticated";
-ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT REFERENCES,TRIGGER,TRUNCATE,MAINTAIN ON TABLES TO "service_role";
+ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" REVOKE ALL ON TABLES FROM "anon";
+ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" REVOKE ALL ON TABLES FROM "authenticated";
+ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
 
 
 INSERT INTO "public"."lab_settings" ("id")

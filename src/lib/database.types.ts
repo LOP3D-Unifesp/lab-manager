@@ -81,10 +81,14 @@ export type Database = {
           accepted_by: string | null
           auth_user_id: string | null
           created_at: string
-          email: string
+          email: string | null
           expires_at: string
           id: string
           invited_by: string
+          last_sent_at: string
+          opened_at: string | null
+          role: Database["public"]["Enums"]["user_role"]
+          send_count: number
           status: Database["public"]["Enums"]["invitation_status"]
           updated_at: string
         }
@@ -93,10 +97,14 @@ export type Database = {
           accepted_by?: string | null
           auth_user_id?: string | null
           created_at?: string
-          email: string
+          email?: string | null
           expires_at: string
           id?: string
           invited_by: string
+          last_sent_at?: string
+          opened_at?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+          send_count?: number
           status?: Database["public"]["Enums"]["invitation_status"]
           updated_at?: string
         }
@@ -105,10 +113,14 @@ export type Database = {
           accepted_by?: string | null
           auth_user_id?: string | null
           created_at?: string
-          email?: string
+          email?: string | null
           expires_at?: string
           id?: string
           invited_by?: string
+          last_sent_at?: string
+          opened_at?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+          send_count?: number
           status?: Database["public"]["Enums"]["invitation_status"]
           updated_at?: string
         }
@@ -136,6 +148,7 @@ export type Database = {
           created_by: string | null
           id: boolean
           name: string | null
+          privacy_contact_email: string | null
           setup_completed_at: string | null
           timezone: string
           updated_at: string
@@ -147,6 +160,7 @@ export type Database = {
           created_by?: string | null
           id?: boolean
           name?: string | null
+          privacy_contact_email?: string | null
           setup_completed_at?: string | null
           timezone?: string
           updated_at?: string
@@ -158,6 +172,7 @@ export type Database = {
           created_by?: string | null
           id?: boolean
           name?: string | null
+          privacy_contact_email?: string | null
           setup_completed_at?: string | null
           timezone?: string
           updated_at?: string
@@ -505,9 +520,11 @@ export type Database = {
           created_at: string
           email: string
           full_name: string
+          funding_agency: Database["public"]["Enums"]["funding_agency"] | null
+          funding_agency_other: string | null
+          has_funding_grant: boolean
           id: string
           is_active: boolean
-          is_scholarship_holder: boolean
           lattes_url: string | null
           nationality_country_code: string | null
           phone: string | null
@@ -523,9 +540,11 @@ export type Database = {
           created_at?: string
           email: string
           full_name: string
+          funding_agency?: Database["public"]["Enums"]["funding_agency"] | null
+          funding_agency_other?: string | null
+          has_funding_grant?: boolean
           id: string
           is_active?: boolean
-          is_scholarship_holder?: boolean
           lattes_url?: string | null
           nationality_country_code?: string | null
           phone?: string | null
@@ -541,9 +560,11 @@ export type Database = {
           created_at?: string
           email?: string
           full_name?: string
+          funding_agency?: Database["public"]["Enums"]["funding_agency"] | null
+          funding_agency_other?: string | null
+          has_funding_grant?: boolean
           id?: string
           is_active?: boolean
-          is_scholarship_holder?: boolean
           lattes_url?: string | null
           nationality_country_code?: string | null
           phone?: string | null
@@ -613,9 +634,8 @@ export type Database = {
       complete_lab_installation: {
         Args: {
           p_acronym: string
-          p_materials?: Json
           p_name: string
-          p_printers?: Json
+          p_privacy_contact_email: string
           p_timezone: string
         }
         Returns: {
@@ -624,6 +644,7 @@ export type Database = {
           created_by: string | null
           id: boolean
           name: string | null
+          privacy_contact_email: string | null
           setup_completed_at: string | null
           timezone: string
           updated_at: string
@@ -635,6 +656,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      configure_invitation_cleanup: {
+        Args: { p_function_url: string; p_secret: string }
+        Returns: undefined
       }
       create_maintenance_block: {
         Args: {
@@ -705,7 +730,9 @@ export type Database = {
           p_country?: string
           p_cpf?: string
           p_full_name: string
-          p_is_scholarship_holder?: boolean
+          p_funding_agency?: Database["public"]["Enums"]["funding_agency"]
+          p_funding_agency_other?: string
+          p_has_funding_grant?: boolean
           p_lattes_url?: string
           p_nationality_country_code?: string
           p_neighborhood?: string
@@ -724,9 +751,11 @@ export type Database = {
           created_at: string
           email: string
           full_name: string
+          funding_agency: Database["public"]["Enums"]["funding_agency"] | null
+          funding_agency_other: string | null
+          has_funding_grant: boolean
           id: string
           is_active: boolean
-          is_scholarship_holder: boolean
           lattes_url: string | null
           nationality_country_code: string | null
           phone: string | null
@@ -745,6 +774,16 @@ export type Database = {
         Args: { p_block_id: string }
         Returns: undefined
       }
+      get_public_lab_identity: {
+        Args: never
+        Returns: {
+          acronym: string
+          invitation_ttl_hours: number
+          name: string
+          privacy_contact_email: string
+        }[]
+      }
+      record_invitation_opened: { Args: never; Returns: undefined }
       replace_printer_materials: {
         Args: { p_material_ids: string[]; p_printer_id: string }
         Returns: {
@@ -779,13 +818,19 @@ export type Database = {
         }
       }
       update_lab_settings: {
-        Args: { p_acronym: string; p_name: string; p_timezone: string }
+        Args: {
+          p_acronym: string
+          p_name: string
+          p_privacy_contact_email: string
+          p_timezone: string
+        }
         Returns: {
           acronym: string | null
           created_at: string
           created_by: string | null
           id: boolean
           name: string | null
+          privacy_contact_email: string | null
           setup_completed_at: string | null
           timezone: string
           updated_at: string
@@ -809,7 +854,9 @@ export type Database = {
           p_country?: string
           p_cpf?: string
           p_full_name: string
-          p_is_scholarship_holder?: boolean
+          p_funding_agency?: Database["public"]["Enums"]["funding_agency"]
+          p_funding_agency_other?: string
+          p_has_funding_grant?: boolean
           p_lattes_url?: string
           p_nationality_country_code?: string
           p_neighborhood?: string
@@ -828,9 +875,11 @@ export type Database = {
           created_at: string
           email: string
           full_name: string
+          funding_agency: Database["public"]["Enums"]["funding_agency"] | null
+          funding_agency_other: string | null
+          has_funding_grant: boolean
           id: string
           is_active: boolean
-          is_scholarship_holder: boolean
           lattes_url: string | null
           nationality_country_code: string | null
           phone: string | null
@@ -866,6 +915,7 @@ export type Database = {
         | "completed"
         | "cancelled"
         | "failed"
+      funding_agency: "cnpq" | "fapesp" | "capes" | "sus" | "fap" | "other"
       invitation_status: "pending" | "accepted" | "expired" | "revoked"
       printer_status: "active" | "maintenance" | "unavailable" | "disabled"
       user_role: "coordinator" | "researcher"
@@ -1020,6 +1070,7 @@ export const Constants = {
         "cancelled",
         "failed",
       ],
+      funding_agency: ["cnpq", "fapesp", "capes", "sus", "fap", "other"],
       invitation_status: ["pending", "accepted", "expired", "revoked"],
       printer_status: ["active", "maintenance", "unavailable", "disabled"],
       user_role: ["coordinator", "researcher"],
