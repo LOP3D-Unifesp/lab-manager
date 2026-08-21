@@ -9,7 +9,7 @@ import {
 import type { Session, User } from "@supabase/supabase-js";
 
 import { supabase } from "./supabaseClient";
-import { mergeMyProfile, type LabSettings, type MyProfile } from "./domain";
+import { mergeMyProfile, type LabSettings, type MyProfile, type PublicProfile } from "./domain";
 import type { Tables } from "./database.types";
 
 type AuthContextValue = {
@@ -51,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       supabase
         .from("profiles")
         .select(
-          "id, full_name, email, role, academic_affiliation, has_funding_grant, funding_agency, funding_agency_other, weekly_workload_hours, lattes_url, nationality_country_code, phone, bio, is_active, created_at, updated_at",
+          "id, full_name, email, role, academic_affiliation, funding_grants:profile_funding_grants(agency, agency_other, grant_name, weekly_hours, monthly_value), weekly_workload_hours, lattes_url, nationality_country_code, phone, bio, is_active, requires_booking_approval, avatar_url, created_at, updated_at",
         )
         .eq("id", session.user.id)
         .eq("is_active", true)
@@ -73,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     setProfile(
       mergeMyProfile(
-        publicResult.data as Tables<"profiles">,
+        publicResult.data as unknown as Omit<PublicProfile, "first_name" | "last_name">,
         privateResult.data as Tables<"profile_private_data">,
       ),
     );

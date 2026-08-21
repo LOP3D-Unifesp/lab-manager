@@ -10,11 +10,13 @@ import { Administracao } from "./pages/Administracao";
 import { AgendaLaboratorio } from "./pages/AgendaLaboratorio";
 import { Dashboard } from "./pages/Dashboard";
 import { Habilidades } from "./pages/Habilidades";
+import { HistoricoReservas } from "./pages/HistoricoReservas";
 import { Impressoras } from "./pages/Impressoras";
 import { Login } from "./pages/Login";
 import { InstallationWizard } from "./pages/InstallationWizard";
 import { Invitations } from "./pages/Invitations";
 import { MeuPerfil } from "./pages/MeuPerfil";
+import { MinhasReservas } from "./pages/MinhasReservas";
 import { NotFound } from "./pages/NotFound";
 import { Pesquisadores } from "./pages/Pesquisadores";
 import { ProfileRequired } from "./pages/ProfileRequired";
@@ -88,7 +90,9 @@ function ProtectedApp() {
   }
 
   if (
-    (location.pathname.startsWith("/administracao") || location.pathname.startsWith("/usuarios")) &&
+    (location.pathname.startsWith("/administracao") ||
+      location.pathname.startsWith("/usuarios") ||
+      location.pathname.startsWith("/reservas/historico")) &&
     profile.role !== "coordinator"
   ) {
     return <Navigate to="/" replace />;
@@ -118,6 +122,8 @@ export const router = createBrowserRouter([
           { path: "agenda", element: <AgendaLaboratorio /> },
           { path: "impressoras", element: <Impressoras /> },
           { path: "reservas", element: <Reservas /> },
+          { path: "reservas/minhas", element: <MinhasReservas /> },
+          { path: "reservas/historico", element: <HistoricoReservas /> },
           { path: "perfil", element: <MeuPerfil /> },
           { path: "administracao", element: <Administracao /> },
           { path: "administracao/convites", element: <Navigate to="/usuarios/convites" replace /> },

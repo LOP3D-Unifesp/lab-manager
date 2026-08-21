@@ -1,7 +1,9 @@
 import {
+  CalendarCheck,
   CalendarDays,
   CalendarPlus,
   Gauge,
+  History,
   LucideIcon,
   Printer,
   Settings,
@@ -14,13 +16,13 @@ export type NavigationItem = {
   desktopLabel: string;
   desktopSection: "main" | "knowledge" | "management" | "account";
   desktopOrder: number;
-  desktopRole?: "coordinator";
+  desktopRole?: "coordinator" | "researcher";
   mobileLabel: string;
   path: string;
   icon: LucideIcon;
   mobilePlacement: "primary" | "action" | "secondary" | "hidden";
   mobileOrder: number;
-  mobileRole?: "coordinator";
+  mobileRole?: "coordinator" | "researcher";
 };
 
 export function getSafeInternalRedirect(value: unknown) {
@@ -98,6 +100,18 @@ export const navigationItems: NavigationItem[] = [
     mobileOrder: 3,
   },
   {
+    desktopLabel: "Minhas reservas",
+    desktopSection: "main",
+    desktopOrder: 5,
+    desktopRole: "researcher",
+    mobileLabel: "Minhas reservas",
+    path: "/reservas/minhas",
+    icon: CalendarCheck,
+    mobilePlacement: "secondary",
+    mobileOrder: 5,
+    mobileRole: "researcher",
+  },
+  {
     desktopLabel: "Meu perfil",
     desktopSection: "account",
     desktopOrder: 1,
@@ -129,6 +143,18 @@ export const navigationItems: NavigationItem[] = [
     icon: Settings,
     mobilePlacement: "secondary",
     mobileOrder: 5,
+    mobileRole: "coordinator",
+  },
+  {
+    desktopLabel: "Histórico de reservas",
+    desktopSection: "management",
+    desktopOrder: 9,
+    desktopRole: "coordinator",
+    mobileLabel: "Histórico",
+    path: "/reservas/historico",
+    icon: History,
+    mobilePlacement: "secondary",
+    mobileOrder: 6,
     mobileRole: "coordinator",
   },
 ];

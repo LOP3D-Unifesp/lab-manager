@@ -2,7 +2,10 @@ import { supabase } from "./supabaseClient";
 import {
   AvailabilitySlot,
   AcademicAffiliation,
+  BookingAlertSummary,
+  BookingStatus,
   FundingAgency,
+  FundingGrant,
   InvitationStage,
   InvitationSummary,
   InstallationState,
@@ -54,15 +57,15 @@ export const publicProfileSelect = [
   "email",
   "role",
   "academic_affiliation",
-  "has_funding_grant",
-  "funding_agency",
-  "funding_agency_other",
+  "funding_grants:profile_funding_grants(agency, agency_other, grant_name, weekly_hours, monthly_value)",
   "weekly_workload_hours",
   "lattes_url",
   "nationality_country_code",
   "phone",
   "bio",
   "is_active",
+  "requires_booking_approval",
+  "avatar_url",
   "created_at",
   "updated_at",
 ].join(", ");
@@ -71,9 +74,7 @@ export type ProfileInput = {
   fullName: string;
   academicAffiliation: AcademicAffiliation | null;
   birthDate: string | null;
-  hasFundingGrant: boolean;
-  fundingAgency: FundingAgency | null;
-  fundingAgencyOther: string | null;
+  fundingGrants: FundingGrant[];
   weeklyWorkloadHours: number | null;
   lattesUrl: string | null;
   cpf: string | null;
@@ -91,17 +92,33 @@ export type ProfileInput = {
   bio: string | null;
 };
 
+async function replaceMyFundingGrants(profileId: string, grants: FundingGrant[]) {
+  const { data, error } = await client().rpc("replace_profile_funding_grants", {
+    p_profile_id: profileId,
+    p_grants: grants.map((grant) => ({
+      agency: grant.agency,
+      agency_other: grant.agency === "other" ? grant.agency_other : null,
+      grant_name: grant.grant_name,
+      weekly_hours: grant.weekly_hours,
+      monthly_value: grant.monthly_value,
+    })),
+  });
+  throwIfError(error);
+
+  return ((data ?? []) as FundingGrant[]).map((grant) => ({
+    agency: grant.agency,
+    agency_other: grant.agency_other,
+    grant_name: grant.grant_name,
+    weekly_hours: grant.weekly_hours,
+    monthly_value: grant.monthly_value,
+  }));
+}
+
 function profileRpcArgs(params: ProfileInput) {
   return {
     p_full_name: params.fullName,
     p_academic_affiliation: params.academicAffiliation ?? undefined,
     p_birth_date: params.birthDate ?? undefined,
-    p_has_funding_grant: params.hasFundingGrant,
-    p_funding_agency: params.hasFundingGrant ? params.fundingAgency ?? undefined : undefined,
-    p_funding_agency_other:
-      params.hasFundingGrant && params.fundingAgency === "other"
-        ? params.fundingAgencyOther ?? undefined
-        : undefined,
     p_weekly_workload_hours: params.weeklyWorkloadHours ?? undefined,
     p_lattes_url: params.lattesUrl ?? undefined,
     p_cpf: params.cpf ?? undefined,
@@ -136,13 +153,23 @@ export async function listProfiles() {
 export async function updateMyProfile(params: ProfileInput) {
   const { data, error } = await client().rpc("update_my_profile", profileRpcArgs(params));
   throwIfError(error);
-  return mapPublicProfile(data as unknown as Omit<PublicProfile, "first_name" | "last_name">);
+  const profileRow = data as unknown as Omit<
+    PublicProfile,
+    "first_name" | "last_name" | "funding_grants"
+  >;
+  const funding_grants = await replaceMyFundingGrants(profileRow.id, params.fundingGrants);
+  return mapPublicProfile({ ...profileRow, funding_grants });
 }
 
 export async function createMyProfile(params: ProfileInput) {
   const { data, error } = await client().rpc("create_profile", profileRpcArgs(params));
   throwIfError(error);
-  return mapPublicProfile(data as unknown as Omit<PublicProfile, "first_name" | "last_name">);
+  const profileRow = data as unknown as Omit<
+    PublicProfile,
+    "first_name" | "last_name" | "funding_grants"
+  >;
+  const funding_grants = await replaceMyFundingGrants(profileRow.id, params.fundingGrants);
+  return mapPublicProfile({ ...profileRow, funding_grants });
 }
 
 export async function inviteUser(email: string, role: ProfileRole) {
@@ -239,6 +266,32 @@ export async function setMyPassword(password: string) {
   throwIfError(error);
 }
 
+export async function uploadMyAvatar(file: File) {
+  const { data: userData, error: userError } = await client().auth.getUser();
+  throwIfError(userError);
+
+  const userId = userData.user?.id;
+  if (!userId) {
+    throw new Error("Usuario nao autenticado.");
+  }
+
+  const extension = file.name.split(".").pop()?.toLowerCase() || "png";
+  const path = `${userId}/avatar.${extension}`;
+
+  const { error: uploadError } = await client()
+    .storage.from("avatars")
+    .upload(path, file, { upsert: true, contentType: file.type });
+  throwIfError(uploadError);
+
+  const { data: publicUrlData } = client().storage.from("avatars").getPublicUrl(path);
+  const avatarUrl = `${publicUrlData.publicUrl}?v=${Date.now()}`;
+
+  const { data, error } = await client().rpc("set_my_avatar_url", { p_avatar_url: avatarUrl });
+  throwIfError(error);
+
+  return (data as { avatar_url: string | null }).avatar_url;
+}
+
 export async function getInstallationState(): Promise<InstallationState> {
   const { data, error } = await client()
     .from("lab_settings")
@@ -329,6 +382,18 @@ export async function updateProfileRole(profileId: string, role: ProfileRole) {
   const { data, error } = await client()
     .from("profiles")
     .update({ role })
+    .eq("id", profileId)
+    .select(publicProfileSelect)
+    .single();
+
+  throwIfError(error);
+  return mapPublicProfile(data as unknown as Omit<PublicProfile, "first_name" | "last_name">);
+}
+
+export async function updateRequiresBookingApproval(profileId: string, value: boolean) {
+  const { data, error } = await client()
+    .from("profiles")
+    .update({ requires_booking_approval: value })
     .eq("id", profileId)
     .select(publicProfileSelect)
     .single();
@@ -545,9 +610,13 @@ export async function listBookings() {
     .select(`
       id, printer_id, profile_id, material_id, project_name, starts_at, ends_at,
       estimated_duration_minutes, status, notes, cancelled_at, cancelled_by,
+      rejected_reason, rejected_at, rejected_by, approved_at, approved_by,
       printer:printers!printer_bookings_printer_id_fkey(id, name, model, location, status, notes, created_at, updated_at),
       material:materials!printer_bookings_material_id_fkey(id, name, description, is_active),
-      profile:profiles!printer_bookings_profile_id_fkey(id, full_name, email, role, academic_affiliation, has_funding_grant, funding_agency, funding_agency_other, weekly_workload_hours, lattes_url, nationality_country_code, phone, bio, is_active, created_at, updated_at)
+      approved_by_profile:profiles!printer_bookings_approved_by_fkey(full_name),
+      rejected_by_profile:profiles!printer_bookings_rejected_by_fkey(full_name),
+      cancelled_by_profile:profiles!printer_bookings_cancelled_by_fkey(full_name),
+      profile:profiles!printer_bookings_profile_id_fkey(id, full_name, email, role, academic_affiliation, funding_grants:profile_funding_grants(agency, agency_other, grant_name, weekly_hours, monthly_value), weekly_workload_hours, lattes_url, nationality_country_code, phone, bio, is_active, requires_booking_approval, avatar_url, created_at, updated_at)
     `)
     .order("starts_at");
   throwIfError(error);
@@ -555,6 +624,117 @@ export async function listBookings() {
   return ((data ?? []) as unknown as Array<Record<string, unknown> & { profile?: Omit<PublicProfile, "first_name" | "last_name"> | null }>).map(
     (booking) => ({ ...booking, profile: booking.profile ? mapPublicProfile(booking.profile) : null }),
   ) as unknown as PrinterBooking[];
+}
+
+// Coordinator feed: pending bookings awaiting a decision plus recent
+// cancellations by someone else (a researcher cancelling their print also
+// deserves the coordinator's attention).
+export async function listCoordinatorBookingsAlertsSummary(profileId: string, signal?: AbortSignal) {
+  const cutoff = new Date(Date.now() - BOOKING_ALERT_WINDOW_HOURS * 60 * 60 * 1000).toISOString();
+
+  let query = client()
+    .from("printer_bookings")
+    .select(`
+      id, project_name, starts_at, status, approved_at, rejected_at, rejected_reason,
+      cancelled_at, cancelled_by,
+      printer:printers!printer_bookings_printer_id_fkey(name),
+      profile:profiles!printer_bookings_profile_id_fkey(full_name),
+      cancelled_by_profile:profiles!printer_bookings_cancelled_by_fkey(full_name)
+    `)
+    .or(`status.eq.pending,and(status.eq.cancelled,cancelled_at.gte.${cutoff},cancelled_by.neq.${profileId})`)
+    .order("starts_at");
+  if (signal) query = query.abortSignal(signal);
+  const { data, error } = await query;
+  throwIfError(error);
+
+  return ((data ?? []) as unknown as Array<{
+    id: string;
+    project_name: string;
+    starts_at: string;
+    status: BookingStatus;
+    approved_at: string | null;
+    rejected_at: string | null;
+    rejected_reason: string | null;
+    cancelled_at: string | null;
+    cancelled_by: string | null;
+    printer: { name: string } | null;
+    profile: { full_name: string } | null;
+    cancelled_by_profile: { full_name: string } | null;
+  }>).map((booking) => ({
+    id: booking.id,
+    project_name: booking.project_name,
+    starts_at: booking.starts_at,
+    status: booking.status,
+    approved_at: booking.approved_at,
+    approved_by_name: null,
+    rejected_at: booking.rejected_at,
+    rejected_by_name: null,
+    rejected_reason: booking.rejected_reason,
+    cancelled_at: booking.cancelled_at,
+    cancelled_by: booking.cancelled_by,
+    cancelled_by_name: booking.cancelled_by_profile?.full_name ?? null,
+    printer_name: booking.printer?.name ?? "Impressora removida",
+    profile_name: booking.profile?.full_name ?? "Usuário removido",
+  })) as BookingAlertSummary[];
+}
+
+// Booking outcomes (approved/rejected by a coordinator, or cancelled by someone
+// else) stay in the researcher's alert list for this long. The bell has no
+// read/unread state, so the window keeps decisions visible for a while.
+const BOOKING_ALERT_WINDOW_HOURS = 48;
+
+export async function listMyBookingAlertsSummary(profileId: string, signal?: AbortSignal) {
+  const cutoff = new Date(Date.now() - BOOKING_ALERT_WINDOW_HOURS * 60 * 60 * 1000).toISOString();
+
+  let query = client()
+    .from("printer_bookings")
+    .select(`
+      id, project_name, starts_at, status, approved_at, rejected_at, rejected_reason,
+      cancelled_at, cancelled_by,
+      printer:printers!printer_bookings_printer_id_fkey(name),
+      approved_by_profile:profiles!printer_bookings_approved_by_fkey(full_name),
+      rejected_by_profile:profiles!printer_bookings_rejected_by_fkey(full_name),
+      cancelled_by_profile:profiles!printer_bookings_cancelled_by_fkey(full_name)
+    `)
+    .eq("profile_id", profileId)
+    .or(
+      `approved_at.gte.${cutoff},rejected_at.gte.${cutoff},and(cancelled_at.gte.${cutoff},cancelled_by.neq.${profileId})`,
+    )
+    .order("starts_at");
+  if (signal) query = query.abortSignal(signal);
+  const { data, error } = await query;
+  throwIfError(error);
+
+  return ((data ?? []) as unknown as Array<{
+    id: string;
+    project_name: string;
+    starts_at: string;
+    status: BookingStatus;
+    approved_at: string | null;
+    rejected_at: string | null;
+    rejected_reason: string | null;
+    cancelled_at: string | null;
+    cancelled_by: string | null;
+    printer: { name: string } | null;
+    approved_by_profile: { full_name: string } | null;
+    rejected_by_profile: { full_name: string } | null;
+    cancelled_by_profile: { full_name: string } | null;
+  }>).map((booking) => ({
+    id: booking.id,
+    project_name: booking.project_name,
+    starts_at: booking.starts_at,
+    status: booking.status,
+    approved_at: booking.approved_at,
+    approved_by_name: booking.approved_by_profile?.full_name ?? null,
+    rejected_at: booking.rejected_at,
+    rejected_by_name: booking.rejected_by_profile?.full_name ?? null,
+    rejected_reason: booking.rejected_reason,
+    cancelled_at: booking.cancelled_at,
+    cancelled_by: booking.cancelled_by,
+    cancelled_by_name: booking.cancelled_by_profile?.full_name ?? null,
+    printer_name: booking.printer?.name ?? "Impressora removida",
+    profile_name: "",
+  })) as BookingAlertSummary[];
 }
 
 export async function listMaintenanceBlocks() {
@@ -622,6 +802,15 @@ export async function setBookingStatus(bookingId: string, status: PrinterBooking
 export async function cancelBooking(bookingId: string) {
   const { data, error } = await client().rpc("cancel_printer_booking", {
     p_booking_id: bookingId,
+  });
+  throwIfError(error);
+  return data as PrinterBooking;
+}
+
+export async function rejectBooking(bookingId: string, reason: string | null) {
+  const { data, error } = await client().rpc("reject_printer_booking", {
+    p_booking_id: bookingId,
+    p_reason: reason ?? undefined,
   });
   throwIfError(error);
   return data as PrinterBooking;

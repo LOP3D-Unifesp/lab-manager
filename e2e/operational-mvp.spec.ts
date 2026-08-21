@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Browser, type Page } from "@playwright/test";
 
 test.describe.configure({ mode: "serial" });
 
@@ -7,12 +7,26 @@ const skillName = `Modelagem E2E ${runId}`;
 const materialName = `PLA E2E ${runId}`;
 const printerName = `Impressora E2E ${runId}`;
 const bookingName = `Prótese E2E ${runId}`;
+const approvalBookingName = `Reserva para aprovação E2E ${runId}`;
 const invitedEmail = `pesquisador.e2e.${runId}@example.com`;
+const invitedPassword = "Pesquisador123!";
 
 function futureDate(days: number) {
   const date = new Date();
   date.setDate(date.getDate() + days);
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+// O laboratório de testes usa Pacific/Auckland como fuso; datas de reserva
+// precisam ser calculadas nesse fuso, não no do navegador.
+function dataNoFusoDoLab(days: number) {
+  const date = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Pacific/Auckland",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
 }
 
 async function loginAsCoordinator(page: Page) {
@@ -22,6 +36,51 @@ async function loginAsCoordinator(page: Page) {
   await page.getByRole("button", { name: "Entrar", exact: true }).click();
   await page.waitForURL(/\/(instalacao)?$/);
   await expect(page.getByRole("heading", { name: /Dashboard|Configure seu laboratório/ })).toBeVisible();
+}
+
+async function login(page: Page, email: string, password: string) {
+  await page.goto("/login");
+  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Senha", { exact: true }).fill(password);
+  await page.getByRole("button", { name: "Entrar", exact: true }).click();
+  await page.waitForURL(/\/(instalacao)?$/);
+  await expect(page.getByRole("heading", { name: /Dashboard|Configure seu laboratório/ })).toBeVisible();
+}
+
+async function criarReservaSimples(page: Page, projectName: string, indiceSlot = 0) {
+  await page.goto("/reservas");
+  await expect(page.getByRole("heading", { name: printerName })).toBeVisible();
+  await page.getByRole("button", { name: "Criar reserva" }).click();
+  const bookingDialog = page.getByRole("dialog");
+  await bookingDialog.getByLabel("Nome da impressão").fill(projectName);
+  await bookingDialog.locator("label").filter({ hasText: /^Material/ }).locator("select").selectOption({ label: materialName });
+
+  const dateInput = bookingDialog.locator('input[type="date"]');
+  const startSelect = bookingDialog
+    .locator("label")
+    .filter({ hasText: /^Inicio/ })
+    .locator("select");
+
+  let startTime = "";
+  for (let dias = 0; dias <= 1 && !startTime; dias += 1) {
+    await dateInput.fill(dataNoFusoDoLab(dias));
+    startTime = await startSelect.evaluate(
+      (element, indice) => {
+        const habilitadas = Array.from((element as HTMLSelectElement).options).filter(
+          (option) => !option.disabled && option.value,
+        );
+        return habilitadas[indice]?.value ?? "";
+      },
+      indiceSlot,
+    );
+  }
+  expect(startTime).not.toBe("");
+  await startSelect.selectOption(startTime);
+  await bookingDialog.getByLabel("Tempo (h)").fill("0.5");
+  await bookingDialog.getByRole("radio", { name: new RegExp(printerName) }).check();
+  await page.getByRole("button", { name: "Salvar reserva" }).click();
+  await expect(bookingDialog).toBeHidden();
+  await expect(page.getByText(projectName).first()).toBeVisible();
 }
 
 test("instalação e autenticação do coordenador", async ({ page }) => {
@@ -173,8 +232,22 @@ test("reserva pode ser criada, editada, concluída e protegida por manutenção"
   const bookingDialog = page.getByRole("dialog");
   await bookingDialog.getByLabel("Nome da impressão").fill(bookingName);
   await bookingDialog.locator("label").filter({ hasText: /^Material/ }).locator("select").selectOption({ label: materialName });
-  await bookingDialog.locator('input[type="date"]').fill(futureDate(7));
-  await bookingDialog.locator("label").filter({ hasText: /^Inicio/ }).locator("select").selectOption("10:00");
+  const dateInput = bookingDialog.locator('input[type="date"]');
+  const startSelect = bookingDialog
+    .locator("label")
+    .filter({ hasText: /^Inicio/ })
+    .locator("select");
+
+  let startTime = "";
+  for (let dias = 0; dias <= 1 && !startTime; dias += 1) {
+    await dateInput.fill(dataNoFusoDoLab(dias));
+    startTime = await startSelect.evaluate((element) => {
+      const options = Array.from((element as HTMLSelectElement).options);
+      return options.find((option) => !option.disabled && option.value)?.value ?? "";
+    });
+  }
+  expect(startTime).not.toBe("");
+  await startSelect.selectOption(startTime);
   await bookingDialog.getByLabel("Tempo (h)").fill("1.5");
   await bookingDialog.getByRole("radio", { name: new RegExp(printerName) }).check();
   await page.getByRole("button", { name: "Salvar reserva" }).click();
@@ -224,9 +297,10 @@ test("convite é aceito e pesquisador permanece sem ações administrativas", as
 
   await page.goto(link!.replace("127.0.0.1:5173", "localhost:5173"));
   await page.getByRole("button", { name: "Aceitar convite" }).click();
-  await page.getByLabel("Nome completo").fill("Pesquisador E2E");
   await page.getByLabel("Crie uma senha").fill("Pesquisador123!");
   await page.getByLabel("Confirme a senha").fill("Pesquisador123!");
+  await page.getByRole("button", { name: "Continuar" }).click();
+  await page.getByLabel("Nome completo").fill("Pesquisador E2E");
   await page.getByRole("button", { name: "Criar perfil" }).click();
   await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
 
@@ -236,4 +310,82 @@ test("convite é aceito e pesquisador permanece sem ações administrativas", as
   await expect(page.getByRole("button", { name: "Bloquear manutenção" })).toHaveCount(0);
   await page.goto("/impressoras");
   await expect(page.getByRole("button", { name: "Cadastrar impressora" })).toHaveCount(0);
+});
+
+test("pesquisador é notificado da decisão do coordenador sobre sua reserva", async ({ page, browser }: { page: Page; browser: Browser }) => {
+  await login(page, invitedEmail, invitedPassword);
+  await criarReservaSimples(page, approvalBookingName);
+
+  // A solicitação recém-criada não deve gerar notificação para o próprio solicitante.
+  const sinoPesquisador = page.getByRole("button", { name: "Atualizações das suas reservas" }).first();
+  await expect(sinoPesquisador).toBeVisible();
+  await expect(sinoPesquisador.locator("span")).toHaveCount(0);
+
+  // O coordenador recebe a notificação e aprova a reserva em outro contexto.
+  const contextoCoordenador = await browser.newContext();
+  const paginaCoordenador = await contextoCoordenador.newPage();
+  await loginAsCoordinator(paginaCoordenador);
+  await paginaCoordenador.goto("/reservas");
+  const secaoPendentes = paginaCoordenador
+    .locator("section")
+    .filter({ hasText: "Reservas aguardando aprovação" });
+  await expect(secaoPendentes.getByText(approvalBookingName)).toBeVisible();
+  await secaoPendentes.getByRole("button", { name: "Aprovar" }).first().click();
+  await expect(secaoPendentes.getByText(approvalBookingName)).toHaveCount(0);
+  await contextoCoordenador.close();
+
+  // O pesquisador recebe a notificação de aprovação em tempo real, com o autor.
+  await expect(sinoPesquisador).toContainText("1", { timeout: 15000 });
+  await sinoPesquisador.click();
+  const notificacaoAprovada = page.locator('a[href="/reservas/minhas"]').filter({ hasText: approvalBookingName });
+  await expect(notificacaoAprovada).toBeVisible();
+  await expect(notificacaoAprovada.getByText("Aprovada", { exact: true })).toBeVisible();
+  await expect(notificacaoAprovada.getByText("Aprovada por Administrador Local")).toBeVisible();
+
+  // Abrir o sino marca as notificações como vistas e zera o badge.
+  await expect(sinoPesquisador.locator("span")).toHaveCount(0);
+
+  // A notificação leva o pesquisador para a página Minhas reservas.
+  await notificacaoAprovada.click();
+  await expect(page).toHaveURL(/\/reservas\/minhas/);
+  await expect(page.getByRole("heading", { name: "Minhas reservas" })).toBeVisible();
+  await expect(page.getByText(approvalBookingName).first()).toBeVisible();
+  await expect(page.getByText(`Aprovada por Administrador Local`).first()).toBeVisible();
+
+  // Cancelamento pelo pesquisador notifica o coordenador.
+  const nomeCancelada = `${approvalBookingName} cancelável`;
+  await criarReservaSimples(page, nomeCancelada, 1);
+  const contextoAprovacao = await browser.newContext();
+  const paginaAprovacao = await contextoAprovacao.newPage();
+  await loginAsCoordinator(paginaAprovacao);
+  await paginaAprovacao.goto("/reservas");
+  const secaoAprovacao = paginaAprovacao
+    .locator("section")
+    .filter({ hasText: "Reservas aguardando aprovação" });
+  await expect(secaoAprovacao.getByText(nomeCancelada)).toBeVisible();
+  await secaoAprovacao.getByRole("button", { name: "Aprovar" }).first().click();
+  await expect(secaoAprovacao.getByText(nomeCancelada)).toHaveCount(0);
+  await contextoAprovacao.close();
+
+  // A agenda já está na data da reserva criada; o botão de cancelar aparece na
+  // seção "Reservas de ...".
+  await page.getByRole("button", { name: `Cancelar reserva ${nomeCancelada}` }).first().click();
+  await page.getByRole("button", { name: "Cancelar reserva", exact: true }).click();
+  await expect(page.getByRole("button", { name: `Cancelar reserva ${nomeCancelada}` })).toHaveCount(0);
+
+  const contextoCancelamento = await browser.newContext();
+  const paginaCancelamento = await contextoCancelamento.newPage();
+  await loginAsCoordinator(paginaCancelamento);
+  const sinoCoordenador = paginaCancelamento
+    .getByRole("button", { name: "Reservas aguardando aprovação" })
+    .first();
+  await expect(sinoCoordenador).toContainText("1", { timeout: 15000 });
+  await sinoCoordenador.click();
+  const notificacaoCancelada = paginaCancelamento
+    .locator('a[href="/reservas/historico"]')
+    .filter({ hasText: nomeCancelada });
+  await expect(notificacaoCancelada).toBeVisible();
+  await expect(notificacaoCancelada.getByText("Cancelada", { exact: true })).toBeVisible();
+  await expect(notificacaoCancelada.getByText("Cancelada por Pesquisador E2E")).toBeVisible();
+  await contextoCancelamento.close();
 });

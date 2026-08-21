@@ -4,6 +4,7 @@ import { useAuth } from "../../lib/auth";
 import { navigationItems, type NavigationItem } from "../../lib/navigation";
 import { AuthUserMenu } from "./AuthUserMenu";
 import { EnvironmentBadge } from "./EnvironmentBadge";
+import { NotificationBell } from "./NotificationBell";
 
 function canShowDesktopItem(item: NavigationItem, role?: string) {
   return (
@@ -67,21 +68,24 @@ export function Sidebar() {
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 border-r border-border bg-surface px-4 py-5 lg:block">
       <div className="flex h-full min-h-0 flex-col">
         <div className="border-b border-border pb-5">
-          <Link
-            to="/"
-            aria-label="Ir para o início"
-            className="block rounded-md transition hover:text-primary focus-visible:outline-offset-4"
-          >
-            <div className="flex items-center gap-2">
-              <p className="text-base font-bold leading-none text-primary">
-                {labSettings?.acronym ?? "Lab"}
-              </p>
-              <EnvironmentBadge />
-            </div>
-            <h1 className="mt-1 text-[24px] font-bold leading-tight text-text">
-              Lab Manager
-            </h1>
-          </Link>
+          <div className="flex items-start justify-between gap-2">
+            <Link
+              to="/"
+              aria-label="Ir para o início"
+              className="block min-w-0 rounded-md transition hover:text-primary focus-visible:outline-offset-4"
+            >
+              <div className="flex items-center gap-2">
+                <p className="text-base font-bold leading-none text-primary">
+                  {labSettings?.acronym ?? "Lab"}
+                </p>
+                <EnvironmentBadge />
+              </div>
+              <h1 className="mt-1 truncate text-[24px] font-bold leading-tight text-text">
+                Lab Manager
+              </h1>
+            </Link>
+            <NotificationBell align="left" />
+          </div>
           <p className="mt-2 text-sm font-semibold leading-5 text-muted">
             {labSettings?.name ?? "Gestão interna do laboratório."}
           </p>

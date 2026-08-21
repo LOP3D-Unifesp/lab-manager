@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(80);
+select plan(111);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -30,11 +30,13 @@ insert into auth.users (
   ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000108', 'authenticated', 'authenticated', 'expired@example.com', crypt('password', gen_salt('bf')), now(), '{}', '{}', now(), now(), '', '', '', ''),
   ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000109', 'authenticated', 'authenticated', 'revoked@example.com', crypt('password', gen_salt('bf')), now(), '{}', '{}', now(), now(), '', '', '', '');
 
-insert into public.profiles (id, full_name, email, role, is_active) values
-  ('00000000-0000-0000-0000-000000000101', 'Coordinator', 'coord@example.com', 'coordinator', true),
-  ('00000000-0000-0000-0000-000000000102', 'Researcher', 'researcher@example.com', 'researcher', true),
-  ('00000000-0000-0000-0000-000000000103', 'Other Researcher', 'other@example.com', 'researcher', true),
-  ('00000000-0000-0000-0000-000000000104', 'Inactive', 'inactive@example.com', 'researcher', false);
+-- Fixture profiles keep the pre-existing auto-approve behaviour (requires_booking_approval = false)
+-- so the rest of this suite's booking-lifecycle assertions stay unchanged.
+insert into public.profiles (id, full_name, email, role, is_active, requires_booking_approval) values
+  ('00000000-0000-0000-0000-000000000101', 'Coordinator', 'coord@example.com', 'coordinator', true, false),
+  ('00000000-0000-0000-0000-000000000102', 'Researcher', 'researcher@example.com', 'researcher', true, false),
+  ('00000000-0000-0000-0000-000000000103', 'Other Researcher', 'other@example.com', 'researcher', true, false),
+  ('00000000-0000-0000-0000-000000000104', 'Inactive', 'inactive@example.com', 'researcher', false, false);
 
 insert into public.profile_private_data (profile_id, cpf) values
   ('00000000-0000-0000-0000-000000000101', '11111111111'),
@@ -121,6 +123,23 @@ select is(
   'researcher cannot promote their own role'
 );
 
+update public.profiles set requires_booking_approval = true
+where id = '00000000-0000-0000-0000-000000000102';
+select is(
+  (select requires_booking_approval from public.profiles where id = '00000000-0000-0000-0000-000000000102'),
+  false,
+  'researcher cannot change their own booking approval requirement'
+);
+
+select throws_ok(
+  $$ select public.replace_profile_funding_grants(
+    '00000000-0000-0000-0000-000000000103',
+    '[{"agency":"cnpq","agency_other":null}]'::jsonb
+  ) $$,
+  'P0001', 'funding_grants_forbidden',
+  'researcher cannot manage another profile funding grants'
+);
+
 select throws_ok(
   $$ insert into public.skills (name) values ('Forbidden skill') $$,
   '42501',
@@ -186,23 +205,52 @@ select is(
   'wizard persists laboratory identity'
 );
 select throws_ok(
-  $$ update public.profiles set has_funding_grant = true where id = '00000000-0000-0000-0000-000000000101' $$,
-  '23514', null,
-  'funding grant requires an agency'
-);
-select throws_ok(
-  $$ update public.profiles set has_funding_grant = true, funding_agency = 'other' where id = '00000000-0000-0000-0000-000000000101' $$,
-  '23514', null,
+  $$ select public.replace_profile_funding_grants(
+    '00000000-0000-0000-0000-000000000101',
+    '[{"agency":"other","agency_other":null}]'::jsonb
+  ) $$,
+  'P0001', 'invalid_grants',
   'other funding agency requires its name'
 );
 select lives_ok(
-  $$ update public.profiles set has_funding_grant = true, funding_agency = 'cnpq' where id = '00000000-0000-0000-0000-000000000101' $$,
-  'known funding agency is accepted'
+  $$ select public.replace_profile_funding_grants(
+    '00000000-0000-0000-0000-000000000101',
+    '[{"agency":"cnpq","agency_other":null},{"agency":"other","agency_other":"Fundacao Local"}]'::jsonb
+  ) $$,
+  'coordinator registers multiple funding grants for their own profile'
 );
 select is(
-  (select funding_agency from public.profiles where id = '00000000-0000-0000-0000-000000000101'),
-  'cnpq'::public.funding_agency,
-  'funding agency is persisted'
+  (select count(*) from public.profile_funding_grants where profile_id = '00000000-0000-0000-0000-000000000101'),
+  2::bigint,
+  'multiple funding grants are persisted'
+);
+select throws_ok(
+  $$ select public.replace_profile_funding_grants(
+    '00000000-0000-0000-0000-000000000101',
+    '[{"agency":"cnpq","agency_other":null,"weekly_hours":100}]'::jsonb
+  ) $$,
+  '23514', null,
+  'weekly hours outside 1-60 is rejected'
+);
+select throws_ok(
+  $$ select public.replace_profile_funding_grants(
+    '00000000-0000-0000-0000-000000000101',
+    '[{"agency":"cnpq","agency_other":null,"monthly_value":-1}]'::jsonb
+  ) $$,
+  '23514', null,
+  'negative monthly value is rejected'
+);
+select lives_ok(
+  $$ select public.replace_profile_funding_grants(
+    '00000000-0000-0000-0000-000000000101',
+    '[{"agency":"cnpq","agency_other":null,"grant_name":"IC FAPESP","weekly_hours":20,"monthly_value":700.50}]'::jsonb
+  ) $$,
+  'coordinator registers a grant with full contract details'
+);
+select results_eq(
+  $$ select grant_name, weekly_hours, monthly_value from public.profile_funding_grants where profile_id = '00000000-0000-0000-0000-000000000101' $$,
+  $$ values ('IC FAPESP'::text, 20::integer, 700.50::numeric(10,2)) $$,
+  'contract details (name, hours, value) are persisted'
 );
 select lives_ok(
   $$ select public.update_lab_settings('Laboratório Atualizado', 'LA', 'America/Recife', 'dados@example.com') $$,
@@ -328,15 +376,30 @@ select lives_ok(
   $$ select public.create_printer_booking(
     '20000000-0000-0000-0000-000000000001',
     '30000000-0000-0000-0000-000000000001',
-    'First booking', now() + interval '1 day', 60, null
+    'First booking', now() + interval '30 minutes', 60, null
   ) $$,
   'first booking succeeds'
+);
+select is(
+  (select status::text from public.printer_bookings where project_name = 'First booking'),
+  'approved',
+  'profile without approval requirement still auto-approves bookings'
+);
+select is(
+  (select approved_at is null from public.printer_bookings where project_name = 'First booking'),
+  true,
+  'auto-approved bookings do not stamp approved_at (no approval notification)'
+);
+select is(
+  (select approved_by from public.printer_bookings where project_name = 'First booking'),
+  null,
+  'auto-approved bookings do not record an approver'
 );
 select throws_ok(
   $$ select public.create_printer_booking(
     '20000000-0000-0000-0000-000000000001',
     '30000000-0000-0000-0000-000000000001',
-    'Conflicting booking', now() + interval '1 day 30 minutes', 60, null
+    'Conflicting booking', now() + interval '45 minutes', 60, null
   ) $$,
   'P0001', 'booking_conflict',
   'overlapping booking is rejected'
@@ -410,7 +473,7 @@ select lives_ok(
     (select id from public.printer_bookings where project_name = 'First booking'),
     '20000000-0000-0000-0000-000000000001',
     '30000000-0000-0000-0000-000000000001',
-    'First booking updated', now() + interval '1 day 2 hours', 90, 'Updated notes'
+    'First booking updated', now() + interval '30 minutes', 90, 'Updated notes'
   ) $$,
   'researcher edits their active booking through RPC'
 );
@@ -488,6 +551,162 @@ select throws_ok(
   'terminal booking status cannot move backwards'
 );
 
+-- Coordinator-controlled per-profile booking approval requirement
+set local role postgres;
+insert into auth.users (
+  instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
+  raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+  confirmation_token, email_change, email_change_token_new, recovery_token
+) values
+  ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000110', 'authenticated', 'authenticated', 'junior@example.com', crypt('password', gen_salt('bf')), now(), '{}', '{}', now(), now(), '', '', '', '');
+insert into public.profiles (id, full_name, email, role, is_active, requires_booking_approval) values
+  ('00000000-0000-0000-0000-000000000110', 'Junior Researcher', 'junior@example.com', 'researcher', true, true);
+set local role authenticated;
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000110","email":"junior@example.com","role":"authenticated"}', true);
+select lives_ok(
+  $$ select public.create_printer_booking(
+    '20000000-0000-0000-0000-000000000001',
+    '30000000-0000-0000-0000-000000000001',
+    'Junior booking', now() + interval '10 days', 60, null
+  ) $$,
+  'researcher flagged for approval can still create a booking'
+);
+select is(
+  (select status::text from public.printer_bookings where project_name = 'Junior booking'),
+  'pending',
+  'booking from a profile requiring approval starts as pending'
+);
+select throws_ok(
+  $$ select public.set_printer_booking_status(
+    (select id from public.printer_bookings where project_name = 'Junior booking'),
+    'approved'
+  ) $$,
+  'P0001', 'coordinator_required',
+  'researcher cannot approve their own pending booking'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
+select lives_ok(
+  $$ select public.set_printer_booking_status(
+    (select id from public.printer_bookings where project_name = 'Junior booking'),
+    'approved'
+  ) $$,
+  'coordinator approves a pending booking'
+);
+select is(
+  (select status::text from public.printer_bookings where project_name = 'Junior booking'),
+  'approved',
+  'approved pending booking is persisted'
+);
+select is(
+  (select approved_at >= now() - interval '5 minutes' from public.printer_bookings where project_name = 'Junior booking'),
+  true,
+  'approving a pending booking stamps approved_at for the researcher notification'
+);
+select is(
+  (select approved_by from public.printer_bookings where project_name = 'Junior booking'),
+  '00000000-0000-0000-0000-000000000101'::uuid,
+  'approving a pending booking records the coordinator as approver'
+);
+
+-- Rejection lifecycle: distinct from cancellation, with reason, and frees the slot.
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000110","email":"junior@example.com","role":"authenticated"}', true);
+select lives_ok(
+  $$ select public.create_printer_booking(
+    '20000000-0000-0000-0000-000000000001',
+    '30000000-0000-0000-0000-000000000001',
+    'Rejected booking', now() + interval '12 days', 60, null
+  ) $$,
+  'researcher flagged for approval creates a second pending booking'
+);
+select throws_ok(
+  $$ select public.reject_printer_booking(
+    (select id from public.printer_bookings where project_name = 'Rejected booking'),
+    'No slot available'
+  ) $$,
+  'P0001', 'coordinator_required',
+  'researcher cannot reject bookings'
+);
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
+select lives_ok(
+  $$ select public.reject_printer_booking(
+    (select id from public.printer_bookings where project_name = 'Rejected booking'),
+    'Impressora reservada para manutenção'
+  ) $$,
+  'coordinator rejects a pending booking with a reason'
+);
+select is(
+  (select status::text from public.printer_bookings where project_name = 'Rejected booking'),
+  'rejected',
+  'rejected booking is persisted with the dedicated status'
+);
+select is(
+  (select rejected_reason from public.printer_bookings where project_name = 'Rejected booking'),
+  'Impressora reservada para manutenção',
+  'rejection reason is persisted'
+);
+select is(
+  (select rejected_by from public.printer_bookings where project_name = 'Rejected booking'),
+  '00000000-0000-0000-0000-000000000101'::uuid,
+  'rejection records the coordinator as author'
+);
+select lives_ok(
+  $$ select public.create_printer_booking(
+    '20000000-0000-0000-0000-000000000001',
+    '30000000-0000-0000-0000-000000000001',
+    'Slot freed booking', now() + interval '12 days', 60, null
+  ) $$,
+  'rejected booking no longer blocks its time slot'
+);
+select throws_ok(
+  $$ select public.reject_printer_booking(
+    (select id from public.printer_bookings where project_name = 'Slot freed booking'),
+    null
+  ) $$,
+  'P0001', 'invalid_booking_status_transition',
+  'auto-approved bookings cannot be rejected'
+);
+
+-- Temporal validation on the operational lifecycle.
+select throws_ok(
+  $$ select public.set_printer_booking_status(
+    (select id from public.printer_bookings where project_name = 'Junior booking'),
+    'in_progress'
+  ) $$,
+  'P0001', 'booking_not_started',
+  'booking starting days from now cannot enter the operational lifecycle'
+);
+
+-- Maintenance blocks must be forward-looking.
+select throws_ok(
+  $$ select public.create_maintenance_block(
+    '20000000-0000-0000-0000-000000000001',
+    now() - interval '2 days', now() - interval '1 day',
+    'Retroactive maintenance', null
+  ) $$,
+  'P0001', 'invalid_start_time',
+  'retroactive maintenance blocks are rejected'
+);
+
+-- The approval requirement only applies to researchers: a coordinator flagged the same way
+-- still auto-approves, since gating their own bookings behind their own approval is pointless.
+update public.profiles set requires_booking_approval = true
+where id = '00000000-0000-0000-0000-000000000101';
+select lives_ok(
+  $$ select public.create_printer_booking(
+    '20000000-0000-0000-0000-000000000001',
+    '30000000-0000-0000-0000-000000000001',
+    'Coordinator booking', now() + interval '11 days', 60, null
+  ) $$,
+  'coordinator creates a booking even when flagged for approval'
+);
+select is(
+  (select status::text from public.printer_bookings where project_name = 'Coordinator booking'),
+  'approved',
+  'coordinator bookings always auto-approve regardless of the approval flag'
+);
+
 select lives_ok(
   $$ select public.update_lab_configuration(
     'Configurable Lab', 'CL', 'Europe/Lisbon', 'privacy@example.com', 12, array[1,2,3,4,5,6]
@@ -539,6 +758,25 @@ select throws_ok(
   $$ select public.update_lab_breaks('12:00', '13:00', '18:00', '19:00') $$,
   'P0001', 'coordinator_required',
   'researcher cannot configure meal intervals'
+);
+
+select lives_ok(
+  $$ select public.set_my_avatar_url('https://example.com/avatar.png') $$,
+  'researcher updates their own avatar pointer'
+);
+select is(
+  (select avatar_url from public.profiles where id = '00000000-0000-0000-0000-000000000102'),
+  'https://example.com/avatar.png',
+  'avatar pointer is persisted'
+);
+select lives_ok(
+  $$ insert into storage.objects (bucket_id, name) values ('avatars', '00000000-0000-0000-0000-000000000102/avatar.png') $$,
+  'researcher uploads an avatar object into their own storage folder'
+);
+select throws_ok(
+  $$ insert into storage.objects (bucket_id, name) values ('avatars', '00000000-0000-0000-0000-000000000101/avatar.png') $$,
+  '42501', null,
+  'researcher cannot upload into another profile avatar folder'
 );
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);

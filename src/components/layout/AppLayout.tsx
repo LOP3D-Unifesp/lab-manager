@@ -5,6 +5,8 @@ import { MobileNavigation } from "./MobileNavigation";
 import { Sidebar } from "./Sidebar";
 import { MobileAccountMenu } from "./MobileAccountMenu";
 import { EnvironmentBadge } from "./EnvironmentBadge";
+import { NotificationBell } from "./NotificationBell";
+import { BookingsAlertProvider } from "../../lib/pendingBookingsAlert";
 import { useAuth } from "../../lib/auth";
 
 type AppLayoutProps = {
@@ -16,6 +18,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const acronym = labSettings?.acronym ?? "Lab";
 
   return (
+    <BookingsAlertProvider>
     <div className="min-h-screen bg-background text-text">
       <Sidebar />
 
@@ -35,7 +38,10 @@ export function AppLayout({ children }: AppLayoutProps) {
                 Lab Manager
               </h1>
             </Link>
-            <MobileAccountMenu />
+            <div className="flex items-center gap-2">
+              <NotificationBell />
+              <MobileAccountMenu />
+            </div>
           </div>
         </header>
 
@@ -46,5 +52,6 @@ export function AppLayout({ children }: AppLayoutProps) {
         <MobileNavigation />
       </div>
     </div>
+    </BookingsAlertProvider>
   );
 }

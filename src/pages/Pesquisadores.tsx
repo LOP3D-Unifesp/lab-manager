@@ -2,23 +2,49 @@ import { useState } from "react";
 import { UserPlus } from "lucide-react";
 import { Link } from "react-router-dom";
 
+import { Avatar } from "../components/ui/Avatar";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
 import { StatusBadge } from "../components/ui/StatusBadge";
 import { useCurrentProfile } from "../lib/currentUser";
-import { usePesquisadoresCadastrados } from "../lib/pesquisadores";
+import { usePesquisadoresCadastrados, type StatusPresenca } from "../lib/pesquisadores";
 
 type Visualizacao = "cards" | "lista";
 type Ordenacao = "alfabetica" | "vinculo" | "presenca";
+const TODOS_VINCULOS = "Todos";
+
+function getStatusVariant(status: StatusPresenca) {
+  const variants: Record<StatusPresenca, "success" | "info" | "warning" | "neutral"> = {
+    Presente: "success",
+    Remoto: "info",
+    "Em aula": "warning",
+    Ausente: "neutral",
+  };
+
+  return variants[status];
+}
 
 export function Pesquisadores() {
   const { pesquisadores } = usePesquisadoresCadastrados();
   const { currentProfile } = useCurrentProfile();
   const [visualizacao, setVisualizacao] = useState<Visualizacao>("cards");
   const [ordenacao, setOrdenacao] = useState<Ordenacao>("alfabetica");
+  const [vinculoFiltro, setVinculoFiltro] = useState(TODOS_VINCULOS);
 
-  const pesquisadoresOrdenados = [...pesquisadores].sort((a, b) => {
+  const vinculosDisponiveis = [
+    TODOS_VINCULOS,
+    ...Array.from(new Set(pesquisadores.map((pesquisador) => pesquisador.vinculo))).sort((a, b) =>
+      a.localeCompare(b, "pt-BR"),
+    ),
+  ];
+
+  const pesquisadoresFiltrados =
+    vinculoFiltro === TODOS_VINCULOS
+      ? pesquisadores
+      : pesquisadores.filter((pesquisador) => pesquisador.vinculo === vinculoFiltro);
+
+  const pesquisadoresOrdenados = [...pesquisadoresFiltrados].sort((a, b) => {
     if (ordenacao === "vinculo") {
       return (
         a.vinculo.localeCompare(b.vinculo, "pt-BR") ||
@@ -58,6 +84,20 @@ export function Pesquisadores() {
                 <option value="alfabetica">Ordem alfabética</option>
                 <option value="vinculo">Vínculo</option>
                 <option value="presenca">Presença</option>
+              </select>
+            </label>
+            <label className="flex min-h-9 items-center gap-1 rounded-md border border-border bg-surface px-2 text-[11px] font-semibold text-muted">
+              Vínculo
+              <select
+                value={vinculoFiltro}
+                onChange={(event) => setVinculoFiltro(event.target.value)}
+                className="min-h-7 rounded-md border border-border bg-background px-1.5 text-[11px] font-semibold text-text outline-none transition focus:border-primary"
+              >
+                {vinculosDisponiveis.map((vinculo) => (
+                  <option key={vinculo} value={vinculo}>
+                    {vinculo}
+                  </option>
+                ))}
               </select>
             </label>
             <div className="flex min-h-9 items-center rounded-md border border-border bg-surface p-1">
@@ -115,7 +155,13 @@ export function Pesquisadores() {
           {pesquisadoresOrdenados.map((pesquisador) => (
             <Card key={pesquisador.id}>
               <div className="flex items-start justify-between gap-4">
-                <div>
+                <div className="flex items-start gap-3">
+                  <Avatar
+                    avatarUrl={pesquisador.avatarUrl}
+                    name={`${pesquisador.nome} ${pesquisador.sobrenome}`}
+                    className="h-12 w-12 shrink-0"
+                  />
+                  <div>
                   <h3 className="text-2xl font-bold text-text">
                     {pesquisador.nome} {pesquisador.sobrenome}
                   </h3>
@@ -129,8 +175,8 @@ export function Pesquisadores() {
                     {pesquisador.telefone || "Sem telefone"}
                   </p>
                   <p className="mt-2 text-sm font-semibold leading-5 text-muted">
-                    {pesquisador.temBolsaFomento
-                      ? `Bolsa de fomento${pesquisador.agenciaFomento ? `: ${pesquisador.agenciaFomento}` : ""}`
+                    {pesquisador.bolsasFomento.length > 0
+                      ? `Bolsas de fomento: ${pesquisador.bolsasFomento.join(", ")}`
                       : "Sem bolsa de fomento"}
                     {pesquisador.cargaHorariaSemanal
                       ? ` - ${pesquisador.cargaHorariaSemanal}h/semana`
@@ -146,12 +192,11 @@ export function Pesquisadores() {
                       Lattes
                     </a>
                   ) : null}
+                  </div>
                 </div>
                 <StatusBadge
                   label={pesquisador.status}
-                  variant={
-                    pesquisador.status === "No laboratorio" ? "success" : "info"
-                  }
+                  variant={getStatusVariant(pesquisador.status)}
                 />
               </div>
             </Card>
@@ -187,7 +232,14 @@ export function Pesquisadores() {
                     className="border-b border-border last:border-b-0 hover:bg-background/70"
                   >
                     <td className="whitespace-nowrap px-5 py-3 text-base font-semibold text-text">
-                      {pesquisador.nome} {pesquisador.sobrenome}
+                      <div className="flex items-center gap-2.5">
+                        <Avatar
+                          avatarUrl={pesquisador.avatarUrl}
+                          name={`${pesquisador.nome} ${pesquisador.sobrenome}`}
+                          className="h-8 w-8 shrink-0 text-xs"
+                        />
+                        {pesquisador.nome} {pesquisador.sobrenome}
+                      </div>
                     </td>
                     <td className="whitespace-nowrap px-5 py-3 text-base text-muted">
                       {pesquisador.vinculo}
@@ -213,16 +265,12 @@ export function Pesquisadores() {
                     <td className="whitespace-nowrap px-5 py-3">
                       <StatusBadge
                         label={pesquisador.status}
-                        variant={
-                          pesquisador.status === "No laboratorio"
-                            ? "success"
-                            : "info"
-                        }
+                        variant={getStatusVariant(pesquisador.status)}
                       />
                     </td>
                     <td className="whitespace-nowrap px-5 py-3 text-base text-muted">
-                      {pesquisador.temBolsaFomento
-                        ? `Bolsa: ${pesquisador.agenciaFomento ?? "agência não informada"}`
+                      {pesquisador.bolsasFomento.length > 0
+                        ? `Bolsas: ${pesquisador.bolsasFomento.join(", ")}`
                         : "Sem bolsa de fomento"}
                       {pesquisador.cargaHorariaSemanal
                         ? ` - ${pesquisador.cargaHorariaSemanal}h`

@@ -1,17 +1,26 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { CalendarDays, Save, UserRoundCog, Utensils } from "lucide-react";
 
+import { FundingGrantsEditor } from "../components/profile/FundingGrantsEditor";
+import { Avatar } from "../components/ui/Avatar";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
 import { StatusBadge } from "../components/ui/StatusBadge";
 import { useAuth } from "../lib/auth";
 import {
-  fundingAgencyOptions,
+  getDiaAbreviado,
+  getDuracaoPeriodoEmHoras,
+  getRoleLabel,
+  getSlotColorClassName,
+  getTotalWeeklyGrantHours,
+  getWorkModeLabel,
+  normalizarCpf,
+  normalizarTextoOpcional,
+  validarLattes,
   type AcademicAffiliation,
-  type FundingAgency,
+  type FundingGrant,
   type PeriodoId,
-  type ProfileRole,
   type WorkMode,
 } from "../lib/domain";
 import { useLabSchedule } from "../lib/labSchedule";
@@ -19,6 +28,7 @@ import {
   listAvailability,
   saveProfileAvailability,
   updateMyProfile,
+  uploadMyAvatar,
 } from "../lib/supabaseRepository";
 
 const academicAffiliationOptions: Array<{
@@ -50,75 +60,12 @@ const allWeekdays = [
 
 type AgendaState = Record<string, WorkMode>;
 
-function getRoleLabel(role: ProfileRole) {
-  return role === "coordinator" ? "Coordenador" : "Pesquisador";
-}
-
 function getSlotKey(weekday: number, periodo: PeriodoId) {
   return `${weekday}|${periodo}`;
 }
 
-function normalizarTextoOpcional(value: string) {
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-}
-
-function normalizarCpf(value: string) {
-  const digits = value.replace(/\D/g, "");
-  return digits.length > 0 ? digits : null;
-}
-
-function validarLattes(value: string | null) {
-  if (!value) {
-    return true;
-  }
-
-  try {
-    const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
-  } catch {
-    return false;
-  }
-}
-
 function getInputClassName() {
   return "min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary";
-}
-
-function getWorkModeLabel(mode: WorkMode | undefined) {
-  if (mode === "onsite") return "Presencial";
-  if (mode === "remote") return "Home office";
-  if (mode === "aula") return "Aula";
-  return "-";
-}
-
-function getSlotColorClassName(mode: WorkMode | undefined) {
-  if (mode === "onsite") {
-    return "border-success bg-success-soft text-success-dark";
-  }
-
-  if (mode === "remote") {
-    return "border-primary bg-primary-soft text-primary";
-  }
-
-  if (mode === "aula") {
-    return "border-warning bg-warning-soft text-warning-dark";
-  }
-
-  return "border-border bg-background text-muted hover:border-primary hover:text-primary";
-}
-
-function getDiaAbreviado(label: string) {
-  return label.slice(0, 3);
-}
-
-function getDuracaoPeriodoEmHoras(periodoId: PeriodoId, periodos: Array<{ id: string; starts_at: string; ends_at: string }>) {
-  const periodo = periodos.find((item) => item.id === periodoId);
-  if (!periodo) return 0;
-
-  const [startH, startM] = periodo.starts_at.split(":").map(Number);
-  const [endH, endM] = periodo.ends_at.split(":").map(Number);
-  return (endH * 60 + endM - startH * 60 - startM) / 60;
 }
 
 export function MeuPerfil() {
@@ -130,10 +77,8 @@ export function MeuPerfil() {
     AcademicAffiliation | ""
   >("");
   const [birthDate, setBirthDate] = useState("");
-  const [hasFundingGrant, setHasFundingGrant] = useState(false);
-  const [fundingAgency, setFundingAgency] = useState<FundingAgency | "">("");
-  const [fundingAgencyOther, setFundingAgencyOther] = useState("");
-  const [weeklyWorkloadHours, setWeeklyWorkloadHours] = useState("");
+  const [fundingGrants, setFundingGrants] = useState<FundingGrant[]>([]);
+  const totalWeeklyHours = getTotalWeeklyGrantHours(fundingGrants);
   const [lattesUrl, setLattesUrl] = useState("");
   const [cpf, setCpf] = useState("");
   const [rg, setRg] = useState("");
@@ -148,6 +93,9 @@ export function MeuPerfil() {
   const [nationalityCountryCode, setNationalityCountryCode] = useState("");
   const [phone, setPhone] = useState("");
   const [bio, setBio] = useState("");
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarError, setAvatarError] = useState("");
   const [agenda, setAgenda] = useState<AgendaState>({});
   const [mobileAgendaWeekday, setMobileAgendaWeekday] = useState(
     1,
@@ -207,10 +155,7 @@ export function MeuPerfil() {
     setFullName(profile.full_name);
     setAcademicAffiliation(profile.academic_affiliation ?? "");
     setBirthDate(profile.birth_date ?? "");
-    setHasFundingGrant(profile.has_funding_grant);
-    setFundingAgency(profile.funding_agency ?? "");
-    setFundingAgencyOther(profile.funding_agency_other ?? "");
-    setWeeklyWorkloadHours(profile.weekly_workload_hours?.toString() ?? "");
+    setFundingGrants(profile.funding_grants);
     setLattesUrl(profile.lattes_url ?? "");
     setCpf(profile.cpf ?? "");
     setRg(profile.rg ?? "");
@@ -318,6 +263,27 @@ export function MeuPerfil() {
     });
   }
 
+  async function handleAvatarChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) {
+      return;
+    }
+
+    setAvatarError("");
+    setAvatarPreview(URL.createObjectURL(file));
+    setAvatarUploading(true);
+
+    try {
+      await uploadMyAvatar(file);
+      await refreshProfile();
+    } catch (error) {
+      setAvatarError(error instanceof Error ? error.message : "Nao foi possivel enviar a foto.");
+    } finally {
+      setAvatarUploading(false);
+    }
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -334,9 +300,7 @@ export function MeuPerfil() {
     const nationalityNormalizada =
       normalizarTextoOpcional(nationalityCountryCode)?.toUpperCase() ?? null;
     const bioNormalizada = normalizarTextoOpcional(bio);
-    const cargaHoraria = weeklyWorkloadHours
-      ? Number(weeklyWorkloadHours)
-      : null;
+    const cargaHoraria = totalWeeklyHours > 0 ? totalWeeklyHours : null;
 
     setErrorMessage("");
     setSuccessMessage("");
@@ -389,13 +353,8 @@ export function MeuPerfil() {
       return;
     }
 
-    if (hasFundingGrant && !fundingAgency) {
-      setErrorMessage("Informe a agência responsável pela bolsa de fomento.");
-      return;
-    }
-
-    if (hasFundingGrant && fundingAgency === "other" && !fundingAgencyOther.trim()) {
-      setErrorMessage("Informe o nome da outra agência de fomento.");
+    if (fundingGrants.some((grant) => grant.agency === "other" && !grant.agency_other?.trim())) {
+      setErrorMessage("Informe o nome de cada outra agência de fomento adicionada.");
       return;
     }
 
@@ -406,12 +365,7 @@ export function MeuPerfil() {
         fullName: nomeNormalizado,
         academicAffiliation: academicAffiliation || null,
         birthDate: birthDateNormalizada,
-        hasFundingGrant,
-        fundingAgency: hasFundingGrant ? fundingAgency || null : null,
-        fundingAgencyOther:
-          hasFundingGrant && fundingAgency === "other"
-            ? normalizarTextoOpcional(fundingAgencyOther)
-            : null,
+        fundingGrants,
         weeklyWorkloadHours: cargaHoraria,
         lattesUrl: lattesNormalizado,
         cpf: cpfNormalizado,
@@ -476,6 +430,25 @@ export function MeuPerfil() {
                 <p className="mt-1 text-base text-muted">
                   O email e o papel sao controlados pela administracao.
                 </p>
+              </div>
+            </div>
+
+            <div className="mb-5 flex items-center gap-4">
+              <Avatar avatarUrl={avatarPreview ?? profile?.avatar_url} name={profile?.full_name} className="h-16 w-16 text-lg" />
+              <div className="grid gap-1">
+                <label className="inline-flex w-fit cursor-pointer items-center rounded-lg border border-primary bg-surface px-4 py-2 text-sm font-bold text-primary transition hover:bg-primary-soft">
+                  {avatarUploading ? "Enviando..." : "Alterar foto"}
+                  <input
+                    accept="image/png,image/jpeg,image/webp"
+                    className="hidden"
+                    disabled={avatarUploading}
+                    onChange={handleAvatarChange}
+                    type="file"
+                  />
+                </label>
+                {avatarError ? (
+                  <p className="text-sm font-semibold text-danger">{avatarError}</p>
+                ) : null}
               </div>
             </div>
 
@@ -555,17 +528,14 @@ export function MeuPerfil() {
               <label className="grid gap-2 text-base font-semibold text-text">
                 Carga horaria semanal
                 <input
-                  className={getInputClassName()}
-                  disabled={submitting}
-                  max={60}
-                  min={1}
-                  onChange={(event) =>
-                    setWeeklyWorkloadHours(event.target.value)
-                  }
-                  placeholder="Horas"
-                  type="number"
-                  value={weeklyWorkloadHours}
+                  className="min-h-11 cursor-not-allowed rounded-lg border border-border bg-primary-soft px-4 text-base font-semibold text-text outline-none"
+                  disabled
+                  readOnly
+                  value={`${totalWeeklyHours}h`}
                 />
+                <p className="text-sm font-normal text-muted">
+                  Somatório automático das horas semanais das bolsas de fomento cadastradas.
+                </p>
               </label>
 
               <label className="grid gap-2 text-base font-semibold text-text md:col-span-2">
@@ -592,61 +562,9 @@ export function MeuPerfil() {
                 />
               </label>
 
-              <label className="grid gap-2 text-base font-semibold text-text">
-                Bolsa de fomento
-                <select
-                  className={getInputClassName()}
-                  disabled={submitting}
-                  onChange={(event) => {
-                    const enabled = event.target.value === "true";
-                    setHasFundingGrant(enabled);
-                    if (!enabled) {
-                      setFundingAgency("");
-                      setFundingAgencyOther("");
-                    }
-                  }}
-                  value={String(hasFundingGrant)}
-                >
-                  <option value="false">Não</option>
-                  <option value="true">Sim</option>
-                </select>
-              </label>
-
-              {hasFundingGrant ? (
-                <label className="grid gap-2 text-base font-semibold text-text">
-                  Agência de fomento
-                  <select
-                    className={getInputClassName()}
-                    disabled={submitting}
-                    onChange={(event) => {
-                      const value = event.target.value as FundingAgency | "";
-                      setFundingAgency(value);
-                      if (value !== "other") setFundingAgencyOther("");
-                    }}
-                    required
-                    value={fundingAgency}
-                  >
-                    <option value="">Selecione</option>
-                    {fundingAgencyOptions.map((option) => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
-                </label>
-              ) : null}
-
-              {hasFundingGrant && fundingAgency === "other" ? (
-                <label className="grid gap-2 text-base font-semibold text-text md:col-span-2">
-                  Qual agência de fomento?
-                  <input
-                    className={getInputClassName()}
-                    disabled={submitting}
-                    maxLength={120}
-                    onChange={(event) => setFundingAgencyOther(event.target.value)}
-                    required
-                    value={fundingAgencyOther}
-                  />
-                </label>
-              ) : null}
+              <div className="md:col-span-2">
+                <FundingGrantsEditor value={fundingGrants} onChange={setFundingGrants} disabled={submitting} />
+              </div>
             </div>
           </Card>
 
@@ -809,9 +727,9 @@ export function MeuPerfil() {
                 <h2 className="text-2xl font-bold text-text">
                   Agenda semanal
                 </h2>
-                {weeklyWorkloadHours ? (
+                {totalWeeklyHours > 0 ? (
                   (() => {
-                    const meta = Number(weeklyWorkloadHours);
+                    const meta = totalWeeklyHours;
                     const faltam = meta - horasAgendadas;
                     return (
                       <p className="mt-1 text-base font-semibold">

@@ -356,6 +356,8 @@ export type Database = {
         Row: {
           cancelled_at: string | null
           cancelled_by: string | null
+          approved_at: string | null
+          approved_by: string | null
           created_at: string
           ends_at: string
           estimated_duration_minutes: number
@@ -365,6 +367,9 @@ export type Database = {
           printer_id: string
           profile_id: string
           project_name: string
+          rejected_at: string | null
+          rejected_by: string | null
+          rejected_reason: string | null
           starts_at: string
           status: Database["public"]["Enums"]["booking_status"]
           updated_at: string
@@ -372,6 +377,8 @@ export type Database = {
         Insert: {
           cancelled_at?: string | null
           cancelled_by?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string
           ends_at: string
           estimated_duration_minutes: number
@@ -381,6 +388,9 @@ export type Database = {
           printer_id: string
           profile_id: string
           project_name: string
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejected_reason?: string | null
           starts_at: string
           status?: Database["public"]["Enums"]["booking_status"]
           updated_at?: string
@@ -388,6 +398,8 @@ export type Database = {
         Update: {
           cancelled_at?: string | null
           cancelled_by?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string
           ends_at?: string
           estimated_duration_minutes?: number
@@ -397,6 +409,9 @@ export type Database = {
           printer_id?: string
           profile_id?: string
           project_name?: string
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejected_reason?: string | null
           starts_at?: string
           status?: Database["public"]["Enums"]["booking_status"]
           updated_at?: string
@@ -498,6 +513,47 @@ export type Database = {
         }
         Relationships: []
       }
+      profile_funding_grants: {
+        Row: {
+          agency: Database["public"]["Enums"]["funding_agency"]
+          agency_other: string | null
+          created_at: string
+          grant_name: string | null
+          id: string
+          monthly_value: number | null
+          profile_id: string
+          weekly_hours: number | null
+        }
+        Insert: {
+          agency: Database["public"]["Enums"]["funding_agency"]
+          agency_other?: string | null
+          created_at?: string
+          grant_name?: string | null
+          id?: string
+          monthly_value?: number | null
+          profile_id: string
+          weekly_hours?: number | null
+        }
+        Update: {
+          agency?: Database["public"]["Enums"]["funding_agency"]
+          agency_other?: string | null
+          created_at?: string
+          grant_name?: string | null
+          id?: string
+          monthly_value?: number | null
+          profile_id?: string
+          weekly_hours?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_funding_grants_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profile_private_data: {
         Row: {
           address_complement: string | null
@@ -595,18 +651,17 @@ export type Database = {
           academic_affiliation:
             | Database["public"]["Enums"]["academic_affiliation"]
             | null
+          avatar_url: string | null
           bio: string | null
           created_at: string
           email: string
           full_name: string
-          funding_agency: Database["public"]["Enums"]["funding_agency"] | null
-          funding_agency_other: string | null
-          has_funding_grant: boolean
           id: string
           is_active: boolean
           lattes_url: string | null
           nationality_country_code: string | null
           phone: string | null
+          requires_booking_approval: boolean
           role: Database["public"]["Enums"]["user_role"]
           updated_at: string
           weekly_workload_hours: number | null
@@ -615,18 +670,17 @@ export type Database = {
           academic_affiliation?:
             | Database["public"]["Enums"]["academic_affiliation"]
             | null
+          avatar_url?: string | null
           bio?: string | null
           created_at?: string
           email: string
           full_name: string
-          funding_agency?: Database["public"]["Enums"]["funding_agency"] | null
-          funding_agency_other?: string | null
-          has_funding_grant?: boolean
           id: string
           is_active?: boolean
           lattes_url?: string | null
           nationality_country_code?: string | null
           phone?: string | null
+          requires_booking_approval?: boolean
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
           weekly_workload_hours?: number | null
@@ -635,18 +689,17 @@ export type Database = {
           academic_affiliation?:
             | Database["public"]["Enums"]["academic_affiliation"]
             | null
+          avatar_url?: string | null
           bio?: string | null
           created_at?: string
           email?: string
           full_name?: string
-          funding_agency?: Database["public"]["Enums"]["funding_agency"] | null
-          funding_agency_other?: string | null
-          has_funding_grant?: boolean
           id?: string
           is_active?: boolean
           lattes_url?: string | null
           nationality_country_code?: string | null
           phone?: string | null
+          requires_booking_approval?: boolean
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
           weekly_workload_hours?: number | null
@@ -690,6 +743,8 @@ export type Database = {
         Returns: {
           cancelled_at: string | null
           cancelled_by: string | null
+          approved_at: string | null
+          approved_by: string | null
           created_at: string
           ends_at: string
           estimated_duration_minutes: number
@@ -699,6 +754,9 @@ export type Database = {
           printer_id: string
           profile_id: string
           project_name: string
+          rejected_at: string | null
+          rejected_by: string | null
+          rejected_reason: string | null
           starts_at: string
           status: Database["public"]["Enums"]["booking_status"]
           updated_at: string
@@ -784,6 +842,8 @@ export type Database = {
         Returns: {
           cancelled_at: string | null
           cancelled_by: string | null
+          approved_at: string | null
+          approved_by: string | null
           created_at: string
           ends_at: string
           estimated_duration_minutes: number
@@ -793,6 +853,9 @@ export type Database = {
           printer_id: string
           profile_id: string
           project_name: string
+          rejected_at: string | null
+          rejected_by: string | null
+          rejected_reason: string | null
           starts_at: string
           status: Database["public"]["Enums"]["booking_status"]
           updated_at: string
@@ -815,9 +878,6 @@ export type Database = {
           p_country?: string
           p_cpf?: string
           p_full_name: string
-          p_funding_agency?: Database["public"]["Enums"]["funding_agency"]
-          p_funding_agency_other?: string
-          p_has_funding_grant?: boolean
           p_lattes_url?: string
           p_nationality_country_code?: string
           p_neighborhood?: string
@@ -832,18 +892,17 @@ export type Database = {
           academic_affiliation:
             | Database["public"]["Enums"]["academic_affiliation"]
             | null
+          avatar_url: string | null
           bio: string | null
           created_at: string
           email: string
           full_name: string
-          funding_agency: Database["public"]["Enums"]["funding_agency"] | null
-          funding_agency_other: string | null
-          has_funding_grant: boolean
           id: string
           is_active: boolean
           lattes_url: string | null
           nationality_country_code: string | null
           phone: string | null
+          requires_booking_approval: boolean
           role: Database["public"]["Enums"]["user_role"]
           updated_at: string
           weekly_workload_hours: number | null
@@ -903,6 +962,25 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      replace_profile_funding_grants: {
+        Args: { p_grants: Json; p_profile_id: string }
+        Returns: {
+          agency: Database["public"]["Enums"]["funding_agency"]
+          agency_other: string | null
+          created_at: string
+          grant_name: string | null
+          id: string
+          monthly_value: number | null
+          profile_id: string
+          weekly_hours: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "profile_funding_grants"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       save_lab_schedule_period: {
         Args: {
           p_ends_at: string
@@ -929,14 +1007,13 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      set_printer_booking_status: {
-        Args: {
-          p_booking_id: string
-          p_status: Database["public"]["Enums"]["booking_status"]
-        }
+      reject_printer_booking: {
+        Args: { p_booking_id: string; p_reason?: string }
         Returns: {
           cancelled_at: string | null
           cancelled_by: string | null
+          approved_at: string | null
+          approved_by: string | null
           created_at: string
           ends_at: string
           estimated_duration_minutes: number
@@ -946,6 +1023,70 @@ export type Database = {
           printer_id: string
           profile_id: string
           project_name: string
+          rejected_at: string | null
+          rejected_by: string | null
+          rejected_reason: string | null
+          starts_at: string
+          status: Database["public"]["Enums"]["booking_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "printer_bookings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_my_avatar_url: {
+        Args: { p_avatar_url: string }
+        Returns: {
+          academic_affiliation:
+            | Database["public"]["Enums"]["academic_affiliation"]
+            | null
+          avatar_url: string | null
+          bio: string | null
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          is_active: boolean
+          lattes_url: string | null
+          nationality_country_code: string | null
+          phone: string | null
+          requires_booking_approval: boolean
+          role: Database["public"]["Enums"]["user_role"]
+          updated_at: string
+          weekly_workload_hours: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_printer_booking_status: {
+        Args: {
+          p_booking_id: string
+          p_status: Database["public"]["Enums"]["booking_status"]
+        }
+        Returns: {
+          cancelled_at: string | null
+          cancelled_by: string | null
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          ends_at: string
+          estimated_duration_minutes: number
+          id: string
+          material_id: string
+          notes: string | null
+          printer_id: string
+          profile_id: string
+          project_name: string
+          rejected_at: string | null
+          rejected_by: string | null
+          rejected_reason: string | null
           starts_at: string
           status: Database["public"]["Enums"]["booking_status"]
           updated_at: string
@@ -1066,9 +1207,6 @@ export type Database = {
           p_country?: string
           p_cpf?: string
           p_full_name: string
-          p_funding_agency?: Database["public"]["Enums"]["funding_agency"]
-          p_funding_agency_other?: string
-          p_has_funding_grant?: boolean
           p_lattes_url?: string
           p_nationality_country_code?: string
           p_neighborhood?: string
@@ -1083,18 +1221,17 @@ export type Database = {
           academic_affiliation:
             | Database["public"]["Enums"]["academic_affiliation"]
             | null
+          avatar_url: string | null
           bio: string | null
           created_at: string
           email: string
           full_name: string
-          funding_agency: Database["public"]["Enums"]["funding_agency"] | null
-          funding_agency_other: string | null
-          has_funding_grant: boolean
           id: string
           is_active: boolean
           lattes_url: string | null
           nationality_country_code: string | null
           phone: string | null
+          requires_booking_approval: boolean
           role: Database["public"]["Enums"]["user_role"]
           updated_at: string
           weekly_workload_hours: number | null
@@ -1119,6 +1256,8 @@ export type Database = {
         Returns: {
           cancelled_at: string | null
           cancelled_by: string | null
+          approved_at: string | null
+          approved_by: string | null
           created_at: string
           ends_at: string
           estimated_duration_minutes: number
@@ -1128,6 +1267,9 @@ export type Database = {
           printer_id: string
           profile_id: string
           project_name: string
+          rejected_at: string | null
+          rejected_by: string | null
+          rejected_reason: string | null
           starts_at: string
           status: Database["public"]["Enums"]["booking_status"]
           updated_at: string
@@ -1159,6 +1301,7 @@ export type Database = {
         | "in_progress"
         | "completed"
         | "cancelled"
+        | "rejected"
         | "failed"
       funding_agency: "cnpq" | "fapesp" | "capes" | "sus" | "fap" | "other"
       invitation_status: "pending" | "accepted" | "expired" | "revoked"

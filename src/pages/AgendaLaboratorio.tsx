@@ -5,6 +5,10 @@ import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
 import {
+  getClasseContador,
+  getCorDia,
+  getDiaAbreviado,
+  isSameSlot,
   type AvailabilitySlot,
   type PeriodoId,
   type WorkMode,
@@ -71,34 +75,6 @@ function getSemanaAtual(operatingWeekdays: number[]) {
 
 function getSlotKey(slot: SlotSelection) {
   return `${slot.weekday}-${slot.periodo}`;
-}
-
-function isSameSlot(a: SlotSelection, b: SlotSelection) {
-  return a.weekday === b.weekday && a.periodo === b.periodo;
-}
-
-function getCorDia(weekday: number) {
-  return weekday % 2 === 1 ? "!bg-sky-50" : "!bg-white";
-}
-
-function getClasseContador(total: number) {
-  if (total === 0) {
-    return "border-border bg-background text-muted hover:bg-surface";
-  }
-
-  if (total <= 5) {
-    return "border-success bg-success-soft text-success-dark hover:bg-surface";
-  }
-
-  if (total <= 8) {
-    return "border-warning-dark bg-warning text-text hover:bg-warning-soft";
-  }
-
-  return "border-danger bg-danger-soft text-danger-dark hover:bg-surface";
-}
-
-function getDiaAbreviado(label: string) {
-  return label.slice(0, 3);
 }
 
 export function AgendaLaboratorio() {

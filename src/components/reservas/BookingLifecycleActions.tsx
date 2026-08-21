@@ -34,7 +34,7 @@ export function BookingLifecycleActions({ bookings, disabled, onChangeStatus }: 
               <Button
                 key={status}
                 className="min-h-8 px-3 py-1.5 text-xs"
-                variant={status === "cancelled" ? "danger" : "secondary"}
+                variant={status === "cancelled" || status === "rejected" ? "danger" : "secondary"}
                 disabled={disabled}
                 onClick={() => onChangeStatus(booking, status)}
               >

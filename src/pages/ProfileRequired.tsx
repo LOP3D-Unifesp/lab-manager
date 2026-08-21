@@ -2,15 +2,13 @@ import { AlertTriangle, LogOut, UserPlus } from "lucide-react";
 import { FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { FundingGrantsEditor } from "../components/profile/FundingGrantsEditor";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
+import { PasswordInput } from "../components/ui/PasswordInput";
 import { useAuth } from "../lib/auth";
 import { createMyProfile, setMyPassword } from "../lib/supabaseRepository";
-import {
-  AcademicAffiliation,
-  fundingAgencyOptions,
-  type FundingAgency,
-} from "../lib/domain";
+import { AcademicAffiliation, getTotalWeeklyGrantHours, type FundingGrant } from "../lib/domain";
 
 const academicAffiliationOptions: Array<{
   value: AcademicAffiliation;
@@ -39,18 +37,34 @@ function normalizeCpf(value: string) {
   return digits.length > 0 ? digits : null;
 }
 
+function extractErrorMessage(error: unknown, fallback: string) {
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === "string"
+      ? error
+      : JSON.stringify(error);
+
+  return message || fallback;
+}
+
 export function ProfileRequired() {
   const { signOut, user, refreshProfile, refreshInstallation } = useAuth();
   const navigate = useNavigate();
-  const [fullName, setFullName] = useState("");
+
+  const [step, setStep] = useState<"account" | "profile">("account");
   const [password, setPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
-  const [academicAffiliation, setAcademicAffiliation] = useState<AcademicAffiliation | "">("");
+  const [accountSubmitting, setAccountSubmitting] = useState(false);
+  const [accountError, setAccountError] = useState("");
+
+  const [fullName, setFullName] = useState("");
+  const [academicAffiliation, setAcademicAffiliation] = useState<
+    AcademicAffiliation | ""
+  >("");
   const [birthDate, setBirthDate] = useState("");
-  const [hasFundingGrant, setHasFundingGrant] = useState(false);
-  const [fundingAgency, setFundingAgency] = useState<FundingAgency | "">("");
-  const [fundingAgencyOther, setFundingAgencyOther] = useState("");
-  const [weeklyWorkloadHours, setWeeklyWorkloadHours] = useState("");
+  const [fundingGrants, setFundingGrants] = useState<FundingGrant[]>([]);
+  const totalWeeklyHours = getTotalWeeklyGrantHours(fundingGrants);
   const [lattesUrl, setLattesUrl] = useState("");
   const [cpf, setCpf] = useState("");
   const [rg, setRg] = useState("");
@@ -68,7 +82,33 @@ export function ProfileRequired() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleAccountSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setAccountError("");
+
+    if (password.length < 8) {
+      setAccountError("A senha deve ter pelo menos 8 caracteres.");
+      return;
+    }
+
+    if (password !== passwordConfirmation) {
+      setAccountError("As senhas nao coincidem.");
+      return;
+    }
+
+    setAccountSubmitting(true);
+
+    try {
+      await setMyPassword(password);
+      setStep("profile");
+    } catch (error) {
+      setAccountError(extractErrorMessage(error, "Nao foi possivel definir a senha."));
+    } finally {
+      setAccountSubmitting(false);
+    }
+  }
+
+  async function handleProfileSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setErrorMessage("");
     setSubmitting(true);
@@ -79,45 +119,19 @@ export function ProfileRequired() {
       return;
     }
 
-    if (password.length < 8) {
-      setErrorMessage("A senha deve ter pelo menos 8 caracteres.");
-      setSubmitting(false);
-      return;
-    }
-
-    if (password !== passwordConfirmation) {
-      setErrorMessage("As senhas nao coincidem.");
-      setSubmitting(false);
-      return;
-    }
-
-    if (hasFundingGrant && !fundingAgency) {
-      setErrorMessage("Informe a agência responsável pela bolsa de fomento.");
-      setSubmitting(false);
-      return;
-    }
-
-    if (hasFundingGrant && fundingAgency === "other" && !fundingAgencyOther.trim()) {
-      setErrorMessage("Informe o nome da outra agência de fomento.");
+    if (fundingGrants.some((grant) => grant.agency === "other" && !grant.agency_other?.trim())) {
+      setErrorMessage("Informe o nome de cada outra agência de fomento adicionada.");
       setSubmitting(false);
       return;
     }
 
     try {
-      await setMyPassword(password);
       await createMyProfile({
         fullName: fullName.trim(),
         academicAffiliation: academicAffiliation || null,
         birthDate: normalizeOptionalText(birthDate),
-        hasFundingGrant,
-        fundingAgency: hasFundingGrant ? fundingAgency || null : null,
-        fundingAgencyOther:
-          hasFundingGrant && fundingAgency === "other"
-            ? normalizeOptionalText(fundingAgencyOther)
-            : null,
-        weeklyWorkloadHours: weeklyWorkloadHours
-          ? Number(weeklyWorkloadHours)
-          : null,
+        fundingGrants,
+        weeklyWorkloadHours: totalWeeklyHours > 0 ? totalWeeklyHours : null,
         lattesUrl: normalizeOptionalText(lattesUrl),
         cpf: normalizeCpf(cpf),
         rg: normalizeOptionalText(rg),
@@ -138,39 +152,31 @@ export function ProfileRequired() {
       await refreshInstallation();
       navigate("/", { replace: true });
     } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : typeof error === "string"
-          ? error
-          : JSON.stringify(error);
-
-      setErrorMessage(message || "Nao foi possivel criar o perfil.");
+      setErrorMessage(extractErrorMessage(error, "Nao foi possivel criar o perfil."));
     } finally {
       setSubmitting(false);
     }
   }
 
-  return (
-    <main className="min-h-screen bg-background px-5 py-8 text-text">
-      <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-3xl flex-col justify-center">
-        <Card>
-          <div className="flex items-start gap-3">
-            <div className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-warning-soft text-warning-dark">
-              <AlertTriangle className="h-5 w-5" aria-hidden="true" />
+  if (step === "account") {
+    return (
+      <main className="min-h-screen bg-background px-5 py-8 text-text">
+        <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-xl flex-col justify-center">
+          <Card>
+            <div className="flex items-start gap-3">
+              <div className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-warning-soft text-warning-dark">
+                <AlertTriangle className="h-5 w-5" aria-hidden="true" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold">Crie sua conta</h1>
+                <p className="mt-2 text-base leading-6 text-muted">
+                  Sua conta está autenticada como {user?.email ?? "este usuário"}.
+                  Defina uma senha para continuar.
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold">Complete seu cadastro</h1>
-              <p className="mt-2 text-base leading-6 text-muted">
-                Sua conta está autenticada, mas não existe um perfil ativo
-                vinculado a {user?.email ?? "este usuário"}. Preencha os dados abaixo
-                para criar seu perfil.
-              </p>
-            </div>
-          </div>
 
-          <form className="mt-6 grid gap-6" onSubmit={handleSubmit}>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <form className="mt-6 grid gap-6" onSubmit={handleAccountSubmit}>
               <label className="grid gap-2 text-base font-semibold">
                 Email
                 <input
@@ -182,6 +188,73 @@ export function ProfileRequired() {
                 />
               </label>
 
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="grid gap-2 text-base font-semibold">
+                  Crie uma senha
+                  <PasswordInput
+                    autoComplete="new-password"
+                    disabled={accountSubmitting}
+                    minLength={8}
+                    onChange={(event) => setPassword(event.target.value)}
+                    required
+                    value={password}
+                  />
+                </label>
+
+                <label className="grid gap-2 text-base font-semibold">
+                  Confirme a senha
+                  <PasswordInput
+                    autoComplete="new-password"
+                    disabled={accountSubmitting}
+                    minLength={8}
+                    onChange={(event) => setPasswordConfirmation(event.target.value)}
+                    required
+                    value={passwordConfirmation}
+                  />
+                </label>
+              </div>
+
+              {accountError ? (
+                <p className="rounded-lg border border-danger bg-danger-soft p-3 text-base font-semibold text-danger">
+                  {accountError}
+                </p>
+              ) : null}
+
+              <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
+                <Button disabled={accountSubmitting} fullWidth type="submit">
+                  {accountSubmitting ? "Salvando..." : "Continuar"}
+                </Button>
+
+                <Button disabled={accountSubmitting} variant="secondary" onClick={signOut}>
+                  <LogOut className="mr-2 h-5 w-5" aria-hidden="true" />
+                  Sair
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </section>
+      </main>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-background px-5 py-8 text-text">
+      <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-3xl flex-col justify-center">
+        <Card>
+          <div className="flex items-start gap-3">
+            <div className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-warning-soft text-warning-dark">
+              <UserPlus className="h-5 w-5" aria-hidden="true" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold">Complete seu perfil</h1>
+              <p className="mt-2 text-base leading-6 text-muted">
+                Falta só preencher seus dados para começar a usar o laboratório.
+              </p>
+            </div>
+          </div>
+
+          <form className="mt-6 grid gap-6" onSubmit={handleProfileSubmit}>
+            <div className="grid gap-4 sm:grid-cols-2">
               <label className="grid gap-2 text-base font-semibold">
                 Nome completo
                 <input
@@ -195,39 +268,7 @@ export function ProfileRequired() {
                   value={fullName}
                 />
               </label>
-            </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="grid gap-2 text-base font-semibold">
-                Crie uma senha
-                <input
-                  autoComplete="new-password"
-                  className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
-                  disabled={submitting}
-                  minLength={8}
-                  onChange={(event) => setPassword(event.target.value)}
-                  required
-                  type="password"
-                  value={password}
-                />
-              </label>
-
-              <label className="grid gap-2 text-base font-semibold">
-                Confirme a senha
-                <input
-                  autoComplete="new-password"
-                  className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
-                  disabled={submitting}
-                  minLength={8}
-                  onChange={(event) => setPasswordConfirmation(event.target.value)}
-                  required
-                  type="password"
-                  value={passwordConfirmation}
-                />
-              </label>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-3">
               <label className="grid gap-2 text-base font-semibold">
                 Vinculação acadêmica
                 <select
@@ -244,7 +285,9 @@ export function ProfileRequired() {
                   ))}
                 </select>
               </label>
+            </div>
 
+            <div className="grid gap-4 sm:grid-cols-2">
               <label className="grid gap-2 text-base font-semibold">
                 Data de nascimento
                 <input
@@ -257,79 +300,22 @@ export function ProfileRequired() {
               </label>
 
               <label className="grid gap-2 text-base font-semibold">
-                Bolsa de fomento
-                <select
-                  className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
-                  disabled={submitting}
-                  onChange={(event) => {
-                    const enabled = event.target.value === "true";
-                    setHasFundingGrant(enabled);
-                    if (!enabled) {
-                      setFundingAgency("");
-                      setFundingAgencyOther("");
-                    }
-                  }}
-                  value={String(hasFundingGrant)}
-                >
-                  <option value="false">Não</option>
-                  <option value="true">Sim</option>
-                </select>
+                Horas semanais
+                <input
+                  className="min-h-11 cursor-not-allowed rounded-lg border border-border bg-primary-soft px-4 text-base font-semibold text-text outline-none"
+                  disabled
+                  readOnly
+                  value={`${totalWeeklyHours}h`}
+                />
+                <p className="text-sm font-normal text-muted">
+                  Somatório automático das horas semanais das bolsas cadastradas abaixo.
+                </p>
               </label>
             </div>
 
-            {hasFundingGrant ? (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="grid gap-2 text-base font-semibold">
-                  Agência de fomento
-                  <select
-                    className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
-                    disabled={submitting}
-                    onChange={(event) => {
-                      const value = event.target.value as FundingAgency | "";
-                      setFundingAgency(value);
-                      if (value !== "other") setFundingAgencyOther("");
-                    }}
-                    required
-                    value={fundingAgency}
-                  >
-                    <option value="">Selecione</option>
-                    {fundingAgencyOptions.map((option) => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
-                </label>
-                {fundingAgency === "other" ? (
-                  <label className="grid gap-2 text-base font-semibold">
-                    Qual agência?
-                    <input
-                      className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
-                      disabled={submitting}
-                      maxLength={120}
-                      onChange={(event) => setFundingAgencyOther(event.target.value)}
-                      required
-                      value={fundingAgencyOther}
-                    />
-                  </label>
-                ) : null}
-              </div>
-            ) : null}
+            <FundingGrantsEditor value={fundingGrants} onChange={setFundingGrants} disabled={submitting} />
 
             <div className="grid gap-4 sm:grid-cols-3">
-              <label className="grid gap-2 text-base font-semibold">
-                Horas semanais
-                <input
-                  className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
-                  disabled={submitting}
-                  inputMode="numeric"
-                  min={1}
-                  max={60}
-                  onChange={(event) => setWeeklyWorkloadHours(event.target.value)}
-                  placeholder="Ex: 20"
-                  type="number"
-                  value={weeklyWorkloadHours}
-                />
-              </label>
-
               <label className="grid gap-2 text-base font-semibold">
                 Lattes URL
                 <input
@@ -353,9 +339,7 @@ export function ProfileRequired() {
                   value={cpf}
                 />
               </label>
-            </div>
 
-            <div className="grid gap-4 sm:grid-cols-3">
               <label className="grid gap-2 text-base font-semibold">
                 RG
                 <input
@@ -366,7 +350,9 @@ export function ProfileRequired() {
                   value={rg}
                 />
               </label>
+            </div>
 
+            <div className="grid gap-4 sm:grid-cols-3">
               <label className="grid gap-2 text-base font-semibold">
                 Telefone
                 <input
@@ -390,9 +376,7 @@ export function ProfileRequired() {
                   value={nationalityCountryCode}
                 />
               </label>
-            </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
               <label className="grid gap-2 text-base font-semibold">
                 CEP
                 <input
@@ -403,7 +387,9 @@ export function ProfileRequired() {
                   value={postalCode}
                 />
               </label>
+            </div>
 
+            <div className="grid gap-4 sm:grid-cols-2">
               <label className="grid gap-2 text-base font-semibold">
                 Rua
                 <input
@@ -414,9 +400,7 @@ export function ProfileRequired() {
                   value={street}
                 />
               </label>
-            </div>
 
-            <div className="grid gap-4 sm:grid-cols-3">
               <label className="grid gap-2 text-base font-semibold">
                 Número
                 <input
@@ -427,7 +411,9 @@ export function ProfileRequired() {
                   value={addressNumber}
                 />
               </label>
+            </div>
 
+            <div className="grid gap-4 sm:grid-cols-3">
               <label className="grid gap-2 text-base font-semibold">
                 Complemento
                 <input
@@ -449,9 +435,7 @@ export function ProfileRequired() {
                   value={neighborhood}
                 />
               </label>
-            </div>
 
-            <div className="grid gap-4 sm:grid-cols-3">
               <label className="grid gap-2 text-base font-semibold">
                 Cidade
                 <input
@@ -462,7 +446,9 @@ export function ProfileRequired() {
                   value={city}
                 />
               </label>
+            </div>
 
+            <div className="grid gap-4 sm:grid-cols-2">
               <label className="grid gap-2 text-base font-semibold">
                 Estado
                 <input
