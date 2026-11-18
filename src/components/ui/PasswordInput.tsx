@@ -7,11 +7,11 @@ export function PasswordInput(props: PasswordInputProps) {
   const [visible, setVisible] = useState(false);
 
   return (
-    <div className="relative">
+    <div className="relative min-w-0">
       <input
         {...props}
         type={visible ? "text" : "password"}
-        className="min-h-11 w-full rounded-lg border border-border bg-background px-4 pr-11 text-base font-normal outline-none transition focus:border-primary"
+        className="min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-4 pr-11 text-base font-normal outline-none transition focus:border-primary"
       />
       <button
         type="button"
