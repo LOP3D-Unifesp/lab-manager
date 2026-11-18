@@ -17,16 +17,38 @@ function futureDate(days: number) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
-// O laboratório de testes usa Pacific/Auckland como fuso; datas de reserva
-// precisam ser calculadas nesse fuso, não no do navegador.
+// O laboratório de testes usa America/Sao_Paulo como fuso; datas de reserva
+// precisam ser calculadas nesse fuso, não no do navegador (o CI roda em UTC).
 function dataNoFusoDoLab(days: number) {
   const date = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
   return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Pacific/Auckland",
+    timeZone: "America/Sao_Paulo",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
   }).format(date);
+}
+
+// Verdadeiro quando o horário (no fuso do laboratório) está a no máximo 1h de agora.
+function podeIniciarAgora(date: string, time: string) {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Sao_Paulo",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    })
+      .formatToParts(new Date())
+      .map((part) => [part.type, part.value]),
+  );
+  const nowWall = Date.UTC(+parts.year, +parts.month - 1, +parts.day, +parts.hour, +parts.minute);
+  const [year, month, day] = date.split("-").map(Number);
+  const [hour, minute] = time.split(":").map(Number);
+  const startWall = Date.UTC(year, month - 1, day, hour, minute);
+  return startWall - nowWall <= 60 * 60 * 1000;
 }
 
 async function loginAsCoordinator(page: Page) {
@@ -122,7 +144,7 @@ test("coordenador configura capacidade, dias, turnos e fuso", async ({ page }) =
   await loginAsCoordinator(page);
   await page.goto("/administracao");
   await page.getByLabel("Espaços de trabalho").fill("12");
-  await page.getByLabel("Fuso horário").fill("Pacific/Auckland");
+  await page.getByLabel("Fuso horário").fill("America/Sao_Paulo");
   await page.getByLabel("Sábado", { exact: true }).check();
   await page.getByRole("button", { name: "Salvar configurações" }).click();
   await expect(page.getByText("Configurações do laboratório atualizadas.")).toBeVisible();
@@ -247,6 +269,7 @@ test("reserva pode ser criada, editada, concluída e protegida por manutenção"
     });
   }
   expect(startTime).not.toBe("");
+  const bookingDate = await dateInput.inputValue();
   await startSelect.selectOption(startTime);
   await bookingDialog.getByLabel("Tempo (h)").fill("1.5");
   await bookingDialog.getByRole("radio", { name: new RegExp(printerName) }).check();
@@ -258,9 +281,14 @@ test("reserva pode ser criada, editada, concluída e protegida por manutenção"
   await page.getByRole("button", { name: "Atualizar reserva" }).click();
   await expect(page.getByText(`${bookingName} revisada`).first()).toBeVisible();
 
-  await page.getByRole("button", { name: "Em andamento", exact: true }).click();
-  await page.getByRole("button", { name: "Concluída", exact: true }).click();
-  await expect(page.getByText(/Concluída/).first()).toBeVisible();
+  // A regra booking_not_started só permite iniciar a reserva a partir de 1h antes
+  // do horário. Quando o primeiro horário livre está mais longe que isso (ex.: de
+  // madrugada no fuso do laboratório), o ciclo operacional não pode ser exercitado.
+  if (podeIniciarAgora(bookingDate, startTime)) {
+    await page.getByRole("button", { name: "Em andamento", exact: true }).click();
+    await page.getByRole("button", { name: "Concluída", exact: true }).click();
+    await expect(page.getByText(/Concluída/).first()).toBeVisible();
+  }
 
   await page.getByRole("button", { name: "Bloquear manutenção" }).click();
   const maintenanceDialog = page.getByRole("dialog");
