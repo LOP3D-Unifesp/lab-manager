@@ -43,6 +43,11 @@ mova-o para o histórico do PR correspondente.
 - **Telas estreitas.** O layout do formulário "Complete seu perfil" foi corrigido, mas outras telas
   não passaram por uma revisão sistemática em celular.
 
+## Funcionalidades previstas e ainda não feitas
+
+- **Busca por habilidade.** Prevista na Fase 3 do MVP. Hoje a lista de Pesquisadores filtra só por
+  vínculo e não mostra as habilidades de cada pessoa.
+
 ## Funcionalidades futuras (pós-MVP)
 
 - Upload de arquivos `.gcode` e `.3mf`.
