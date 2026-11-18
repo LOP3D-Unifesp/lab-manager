@@ -75,13 +75,11 @@ npm run build
 - `npm run db:reset:local`: apaga e recria explicitamente somente o banco local.
 - `npm run db:seed:demo`: adiciona impressora, material, habilidade, disponibilidade, reserva e manutenção fictícios após o wizard.
 - `npm run db:seed:demo:remote`: igual ao seed demo, mas contra o Supabase hospedado (exige `CONFIRM_REMOTE_HOST`).
-- `npm run db:clean:e2e`: remove somente cadastros locais identificados pelos prefixos exclusivos dos testes E2E.
 - `npm run dev`: inicia o frontend e recusa qualquer URL Supabase hospedada.
 - `npm run dev:remote`: inicia deliberadamente contra `.env.remote.local`.
 - `npm test`: executa os testes de unidade do dominio.
 - `npm run test:db`: executa os testes pgTAP no Supabase local.
 - `npm run test:concurrency`: dispara duas reservas simultâneas contra o Supabase local.
-- `npm run test:e2e`: valida no Chromium instalação, catálogos, reservas, manutenção, convites e permissões; limpa os artefatos de teste automaticamente.
 - `npm run db:types`: atualiza os tipos TypeScript a partir do banco local.
 
 - `npm run build`: executa a checagem TypeScript e gera a build de produção.
