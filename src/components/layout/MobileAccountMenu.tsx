@@ -3,31 +3,17 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { useAuth } from "../../lib/auth";
+import { Avatar } from "../ui/Avatar";
 import { StatusBadge } from "../ui/StatusBadge";
 
 function getRoleLabel(role?: string) {
   return role === "coordinator" ? "Coordenador" : "Pesquisador";
 }
 
-function getInitials(name?: string) {
-  const words = name?.trim().split(/\s+/).filter(Boolean) ?? [];
-
-  if (words.length === 0) {
-    return "";
-  }
-
-  return words
-    .slice(0, 2)
-    .map((word) => word[0])
-    .join("")
-    .toUpperCase();
-}
-
 export function MobileAccountMenu() {
   const { profile, signOut } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const initials = getInitials(profile?.full_name);
 
   useEffect(() => {
     if (!isOpen) {
@@ -67,30 +53,20 @@ export function MobileAccountMenu() {
         aria-label="Abrir menu da conta"
         onClick={() => setIsOpen((current) => !current)}
         className={[
-          "inline-flex h-11 w-11 items-center justify-center rounded-full border text-sm font-bold transition",
+          "inline-flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border text-sm font-bold transition",
           isOpen
             ? "border-primary bg-primary text-white shadow-soft"
             : "border-border bg-primary-soft text-primary-dark hover:border-primary",
         ].join(" ")}
       >
-        {initials ? (
-          <span aria-hidden="true">{initials}</span>
-        ) : (
-          <User className="h-5 w-5" aria-hidden="true" />
-        )}
+        <Avatar avatarUrl={profile.avatar_url} name={profile.full_name} className="h-11 w-11" />
       </button>
 
       {isOpen ? (
         <div className="absolute right-0 top-[3.25rem] z-50 w-[min(18rem,calc(100vw-2rem))] overflow-hidden rounded-lg border border-border bg-surface shadow-soft">
           <div className="border-b border-border p-3">
             <div className="flex min-w-0 items-start gap-3">
-              <div className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-soft text-sm font-bold text-primary-dark">
-                {initials ? (
-                  <span aria-hidden="true">{initials}</span>
-                ) : (
-                  <User className="h-5 w-5" aria-hidden="true" />
-                )}
-              </div>
+              <Avatar avatarUrl={profile.avatar_url} name={profile.full_name} className="h-10 w-10" />
               <div className="min-w-0">
                 <p className="truncate text-base font-bold leading-tight text-text">
                   {profile.full_name}

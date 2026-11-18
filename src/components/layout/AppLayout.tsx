@@ -4,13 +4,21 @@ import { Link } from "react-router-dom";
 import { MobileNavigation } from "./MobileNavigation";
 import { Sidebar } from "./Sidebar";
 import { MobileAccountMenu } from "./MobileAccountMenu";
+import { EnvironmentBadge } from "./EnvironmentBadge";
+import { NotificationBell } from "./NotificationBell";
+import { BookingsAlertProvider } from "../../lib/pendingBookingsAlert";
+import { useAuth } from "../../lib/auth";
 
 type AppLayoutProps = {
   children: ReactNode;
 };
 
 export function AppLayout({ children }: AppLayoutProps) {
+  const { labSettings } = useAuth();
+  const acronym = labSettings?.acronym ?? "Lab";
+
   return (
+    <BookingsAlertProvider>
     <div className="min-h-screen bg-background text-text">
       <Sidebar />
 
@@ -22,14 +30,18 @@ export function AppLayout({ children }: AppLayoutProps) {
               aria-label="Ir para o início"
               className="min-w-0 rounded-md transition hover:text-primary focus-visible:outline-offset-4"
             >
-              <p className="text-sm font-bold leading-none text-primary">
-                LO&P3D
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-bold leading-none text-primary">{acronym}</p>
+                <EnvironmentBadge />
+              </div>
               <h1 className="mt-1 truncate text-[20px] font-bold leading-none text-text">
                 Lab Manager
               </h1>
             </Link>
-            <MobileAccountMenu />
+            <div className="flex items-center gap-2">
+              <NotificationBell />
+              <MobileAccountMenu />
+            </div>
           </div>
         </header>
 
@@ -40,5 +52,6 @@ export function AppLayout({ children }: AppLayoutProps) {
         <MobileNavigation />
       </div>
     </div>
+    </BookingsAlertProvider>
   );
 }

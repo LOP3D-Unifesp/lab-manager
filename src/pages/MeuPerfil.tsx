@@ -1,22 +1,35 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import { CalendarDays, Save, UserRoundCog } from "lucide-react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
+import { CalendarDays, Save, UserRoundCog, Utensils } from "lucide-react";
 
+import { WorkloadField } from "../components/profile/WorkloadField";
+import { Avatar } from "../components/ui/Avatar";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
 import { StatusBadge } from "../components/ui/StatusBadge";
 import { useAuth } from "../lib/auth";
 import {
-  periodos,
+  getDiaAbreviado,
+  getDuracaoPeriodoEmHoras,
+  getRoleLabel,
+  getSlotColorClassName,
+  getEffectiveWeeklyHours,
+  getTotalWeeklyGrantHours,
+  getWorkModeLabel,
+  normalizarCpf,
+  normalizarTextoOpcional,
+  validarLattes,
   type AcademicAffiliation,
+  type FundingGrant,
   type PeriodoId,
-  type ProfileRole,
   type WorkMode,
 } from "../lib/domain";
+import { useLabSchedule } from "../lib/labSchedule";
 import {
   listAvailability,
   saveProfileAvailability,
   updateMyProfile,
+  uploadMyAvatar,
 } from "../lib/supabaseRepository";
 
 const academicAffiliationOptions: Array<{
@@ -36,96 +49,40 @@ const academicAffiliationOptions: Array<{
   { value: "other", label: "Outro" },
 ];
 
-const diasDaSemana = [
+const allWeekdays = [
+  { weekday: 0, label: "Domingo" },
   { weekday: 1, label: "Segunda" },
-  { weekday: 2, label: "Terca" },
+  { weekday: 2, label: "Terça" },
   { weekday: 3, label: "Quarta" },
   { weekday: 4, label: "Quinta" },
   { weekday: 5, label: "Sexta" },
+  { weekday: 6, label: "Sábado" },
 ];
 
 type AgendaState = Record<string, WorkMode>;
 
-function getRoleLabel(role: ProfileRole) {
-  return role === "coordinator" ? "Coordenador" : "Pesquisador";
-}
-
 function getSlotKey(weekday: number, periodo: PeriodoId) {
-  return `${weekday}-${periodo}`;
-}
-
-function normalizarTextoOpcional(value: string) {
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
-}
-
-function normalizarCpf(value: string) {
-  const digits = value.replace(/\D/g, "");
-  return digits.length > 0 ? digits : null;
-}
-
-function validarLattes(value: string | null) {
-  if (!value) {
-    return true;
-  }
-
-  try {
-    const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
-  } catch {
-    return false;
-  }
+  return `${weekday}|${periodo}`;
 }
 
 function getInputClassName() {
   return "min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary";
 }
 
-function getWorkModeLabel(mode: WorkMode | undefined) {
-  if (mode === "onsite") return "Presencial";
-  if (mode === "remote") return "Home office";
-  if (mode === "aula") return "Aula";
-  return "-";
-}
-
-function getSlotColorClassName(mode: WorkMode | undefined) {
-  if (mode === "onsite") {
-    return "border-success bg-success-soft text-success-dark";
-  }
-
-  if (mode === "remote") {
-    return "border-primary bg-primary-soft text-primary";
-  }
-
-  if (mode === "aula") {
-    return "border-warning bg-warning-soft text-warning-dark";
-  }
-
-  return "border-border bg-background text-muted hover:border-primary hover:text-primary";
-}
-
-function getDiaAbreviado(label: string) {
-  return label.slice(0, 3);
-}
-
-function getDuracaoPeriodoEmHoras(periodoId: PeriodoId) {
-  const periodo = periodos.find((item) => item.id === periodoId);
-  if (!periodo) return 0;
-
-  const [startH, startM] = periodo.starts_at.split(":").map(Number);
-  const [endH, endM] = periodo.ends_at.split(":").map(Number);
-  return (endH * 60 + endM - startH * 60 - startM) / 60;
-}
-
 export function MeuPerfil() {
   const { profile, refreshProfile } = useAuth();
+  const { periodos, timeline, operatingWeekdays } = useLabSchedule();
+  const diasDaSemana = allWeekdays.filter((day) => operatingWeekdays.includes(day.weekday));
   const [fullName, setFullName] = useState("");
   const [academicAffiliation, setAcademicAffiliation] = useState<
     AcademicAffiliation | ""
   >("");
   const [birthDate, setBirthDate] = useState("");
-  const [isScholarshipHolder, setIsScholarshipHolder] = useState(false);
-  const [weeklyWorkloadHours, setWeeklyWorkloadHours] = useState("");
+  const [fundingGrants, setFundingGrants] = useState<FundingGrant[]>([]);
+  const [isScholarshipHolder, setIsScholarshipHolder] = useState(true);
+  const [manualWorkload, setManualWorkload] = useState("");
+  const totalGrantHours = getTotalWeeklyGrantHours(fundingGrants);
+  const totalWeeklyHours = getEffectiveWeeklyHours(isScholarshipHolder, fundingGrants, manualWorkload);
   const [lattesUrl, setLattesUrl] = useState("");
   const [cpf, setCpf] = useState("");
   const [rg, setRg] = useState("");
@@ -140,9 +97,12 @@ export function MeuPerfil() {
   const [nationalityCountryCode, setNationalityCountryCode] = useState("");
   const [phone, setPhone] = useState("");
   const [bio, setBio] = useState("");
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarError, setAvatarError] = useState("");
   const [agenda, setAgenda] = useState<AgendaState>({});
   const [mobileAgendaWeekday, setMobileAgendaWeekday] = useState(
-    diasDaSemana[0].weekday,
+    1,
   );
   const [allSlots, setAllSlots] = useState<Array<{ profile_id: string; weekday: number; periodo: PeriodoId; work_mode: WorkMode }>>([]);
   const [errorMessage, setErrorMessage] = useState("");
@@ -158,8 +118,8 @@ export function MeuPerfil() {
     };
 
     Object.entries(agenda).forEach(([key, mode]) => {
-      const periodoId = key.split("-")[1] as PeriodoId;
-      const horas = getDuracaoPeriodoEmHoras(periodoId);
+      const periodoId = key.split("|")[1] as PeriodoId;
+      const horas = getDuracaoPeriodoEmHoras(periodoId, periodos);
 
       if (mode === "onsite") {
         totais.presencial += horas;
@@ -177,13 +137,19 @@ export function MeuPerfil() {
     });
 
     return totais;
-  }, [agenda]);
+  }, [agenda, periodos]);
 
   const horasAgendadas = resumoHorasAgenda.totalAgendado;
 
   const mobileAgendaDay =
     diasDaSemana.find((dia) => dia.weekday === mobileAgendaWeekday) ??
-    diasDaSemana[0];
+    diasDaSemana[0] ?? allWeekdays[1];
+
+  useEffect(() => {
+    if (diasDaSemana.length > 0 && !operatingWeekdays.includes(mobileAgendaWeekday)) {
+      setMobileAgendaWeekday(diasDaSemana[0].weekday);
+    }
+  }, [diasDaSemana, mobileAgendaWeekday, operatingWeekdays]);
 
   useEffect(() => {
     if (!profile) {
@@ -193,8 +159,12 @@ export function MeuPerfil() {
     setFullName(profile.full_name);
     setAcademicAffiliation(profile.academic_affiliation ?? "");
     setBirthDate(profile.birth_date ?? "");
-    setIsScholarshipHolder(profile.is_scholarship_holder);
-    setWeeklyWorkloadHours(profile.weekly_workload_hours?.toString() ?? "");
+    setFundingGrants(profile.funding_grants);
+    const holder = profile.funding_grants.length > 0 || profile.weekly_workload_hours === null;
+    setIsScholarshipHolder(holder);
+    setManualWorkload(
+      !holder && profile.weekly_workload_hours !== null ? String(profile.weekly_workload_hours) : "",
+    );
     setLattesUrl(profile.lattes_url ?? "");
     setCpf(profile.cpf ?? "");
     setRg(profile.rg ?? "");
@@ -302,6 +272,27 @@ export function MeuPerfil() {
     });
   }
 
+  async function handleAvatarChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) {
+      return;
+    }
+
+    setAvatarError("");
+    setAvatarPreview(URL.createObjectURL(file));
+    setAvatarUploading(true);
+
+    try {
+      await uploadMyAvatar(file);
+      await refreshProfile();
+    } catch (error) {
+      setAvatarError(error instanceof Error ? error.message : "Nao foi possivel enviar a foto.");
+    } finally {
+      setAvatarUploading(false);
+    }
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -318,9 +309,7 @@ export function MeuPerfil() {
     const nationalityNormalizada =
       normalizarTextoOpcional(nationalityCountryCode)?.toUpperCase() ?? null;
     const bioNormalizada = normalizarTextoOpcional(bio);
-    const cargaHoraria = weeklyWorkloadHours
-      ? Number(weeklyWorkloadHours)
-      : null;
+    const cargaHoraria = totalWeeklyHours > 0 ? totalWeeklyHours : null;
 
     setErrorMessage("");
     setSuccessMessage("");
@@ -373,14 +362,22 @@ export function MeuPerfil() {
       return;
     }
 
+    if (
+      isScholarshipHolder &&
+      fundingGrants.some((grant) => grant.agency === "other" && !grant.agency_other?.trim())
+    ) {
+      setErrorMessage("Informe o nome de cada outra agência de fomento adicionada.");
+      return;
+    }
+
     setSubmitting(true);
 
     try {
-      await updateMyProfile(profile.id, {
+      await updateMyProfile({
         fullName: nomeNormalizado,
         academicAffiliation: academicAffiliation || null,
         birthDate: birthDateNormalizada,
-        isScholarshipHolder,
+        fundingGrants: isScholarshipHolder ? fundingGrants : [],
         weeklyWorkloadHours: cargaHoraria,
         lattesUrl: lattesNormalizado,
         cpf: cpfNormalizado,
@@ -399,8 +396,11 @@ export function MeuPerfil() {
       });
       await saveProfileAvailability(
         profile.id,
-        Object.entries(agenda).map(([key, workMode]) => {
-          const [weekday, periodo] = key.split("-");
+        Object.entries(agenda).filter(([key]) => {
+          const [weekday, periodo] = key.split("|");
+          return operatingWeekdays.includes(Number(weekday)) && periodos.some((item) => item.id === periodo);
+        }).map(([key, workMode]) => {
+          const [weekday, periodo] = key.split("|");
           return {
             weekday: Number(weekday),
             periodo: periodo as PeriodoId,
@@ -442,6 +442,25 @@ export function MeuPerfil() {
                 <p className="mt-1 text-base text-muted">
                   O email e o papel sao controlados pela administracao.
                 </p>
+              </div>
+            </div>
+
+            <div className="mb-5 flex items-center gap-4">
+              <Avatar avatarUrl={avatarPreview ?? profile?.avatar_url} name={profile?.full_name} className="h-16 w-16 text-lg" />
+              <div className="grid gap-1">
+                <label className="inline-flex w-fit cursor-pointer items-center rounded-lg border border-primary bg-surface px-4 py-2 text-sm font-bold text-primary transition hover:bg-primary-soft">
+                  {avatarUploading ? "Enviando..." : "Alterar foto"}
+                  <input
+                    accept="image/png,image/jpeg,image/webp"
+                    className="hidden"
+                    disabled={avatarUploading}
+                    onChange={handleAvatarChange}
+                    type="file"
+                  />
+                </label>
+                {avatarError ? (
+                  <p className="text-sm font-semibold text-danger">{avatarError}</p>
+                ) : null}
               </div>
             </div>
 
@@ -518,21 +537,20 @@ export function MeuPerfil() {
                 />
               </label>
 
-              <label className="grid gap-2 text-base font-semibold text-text">
-                Carga horaria semanal
-                <input
-                  className={getInputClassName()}
-                  disabled={submitting}
-                  max={60}
-                  min={1}
-                  onChange={(event) =>
-                    setWeeklyWorkloadHours(event.target.value)
-                  }
-                  placeholder="Horas"
-                  type="number"
-                  value={weeklyWorkloadHours}
-                />
-              </label>
+              <WorkloadField
+                disabled={submitting}
+                grants={fundingGrants}
+                isScholarshipHolder={isScholarshipHolder}
+                manualHours={manualWorkload}
+                onGrantsChange={setFundingGrants}
+                onIsScholarshipHolderChange={(value) => {
+                  setIsScholarshipHolder(value);
+                  setSuccessMessage("");
+                  setErrorMessage("");
+                }}
+                onManualHoursChange={setManualWorkload}
+                totalGrantHours={totalGrantHours}
+              />
 
               <label className="grid gap-2 text-base font-semibold text-text md:col-span-2">
                 Link do Lattes
@@ -558,18 +576,6 @@ export function MeuPerfil() {
                 />
               </label>
 
-              <label className="flex min-h-11 items-center gap-3 rounded-lg border border-border bg-background px-4 text-base font-semibold text-text md:col-span-2">
-                <input
-                  checked={isScholarshipHolder}
-                  className="h-5 w-5 accent-primary"
-                  disabled={submitting}
-                  onChange={(event) =>
-                    setIsScholarshipHolder(event.target.checked)
-                  }
-                  type="checkbox"
-                />
-                Bolsista
-              </label>
             </div>
           </Card>
 
@@ -732,9 +738,9 @@ export function MeuPerfil() {
                 <h2 className="text-2xl font-bold text-text">
                   Agenda semanal
                 </h2>
-                {weeklyWorkloadHours ? (
+                {totalWeeklyHours > 0 ? (
                   (() => {
-                    const meta = Number(weeklyWorkloadHours);
+                    const meta = totalWeeklyHours;
                     const faltam = meta - horasAgendadas;
                     return (
                       <p className="mt-1 text-base font-semibold">
@@ -807,7 +813,21 @@ export function MeuPerfil() {
             </div>
 
             <div className="grid gap-3">
-              {periodos.map((periodo) => {
+              {timeline.map((item) => {
+                if (item.kind === "break") {
+                  return (
+                    <div
+                      aria-label={`${item.label}: ${item.horario}`}
+                      className="flex items-center justify-center gap-2 rounded-lg border border-warning bg-warning-soft px-4 py-3 font-semibold text-warning-dark"
+                      key={item.id}
+                      role="separator"
+                    >
+                      <Utensils aria-hidden="true" className="h-4 w-4" />
+                      <span>{item.label} · {item.horario}</span>
+                    </div>
+                  );
+                }
+                const periodo = item;
                 const key = getSlotKey(mobileAgendaDay.weekday, periodo.id);
                 const mode = agenda[key];
                 const presencialCount = countPresencial(
@@ -832,9 +852,6 @@ export function MeuPerfil() {
                     <span className="min-w-0">
                       <span className="block text-base font-bold text-text">
                         {periodo.label}
-                      </span>
-                      <span className="mt-1 block text-sm font-semibold opacity-75">
-                        {periodo.horario}
                       </span>
                     </span>
                     <span className="text-right">
@@ -883,8 +900,25 @@ export function MeuPerfil() {
                 </tr>
               </thead>
               <tbody>
-                {periodos.map((periodo) => (
-                  <tr key={periodo.id}>
+                {timeline.map((item) => {
+                  if (item.kind === "break") {
+                    return (
+                      <tr key={item.id}>
+                        <td className="py-2" colSpan={diasDaSemana.length + 1}>
+                          <div
+                            aria-label={`${item.label}: ${item.horario}`}
+                            className="flex items-center justify-center gap-2 rounded-lg border border-warning bg-warning-soft px-4 py-2 text-sm font-semibold text-warning-dark"
+                            role="separator"
+                          >
+                            <Utensils aria-hidden="true" className="h-4 w-4" />
+                            <span>{item.label} · {item.horario}</span>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  }
+                  const periodo = item;
+                  return <tr key={periodo.id}>
                     <td className="pr-2 py-1">
                       <button
                         className="w-full rounded-lg px-2 py-2 text-left text-sm font-bold text-text transition hover:bg-background disabled:pointer-events-none"
@@ -894,7 +928,6 @@ export function MeuPerfil() {
                         type="button"
                       >
                         <span className="block">{periodo.label}</span>
-                        <span className="block text-xs font-normal text-muted">{periodo.horario}</span>
                       </button>
                     </td>
                     {diasDaSemana.map((dia) => {
@@ -920,8 +953,8 @@ export function MeuPerfil() {
                         </td>
                       );
                     })}
-                  </tr>
-                ))}
+                  </tr>;
+                })}
               </tbody>
             </table>
           </div>

@@ -25,7 +25,7 @@ export function StatusBadge({
   return (
     <span
       className={[
-        "inline-flex min-h-8 items-center rounded-full border px-3 py-1 text-base font-semibold leading-none",
+        "inline-flex min-h-8 shrink-0 items-center whitespace-nowrap rounded-full border px-3 py-1 text-base font-semibold leading-none",
         variantClasses[variant],
       ].join(" ")}
     >

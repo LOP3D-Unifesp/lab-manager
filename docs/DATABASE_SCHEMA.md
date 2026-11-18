@@ -19,6 +19,14 @@ O schema cobre:
 
 O Supabase Auth sera a fonte de autenticacao. O PostgreSQL sera a fonte dos dados de dominio da aplicacao.
 
+Status do MVP implementado:
+
+- `profiles` contem somente dados compartilhados no diretorio interno;
+- CPF, RG, nascimento e endereco ficam isolados em `profile_private_data`;
+- convites usam Supabase Auth e `invitations`; o token e gerenciado pelo Auth e nao e persistido no schema publico;
+- `languages` e `profile_languages` sao evolucao pos-MVP e ainda nao existem nas migrations;
+- RLS, operacao e recuperacao estao detalhadas em `DATABASE_SECURITY.md`.
+
 Convencoes gerais:
 
 - Chaves primarias usam `uuid`.
@@ -56,6 +64,17 @@ Vinculo academico ou institucional do pesquisador. Nao altera permissoes.
 Observacao:
 
 - `intern` representa Estagiario.
+
+### `funding_agency`
+
+Agencia responsavel pela bolsa de fomento.
+
+- `cnpq`
+- `fapesp`
+- `capes`
+- `sus`
+- `fap`
+- `other`
 
 ### `invitation_status`
 
@@ -117,6 +136,9 @@ Campos sugeridos:
 | `email` | `text` | Sim | Email principal do usuario. |
 | `role` | `user_role` | Sim | Papel de acesso no sistema. |
 | `academic_affiliation` | `academic_affiliation` | Nao | Vinculo academico ou institucional. |
+| `has_funding_grant` | `boolean` | Sim | Indica se a pessoa possui bolsa de fomento. |
+| `funding_agency` | `funding_agency` | Quando houver bolsa | Agencia de fomento: CNPq, FAPESP, CAPES, SUS, FAP ou outra. |
+| `funding_agency_other` | `text` | Para agencia `other` | Nome da agencia quando a opcao selecionada for outra. |
 | `nationality_country_code` | `char(2)` | Nao | Codigo ISO 3166-1 alpha-2 da nacionalidade ou pais principal do pesquisador. Exemplos: `CL`, `BR`, `DE`. |
 | `phone` | `text` | Nao | Telefone de contato. |
 | `bio` | `text` | Nao | Resumo do pesquisador. |
@@ -138,6 +160,7 @@ Campos obrigatorios:
 - `full_name`
 - `email`
 - `role`
+- `has_funding_grant`
 - `is_active`
 - `created_at`
 - `updated_at`
@@ -145,6 +168,8 @@ Campos obrigatorios:
 Campos opcionais:
 
 - `academic_affiliation`
+- `funding_agency`, quando nao houver bolsa de fomento
+- `funding_agency_other`, exceto quando a agencia for `other`
 - `nationality_country_code`
 - `phone`
 - `bio`
@@ -162,26 +187,91 @@ Regras de integridade:
 - `profiles.id` deve ser igual ao `auth.users.id`.
 - `email` deve ser unico.
 - `role` deve ser `coordinator` ou `researcher`.
+- Quando `has_funding_grant` for verdadeiro, `funding_agency` e obrigatoria.
+- Quando `funding_agency` for `other`, `funding_agency_other` e obrigatorio; nos demais casos ele deve ficar vazio.
 - `nationality_country_code` deve usar dois caracteres no padrao ISO 3166-1 alpha-2.
 - `nationality_country_code` representa nacionalidade ou pais principal do pesquisador, nao residencia atual nem instituicao de vinculo.
 - Pesquisadores nao podem alterar o proprio `role`.
 - Perfis inativos nao devem ser tratados como pesquisadores disponiveis nas consultas operacionais.
 
+### 3.1.1 `profile_private_data`
+
+Finalidade: isolar dados pessoais que nao pertencem ao diretorio compartilhado do laboratorio.
+
+Campos:
+
+| Campo | Tipo PostgreSQL | Obrigatorio | Descricao |
+| --- | --- | --- | --- |
+| `profile_id` | `uuid` | Sim | Perfil dono dos dados e chave primaria. |
+| `birth_date` | `date` | Nao | Data de nascimento. |
+| `cpf` | `text` | Nao | CPF normalizado com 11 digitos. |
+| `rg` | `text` | Nao | Documento de identidade. |
+| `postal_code` | `text` | Nao | CEP ou codigo postal. |
+| `street` | `text` | Nao | Logradouro. |
+| `address_number` | `text` | Nao | Numero. |
+| `address_complement` | `text` | Nao | Complemento. |
+| `neighborhood` | `text` | Nao | Bairro. |
+| `city` | `text` | Nao | Cidade de residencia. |
+| `state` | `text` | Nao | Estado de residencia. |
+| `country` | `text` | Nao | Pais de residencia. |
+| `created_at` | `timestamptz` | Sim | Data de criacao. |
+| `updated_at` | `timestamptz` | Sim | Data da ultima atualizacao. |
+
+Somente o proprio usuario e coordenadores podem ler esses dados. Escritas do usuario passam
+pelas funcoes transacionais de criacao e atualizacao do perfil; nao ha escrita direta pelo frontend.
+
+### 3.1.2 `lab_settings`
+
+Finalidade: representar a configuracao unica do laboratorio administrado por uma instalacao.
+Nao existe `lab_id` nas demais tabelas porque multitenancy fica fora do MVP.
+
+| Campo | Tipo | Obrigatorio | Descricao |
+|---|---|---:|---|
+| `id` | `boolean` | Sim | Chave singleton, sempre `true`. |
+| `name` | `text` | Apos setup | Nome institucional do laboratorio. |
+| `acronym` | `text` | Apos setup | Sigla exibida na navegacao. |
+| `timezone` | `text` | Sim | Fuso IANA usado pela instalacao. |
+| `workspace_capacity` | `integer` | Sim | Limite de pessoas presenciais por turno. |
+| `operating_weekdays` | `integer[]` | Sim | Dias da semana em que a agenda recorrente fica ativa. |
+| `lunch_starts_at` / `lunch_ends_at` | `time` | Sim | Intervalo configurável de almoço. |
+| `dinner_starts_at` / `dinner_ends_at` | `time` | Sim | Intervalo configurável de jantar. |
+| `privacy_contact_email` | `text` | Apos setup | Contato institucional exibido no convite e no aviso publico de privacidade. |
+| `setup_completed_at` | `timestamptz` | Nao | Preenchido somente pela conclusao atomica do wizard. |
+| `created_by` | `uuid` | Nao | Primeiro coordenador que concluiu o setup. |
+| `updated_by` | `uuid` | Nao | Ultimo coordenador que alterou a configuracao. |
+| `created_at` | `timestamptz` | Sim | Data de criacao da linha singleton. |
+| `updated_at` | `timestamptz` | Sim | Data da ultima atualizacao. |
+
+Usuarios ativos podem consultar a configuracao. Somente coordenadores podem conclui-la ou altera-la,
+sempre pelas RPCs protegidas.
+
+### 3.1.3 `lab_schedule_periods`
+
+Catálogo ordenado dos turnos recorrentes do laboratório. Cada disponibilidade referencia um
+identificador estável; alterações de início e fim são propagadas sem perder as seleções dos
+pesquisadores. Turnos inativos permanecem preservados e não aparecem na agenda. Turnos ativos
+não podem se sobrepor aos intervalos de almoço e jantar configurados em `lab_settings`.
+
 ### 3.2 `invitations`
 
-Finalidade: registrar convites criados por coordenadores para entrada de pesquisadores no sistema.
+Finalidade: registrar convites criados por coordenadores para entrada de pesquisadores ou novos
+coordenadores no sistema.
 
 Campos sugeridos:
 
 | Campo | Tipo PostgreSQL | Obrigatorio | Descricao |
 | --- | --- | --- | --- |
 | `id` | `uuid` | Sim | Identificador do convite. |
-| `email` | `text` | Sim | Email da pessoa convidada. |
-| `token_hash` | `text` | Sim | Hash do token do convite. O token puro nunca deve ser salvo no banco. |
+| `email` | `text` | Enquanto pendente | Email da pessoa convidada; removido ao aceitar, expirar ou revogar. |
+| `role` | `user_role` | Sim | Papel que sera aplicado ao perfil no aceite. |
 | `status` | `invitation_status` | Sim | Status do convite. |
 | `invited_by` | `uuid` | Sim | Coordenador que criou o convite. |
+| `auth_user_id` | `uuid` | Nao | Usuario criado pelo Supabase Auth ao enviar o convite. |
 | `accepted_by` | `uuid` | Nao | Perfil criado ao aceitar o convite. |
 | `expires_at` | `timestamptz` | Sim | Data obrigatoria de expiracao. |
+| `opened_at` | `timestamptz` | Nao | Momento da confirmacao explicita do link, antes do cadastro. |
+| `last_sent_at` | `timestamptz` | Sim | Ultimo envio, usado no prazo e no limite de reenvio. |
+| `send_count` | `integer` | Sim | Quantidade de envios do convite. |
 | `accepted_at` | `timestamptz` | Nao | Data de aceite. |
 | `created_at` | `timestamptz` | Sim | Data de criacao. |
 | `updated_at` | `timestamptz` | Sim | Data da ultima atualizacao. |
@@ -198,11 +288,12 @@ Chaves estrangeiras:
 Campos obrigatorios:
 
 - `id`
-- `email`
-- `token_hash`
+- `role`
 - `status`
 - `invited_by`
 - `expires_at`
+- `last_sent_at`
+- `send_count`
 - `created_at`
 - `updated_at`
 
@@ -210,10 +301,12 @@ Campos opcionais:
 
 - `accepted_by`
 - `accepted_at`
+- `auth_user_id`
+- `email` depois que o convite deixa de estar pendente
+- `opened_at`
 
 Indices recomendados:
 
-- indice unico em `token_hash`;
 - indice em `email`;
 - indice composto em `email, status`;
 - indice em `expires_at`;
@@ -221,22 +314,27 @@ Indices recomendados:
 
 Regras de integridade:
 
-- O token puro nunca deve ser persistido.
+- O token e seu hash sao gerenciados internamente pelo Supabase Auth e nao sao persistidos nas tabelas publicas.
 - O sistema nao tera cadastro publico aberto.
 - O coordenador cria um convite para um email especifico.
-- O sistema gera um link de convite com token, mas salva apenas `token_hash`.
-- O pesquisador acessa o link de convite antes de criar conta.
-- Antes de permitir cadastro, o sistema valida `token_hash`, `status`, `expires_at` e o email associado ao convite.
+- A Edge Function solicita ao Supabase Auth o link de convite e salva apenas o estado de auditoria.
+- O Auth provisiona uma identidade pendente, mas nenhum perfil e criado antes do aceite.
+- Abrir a pagina intermediaria nao confirma o token; `verifyOtp` roda somente apos o botao de aceite.
+- Antes de permitir o perfil, o sistema valida `status`, `expires_at`, `auth_user_id` e o email obtido do JWT.
 - Se o convite for valido, o pesquisador pode criar sua conta no Supabase Auth.
 - Apos a conta ser criada e autenticada, o sistema cria o `profile` vinculado a `auth.users.id`.
 - O `profile` deve herdar ou validar o email do convite.
 - Sem convite valido, o sistema nao deve permitir criacao de perfil.
 - Usuarios autenticados sem `profile` valido nao devem acessar areas internas do sistema.
-- Todo convite deve ter expiracao obrigatoria em `expires_at`.
+- Todo convite expira 72 horas depois do ultimo envio.
 - Apenas convites `pending` e nao expirados podem ser aceitos.
 - Convites aceitos nao podem ser reutilizados.
 - Nao deve existir mais de um convite `pending` ativo para o mesmo email.
 - `accepted_by` e `accepted_at` devem ser preenchidos quando o convite for aceito.
+- Convites aceitos removem o email duplicado e usam `accepted_by` para identificacao historica.
+- Convites expirados ou revogados removem o email e a identidade Auth incompleta; a limpeza horaria
+  e idempotente e repete exclusoes que falharam.
+- Reenvio so ocorre depois de cinco minutos, invalida o token anterior e incrementa `send_count`.
 - Apenas coordenadores podem criar, revogar ou gerenciar convites.
 
 ### 3.3 `skills`
@@ -332,7 +430,7 @@ Regras de integridade:
 
 Finalidade: armazenar o catalogo de idiomas que pesquisadores podem associar aos seus perfis. Idiomas nao devem ser tratados como `skills`, porque representam capacidade de comunicacao, nao habilidade tecnica.
 
-Idiomas fazem parte do schema inicial do MVP para suportar pesquisadores internacionais. A interface inicial pode ser simples, mas o modelo de dados ja deve permitir associar idiomas falados aos perfis.
+Idiomas sao uma evolucao pos-MVP para suportar pesquisadores internacionais. Esta secao preserva a proposta conceitual, mas as tabelas ainda nao existem nas migrations.
 
 Campos sugeridos:
 
@@ -382,7 +480,7 @@ Regras de integridade:
 
 Finalidade: representar a relacao muitos-para-muitos entre perfis e idiomas falados.
 
-Esta tabela faz parte do schema inicial do MVP para que perfis de pesquisadores internacionais possam registrar idiomas desde a primeira versao do banco, mesmo que a interface de gerenciamento seja simples.
+Esta tabela fica reservada para o pos-MVP e ainda nao existe nas migrations.
 
 Campos sugeridos:
 
@@ -849,7 +947,7 @@ Escrita por coordenadores:
 
 - Coordenadores podem criar e gerenciar convites.
 - Coordenadores podem gerenciar perfis, respeitando restricoes de integridade.
-- Coordenadores podem administrar o catalogo de idiomas.
+- O catalogo de idiomas fica reservado para o pos-MVP.
 - Coordenadores podem gerenciar impressoras, materiais e compatibilidades.
 - Coordenadores podem criar e gerenciar bloqueios de manutencao.
 - Coordenadores podem editar ou cancelar reservas de qualquer pesquisador.
@@ -860,29 +958,23 @@ Seeds recomendados para ambiente inicial:
 
 - perfil inicial de coordenador associado a um usuario real do Supabase Auth;
 - habilidades iniciais comuns do laboratorio;
-- idiomas iniciais: Portugues (`pt`), Espanhol (`es`), Ingles (`en`), Alemao (`de`), Frances (`fr`) e Italiano (`it`);
 - materiais tecnicos iniciais, como PLA, PETG, PA, TPU, ABS e resina, se aplicavel;
 - impressoras iniciais do laboratorio, se a lista ja estiver disponivel;
 - compatibilidades iniciais entre impressoras e materiais.
 
-Os seeds nao devem incluir tokens puros de convite. Caso convites sejam semeados em ambiente de teste, devem usar apenas `token_hash`.
+Seeds de teste podem incluir o estado de auditoria de convites, mas tokens de Auth nunca devem ser persistidos no schema publico.
 
 ## 8. Testes e validacoes futuras
 
-Validacoes a cobrir quando migrations, policies e camada de aplicacao forem implementadas:
+Validacoes cobertas pelos testes de banco do MVP:
 
 - criar perfil apenas quando `profiles.id` corresponder a `auth.users.id`;
-- impedir aceite de convite expirado, aceito, revogado ou com token invalido;
+- impedir aceite de convite expirado, aceito, revogado ou associado a outro usuario/email;
 - impedir convite pendente duplicado para o mesmo email;
 - impedir disponibilidade com `weekday` fora de `0..6`;
 - impedir disponibilidade com horario inicial maior ou igual ao horario final;
 - impedir habilidade duplicada para o mesmo perfil;
 - validar `nationality_country_code` com dois caracteres ISO 3166-1 alpha-2;
-- impedir idioma duplicado para o mesmo perfil;
-- impedir associacao nova com idioma inativo;
-- confirmar que usuarios autenticados conseguem consultar idiomas de perfis ativos;
-- confirmar que pesquisadores so alteram os proprios idiomas;
-- confirmar que coordenadores administram o catalogo de idiomas;
 - impedir material duplicado para a mesma impressora;
 - impedir reserva com material incompativel;
 - impedir reserva sobre reserva ativa;
@@ -895,10 +987,10 @@ Validacoes a cobrir quando migrations, policies e camada de aplicacao forem impl
 
 - `profiles.id` sera igual a `auth.users.id`.
 - O sistema nao tera cadastro publico aberto.
-- Convites usarao `email` e `token_hash`.
-- Token puro de convite nunca sera salvo no banco.
+- Convites usarao email, usuario do Auth, status e expiracao; o Supabase Auth gerencia o token.
+- Token ou hash de convite nunca sera salvo no schema publico.
 - Convites terao expiracao obrigatoria via `expires_at`.
-- Antes do cadastro, o sistema validara `token_hash`, status, expiracao e email associado ao convite.
+- Antes do perfil, o sistema validara usuario do Auth, status, expiracao e email obtido do JWT.
 - Contas no Supabase Auth so poderao gerar `profile` quando houver convite valido.
 - O `profile` criado no aceite deve herdar ou validar o email do convite.
 - Usuarios sem `profile` valido nao acessam areas internas do sistema.
@@ -910,16 +1002,14 @@ Validacoes a cobrir quando migrations, policies e camada de aplicacao forem impl
 - `pending` fica reservado para fluxo futuro de aprovacao.
 - Manutencao nao pode coexistir com reservas ativas no mesmo periodo.
 - A estrategia preferencial inicial de conflito sera funcao transacional/RPC no Supabase/PostgreSQL.
-- Exclusion constraint com ranges fica como melhoria futura, nao obrigatoria para o MVP.
+- Uma exclusion constraint com `tstzrange` impede sobreposicoes de reservas ativas mesmo fora da RPC.
 - Materiais serao catalogo tecnico simples no MVP, sem controle de estoque.
 - `materials` continua sendo usado por `printer_materials` e `printer_bookings`.
 - Cadastro de rolos, lotes fisicos, fabricante, cor, peso e secagem fica fora do MVP.
 - Impressoras `disabled` nao aparecem para novas reservas, mas permanecem no historico.
 - O MVP registra nacionalidade ou pais principal em `nationality_country_code`, nao residencia ou instituicao.
 - Idiomas indicam apenas quais idiomas a pessoa fala.
-- Idiomas entram no schema inicial do MVP para suportar pesquisadores internacionais, ainda que a interface inicial seja simples.
-- Nao havera `proficiency_level` no MVP.
-- `proficiency_level` fica reservado como evolucao futura em `profile_languages`.
+- Idiomas, `profile_languages` e `proficiency_level` ficam reservados para o pos-MVP.
 - Idiomas nao sao habilidades tecnicas e nao entram em `skills`.
 - Nao havera upload `.gcode` ou `.3mf` no schema do MVP.
 - Nao havera historico detalhado de manutencao alem dos bloqueios.

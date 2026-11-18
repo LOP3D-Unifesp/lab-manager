@@ -14,6 +14,10 @@ O projeto centraliza informações operacionais do laboratório para que pesquis
 - Cadastro e acompanhamento de impressoras 3D.
 - Reservas manuais de impressoras.
 - Área de administração para coordenadores.
+- Convites com papel predefinido, validade de 72 horas, aceite explícito e revogação.
+- Capacidade presencial, dias de funcionamento e turnos configuráveis pelo coordenador.
+- Área de usuários com perfis ativos e convites, separada das configurações do laboratório.
+- Aviso público de privacidade e descarte automático de identidades incompletas.
 
 ## Stack
 
@@ -30,7 +34,7 @@ O projeto centraliza informações operacionais do laboratório para que pesquis
 - npm
 - Projeto Supabase configurado
 
-## Configuração local
+## Configuração local com Docker
 
 1. Instale as dependências:
 
@@ -38,32 +42,27 @@ O projeto centraliza informações operacionais do laboratório para que pesquis
 npm install
 ```
 
-2. Crie o arquivo de ambiente a partir do exemplo:
+2. Inicie e configure o Supabase Docker. Esse comando recria somente o banco local e cria o
+   coordenador de desenvolvimento:
 
 ```bash
-cp .env.example .env
+npm run setup:local
 ```
 
-No Windows PowerShell:
-
-```powershell
-Copy-Item .env.example .env
-```
-
-3. Preencha as variáveis no arquivo `.env`:
-
-```env
-VITE_SUPABASE_URL=
-VITE_SUPABASE_ANON_KEY=
-```
-
-4. Inicie o servidor de desenvolvimento:
+3. Inicie o servidor de desenvolvimento:
 
 ```bash
 npm run dev
 ```
 
-5. Gere uma build de produção:
+O acesso inicial é `admin@lab.local` / `LabManager123!`. O navegador será direcionado ao wizard de
+instalação. Nos dias seguintes, use `npm run db:start`; os dados só são apagados quando
+`npm run db:reset:local` é executado explicitamente.
+
+Convites de desenvolvimento são entregues somente no Mailpit local em
+`http://127.0.0.1:55324`; nenhum email real é enviado pelo Docker.
+
+4. Gere uma build de produção:
 
 ```bash
 npm run build
@@ -71,7 +70,18 @@ npm run build
 
 ## Scripts
 
-- `npm run dev`: inicia o servidor local do Vite.
+- `npm run setup:local`: inicia o Docker, recria o banco local e cria o primeiro coordenador.
+- `npm run db:start` / `npm run db:stop`: liga ou desliga o Docker preservando dados.
+- `npm run db:reset:local`: apaga e recria explicitamente somente o banco local.
+- `npm run db:seed:demo`: adiciona impressora, material, habilidade, disponibilidade, reserva e manutenção fictícios após o wizard.
+- `npm run db:seed:demo:remote`: igual ao seed demo, mas contra o Supabase hospedado (exige `CONFIRM_REMOTE_HOST`).
+- `npm run dev`: inicia o frontend e recusa qualquer URL Supabase hospedada.
+- `npm run dev:remote`: inicia deliberadamente contra `.env.remote.local`.
+- `npm test`: executa os testes de unidade do dominio.
+- `npm run test:db`: executa os testes pgTAP no Supabase local.
+- `npm run test:concurrency`: dispara duas reservas simultâneas contra o Supabase local.
+- `npm run db:types`: atualiza os tipos TypeScript a partir do banco local.
+
 - `npm run build`: executa a checagem TypeScript e gera a build de produção.
 - `npm run preview`: serve localmente a build gerada.
 
@@ -106,6 +116,7 @@ A documentação de apoio fica em `docs/`:
 - `docs/DESIGN_GUIDE.md`: diretrizes visuais e de experiência.
 - `docs/USER_FLOWS.md`: fluxos de uso esperados.
 - `docs/MVP_PLAN.md`: fases de implementação do MVP.
+- `docs/LOCAL_DEVELOPMENT.md`: Docker, wizard, migrations e promoção para o Supabase web.
 
 ## Módulos da aplicação
 

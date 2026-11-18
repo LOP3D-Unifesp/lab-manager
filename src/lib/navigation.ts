@@ -1,7 +1,9 @@
 import {
+  CalendarCheck,
   CalendarDays,
   CalendarPlus,
   Gauge,
+  History,
   LucideIcon,
   Printer,
   Settings,
@@ -14,14 +16,27 @@ export type NavigationItem = {
   desktopLabel: string;
   desktopSection: "main" | "knowledge" | "management" | "account";
   desktopOrder: number;
-  desktopRole?: "coordinator";
+  desktopRole?: "coordinator" | "researcher";
   mobileLabel: string;
   path: string;
   icon: LucideIcon;
   mobilePlacement: "primary" | "action" | "secondary" | "hidden";
   mobileOrder: number;
-  mobileRole?: "coordinator";
+  mobileRole?: "coordinator" | "researcher";
 };
+
+export function getSafeInternalRedirect(value: unknown) {
+  if (typeof value !== "string" || !value.startsWith("/") || value.startsWith("//")) {
+    return "/";
+  }
+
+  const normalized = value.toLowerCase();
+  if (value.includes("\\") || normalized.includes("%5c") || /[\u0000-\u001f]/.test(value)) {
+    return "/";
+  }
+
+  return value;
+}
 
 export const navigationItems: NavigationItem[] = [
   {
@@ -68,13 +83,11 @@ export const navigationItems: NavigationItem[] = [
     desktopLabel: "Impressoras",
     desktopSection: "management",
     desktopOrder: 6,
-    desktopRole: "coordinator",
     mobileLabel: "Impressoras",
     path: "/impressoras",
     icon: Printer,
     mobilePlacement: "secondary",
     mobileOrder: 3,
-    mobileRole: "coordinator",
   },
   {
     desktopLabel: "Reservas",
@@ -87,6 +100,18 @@ export const navigationItems: NavigationItem[] = [
     mobileOrder: 3,
   },
   {
+    desktopLabel: "Minhas reservas",
+    desktopSection: "main",
+    desktopOrder: 5,
+    desktopRole: "researcher",
+    mobileLabel: "Minhas reservas",
+    path: "/reservas/minhas",
+    icon: CalendarCheck,
+    mobilePlacement: "secondary",
+    mobileOrder: 5,
+    mobileRole: "researcher",
+  },
+  {
     desktopLabel: "Meu perfil",
     desktopSection: "account",
     desktopOrder: 1,
@@ -97,15 +122,39 @@ export const navigationItems: NavigationItem[] = [
     mobileOrder: 1,
   },
   {
-    desktopLabel: "Administração",
+    desktopLabel: "Usuários",
     desktopSection: "management",
     desktopOrder: 7,
+    desktopRole: "coordinator",
+    mobileLabel: "Usuários",
+    path: "/usuarios",
+    icon: Users,
+    mobilePlacement: "secondary",
+    mobileOrder: 4,
+    mobileRole: "coordinator",
+  },
+  {
+    desktopLabel: "Administração",
+    desktopSection: "management",
+    desktopOrder: 8,
     desktopRole: "coordinator",
     mobileLabel: "Administração",
     path: "/administracao",
     icon: Settings,
     mobilePlacement: "secondary",
-    mobileOrder: 4,
+    mobileOrder: 5,
+    mobileRole: "coordinator",
+  },
+  {
+    desktopLabel: "Histórico de reservas",
+    desktopSection: "management",
+    desktopOrder: 9,
+    desktopRole: "coordinator",
+    mobileLabel: "Histórico",
+    path: "/reservas/historico",
+    icon: History,
+    mobilePlacement: "secondary",
+    mobileOrder: 6,
     mobileRole: "coordinator",
   },
 ];

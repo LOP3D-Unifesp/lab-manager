@@ -5,6 +5,8 @@ import { Lock, LogIn } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { useAuth } from "../lib/auth";
+import { getSafeInternalRedirect } from "../lib/navigation";
+import { supabaseConfigurationError } from "../lib/supabaseClient";
 
 export function Login() {
   const { authConfigured, loading, session, signIn } = useAuth();
@@ -14,13 +16,14 @@ export function Login() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const redirectTo =
+  const redirectTo = getSafeInternalRedirect(
     typeof location.state === "object" &&
     location.state !== null &&
     "from" in location.state &&
     typeof location.state.from === "string"
       ? location.state.from
-      : "/";
+      : "/",
+  );
 
   if (!loading && session) {
     return <Navigate to={redirectTo} replace />;
@@ -65,7 +68,8 @@ export function Login() {
 
           {!authConfigured ? (
             <p className="rounded-lg border border-danger bg-danger-soft p-3 text-base font-semibold text-danger">
-              Supabase nao esta configurado. Verifique o arquivo .env.
+              {supabaseConfigurationError ??
+                "Supabase nao esta configurado. Execute npm run setup:local."}
             </p>
           ) : null}
 

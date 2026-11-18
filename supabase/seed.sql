@@ -1,0 +1,1 @@
+-- Intentionally empty. Development demo data is opt-in via `npm run db:seed:demo`.
