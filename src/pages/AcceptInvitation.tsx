@@ -32,7 +32,7 @@ export function AcceptInvitation() {
       });
       if (verificationError) throw verificationError;
       await markInvitationOpened();
-      window.history.replaceState({}, "", "/convite/aceitar");
+      window.history.replaceState({}, "", `${import.meta.env.BASE_URL.replace(/\/$/, "")}/convite/aceitar`);
       navigate("/", { replace: true });
     } catch {
       await supabase.auth.signOut();

@@ -67,6 +67,36 @@ VITE_SUPABASE_ANON_KEY=SUA_CHAVE_PUBLICA
 
 Depois execute `npm run dev:remote`. Chaves `service_role` nunca usam prefixo `VITE_`.
 
+## Ambiente de teste na nuvem (GitHub Pages + Supabase hospedado)
+
+O frontend é publicado em `https://lop3d-unifesp.github.io/lab-manager/` pelo workflow
+`.github/workflows/deploy-pages.yml` a cada push na `main` (ou manualmente via *Run workflow*).
+
+1. Em *Settings → Pages*, escolha *Source: GitHub Actions*.
+2. Em *Settings → Secrets and variables → Actions → Variables*, defina `VITE_SUPABASE_URL` e
+   `VITE_SUPABASE_ANON_KEY` (chave pública; a proteção é RLS). A `service_role` nunca vai ao GitHub.
+3. No Supabase: `supabase link`, `supabase db push` (ou `db reset --linked` para recomeçar),
+   `supabase functions deploy`, secret `PUBLIC_SITE_URL=https://lop3d-unifesp.github.io/lab-manager`
+   e configure o Auth sem usar o painel com `npm run config:remote-auth` (variáveis
+   `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`, `PUBLIC_SITE_URL`, `CONFIRM_REMOTE_HOST=<ref>.supabase.co`).
+   Ele altera somente Site URL, redirects, cadastro público e o template de convite.
+4. `npm run bootstrap:remote` cria o coordenador; depois de concluir o wizard no site,
+   `npm run db:seed:demo:remote` (mesmas variáveis de ambiente do bootstrap) adiciona dados fictícios.
+
+Para não digitar segredos a cada vez, crie `.env.admin.local` na raiz (ignorado pelo git; nunca
+commite nem use prefixo `VITE_`). Os scripts remotos o leem automaticamente:
+
+```env
+SUPABASE_ACCESS_TOKEN=sbp_...
+SUPABASE_PROJECT_REF=<ref>
+SUPABASE_URL=https://<ref>.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=...
+PUBLIC_SITE_URL=https://lop3d-unifesp.github.io/lab-manager
+CONFIRM_REMOTE_HOST=<ref>.supabase.co
+```
+
+Migrations não são aplicadas automaticamente pelo CI; use `supabase db push` manualmente.
+
 ## Primeiro coordenador remoto
 
 Em um projeto novo, aplique a baseline e publique a Edge Function antes do bootstrap. Mantenha

@@ -1,3 +1,4 @@
+import "./load-admin-env.mjs";
 import { bootstrapAdmin, isLoopbackUrl } from "./bootstrap-lib.mjs";
 import { createClient } from "@supabase/supabase-js";
 
