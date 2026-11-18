@@ -197,10 +197,10 @@ export function ProfileRequired() {
             </div>
 
             <form className="mt-6 grid gap-6" onSubmit={handleAccountSubmit}>
-              <label className="grid gap-2 text-base font-semibold">
+              <label className="grid min-w-0 gap-2 text-base font-semibold">
                 Email
                 <input
-                  className="min-h-11 cursor-not-allowed rounded-lg border border-border bg-primary-soft px-4 text-base font-semibold text-text opacity-100 outline-none disabled:opacity-100"
+                  className="min-h-11 w-full min-w-0 cursor-not-allowed rounded-lg border border-border bg-primary-soft px-4 text-base font-semibold text-text opacity-100 outline-none disabled:opacity-100"
                   disabled
                   readOnly
                   type="email"
@@ -209,7 +209,7 @@ export function ProfileRequired() {
               </label>
 
               <div className="grid gap-4 sm:grid-cols-2">
-                <label className="grid gap-2 text-base font-semibold">
+                <label className="grid min-w-0 gap-2 text-base font-semibold">
                   Crie uma senha
                   <PasswordInput
                     autoComplete="new-password"
@@ -221,7 +221,7 @@ export function ProfileRequired() {
                   />
                 </label>
 
-                <label className="grid gap-2 text-base font-semibold">
+                <label className="grid min-w-0 gap-2 text-base font-semibold">
                   Confirme a senha
                   <PasswordInput
                     autoComplete="new-password"
@@ -259,7 +259,7 @@ export function ProfileRequired() {
 
   return (
     <main className="min-h-screen bg-background px-5 py-8 text-text">
-      <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-3xl flex-col justify-center">
+      <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full min-w-0 max-w-3xl flex-col justify-center">
         <Card>
           <div className="flex items-start gap-3">
             <div className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-warning-soft text-warning-dark">
@@ -275,11 +275,11 @@ export function ProfileRequired() {
 
           <form className="mt-6 grid gap-6" onSubmit={handleProfileSubmit}>
             <div className="grid gap-4 sm:grid-cols-2">
-              <label className="grid gap-2 text-base font-semibold">
+              <label className="grid min-w-0 gap-2 text-base font-semibold">
                 Nome completo
                 <input
                   autoComplete="name"
-                  className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
+                  className="min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
                   disabled={submitting}
                   onChange={(event) => setFullName(event.target.value)}
                   placeholder="Seu nome completo"
@@ -289,10 +289,10 @@ export function ProfileRequired() {
                 />
               </label>
 
-              <label className="grid gap-2 text-base font-semibold">
+              <label className="grid min-w-0 gap-2 text-base font-semibold">
                 Vinculação acadêmica
                 <select
-                  className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
+                  className="min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
                   disabled={submitting}
                   onChange={(event) => setAcademicAffiliation(event.target.value as AcademicAffiliation | "")}
                   value={academicAffiliation}
@@ -308,10 +308,10 @@ export function ProfileRequired() {
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <label className="grid gap-2 text-base font-semibold">
+              <label className="grid min-w-0 gap-2 text-base font-semibold">
                 Data de nascimento
                 <input
-                  className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
+                  className="min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
                   disabled={submitting}
                   onChange={(event) => setBirthDate(event.target.value)}
                   type="date"
@@ -333,11 +333,11 @@ export function ProfileRequired() {
               totalGrantHours={totalGrantHours}
             />
 
-            <div className="grid gap-4 sm:grid-cols-3">
-              <label className="grid gap-2 text-base font-semibold">
+            <div className="grid gap-4 md:grid-cols-3">
+              <label className="grid min-w-0 gap-2 text-base font-semibold">
                 Lattes URL
                 <input
-                  className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
+                  className="min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
                   disabled={submitting}
                   onChange={(event) => setLattesUrl(event.target.value)}
                   placeholder="https://..."
@@ -346,10 +346,10 @@ export function ProfileRequired() {
                 />
               </label>
 
-              <label className="grid gap-2 text-base font-semibold">
+              <label className="grid min-w-0 gap-2 text-base font-semibold">
                 CPF
                 <input
-                  className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
+                  className="min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
                   disabled={submitting}
                   onChange={(event) => setCpf(event.target.value)}
                   placeholder="Somente números"
@@ -358,10 +358,10 @@ export function ProfileRequired() {
                 />
               </label>
 
-              <label className="grid gap-2 text-base font-semibold">
+              <label className="grid min-w-0 gap-2 text-base font-semibold">
                 RG
                 <input
-                  className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
+                  className="min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
                   disabled={submitting}
                   onChange={(event) => setRg(event.target.value)}
                   type="text"
@@ -370,11 +370,11 @@ export function ProfileRequired() {
               </label>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-3">
-              <label className="grid gap-2 text-base font-semibold">
+            <div className="grid gap-4 md:grid-cols-3">
+              <label className="grid min-w-0 gap-2 text-base font-semibold">
                 Telefone
                 <input
-                  className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
+                  className="min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
                   disabled={submitting}
                   onChange={(event) => setPhone(event.target.value)}
                   type="tel"
@@ -382,10 +382,10 @@ export function ProfileRequired() {
                 />
               </label>
 
-              <label className="grid gap-2 text-base font-semibold">
+              <label className="grid min-w-0 gap-2 text-base font-semibold">
                 Nacionalidade (código)
                 <input
-                  className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
+                  className="min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
                   disabled={submitting}
                   onChange={(event) => setNationalityCountryCode(event.target.value.toUpperCase())}
                   maxLength={2}
@@ -395,10 +395,10 @@ export function ProfileRequired() {
                 />
               </label>
 
-              <label className="grid gap-2 text-base font-semibold">
+              <label className="grid min-w-0 gap-2 text-base font-semibold">
                 CEP
                 <input
-                  className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
+                  className="min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
                   disabled={submitting}
                   onChange={(event) => setPostalCode(event.target.value)}
                   type="text"
@@ -408,10 +408,10 @@ export function ProfileRequired() {
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <label className="grid gap-2 text-base font-semibold">
+              <label className="grid min-w-0 gap-2 text-base font-semibold">
                 Rua
                 <input
-                  className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
+                  className="min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
                   disabled={submitting}
                   onChange={(event) => setStreet(event.target.value)}
                   type="text"
@@ -419,10 +419,10 @@ export function ProfileRequired() {
                 />
               </label>
 
-              <label className="grid gap-2 text-base font-semibold">
+              <label className="grid min-w-0 gap-2 text-base font-semibold">
                 Número
                 <input
-                  className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
+                  className="min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
                   disabled={submitting}
                   onChange={(event) => setAddressNumber(event.target.value)}
                   type="text"
@@ -431,11 +431,11 @@ export function ProfileRequired() {
               </label>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-3">
-              <label className="grid gap-2 text-base font-semibold">
+            <div className="grid gap-4 md:grid-cols-3">
+              <label className="grid min-w-0 gap-2 text-base font-semibold">
                 Complemento
                 <input
-                  className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
+                  className="min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
                   disabled={submitting}
                   onChange={(event) => setAddressComplement(event.target.value)}
                   type="text"
@@ -443,10 +443,10 @@ export function ProfileRequired() {
                 />
               </label>
 
-              <label className="grid gap-2 text-base font-semibold">
+              <label className="grid min-w-0 gap-2 text-base font-semibold">
                 Bairro
                 <input
-                  className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
+                  className="min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
                   disabled={submitting}
                   onChange={(event) => setNeighborhood(event.target.value)}
                   type="text"
@@ -454,10 +454,10 @@ export function ProfileRequired() {
                 />
               </label>
 
-              <label className="grid gap-2 text-base font-semibold">
+              <label className="grid min-w-0 gap-2 text-base font-semibold">
                 Cidade
                 <input
-                  className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
+                  className="min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
                   disabled={submitting}
                   onChange={(event) => setCity(event.target.value)}
                   type="text"
@@ -467,10 +467,10 @@ export function ProfileRequired() {
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <label className="grid gap-2 text-base font-semibold">
+              <label className="grid min-w-0 gap-2 text-base font-semibold">
                 Estado
                 <input
-                  className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
+                  className="min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
                   disabled={submitting}
                   onChange={(event) => setState(event.target.value)}
                   type="text"
@@ -478,10 +478,10 @@ export function ProfileRequired() {
                 />
               </label>
 
-              <label className="grid gap-2 text-base font-semibold">
+              <label className="grid min-w-0 gap-2 text-base font-semibold">
                 País
                 <input
-                  className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
+                  className="min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
                   disabled={submitting}
                   onChange={(event) => setCountry(event.target.value)}
                   type="text"
@@ -490,7 +490,7 @@ export function ProfileRequired() {
               </label>
             </div>
 
-            <label className="grid gap-2 text-base font-semibold">
+            <label className="grid min-w-0 gap-2 text-base font-semibold">
               Biografia
               <textarea
                 className="min-h-[8rem] rounded-lg border border-border bg-background px-4 py-3 text-base font-normal outline-none transition focus:border-primary"
