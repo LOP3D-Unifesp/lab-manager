@@ -30,7 +30,7 @@ export function WorkloadField({
   return (
     <div className="grid gap-4 md:col-span-2">
       <div className="grid gap-4 sm:grid-cols-2 sm:items-start">
-        <label className="grid gap-2 text-base font-semibold text-text">
+        <label className="grid min-w-0 gap-2 text-base font-semibold text-text">
           Bolsista ou voluntário?
           <select
             className={inputClassName}
@@ -49,7 +49,7 @@ export function WorkloadField({
         </label>
 
         {isScholarshipHolder ? (
-          <label className="grid gap-2 text-base font-semibold text-text">
+          <label className="grid min-w-0 gap-2 text-base font-semibold text-text">
             {label}
             <input
               className="min-h-11 cursor-not-allowed rounded-lg border border-border bg-primary-soft px-4 text-base font-semibold text-text outline-none"
@@ -59,7 +59,7 @@ export function WorkloadField({
             />
           </label>
         ) : (
-          <label className="grid gap-2 text-base font-semibold text-text">
+          <label className="grid min-w-0 gap-2 text-base font-semibold text-text">
             {label}
             <input
               className={inputClassName}
