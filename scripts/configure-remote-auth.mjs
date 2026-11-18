@@ -19,6 +19,11 @@ if (process.env.CONFIRM_REMOTE_HOST !== `${projectRef}.supabase.co`) {
 }
 
 const template = readFileSync(resolve(import.meta.dirname, "../supabase/templates/invite.html"), "utf8");
+// O assunto vem do config.toml para o ambiente local e o hospedado nunca divergirem.
+const config = readFileSync(resolve(import.meta.dirname, "../supabase/config.toml"), "utf8");
+const subject = config.match(/\[auth\.email\.template\.invite\]\s+subject\s*=\s*"([^"]+)"/)?.[1];
+if (!subject) throw new Error("Assunto do convite não encontrado em supabase/config.toml.");
+
 const endpoint = `https://api.supabase.com/v1/projects/${projectRef}/config/auth`;
 const headers = { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" };
 
@@ -30,6 +35,7 @@ const response = await fetch(endpoint, {
     site_url: siteUrl,
     uri_allow_list: `${siteUrl}/**`,
     disable_signup: true,
+    mailer_subjects_invite: subject,
     mailer_templates_invite_content: template,
   }),
 });
@@ -39,3 +45,4 @@ const current = await (await fetch(endpoint, { headers })).json();
 console.log(`site_url: ${current.site_url}`);
 console.log(`uri_allow_list: ${current.uri_allow_list}`);
 console.log(`disable_signup: ${current.disable_signup}`);
+console.log(`assunto do convite: ${current.mailer_subjects_invite}`);
