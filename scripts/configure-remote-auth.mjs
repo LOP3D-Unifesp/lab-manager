@@ -26,7 +26,8 @@ const response = await fetch(endpoint, {
   method: "PATCH",
   headers,
   body: JSON.stringify({
-    site_url: `${siteUrl}/`,
+    // Sem barra final: o template de convite monta "{{ .SiteURL }}/convite/aceitar".
+    site_url: siteUrl,
     uri_allow_list: `${siteUrl}/**`,
     disable_signup: true,
     mailer_templates_invite_content: template,

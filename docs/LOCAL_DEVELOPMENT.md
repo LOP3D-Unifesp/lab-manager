@@ -126,7 +126,7 @@ O projeto hospedado permanece intocado até esta sequência ser executada delibe
 2. manter `verify_jwt=true` nas duas funções administrativas e `verify_jwt=false` apenas na limpeza,
    que valida manualmente o bearer secreto;
 3. configurar `PUBLIC_SITE_URL` nas funções com a origem HTTPS da aplicação;
-4. no painel Auth, manter cadastro público desabilitado e configurar `Site URL`/redirects;
+4. no painel Auth, manter cadastro público desabilitado e configurar `Site URL` (sem barra final, o template de convite acrescenta `/convite/aceitar`) e os redirects;
 5. promover `supabase/templates/invite.html` como template de convite. O link deve continuar usando
    `{{ .TokenHash }}` e apontar primeiro para `/convite/aceitar`, nunca diretamente para
    `{{ .ConfirmationURL }}`;

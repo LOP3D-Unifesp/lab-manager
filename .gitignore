@@ -148,3 +148,6 @@ supabase/snippets/
 
 # Local browser automation artifacts.
 .playwright-cli/
+
+# Claude Code (configuração local)
+.claude/
