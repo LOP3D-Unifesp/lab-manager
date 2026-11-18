@@ -133,3 +133,5 @@ npm run test:concurrency
 npm test
 npm run build
 ```
+
+O fluxo de contribuição (branch, PR e CI) está em [../CONTRIBUTING.md](../CONTRIBUTING.md).

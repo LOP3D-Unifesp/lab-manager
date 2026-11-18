@@ -19,13 +19,80 @@ O schema cobre:
 
 O Supabase Auth sera a fonte de autenticacao. O PostgreSQL sera a fonte dos dados de dominio da aplicacao.
 
+> **Fonte da verdade:** as migrations em `supabase/migrations/` (13 arquivos, de `20260818` a
+> `20260830`). Este documento descreve o resultado delas. A secao 1.1 resume o que mudou depois da
+> baseline; onde houver divergencia, vale a migration.
+
 Status do MVP implementado:
 
 - `profiles` contem somente dados compartilhados no diretorio interno;
 - CPF, RG, nascimento e endereco ficam isolados em `profile_private_data`;
 - convites usam Supabase Auth e `invitations`; o token e gerenciado pelo Auth e nao e persistido no schema publico;
 - `languages` e `profile_languages` sao evolucao pos-MVP e ainda nao existem nas migrations;
+- bolsas de fomento ficam em `profile_funding_grants` (varias por perfil);
+- a configuracao do laboratorio fica em `lab_settings` e `lab_schedule_periods`;
+- reservas tem fluxo de aprovacao, rejeicao e ciclo operacional;
+- fotos de perfil ficam no bucket `avatars` do Storage;
 - RLS, operacao e recuperacao estao detalhadas em `DATABASE_SECURITY.md`.
+
+### 1.1 Atualizacoes posteriores a baseline
+
+| Migration | Mudanca |
+| --- | --- |
+| `20260819_complete_operational_mvp` | RPCs `update_printer_booking` (edicao de reserva) e `set_printer_booking_status` (mudanca de status pelo coordenador). |
+| `20260820_configurable_lab_operation` | `lab_settings.workspace_capacity` e `operating_weekdays`; tabela `lab_schedule_periods` (turnos); `availability_slots.schedule_period_id`; RPCs `update_lab_configuration`, `save_lab_schedule_period`, `replace_profile_availability`. |
+| `20260821_configurable_meal_breaks` | Intervalos de almoco e jantar em `lab_settings`; RPC `update_lab_breaks`; turnos nao podem sobrepor os intervalos. |
+| `20260822_configurable_booking_approval` | `profiles.requires_booking_approval` (padrao `true`); reservas nascem `pending` ou `approved` conforme essa configuracao. |
+| `20260823_realtime_pending_bookings` | `printer_bookings` entra na publicacao `supabase_realtime`. |
+| `20260824_profile_funding_grants` | Tabela `profile_funding_grants`; remove `has_funding_grant`, `funding_agency` e `funding_agency_other` de `profiles`; RPC `replace_profile_funding_grants`; `create_profile` e `update_my_profile` perdem os parametros de bolsa. |
+| `20260825_profile_avatars` | `profiles.avatar_url`; bucket publico `avatars` (3 MiB; png, jpeg e webp); RPC `set_my_avatar_url`. |
+| `20260826_funding_grant_contract_details` | `profile_funding_grants.grant_name`, `weekly_hours` (1 a 60) e `monthly_value` (>= 0). |
+| `20260827_booking_rejected_status` | Valor `rejected` em `booking_status`; `rejected_reason` e `rejected_at`. |
+| `20260828_booking_rule_fixes` | Transicoes e janela de inicio (1 hora antes); edicao so de reservas `pending` ou `approved`; RPC `reject_printer_booking`. |
+| `20260829_booking_approved_at` | `printer_bookings.approved_at` (nulo para reservas aprovadas automaticamente). |
+| `20260830_booking_decided_by` | `approved_by` e `rejected_by` (com indices). |
+
+Resumo dos objetos que mais mudam o entendimento do schema:
+
+- **Reservas (`printer_bookings`):** alem dos campos de 3.11, tem `rejected_reason`, `rejected_at`,
+  `rejected_by`, `approved_at`, `approved_by`, `cancelled_at` e `cancelled_by`. A duracao
+  estimada vai de 30 a 1440 minutos, em multiplos de 30. Uma exclusao por intervalo
+  (`printer_bookings_no_active_overlap`, GiST em `printer_id` e no intervalo da reserva) impede
+  sobreposicao entre reservas `pending`, `approved` e `in_progress` da mesma impressora.
+- **Transicoes de status:** `pending` para `approved`, `rejected` ou `cancelled`; `approved` para
+  `in_progress` ou `cancelled`; `in_progress` para `completed` ou `failed`. `in_progress`,
+  `completed` e `failed` so sao aceitos a partir de 1 hora antes de `starts_at`
+  (`booking_not_started`). Edicao so em `pending` ou `approved` (`booking_not_editable`).
+- **RPCs de reserva:** `create_printer_booking`, `update_printer_booking`, `cancel_printer_booking`,
+  `reject_printer_booking(p_booking_id, p_reason)` e `set_printer_booking_status(p_booking_id,
+  p_status)` (somente coordenador; registra `approved_at` e `approved_by` ao aprovar).
+- **Manutencao:** `create_maintenance_block` e `delete_maintenance_block`; o inicio nao pode estar
+  no passado e o bloqueio nao pode sobrepor reservas ativas nem outros bloqueios.
+- **Laboratorio:** `lab_settings` guarda tambem `workspace_capacity` (padrao 10),
+  `operating_weekdays` (padrao segunda a sexta) e os horarios de almoco (12:00 a 13:30) e jantar
+  (17:30 a 19:00). RPCs: `complete_lab_installation`, `update_lab_configuration`,
+  `update_lab_breaks`, `save_lab_schedule_period` e `get_public_lab_identity` (anonima; devolve nome,
+  sigla, contato de privacidade e validade do convite de 72 horas).
+- **Turnos (`lab_schedule_periods`):** `id`, `starts_at`, `ends_at`, `sort_order`, `is_active`,
+  `created_by`, `updated_by` e timestamps; `starts_at < ends_at` e unico por intervalo. Turnos ativos
+  nao podem se sobrepor entre si nem aos intervalos de almoco e jantar, e deve existir ao menos um
+  ativo. A baseline cria seis turnos (08-10, 10-12, 13:30-15:30, 15:30-17:30, 19-21 e 21-23).
+- **Disponibilidade:** `availability_slots` referencia o turno por `schedule_period_id`; `starts_at`
+  e `ends_at` sao derivados por trigger. Escrita direta e revogada; a gravacao ocorre por
+  `replace_profile_availability(p_profile_id, p_slots)`, que exige dia de funcionamento, turno ativo
+  e respeita `workspace_capacity` para o modo `onsite`.
+- **Convites:** `invitations` tem a regra de um convite pendente por e-mail; objetos de apoio:
+  `record_invitation_opened()`, `configure_invitation_cleanup(p_function_url, p_secret)` (somente
+  `service_role`) e `private.expire_pending_invitations()`. A validade de 72 horas e uma constante
+  (`INVITATION_TTL_HOURS` nas Edge Functions e o valor devolvido por `get_public_lab_identity`), nao
+  uma coluna de `lab_settings`.
+- **Bolsas (`profile_funding_grants`):** `id`, `profile_id` (cascade), `agency` (`funding_agency`),
+  `agency_other`, `grant_name`, `weekly_hours`, `monthly_value` e `created_at`. `agency_other` e
+  obrigatorio so para `other`. Leitura por qualquer usuario ativo; escrita pelo dono ou coordenador,
+  via `replace_profile_funding_grants(p_profile_id, p_grants)`.
+- **Perfil:** alem dos campos de 3.1, `profiles` tem `weekly_workload_hours` (1 a 60), `lattes_url`,
+  `requires_booking_approval` e `avatar_url`. Um trigger impede que o proprio usuario altere seu
+  `role`. As RPCs de perfil sao `create_profile` e `update_my_profile`.
 
 Convencoes gerais:
 
@@ -34,7 +101,7 @@ Convencoes gerais:
 - Campos de horario recorrente semanal usam `time`.
 - Tabelas principais devem ter `created_at timestamptz` e `updated_at timestamptz`.
 - Reservas canceladas ou finalizadas permanecem no historico.
-- O documento nao define SQL, migrations ou politicas RLS finais.
+- As migrations em `supabase/migrations/` sao a fonte da verdade para SQL, RPCs e politicas RLS.
 
 ## 2. Enums sugeridos
 
@@ -100,12 +167,16 @@ Status de uma reserva.
 
 - `pending`
 - `approved`
+- `rejected`
 - `in_progress`
 - `completed`
 - `cancelled`
 - `failed`
 
-No MVP, novas reservas devem iniciar como `approved`, porque ainda nao havera fluxo de aprovacao manual. O status `pending` fica documentado para um fluxo futuro de aprovacao.
+Novas reservas iniciam como `pending` quando o pesquisador tem `profiles.requires_booking_approval`
+(padrao `true`) e como `approved` para coordenadores ou pesquisadores sem essa exigencia. O status
+`rejected` registra a recusa pelo coordenador e nao bloqueia o horario. Detalhes e transicoes na
+secao 1.1.
 
 ### `weekday`
 
@@ -136,9 +207,10 @@ Campos sugeridos:
 | `email` | `text` | Sim | Email principal do usuario. |
 | `role` | `user_role` | Sim | Papel de acesso no sistema. |
 | `academic_affiliation` | `academic_affiliation` | Nao | Vinculo academico ou institucional. |
-| `has_funding_grant` | `boolean` | Sim | Indica se a pessoa possui bolsa de fomento. |
-| `funding_agency` | `funding_agency` | Quando houver bolsa | Agencia de fomento: CNPq, FAPESP, CAPES, SUS, FAP ou outra. |
-| `funding_agency_other` | `text` | Para agencia `other` | Nome da agencia quando a opcao selecionada for outra. |
+| `weekly_workload_hours` | `integer` | Nao | Carga horaria semanal (1 a 60). Bolsistas: soma das horas das bolsas; voluntarios: valor manual. |
+| `lattes_url` | `text` | Nao | Link do curriculo Lattes. |
+| `requires_booking_approval` | `boolean` | Sim | Se `true` (padrao), as reservas da pessoa nascem `pending`. |
+| `avatar_url` | `text` | Nao | URL da foto no bucket `avatars`. |
 | `nationality_country_code` | `char(2)` | Nao | Codigo ISO 3166-1 alpha-2 da nacionalidade ou pais principal do pesquisador. Exemplos: `CL`, `BR`, `DE`. |
 | `phone` | `text` | Nao | Telefone de contato. |
 | `bio` | `text` | Nao | Resumo do pesquisador. |
@@ -160,7 +232,7 @@ Campos obrigatorios:
 - `full_name`
 - `email`
 - `role`
-- `has_funding_grant`
+- `requires_booking_approval`
 - `is_active`
 - `created_at`
 - `updated_at`
@@ -168,8 +240,7 @@ Campos obrigatorios:
 Campos opcionais:
 
 - `academic_affiliation`
-- `funding_agency`, quando nao houver bolsa de fomento
-- `funding_agency_other`, exceto quando a agencia for `other`
+- `weekly_workload_hours`, `lattes_url` e `avatar_url`
 - `nationality_country_code`
 - `phone`
 - `bio`
@@ -187,8 +258,8 @@ Regras de integridade:
 - `profiles.id` deve ser igual ao `auth.users.id`.
 - `email` deve ser unico.
 - `role` deve ser `coordinator` ou `researcher`.
-- Quando `has_funding_grant` for verdadeiro, `funding_agency` e obrigatoria.
-- Quando `funding_agency` for `other`, `funding_agency_other` e obrigatorio; nos demais casos ele deve ficar vazio.
+- Bolsas de fomento ficam em `profile_funding_grants` (secao 1.1); uma pessoa pode ter varias.
+- `weekly_workload_hours`, quando informado, fica entre 1 e 60.
 - `nationality_country_code` deve usar dois caracteres no padrao ISO 3166-1 alpha-2.
 - `nationality_country_code` representa nacionalidade ou pais principal do pesquisador, nao residencia atual nem instituicao de vinculo.
 - Pesquisadores nao podem alterar o proprio `role`.
@@ -574,7 +645,7 @@ Regras de integridade:
 - `weekday` deve estar entre `0` e `6`.
 - `starts_at` deve ser anterior a `ends_at`.
 - `work_mode` deve ser `onsite`, `remote` ou `aula`.
-- Os blocos b1-b6 usados pela interface sao derivados de `starts_at` e `ends_at`; nao existe coluna `periodo` no banco.
+- Os turnos sao linhas de `lab_schedule_periods`, referenciadas por `schedule_period_id`; `starts_at` e `ends_at` sao derivados do turno. Nao existe coluna `periodo`.
 - O sistema deve evitar faixas duplicadas ou incoerentes para o mesmo pesquisador.
 - A disponibilidade representa planejamento, nao confirmacao real de presenca.
 - Pesquisadores so podem alterar a propria disponibilidade.
@@ -792,8 +863,7 @@ Regras de integridade:
 
 - `starts_at` deve ser anterior a `ends_at`.
 - `estimated_duration_minutes` e obrigatorio no MVP, porque a reserva manual exige duracao estimada para calcular `ends_at`.
-- No MVP, novas reservas devem iniciar com status `approved`.
-- `pending` deve permanecer disponivel para fluxo futuro de aprovacao manual.
+- Novas reservas iniciam como `pending` ou `approved` conforme `profiles.requires_booking_approval` (secao 1.1).
 - Reservas com status `pending`, `approved` ou `in_progress` bloqueiam o horario.
 - Reservas com status `cancelled`, `completed` ou `failed` nao bloqueiam o horario.
 - Reservas da mesma impressora nao podem se sobrepor quando estiverem ativas.
@@ -995,11 +1065,10 @@ Validacoes cobertas pelos testes de banco do MVP:
 - O `profile` criado no aceite deve herdar ou validar o email do convite.
 - Usuarios sem `profile` valido nao acessam areas internas do sistema.
 - `weekday` sera inteiro de `0` a `6`.
-- Disponibilidade semanal usara `starts_at time`, `ends_at time` e `work_mode`; `periodo` e apenas um identificador derivado na aplicacao.
+- Disponibilidade semanal referencia um turno de `lab_schedule_periods` e tem `work_mode`; `starts_at` e `ends_at` sao derivados do turno.
 - Reservas e bloqueios usarao `starts_at timestamptz` e `ends_at timestamptz`.
 - `estimated_duration_minutes` sera obrigatorio em `printer_bookings` no MVP.
-- No MVP, novas reservas comecam como `approved`.
-- `pending` fica reservado para fluxo futuro de aprovacao.
+- Novas reservas comecam como `pending` ou `approved` conforme a exigencia de aprovacao do perfil.
 - Manutencao nao pode coexistir com reservas ativas no mesmo periodo.
 - A estrategia preferencial inicial de conflito sera funcao transacional/RPC no Supabase/PostgreSQL.
 - Uma exclusion constraint com `tstzrange` impede sobreposicoes de reservas ativas mesmo fora da RPC.
@@ -1013,7 +1082,7 @@ Validacoes cobertas pelos testes de banco do MVP:
 - Idiomas nao sao habilidades tecnicas e nao entram em `skills`.
 - Nao havera upload `.gcode` ou `.3mf` no schema do MVP.
 - Nao havera historico detalhado de manutencao alem dos bloqueios.
-- As migrations do MVP ficam consolidadas em uma baseline inicial versionada no repositorio.
+- A baseline inicial (`20260818`) e imutavel; mudancas de schema entram em migrations incrementais (hoje ate `20260830`).
 
 ## 10. Evolucao futura: controle de estoque de materiais
 

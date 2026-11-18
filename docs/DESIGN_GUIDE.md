@@ -38,6 +38,10 @@ A fonte principal do sistema deve ser Dosis:
 font-family: "Dosis", system-ui, sans-serif;
 ```
 
+> **Situação atual:** a fonte está configurada no Tailwind (`tailwind.config.ts`) e em `src/index.css`,
+> mas o `index.html` ainda não a carrega de nenhum servidor de fontes; sem ela instalada no
+> dispositivo, o navegador usa o fallback. Veja [PENDENCIAS.md](PENDENCIAS.md).
+
 Caso a fonte externa ainda não esteja configurada, usar o fallback:
 
 ```css
@@ -186,7 +190,7 @@ No mobile, priorizar acesso rápido a:
 - Impressoras;
 - Reservas.
 
-As seções Pesquisadores, Habilidades e Administração devem continuar acessíveis por menu recolhível ou área secundária de navegação.
+As demais seções (Pesquisadores, Habilidades, Minhas reservas, Meu perfil e, para coordenadores, Usuários, Administração e Histórico de reservas) ficam no menu recolhível ou na área da conta.
 
 ### Desktop
 
@@ -198,11 +202,17 @@ No desktop, usar sidebar fixa com:
 - Agenda do Laboratório
 - Impressoras
 - Reservas
-- Administração
+- Minhas reservas
+- Meu perfil
+- Usuários (coordenador)
+- Administração (coordenador)
+- Histórico de reservas (coordenador)
+
+O menu da conta (`AuthUserMenu`, `MobileAccountMenu`) concentra perfil e saída. Um selo de ambiente (`EnvironmentBadge`) indica quando o app está em modo local ou remoto, e o sino de notificações (`NotificationBell`) mostra reservas pendentes ao coordenador.
 
 A navegação deve indicar claramente a página atual e manter áreas clicáveis confortáveis.
 
-## 10. Componentes previstos
+## 10. Componentes
 
 ### AppLayout
 
@@ -228,6 +238,18 @@ Card para métricas simples do dashboard, como pesquisadores presentes, impresso
 
 Badge textual para status de reserva, impressora ou disponibilidade. Nunca deve depender apenas de cor. Deve sempre conter texto, como "Pendente", "Aprovada", "Em manutenção" ou "Indisponível".
 
+### Avatar
+
+Foto de perfil com iniciais como alternativa quando a pessoa não enviou imagem.
+
+### PasswordInput
+
+Campo de senha com botão para mostrar ou ocultar o texto.
+
+### TimezoneSelect
+
+Seleção de fuso horário (lista de fusos suportados pelo navegador, com os brasileiros primeiro), usada no wizard e em Administração.
+
 ### Cards
 
 Cards devem ser usados para listas e resumos em mobile, como pesquisadores, habilidades, impressoras e reservas. Devem ter fundo branco, borda clara, espaçamento interno confortável e hierarquia textual evidente.
@@ -248,7 +270,7 @@ Listas devem aparecer como cards ou linhas simples em mobile. Em desktop, podem 
 
 Tabelas completas devem ser usadas principalmente em desktop. Devem ter cabeçalho claro, linhas bem espaçadas, texto mínimo de `17px` e ações alinhadas de forma previsível.
 
-## 11. Páginas previstas
+## 11. Páginas
 
 ### Dashboard
 
@@ -256,7 +278,7 @@ Visão geral do laboratório, com resumo de presença, reservas, impressoras e a
 
 ### Pesquisadores
 
-Lista e consulta de pesquisadores, vínculos acadêmicos, disponibilidade e informações básicas de perfil.
+Lista e consulta de pesquisadores, vínculos acadêmicos, bolsas ou condição de voluntário, carga horária e informações básicas de perfil.
 
 ### Habilidades
 
@@ -272,11 +294,27 @@ Lista de impressoras 3D, status operacional, materiais compatíveis e acesso à 
 
 ### Reservas
 
-Criação, consulta e acompanhamento de reservas manuais de impressoras 3D.
+Criação, consulta e acompanhamento de reservas manuais de impressoras 3D, com ações de aprovação e ciclo operacional para coordenadores.
+
+### Minhas reservas e Histórico de reservas
+
+Minhas reservas lista as reservas da pessoa autenticada. O Histórico (coordenador) reúne todas as reservas encerradas ou canceladas.
+
+### Meu perfil
+
+Edição de dados pessoais, foto, bolsas ou carga horária (bolsista ou voluntário) e da agenda semanal por turno.
+
+### Usuários
+
+Área do coordenador com perfis ativos (papel, ativação e exigência de aprovação de reservas) e convites (enviar, reenviar, revogar).
 
 ### Administração
 
-Área de gestão para coordenadores, incluindo usuários, impressoras, materiais e bloqueios de manutenção.
+Área do coordenador para as configurações do laboratório: identidade, fuso, capacidade presencial, dias de funcionamento, turnos e intervalos de almoço e jantar. Impressoras, materiais e bloqueios de manutenção são geridos na página Impressoras.
+
+### Páginas públicas e de entrada
+
+Login, aceite de convite (`/convite/aceitar`), aviso de privacidade (`/privacidade`) e o wizard de instalação (`/instalacao`).
 
 ## 12. Bibliotecas permitidas
 
@@ -284,18 +322,14 @@ Bibliotecas permitidas para a interface:
 
 - Tailwind CSS;
 - lucide-react;
-- React Router;
-- FullCalendar em fase posterior.
+- React Router.
 
-Tailwind CSS deve ser usado para acelerar consistência visual e responsividade. `lucide-react` pode ser usado para ícones de navegação, ações e status. React Router deve organizar as páginas previstas. FullCalendar pode ser adotado em fase posterior para visualizações mais completas de agenda.
+Tailwind CSS deve ser usado para acelerar consistência visual e responsividade. `lucide-react` pode ser usado para ícones de navegação, ações e status. React Router organiza as páginas. A agenda é uma grade própria em Tailwind; uma biblioteca de calendário só deve entrar se a grade atual deixar de atender.
 
-## 13. Fora do escopo visual inicial
+## 13. Fora do escopo por enquanto
 
-Não implementar ainda:
+Ainda não implementar:
 
-- tela de login final;
-- calendário funcional completo;
-- formulários complexos;
 - upload de arquivos;
 - parser de `.gcode`;
 - parser de `.3mf`;
@@ -303,4 +337,4 @@ Não implementar ainda:
 - gráficos avançados;
 - integração com impressoras.
 
-O foco visual inicial deve estar na estrutura de layout, navegação, hierarquia tipográfica, componentes básicos e páginas previstas para o MVP.
+Login, agenda semanal, formulários complexos (perfil, bolsas, wizard) e a gestão de reservas já existem; novas telas devem reutilizar os componentes e padrões deste guia.
