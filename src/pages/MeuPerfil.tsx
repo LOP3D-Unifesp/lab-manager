@@ -538,6 +538,7 @@ export function MeuPerfil() {
               </label>
 
               <WorkloadField
+                className="md:col-span-2"
                 disabled={submitting}
                 grants={fundingGrants}
                 isScholarshipHolder={isScholarshipHolder}

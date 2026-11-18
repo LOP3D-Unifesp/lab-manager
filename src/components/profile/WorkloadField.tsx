@@ -11,6 +11,7 @@ type WorkloadFieldProps = {
   onManualHoursChange: (value: string) => void;
   disabled?: boolean;
   label?: string;
+  className?: string;
 };
 
 const inputClassName =
@@ -26,9 +27,10 @@ export function WorkloadField({
   onManualHoursChange,
   disabled,
   label = "Carga horaria semanal",
+  className = "",
 }: WorkloadFieldProps) {
   return (
-    <div className="grid gap-4 md:col-span-2">
+    <div className={`grid gap-4 ${className}`}>
       <div className="grid gap-4 sm:grid-cols-2 sm:items-start">
         <label className="grid min-w-0 gap-2 text-base font-semibold text-text">
           Bolsista ou voluntário?
