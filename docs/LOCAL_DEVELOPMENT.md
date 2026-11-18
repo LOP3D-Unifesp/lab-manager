@@ -93,6 +93,13 @@ SUPABASE_URL=https://<ref>.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=...
 PUBLIC_SITE_URL=https://lop3d-unifesp.github.io/lab-manager
 CONFIRM_REMOTE_HOST=<ref>.supabase.co
+# Opcional: SMTP próprio (sem ele o Supabase limita o envio a poucos e-mails por hora)
+SMTP_HOST=smtp-relay.brevo.com
+SMTP_PORT=587
+SMTP_USER=<login SMTP, ex.: xxxx@smtp-brevo.com>
+SMTP_PASS=<chave SMTP>
+SMTP_FROM_EMAIL=<remetente verificado no provedor>
+SMTP_FROM_NAME=LO&P3D Lab Manager
 ```
 
 Migrations não são aplicadas automaticamente pelo CI; use `supabase db push` manualmente.
