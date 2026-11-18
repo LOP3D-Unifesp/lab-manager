@@ -19,7 +19,9 @@ jobs:
       - run: npm test
       - run: npm run build
 
+  # Job pesado (Docker + Supabase): só na main, não em cada PR.
   database:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
