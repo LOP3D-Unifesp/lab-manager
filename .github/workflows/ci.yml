@@ -30,7 +30,7 @@ jobs:
       - run: npm ci
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.98.2
       - run: npm run setup:local
       - run: npm run test:db
       - run: npm run test:concurrency
