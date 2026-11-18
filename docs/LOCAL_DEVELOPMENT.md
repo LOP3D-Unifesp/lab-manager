@@ -93,6 +93,13 @@ SUPABASE_URL=https://<ref>.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=...
 PUBLIC_SITE_URL=https://lop3d-unifesp.github.io/lab-manager
 CONFIRM_REMOTE_HOST=<ref>.supabase.co
+# Opcional: SMTP próprio (sem ele o Supabase limita o envio a poucos e-mails por hora)
+SMTP_HOST=smtp-relay.brevo.com
+SMTP_PORT=587
+SMTP_USER=<login SMTP, ex.: xxxx@smtp-brevo.com>
+SMTP_PASS=<chave SMTP>
+SMTP_FROM_EMAIL=<remetente verificado no provedor>
+SMTP_FROM_NAME=LO&P3D Lab Manager
 ```
 
 Migrations não são aplicadas automaticamente pelo CI; use `supabase db push` manualmente.
@@ -126,7 +133,7 @@ O projeto hospedado permanece intocado até esta sequência ser executada delibe
 2. manter `verify_jwt=true` nas duas funções administrativas e `verify_jwt=false` apenas na limpeza,
    que valida manualmente o bearer secreto;
 3. configurar `PUBLIC_SITE_URL` nas funções com a origem HTTPS da aplicação;
-4. no painel Auth, manter cadastro público desabilitado e configurar `Site URL`/redirects;
+4. no painel Auth, manter cadastro público desabilitado e configurar `Site URL` (sem barra final, o template de convite acrescenta `/convite/aceitar`) e os redirects;
 5. promover `supabase/templates/invite.html` como template de convite. O link deve continuar usando
    `{{ .TokenHash }}` e apontar primeiro para `/convite/aceitar`, nunca diretamente para
    `{{ .ConfirmationURL }}`;
