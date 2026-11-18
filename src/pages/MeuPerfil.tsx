@@ -1,7 +1,7 @@
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { CalendarDays, Save, UserRoundCog, Utensils } from "lucide-react";
 
-import { FundingGrantsEditor } from "../components/profile/FundingGrantsEditor";
+import { WorkloadField } from "../components/profile/WorkloadField";
 import { Avatar } from "../components/ui/Avatar";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
@@ -13,6 +13,7 @@ import {
   getDuracaoPeriodoEmHoras,
   getRoleLabel,
   getSlotColorClassName,
+  getEffectiveWeeklyHours,
   getTotalWeeklyGrantHours,
   getWorkModeLabel,
   normalizarCpf,
@@ -78,7 +79,10 @@ export function MeuPerfil() {
   >("");
   const [birthDate, setBirthDate] = useState("");
   const [fundingGrants, setFundingGrants] = useState<FundingGrant[]>([]);
-  const totalWeeklyHours = getTotalWeeklyGrantHours(fundingGrants);
+  const [isScholarshipHolder, setIsScholarshipHolder] = useState(true);
+  const [manualWorkload, setManualWorkload] = useState("");
+  const totalGrantHours = getTotalWeeklyGrantHours(fundingGrants);
+  const totalWeeklyHours = getEffectiveWeeklyHours(isScholarshipHolder, fundingGrants, manualWorkload);
   const [lattesUrl, setLattesUrl] = useState("");
   const [cpf, setCpf] = useState("");
   const [rg, setRg] = useState("");
@@ -156,6 +160,11 @@ export function MeuPerfil() {
     setAcademicAffiliation(profile.academic_affiliation ?? "");
     setBirthDate(profile.birth_date ?? "");
     setFundingGrants(profile.funding_grants);
+    const holder = profile.funding_grants.length > 0 || profile.weekly_workload_hours === null;
+    setIsScholarshipHolder(holder);
+    setManualWorkload(
+      !holder && profile.weekly_workload_hours !== null ? String(profile.weekly_workload_hours) : "",
+    );
     setLattesUrl(profile.lattes_url ?? "");
     setCpf(profile.cpf ?? "");
     setRg(profile.rg ?? "");
@@ -353,7 +362,10 @@ export function MeuPerfil() {
       return;
     }
 
-    if (fundingGrants.some((grant) => grant.agency === "other" && !grant.agency_other?.trim())) {
+    if (
+      isScholarshipHolder &&
+      fundingGrants.some((grant) => grant.agency === "other" && !grant.agency_other?.trim())
+    ) {
       setErrorMessage("Informe o nome de cada outra agência de fomento adicionada.");
       return;
     }
@@ -365,7 +377,7 @@ export function MeuPerfil() {
         fullName: nomeNormalizado,
         academicAffiliation: academicAffiliation || null,
         birthDate: birthDateNormalizada,
-        fundingGrants,
+        fundingGrants: isScholarshipHolder ? fundingGrants : [],
         weeklyWorkloadHours: cargaHoraria,
         lattesUrl: lattesNormalizado,
         cpf: cpfNormalizado,
@@ -525,18 +537,20 @@ export function MeuPerfil() {
                 />
               </label>
 
-              <label className="grid gap-2 text-base font-semibold text-text">
-                Carga horaria semanal
-                <input
-                  className="min-h-11 cursor-not-allowed rounded-lg border border-border bg-primary-soft px-4 text-base font-semibold text-text outline-none"
-                  disabled
-                  readOnly
-                  value={`${totalWeeklyHours}h`}
-                />
-                <p className="text-sm font-normal text-muted">
-                  Somatório automático das horas semanais das bolsas de fomento cadastradas.
-                </p>
-              </label>
+              <WorkloadField
+                disabled={submitting}
+                grants={fundingGrants}
+                isScholarshipHolder={isScholarshipHolder}
+                manualHours={manualWorkload}
+                onGrantsChange={setFundingGrants}
+                onIsScholarshipHolderChange={(value) => {
+                  setIsScholarshipHolder(value);
+                  setSuccessMessage("");
+                  setErrorMessage("");
+                }}
+                onManualHoursChange={setManualWorkload}
+                totalGrantHours={totalGrantHours}
+              />
 
               <label className="grid gap-2 text-base font-semibold text-text md:col-span-2">
                 Link do Lattes
@@ -562,9 +576,6 @@ export function MeuPerfil() {
                 />
               </label>
 
-              <div className="md:col-span-2">
-                <FundingGrantsEditor value={fundingGrants} onChange={setFundingGrants} disabled={submitting} />
-              </div>
             </div>
           </Card>
 

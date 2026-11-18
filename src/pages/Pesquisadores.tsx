@@ -177,7 +177,9 @@ export function Pesquisadores() {
                   <p className="mt-2 text-sm font-semibold leading-5 text-muted">
                     {pesquisador.bolsasFomento.length > 0
                       ? `Bolsas de fomento: ${pesquisador.bolsasFomento.join(", ")}`
-                      : "Sem bolsa de fomento"}
+                      : pesquisador.cargaHorariaSemanal
+                        ? "Voluntário"
+                        : "Sem bolsa de fomento"}
                     {pesquisador.cargaHorariaSemanal
                       ? ` - ${pesquisador.cargaHorariaSemanal}h/semana`
                       : ""}
@@ -271,7 +273,9 @@ export function Pesquisadores() {
                     <td className="whitespace-nowrap px-5 py-3 text-base text-muted">
                       {pesquisador.bolsasFomento.length > 0
                         ? `Bolsas: ${pesquisador.bolsasFomento.join(", ")}`
-                        : "Sem bolsa de fomento"}
+                        : pesquisador.cargaHorariaSemanal
+                          ? "Voluntário"
+                          : "Sem bolsa de fomento"}
                       {pesquisador.cargaHorariaSemanal
                         ? ` - ${pesquisador.cargaHorariaSemanal}h`
                         : ""}

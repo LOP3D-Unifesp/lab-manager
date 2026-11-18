@@ -59,6 +59,19 @@ export function getTotalWeeklyGrantHours(grants: FundingGrant[]) {
   return grants.reduce((total, grant) => total + (grant.weekly_hours ?? 0), 0);
 }
 
+export function getEffectiveWeeklyHours(
+  isScholarshipHolder: boolean,
+  grants: FundingGrant[],
+  manualHours: string,
+) {
+  if (isScholarshipHolder) {
+    return getTotalWeeklyGrantHours(grants);
+  }
+
+  const parsed = Number(manualHours);
+  return manualHours.trim() !== "" && Number.isFinite(parsed) ? parsed : 0;
+}
+
 export function getRoleLabel(role: ProfileRole) {
   return role === "coordinator" ? "Coordenador" : "Pesquisador";
 }

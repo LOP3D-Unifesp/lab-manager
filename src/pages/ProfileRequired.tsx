@@ -2,13 +2,18 @@ import { AlertTriangle, LogOut, UserPlus } from "lucide-react";
 import { FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { FundingGrantsEditor } from "../components/profile/FundingGrantsEditor";
+import { WorkloadField } from "../components/profile/WorkloadField";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { PasswordInput } from "../components/ui/PasswordInput";
 import { useAuth } from "../lib/auth";
 import { createMyProfile, setMyPassword } from "../lib/supabaseRepository";
-import { AcademicAffiliation, getTotalWeeklyGrantHours, type FundingGrant } from "../lib/domain";
+import {
+  AcademicAffiliation,
+  getEffectiveWeeklyHours,
+  getTotalWeeklyGrantHours,
+  type FundingGrant,
+} from "../lib/domain";
 
 const academicAffiliationOptions: Array<{
   value: AcademicAffiliation;
@@ -64,7 +69,10 @@ export function ProfileRequired() {
   >("");
   const [birthDate, setBirthDate] = useState("");
   const [fundingGrants, setFundingGrants] = useState<FundingGrant[]>([]);
-  const totalWeeklyHours = getTotalWeeklyGrantHours(fundingGrants);
+  const [isScholarshipHolder, setIsScholarshipHolder] = useState(true);
+  const [manualWorkload, setManualWorkload] = useState("");
+  const totalGrantHours = getTotalWeeklyGrantHours(fundingGrants);
+  const totalWeeklyHours = getEffectiveWeeklyHours(isScholarshipHolder, fundingGrants, manualWorkload);
   const [lattesUrl, setLattesUrl] = useState("");
   const [cpf, setCpf] = useState("");
   const [rg, setRg] = useState("");
@@ -119,8 +127,20 @@ export function ProfileRequired() {
       return;
     }
 
-    if (fundingGrants.some((grant) => grant.agency === "other" && !grant.agency_other?.trim())) {
+    if (
+      isScholarshipHolder &&
+      fundingGrants.some((grant) => grant.agency === "other" && !grant.agency_other?.trim())
+    ) {
       setErrorMessage("Informe o nome de cada outra agência de fomento adicionada.");
+      setSubmitting(false);
+      return;
+    }
+
+    if (
+      totalWeeklyHours > 0 &&
+      (!Number.isInteger(totalWeeklyHours) || totalWeeklyHours < 1 || totalWeeklyHours > 60)
+    ) {
+      setErrorMessage("A carga horaria deve estar entre 1 e 60 horas.");
       setSubmitting(false);
       return;
     }
@@ -130,7 +150,7 @@ export function ProfileRequired() {
         fullName: fullName.trim(),
         academicAffiliation: academicAffiliation || null,
         birthDate: normalizeOptionalText(birthDate),
-        fundingGrants,
+        fundingGrants: isScholarshipHolder ? fundingGrants : [],
         weeklyWorkloadHours: totalWeeklyHours > 0 ? totalWeeklyHours : null,
         lattesUrl: normalizeOptionalText(lattesUrl),
         cpf: normalizeCpf(cpf),
@@ -299,21 +319,19 @@ export function ProfileRequired() {
                 />
               </label>
 
-              <label className="grid gap-2 text-base font-semibold">
-                Horas semanais
-                <input
-                  className="min-h-11 cursor-not-allowed rounded-lg border border-border bg-primary-soft px-4 text-base font-semibold text-text outline-none"
-                  disabled
-                  readOnly
-                  value={`${totalWeeklyHours}h`}
-                />
-                <p className="text-sm font-normal text-muted">
-                  Somatório automático das horas semanais das bolsas cadastradas abaixo.
-                </p>
-              </label>
             </div>
 
-            <FundingGrantsEditor value={fundingGrants} onChange={setFundingGrants} disabled={submitting} />
+            <WorkloadField
+              disabled={submitting}
+              grants={fundingGrants}
+              isScholarshipHolder={isScholarshipHolder}
+              label="Horas semanais"
+              manualHours={manualWorkload}
+              onGrantsChange={setFundingGrants}
+              onIsScholarshipHolderChange={setIsScholarshipHolder}
+              onManualHoursChange={setManualWorkload}
+              totalGrantHours={totalGrantHours}
+            />
 
             <div className="grid gap-4 sm:grid-cols-3">
               <label className="grid gap-2 text-base font-semibold">

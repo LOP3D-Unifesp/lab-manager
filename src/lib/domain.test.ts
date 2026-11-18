@@ -20,6 +20,7 @@ import {
   getMensagemErroReserva,
   getRoleLabel,
   getSlotColorClassName,
+  getEffectiveWeeklyHours,
   getTotalWeeklyGrantHours,
   getWorkModeLabel,
   formatSchedulePeriod,
@@ -194,6 +195,16 @@ describe("regras de dominio", () => {
       ]),
     ).toBe(0);
     expect(getTotalWeeklyGrantHours([])).toBe(0);
+  });
+
+  it("usa a soma das bolsas para bolsistas e a carga manual para voluntarios", () => {
+    const grants = [
+      { agency: "cnpq" as const, agency_other: null, grant_name: null, weekly_hours: 20, monthly_value: null },
+    ];
+    expect(getEffectiveWeeklyHours(true, grants, "12")).toBe(20);
+    expect(getEffectiveWeeklyHours(false, grants, "12")).toBe(12);
+    expect(getEffectiveWeeklyHours(false, grants, "")).toBe(0);
+    expect(getEffectiveWeeklyHours(false, [], "abc")).toBe(0);
   });
 
   it.each(["pending", "approved", "in_progress"] as const)(
