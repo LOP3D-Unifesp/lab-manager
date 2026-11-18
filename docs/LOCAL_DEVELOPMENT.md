@@ -5,7 +5,9 @@ recusa URLs hospedadas, evitando alterações acidentais no projeto web.
 
 ## Primeira instalação local
 
-Requisitos: Node.js, npm, Docker Desktop em execução e Supabase CLI disponível pelo `npx`.
+Requisitos: Node.js 22, npm, Docker Desktop em execução e Supabase CLI **3.2 ou superior**
+(`scoop update supabase` no Windows; o CI usa a mesma versão). O `supabase/config.toml` usa a seção
+`[local_smtp]`, nome adotado pela CLI 3.x.
 
 ```bash
 npm install
@@ -67,46 +69,16 @@ VITE_SUPABASE_ANON_KEY=SUA_CHAVE_PUBLICA
 
 Depois execute `npm run dev:remote`. Chaves `service_role` nunca usam prefixo `VITE_`.
 
-## Ambiente de teste na nuvem (GitHub Pages + Supabase hospedado)
+## Ambiente de teste na nuvem
 
-O frontend é publicado em `https://lop3d-unifesp.github.io/lab-manager/` pelo workflow
-`.github/workflows/deploy-pages.yml` a cada push na `main` (ou manualmente via *Run workflow*).
-
-1. Em *Settings → Pages*, escolha *Source: GitHub Actions*.
-2. Em *Settings → Secrets and variables → Actions → Variables*, defina `VITE_SUPABASE_URL` e
-   `VITE_SUPABASE_ANON_KEY` (chave pública; a proteção é RLS). A `service_role` nunca vai ao GitHub.
-3. No Supabase: `supabase link`, `supabase db push` (ou `db reset --linked` para recomeçar),
-   `supabase functions deploy`, secret `PUBLIC_SITE_URL=https://lop3d-unifesp.github.io/lab-manager`
-   e configure o Auth sem usar o painel com `npm run config:remote-auth` (variáveis
-   `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`, `PUBLIC_SITE_URL`, `CONFIRM_REMOTE_HOST=<ref>.supabase.co`).
-   Ele altera somente Site URL, redirects, cadastro público e o template de convite.
-4. `npm run bootstrap:remote` cria o coordenador; depois de concluir o wizard no site,
-   `npm run db:seed:demo:remote` (mesmas variáveis de ambiente do bootstrap) adiciona dados fictícios.
-
-Para não digitar segredos a cada vez, crie `.env.admin.local` na raiz (ignorado pelo git; nunca
-commite nem use prefixo `VITE_`). Os scripts remotos o leem automaticamente:
-
-```env
-SUPABASE_ACCESS_TOKEN=sbp_...
-SUPABASE_PROJECT_REF=<ref>
-SUPABASE_URL=https://<ref>.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=...
-PUBLIC_SITE_URL=https://lop3d-unifesp.github.io/lab-manager
-CONFIRM_REMOTE_HOST=<ref>.supabase.co
-# Opcional: SMTP próprio (sem ele o Supabase limita o envio a poucos e-mails por hora)
-SMTP_HOST=smtp-relay.brevo.com
-SMTP_PORT=587
-SMTP_USER=<login SMTP, ex.: xxxx@smtp-brevo.com>
-SMTP_PASS=<chave SMTP>
-SMTP_FROM_EMAIL=<remetente verificado no provedor>
-SMTP_FROM_NAME=LO&P3D Lab Manager
-```
-
-Migrations não são aplicadas automaticamente pelo CI; use `supabase db push` manualmente.
+O site de teste da equipe (GitHub Pages + Supabase hospedado), a configuração do Auth, do SMTP e os
+scripts `bootstrap:remote`, `config:remote-auth` e `db:seed:demo:remote` estão documentados em
+[DEPLOY.md](DEPLOY.md). Pendências conhecidas (como o e-mail de convite cair no spam) ficam em
+[PENDENCIAS.md](PENDENCIAS.md).
 
 ## Primeiro coordenador remoto
 
-Em um projeto novo, aplique a baseline e publique a Edge Function antes do bootstrap. Mantenha
+Em um projeto novo, aplique as migrations e publique as Edge Functions antes do bootstrap. Mantenha
 `auth.enable_signup=false`, mas deixe o provedor de email habilitado para permitir login e convites.
 
 O comando remoto exige confirmação do hostname e recebe segredos apenas pelo ambiente do processo:
@@ -128,7 +100,7 @@ Vault os segredos usados pelo Cron de limpeza e agenda `cleanup-expired-invitati
 
 O projeto hospedado permanece intocado até esta sequência ser executada deliberadamente:
 
-1. aplicar a baseline em staging e publicar `invite-user`, `manage-invitation` e
+1. aplicar as migrations em staging e publicar `invite-user`, `manage-invitation` e
    `cleanup-invitations`;
 2. manter `verify_jwt=true` nas duas funções administrativas e `verify_jwt=false` apenas na limpeza,
    que valida manualmente o bearer secreto;
@@ -145,7 +117,8 @@ Não copie usuários, convites nem outros dados do Docker para o projeto hospeda
 ## Migrations, seeds e promoção
 
 - `supabase/migrations/20260818000000_initial_mvp_baseline.sql` é a baseline imutável do MVP.
-- Depois que ela entrar na `main`, cada mudança de schema ganha uma migration incremental nova.
+- A baseline já está na `main`: cada mudança de schema ganha uma migration incremental nova
+  (hoje são 13, até `20260830000000`). Nunca edite uma migration já mergeada.
 - `supabase/seed.sql` não contém dados pessoais nem dados de demonstração.
 - Antes de promover: faça backup, valide em staging vazio, execute reset/testes locais e revise o diff.
 - Aplique migrations hospedadas deliberadamente com o Supabase CLI somente após vincular e conferir o
@@ -160,3 +133,5 @@ npm run test:concurrency
 npm test
 npm run build
 ```
+
+O fluxo de contribuição (branch, PR e CI) está em [../CONTRIBUTING.md](../CONTRIBUTING.md).

@@ -22,25 +22,27 @@ O sistema terá dois papéis principais:
 ### Coordenador
 
 Pode:
-- convidar pesquisadores;
-- gerenciar usuários;
+- convidar pessoas como pesquisador ou coordenador (convite válido por 72 horas, com reenvio e revogação);
+- gerenciar usuários e decidir, por pesquisador, se as reservas exigem aprovação;
+- configurar o laboratório (capacidade presencial, dias de funcionamento, turnos, intervalos de almoço e jantar e fuso horário);
 - cadastrar e editar impressoras;
 - cadastrar materiais;
 - bloquear horários de manutenção;
 - visualizar todas as agendas;
+- aprovar ou rejeitar reservas pendentes e acompanhar o ciclo operacional (iniciar, concluir ou marcar como falha);
 - editar ou cancelar reservas, quando necessário.
 
 ### Pesquisador
 
 Pode:
-- criar perfil a partir de convite;
-- editar seu próprio perfil;
+- aceitar o convite (confirmação explícita) e completar seu perfil;
+- editar seu próprio perfil, incluindo foto, Lattes, bolsas de fomento e carga horária;
 - cadastrar sua disponibilidade;
 - cadastrar suas habilidades;
 - visualizar a agenda dos pesquisadores;
 - visualizar a agenda das impressoras;
 - reservar impressoras;
-- cancelar ou editar suas próprias reservas, conforme regra definida.
+- cancelar ou editar suas próprias reservas enquanto estiverem pendentes ou aprovadas.
 
 ## 4. Vínculo acadêmico
 
@@ -67,7 +69,7 @@ Funcionalidades:
 - cadastro de perfil;
 - cadastro de disponibilidade semanal;
 - cadastro de habilidades;
-- busca por habilidade;
+- busca por habilidade (prevista; ainda não implementada, veja [PENDENCIAS.md](PENDENCIAS.md));
 - visualização de quem estará no laboratório em determinada data.
 
 ### 5.2 Módulo de impressoras
@@ -88,16 +90,32 @@ Funcionalidades:
 - vincular reserva a uma impressora;
 - informar material, duração estimada e projeto;
 - anexar arquivo .gcode ou .3mf em fase futura;
-- acompanhar status da reserva.
+- acompanhar status da reserva;
+- aprovação opcional pelo coordenador, com alerta em tempo real de reservas pendentes.
 
 ## 6. Status de reserva
 
 - Pendente
 - Aprovada
+- Rejeitada (com motivo opcional)
 - Em andamento
 - Concluída
 - Cancelada
 - Falhou
+
+Política de aprovação: cada pesquisador tem a configuração "exige aprovação" (ligada por padrão, o
+coordenador altera em **Usuários**). Reservas de pesquisadores com a configuração ligada nascem
+**Pendentes**; as de coordenadores ou de pesquisadores sem a configuração nascem **Aprovadas**.
+Reservas pendentes, aprovadas e em andamento bloqueiam o horário. "Em andamento", "Concluída" e
+"Falhou" só podem ser registradas a partir de 1 hora antes do horário da reserva.
+
+## 6.1 Perfil, bolsas e carga horária
+
+O perfil guarda vínculo acadêmico, Lattes, nacionalidade, contato, biografia e foto. A pessoa é
+**bolsista** ou **voluntária**: bolsistas cadastram uma ou mais bolsas de fomento (agência, nome,
+horas semanais e valor mensal) e a carga horária semanal é a soma das horas das bolsas; voluntários
+informam a carga manualmente (1 a 60 horas). Dados pessoais sensíveis (CPF, RG, nascimento e
+endereço) ficam isolados e visíveis só ao próprio usuário e ao coordenador.
 
 ## 7. Status de impressora
 

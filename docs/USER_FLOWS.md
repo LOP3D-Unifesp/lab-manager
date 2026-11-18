@@ -2,7 +2,7 @@
 
 ## 1. Objetivo do documento
 
-Este documento descreve os fluxos funcionais do MVP do LO&P3D Lab Manager. O objetivo é registrar o comportamento esperado do sistema antes da implementação da autenticação, dos perfis, das agendas, das impressoras e das reservas.
+Este documento descreve os fluxos funcionais do LO&P3D Lab Manager. O objetivo é registrar o comportamento esperado do sistema para autenticação, perfis, agendas, impressoras, reservas e configuração do laboratório. Ele foi atualizado para refletir o que está implementado; itens previstos e ainda não feitos estão marcados.
 
 O documento deve orientar a implementação funcional sem definir modelagem de banco, nomes de tabelas, regras de RLS, componentes React ou detalhes internos de infraestrutura.
 
@@ -10,18 +10,20 @@ O documento deve orientar a implementação funcional sem definir modelagem de b
 
 - Todos os usuários que acessam informações do sistema devem estar autenticados.
 - O sistema possui dois papéis principais: coordenador e pesquisador.
-- O coordenador pode convidar pesquisadores, gerenciar impressoras, materiais, bloqueios de manutenção e reservas.
+- O acesso ao sistema é somente por convite; não existe cadastro público.
+- O coordenador pode convidar pessoas (como pesquisador ou coordenador), configurar o laboratório, gerenciar impressoras, materiais, bloqueios de manutenção e decidir sobre reservas.
 - O pesquisador pode criar e editar o próprio perfil, cadastrar habilidades, informar disponibilidade semanal, consultar agendas e criar reservas manuais.
 - O pesquisador só pode gerenciar dados próprios, exceto nas consultas compartilhadas permitidas pelo sistema.
 - A reserva de impressora no MVP é manual e deve conter impressora, projeto, material, data, horário inicial e duração estimada.
 - O sistema deve impedir conflitos de horário para a mesma impressora.
 - Upload de arquivos, parser de `.gcode`, parser de `.3mf`, sugestão automática de horário, relatórios avançados e integração direta com impressoras estão fora do MVP inicial.
-- Status de reserva previstos: `Pendente`, `Aprovada`, `Em andamento`, `Concluída`, `Cancelada` e `Falhou`.
+- Status de reserva: `Pendente`, `Aprovada`, `Rejeitada`, `Em andamento`, `Concluída`, `Cancelada` e `Falhou`.
+- Reservas `Pendente`, `Aprovada` e `Em andamento` bloqueiam o horário da impressora.
 - Status de impressora previstos: `Ativa`, `Em manutenção`, `Indisponível` e `Desativada`.
 
 ## 3. Papéis envolvidos
 
-**Coordenador:** usuário responsável pela administração operacional do laboratório. Pode convidar pesquisadores, gerenciar cadastros administrativos, bloquear impressoras para manutenção e editar ou cancelar reservas quando necessário.
+**Coordenador:** usuário responsável pela administração operacional do laboratório. Pode convidar usuários, configurar o laboratório, decidir sobre reservas, gerenciar cadastros administrativos, bloquear impressoras para manutenção e editar ou cancelar reservas quando necessário.
 
 **Pesquisador:** usuário convidado para usar o sistema. Pode manter seu perfil, informar habilidades e disponibilidade, consultar informações do laboratório e reservar impressoras conforme as regras do MVP.
 
@@ -41,73 +43,76 @@ O documento deve orientar a implementação funcional sem definir modelagem de b
 
 ### 5.1 Usuários e perfis
 
-### Fluxo 1 - Coordenador convida pesquisador
+### Fluxo 1 - Coordenador convida usuário
 
-**Objetivo:**  
-Permitir que o coordenador convide uma pessoa para acessar o sistema como pesquisador.
+**Objetivo:**
+Permitir que o coordenador convide uma pessoa para acessar o sistema como pesquisador ou coordenador.
 
-**Ator principal:**  
+**Ator principal:**
 Coordenador.
 
-**Pré-condições:**  
+**Pré-condições:**
 - O coordenador está autenticado.
+- O laboratório concluiu a instalação e possui um e-mail de contato para privacidade.
 - A pessoa a ser convidada ainda não possui acesso ativo ao sistema.
 
-**Passos:**  
-1. O coordenador inicia a criação de um convite.
-2. O coordenador informa os dados necessários para identificar o pesquisador convidado.
-3. O sistema valida se o coordenador tem permissão para convidar usuários.
-4. O sistema registra o convite como pendente.
-5. O sistema disponibiliza o convite para que o pesquisador possa aceitar e criar seu perfil.
+**Passos:**
+1. O coordenador acessa **Usuários → Convites** e inicia um convite.
+2. O coordenador informa o e-mail da pessoa e escolhe o papel (pesquisador ou coordenador).
+3. O sistema valida a permissão e envia o e-mail de convite.
+4. O sistema registra o convite como pendente, com validade de 72 horas.
+5. Enquanto o convite estiver pendente, o coordenador pode reenviá-lo (após um intervalo mínimo) ou revogá-lo.
 
-**Resultado esperado:**  
-O convite fica disponível para o pesquisador convidado iniciar o cadastro de perfil.
+**Resultado esperado:**
+A pessoa recebe um e-mail com o link do convite e o convite aparece na lista como pendente.
 
-**Regras de negócio:**  
-- Apenas coordenadores podem convidar pesquisadores.
-- Um convite deve estar associado a um pesquisador específico.
-- Convites pendentes devem poder ser identificados como ainda não aceitos.
-- Um convite aceito não deve poder ser reutilizado para criar outro perfil.
+**Regras de negócio:**
+- Apenas coordenadores podem convidar usuários.
+- O papel é definido no convite e não pode ser alterado pelo convidado.
+- Um convite é válido por 72 horas; depois disso expira.
+- Convites podem estar `Pendentes`, `Aceitos`, `Expirados` ou `Revogados`.
+- Um convite aceito não pode ser reutilizado.
+- Convites expirados ou revogados têm a identidade técnica pendente e o e-mail descartados automaticamente.
 
-**Estados de erro:**  
+**Estados de erro:**
 - Usuário sem permissão tenta criar convite.
-- Dados obrigatórios do convite não são informados.
-- Já existe convite pendente ou perfil ativo para a mesma pessoa.
-- O sistema não consegue registrar o convite.
+- Instalação incompleta ou contato de privacidade não informado.
+- E-mail inválido, ou já existe convite pendente ou perfil ativo para a mesma pessoa.
+- Limite de envio de e-mails do provedor atingido.
+- O sistema não consegue registrar ou enviar o convite.
 
-### Fluxo 2 - Pesquisador aceita convite e cria perfil
+### Fluxo 2 - Convidado aceita o convite e cria o perfil
 
-**Objetivo:**  
-Permitir que o pesquisador convidado aceite o convite e crie seu perfil inicial.
+**Objetivo:**
+Permitir que a pessoa convidada aceite o convite e complete seu perfil inicial.
 
-**Ator principal:**  
-Pesquisador.
+**Ator principal:**
+Pessoa convidada.
 
-**Pré-condições:**  
-- Existe um convite válido e pendente para o pesquisador.
-- O pesquisador ainda não possui perfil ativo criado a partir desse convite.
+**Pré-condições:**
+- Existe um convite válido e pendente para a pessoa.
 
-**Passos:**  
-1. O pesquisador acessa o convite recebido.
-2. O sistema verifica se o convite é válido e ainda está pendente.
-3. O pesquisador informa os dados obrigatórios do perfil.
-4. O pesquisador confirma a criação do perfil.
-5. O sistema cria o perfil do pesquisador.
-6. O sistema marca o convite como aceito.
+**Passos:**
+1. A pessoa abre o link recebido por e-mail e vê a página **Revise antes de aceitar**, com a identidade do laboratório e o aviso de privacidade.
+2. Abrir a página não confirma o convite nem cria sessão.
+3. A pessoa clica em **Aceitar convite**; o sistema valida o convite e cria uma sessão.
+4. A pessoa define uma senha.
+5. A pessoa preenche o perfil (nome, vínculo acadêmico, bolsas ou carga horária, contato e dados pessoais) e confirma.
+6. O sistema cria o perfil com o papel definido no convite e marca o convite como aceito.
 
-**Resultado esperado:**  
-O pesquisador passa a ter um perfil ativo e pode acessar as funcionalidades permitidas ao seu papel.
+**Resultado esperado:**
+A pessoa passa a ter um perfil ativo e acessa as funcionalidades do seu papel.
 
-**Regras de negócio:**  
+**Regras de negócio:**
 - Um convite válido só pode ser aceito uma vez.
-- O perfil inicial deve conter os dados mínimos necessários para identificação do pesquisador.
+- O aceite exige confirmação explícita, para que a pré-visualização do e-mail não consuma o link.
 - O vínculo acadêmico pode ser informado, mas não altera permissões.
-- O perfil criado a partir de convite recebe o papel de pesquisador.
+- Quem sai antes de concluir o perfil tem a identidade incompleta descartada automaticamente após a expiração do convite.
 
-**Estados de erro:**  
-- Convite inválido, expirado, inexistente ou já aceito.
+**Estados de erro:**
+- Link incompleto, convite inválido, expirado, revogado ou já usado (a mensagem orienta pedir novo convite).
+- Senha fora das regras mínimas ou confirmação diferente.
 - Dados obrigatórios do perfil não são informados.
-- O pesquisador tenta criar mais de um perfil com o mesmo convite.
 - O sistema não consegue concluir a criação do perfil.
 
 ### Fluxo 3 - Pesquisador edita perfil
@@ -180,6 +185,25 @@ As habilidades do pesquisador ficam visíveis nas consultas permitidas pelo sist
 - Tentativa de cadastrar habilidade duplicada para o mesmo perfil.
 - O sistema não consegue salvar as alterações.
 
+### Fluxo 3.1 - Pesquisador informa vínculo de bolsa e carga horária
+
+**Objetivo:**
+Registrar se a pessoa é bolsista ou voluntária e qual é a sua carga horária semanal.
+
+**Ator principal:**
+Pesquisador (também no cadastro inicial do perfil).
+
+**Passos:**
+1. No perfil, a pessoa escolhe **Bolsista** ou **Voluntário**.
+2. Se for bolsista, cadastra uma ou mais bolsas (agência, nome da bolsa, horas semanais e valor mensal); a carga horária é a soma das horas das bolsas.
+3. Se for voluntário, informa manualmente a carga horária semanal (1 a 60 horas); as bolsas são removidas ao salvar.
+4. O sistema salva o perfil e usa a carga horária como meta na agenda semanal.
+
+**Regras de negócio:**
+- A carga horária semanal vai de 1 a 60 horas; sem valor, não há meta.
+- Agência "outra" exige o nome da agência.
+- A lista de pesquisadores mostra "Voluntário" para quem tem carga mas nenhuma bolsa.
+
 ### Fluxo 5 - Pesquisador cadastra disponibilidade semanal
 
 **Objetivo:**  
@@ -195,9 +219,9 @@ Pesquisador.
 **Passos:**  
 1. O pesquisador acessa sua disponibilidade semanal.
 2. O sistema apresenta os períodos já cadastrados, se existirem.
-3. O pesquisador informa dias da semana e faixas de horário.
+3. O pesquisador escolhe, para cada dia de funcionamento e turno, o modo: presencial, home office ou aula (ou nenhum).
 4. O pesquisador confirma o cadastro ou a atualização.
-5. O sistema valida as faixas de horário.
+5. O sistema valida os turnos e a capacidade presencial.
 6. O sistema salva a disponibilidade semanal.
 
 **Resultado esperado:**  
@@ -205,13 +229,15 @@ A disponibilidade semanal do pesquisador fica registrada e pode ser usada na con
 
 **Regras de negócio:**  
 - O pesquisador só pode alterar a própria disponibilidade.
-- Cada faixa deve ter horário inicial anterior ao horário final.
-- O sistema deve evitar faixas duplicadas ou incoerentes para o mesmo pesquisador.
+- Os dias e turnos disponíveis são os configurados pelo coordenador (Fluxo 19).
+- O número de pessoas presenciais em um turno não pode ultrapassar a capacidade presencial do laboratório.
+- O sistema evita turnos duplicados ou incoerentes para o mesmo pesquisador.
+- A agenda mostra as horas agendadas contra a carga horária semanal do perfil.
 - A disponibilidade representa planejamento e não confirmação automática de presença real.
 
 **Estados de erro:**  
-- Horário inicial igual ou posterior ao horário final.
-- Dia da semana ou horário obrigatório não informado.
+- Capacidade presencial do turno já atingida.
+- Dia ou turno fora do funcionamento do laboratório.
 - Pesquisador tenta alterar disponibilidade de outro usuário.
 - O sistema não consegue salvar a disponibilidade.
 
@@ -248,6 +274,8 @@ O usuário visualiza quem está previsto para estar no laboratório no período 
 - O sistema não consegue carregar a agenda do laboratório.
 
 ### Fluxo 7 - Usuário busca pesquisador por habilidade
+
+> **Situação: prevista, ainda não implementada.** Hoje a lista de Pesquisadores filtra por vínculo e não exibe habilidades. Veja [PENDENCIAS.md](PENDENCIAS.md).
 
 **Objetivo:**  
 Permitir que usuários autenticados encontrem pesquisadores com habilidades específicas.
@@ -408,13 +436,15 @@ Pesquisador.
 5. O sistema valida a disponibilidade da impressora no período.
 6. O sistema valida a compatibilidade entre material e impressora.
 7. O pesquisador confirma a reserva.
-8. O sistema registra a reserva com status inicial previsto para o MVP.
+8. O sistema registra a reserva: como `Pendente`, se o pesquisador exige aprovação, ou como `Aprovada`, caso contrário (coordenadores e pesquisadores sem essa exigência).
 
 **Resultado esperado:**  
-A reserva é criada e passa a aparecer na agenda da impressora e na lista de reservas do pesquisador.
+A reserva é criada e passa a aparecer na agenda da impressora e em **Minhas reservas**. Se ficar `Pendente`, os coordenadores recebem um alerta em tempo real.
 
 **Regras de negócio:**  
 - O pesquisador só pode criar reserva para si mesmo.
+- A exigência de aprovação é uma configuração por pesquisador, ligada por padrão e alterada pelo coordenador em **Usuários**.
+- A duração vai de 30 minutos a 24 horas, em múltiplos de 30 minutos.
 - A impressora deve estar apta para receber reservas no período escolhido.
 - O material selecionado deve ser compatível com a impressora.
 - O horário final deve ser calculado a partir do horário inicial e da duração estimada.
@@ -476,7 +506,7 @@ Pesquisador.
 **Pré-condições:**  
 - O pesquisador está autenticado.
 - A reserva pertence ao pesquisador.
-- A reserva ainda não está `Em andamento`, `Concluída`, `Falhou` ou `Cancelada`.
+- A reserva está `Pendente` ou `Aprovada`.
 
 **Passos:**  
 1. O pesquisador acessa suas reservas.
@@ -492,7 +522,7 @@ A reserva própria é cancelada, permanece no histórico e deixa de bloquear o h
 
 **Regras de negócio:**  
 - O pesquisador só pode cancelar reservas próprias.
-- O pesquisador só pode cancelar a própria reserva se ela ainda não estiver `Em andamento`, `Concluída`, `Falhou` ou `Cancelada`.
+- O pesquisador só pode cancelar a própria reserva se ela estiver `Pendente` ou `Aprovada`.
 - O cancelamento não deve apagar a reserva do histórico.
 - Reservas canceladas não devem bloquear novos agendamentos.
 
@@ -501,7 +531,7 @@ A reserva própria é cancelada, permanece no histórico e deixa de bloquear o h
 - Reserva já está `Em andamento`.
 - Reserva já está `Concluída`.
 - Reserva já está `Falhou`.
-- Reserva já está `Cancelada`.
+- Reserva já está `Cancelada` ou `Rejeitada`.
 - Reserva não encontrada.
 - O sistema não consegue cancelar a reserva.
 
@@ -575,6 +605,7 @@ A reserva é editada ou marcada como `Cancelada`, sem ser apagada do histórico.
 - Cancelar uma reserva deve alterar seu status, não remover seu registro histórico.
 - A reserva não deve ser apagada do histórico em nenhuma edição ou cancelamento.
 - Reservas canceladas deixam de bloquear o horário da impressora.
+- Só reservas `Pendentes` ou `Aprovadas` podem ser editadas ou canceladas.
 
 **Estados de erro:**  
 - Usuário sem permissão tenta editar ou cancelar reserva.
@@ -584,6 +615,85 @@ A reserva é editada ou marcada como `Cancelada`, sem ser apagada do histórico.
 - Novo material é incompatível com a impressora.
 - O sistema não consegue aplicar a alteração.
 
+### Fluxo 16 - Coordenador aprova ou rejeita reserva pendente
+
+**Objetivo:**
+Permitir que o coordenador decida sobre reservas que aguardam aprovação.
+
+**Ator principal:**
+Coordenador.
+
+**Pré-condições:**
+- Existe uma reserva `Pendente`.
+
+**Passos:**
+1. O coordenador recebe o alerta de reservas pendentes (sino de notificações, atualizado em tempo real).
+2. O coordenador abre a reserva e escolhe **Aprovar** ou **Rejeitar**.
+3. Ao rejeitar, pode informar um motivo.
+4. O sistema registra a decisão, quem decidiu e quando, e atualiza o status.
+5. O pesquisador é notificado da decisão.
+
+**Regras de negócio:**
+- Apenas coordenadores decidem sobre reservas.
+- `Rejeitada` não bloqueia o horário e não pode ser reaberta (o pesquisador cria uma nova reserva).
+- A decisão fica registrada no histórico da reserva.
+
+### Fluxo 17 - Coordenador conduz o ciclo operacional da reserva
+
+**Objetivo:**
+Registrar o andamento real de uma impressão.
+
+**Ator principal:**
+Coordenador.
+
+**Passos:**
+1. Com a reserva `Aprovada`, o coordenador marca **Em andamento**.
+2. Ao terminar, marca **Concluída** ou **Falhou**.
+
+**Regras de negócio:**
+- As transições permitidas são `Aprovada → Em andamento → Concluída` ou `Falhou`.
+- Essas mudanças só são aceitas a partir de 1 hora antes do horário da reserva.
+- Reservas encerradas permanecem no **Histórico de reservas**.
+
+### 5.6 Instalação e configuração do laboratório
+
+### Fluxo 18 - Primeiro coordenador conclui a instalação
+
+**Objetivo:**
+Preparar um sistema novo para uso.
+
+**Ator principal:**
+Primeiro coordenador.
+
+**Passos:**
+1. O coordenador entra e é direcionado ao wizard de instalação.
+2. Informa o nome e a sigla do laboratório, o fuso horário e um e-mail institucional de contato para privacidade.
+3. O sistema marca a instalação como concluída.
+
+**Regras de negócio:**
+- Até a instalação ser concluída, pesquisadores veem apenas um aviso de instalação pendente.
+- Convites ficam bloqueados enquanto o contato de privacidade não estiver preenchido.
+- A instalação só pode ser concluída uma vez.
+
+### Fluxo 19 - Coordenador configura o funcionamento do laboratório
+
+**Objetivo:**
+Ajustar a capacidade e o calendário usados nas agendas.
+
+**Ator principal:**
+Coordenador.
+
+**Passos:**
+1. Em **Administração**, o coordenador ajusta nome, sigla, fuso e contato de privacidade.
+2. Define a capacidade presencial e os dias de funcionamento.
+3. Cria, edita ou desativa turnos e define os intervalos de almoço e jantar.
+4. O sistema valida e aplica as mudanças.
+
+**Regras de negócio:**
+- Turnos ativos não podem se sobrepor entre si nem aos intervalos de almoço e jantar.
+- Deve existir pelo menos um turno ativo.
+- A capacidade não pode ficar abaixo da ocupação presencial já cadastrada.
+
 ## 6. Critérios para manter os fluxos objetivos
 
 - Descrever comportamento funcional, não implementação técnica.
@@ -592,5 +702,5 @@ A reserva é editada ou marcada como `Cancelada`, sem ser apagada do histórico.
 - Concentrar regras comuns nas premissas gerais.
 - Evitar repetir regras já descritas quando uma referência ao fluxo ou à premissa for suficiente.
 - Registrar apenas estados de erro que mudam a experiência ou a regra do fluxo.
-- Preservar o escopo do MVP e não incluir funcionalidades pós-MVP.
+- Manter o foco no que está implementado e marcar claramente o que é previsto.
 - Usar os status definidos no PRD para reservas e impressoras.
