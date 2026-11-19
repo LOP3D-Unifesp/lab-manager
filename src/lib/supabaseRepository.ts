@@ -1,4 +1,11 @@
 import { supabase } from "./supabaseClient";
+import type {
+  FundingAgencyRecord,
+  FundingCategory,
+  Project,
+  ProjectFunding,
+  ProjectStatus,
+} from "./projects";
 import {
   AvailabilitySlot,
   AcademicAffiliation,
@@ -839,4 +846,133 @@ export async function deleteMaintenanceBlock(blockId: string) {
     p_block_id: blockId,
   });
   throwIfError(error);
+}
+
+// ---------------------------------------------------------------------------
+// Projetos, membros e fomento
+// ---------------------------------------------------------------------------
+
+const projectSelect = [
+  "id",
+  "name",
+  "description",
+  "status",
+  "starts_on",
+  "ends_on",
+  "created_at",
+  "updated_at",
+  "members:project_members(profile_id, profile:profiles!project_members_profile_id_fkey(full_name, avatar_url))",
+  "funding:project_funding(agency_id, process_number, grant_name, starts_on, ends_on, agency:funding_agencies(acronym), items:project_funding_items(category, description, amount))",
+].join(", ");
+
+type ProjectRow = Omit<Project, "members" | "funding"> & {
+  members: Array<{ profile_id: string; profile: { full_name: string; avatar_url: string | null } | null }>;
+  funding: Array<
+    Omit<ProjectFunding, "agency_acronym" | "items"> & {
+      agency: { acronym: string } | null;
+      items: Array<{ category: FundingCategory; description: string | null; amount: number | string }>;
+    }
+  >;
+};
+
+function mapProject(row: ProjectRow): Project {
+  return {
+    ...row,
+    members: (row.members ?? [])
+      .map((member) => ({
+        profile_id: member.profile_id,
+        full_name: member.profile?.full_name ?? "",
+        avatar_url: member.profile?.avatar_url ?? null,
+      }))
+      .sort((a, b) => a.full_name.localeCompare(b.full_name, "pt-BR")),
+    funding: (row.funding ?? []).map((funding) => ({
+      agency_id: funding.agency_id,
+      agency_acronym: funding.agency?.acronym ?? "",
+      process_number: funding.process_number,
+      grant_name: funding.grant_name,
+      starts_on: funding.starts_on,
+      ends_on: funding.ends_on,
+      items: (funding.items ?? []).map((item) => ({
+        category: item.category,
+        description: item.description,
+        amount: Number(item.amount),
+      })),
+    })),
+  };
+}
+
+export async function listProjects() {
+  const { data, error } = await client().from("projects").select(projectSelect).order("name");
+  throwIfError(error);
+  return ((data ?? []) as unknown as ProjectRow[]).map(mapProject);
+}
+
+export async function getProject(id: string) {
+  const { data, error } = await client().from("projects").select(projectSelect).eq("id", id).maybeSingle();
+  throwIfError(error);
+  return data ? mapProject(data as unknown as ProjectRow) : null;
+}
+
+export type ProjectInput = {
+  name: string;
+  description: string | null;
+  status: ProjectStatus;
+  starts_on: string | null;
+  ends_on: string | null;
+};
+
+export async function createProject(params: ProjectInput) {
+  const { data, error } = await client().from("projects").insert(params).select("id").single();
+  throwIfError(error);
+  return (data as { id: string }).id;
+}
+
+export async function updateProject(id: string, params: ProjectInput) {
+  const { error } = await client().from("projects").update(params).eq("id", id);
+  throwIfError(error);
+}
+
+export async function replaceProjectMembers(projectId: string, profileIds: string[]) {
+  const { error } = await client().rpc("replace_project_members", {
+    p_project_id: projectId,
+    p_profile_ids: profileIds,
+  });
+  throwIfError(error);
+}
+
+export type ProjectFundingInput = {
+  agency_id: string;
+  process_number: string | null;
+  grant_name: string | null;
+  starts_on: string | null;
+  ends_on: string | null;
+  items: Array<{ category: FundingCategory; description: string | null; amount: number }>;
+};
+
+export async function replaceProjectFunding(projectId: string, funding: ProjectFundingInput[]) {
+  const { error } = await client().rpc("replace_project_funding", {
+    p_project_id: projectId,
+    p_funding: funding,
+  });
+  throwIfError(error);
+}
+
+export async function listFundingAgencies() {
+  const { data, error } = await client()
+    .from("funding_agencies")
+    .select("id, acronym, name, is_active")
+    .eq("is_active", true)
+    .order("acronym");
+  throwIfError(error);
+  return (data ?? []) as FundingAgencyRecord[];
+}
+
+export async function createFundingAgency(params: { acronym: string; name: string | null }) {
+  const { data, error } = await client()
+    .from("funding_agencies")
+    .insert(params)
+    .select("id, acronym, name, is_active")
+    .single();
+  throwIfError(error);
+  return data as FundingAgencyRecord;
 }

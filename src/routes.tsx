@@ -20,6 +20,8 @@ import { MinhasReservas } from "./pages/MinhasReservas";
 import { NotFound } from "./pages/NotFound";
 import { Pesquisadores } from "./pages/Pesquisadores";
 import { ProfileRequired } from "./pages/ProfileRequired";
+import { ProjetoDetalhe } from "./pages/ProjetoDetalhe";
+import { Projetos } from "./pages/Projetos";
 import { Reservas } from "./pages/Reservas";
 import { AcceptInvitation } from "./pages/AcceptInvitation";
 import { Privacy } from "./pages/Privacy";
@@ -118,6 +120,8 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <Dashboard /> },
           { path: "pesquisadores", element: <Pesquisadores /> },
+          { path: "projetos", element: <Projetos /> },
+          { path: "projetos/:id", element: <ProjetoDetalhe /> },
           { path: "habilidades", element: <Habilidades /> },
           { path: "agenda", element: <AgendaLaboratorio /> },
           { path: "impressoras", element: <Impressoras /> },

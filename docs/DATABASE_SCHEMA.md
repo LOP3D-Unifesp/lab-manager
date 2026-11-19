@@ -19,8 +19,8 @@ O schema cobre:
 
 O Supabase Auth sera a fonte de autenticacao. O PostgreSQL sera a fonte dos dados de dominio da aplicacao.
 
-> **Fonte da verdade:** as migrations em `supabase/migrations/` (13 arquivos, de `20260818` a
-> `20260830`). Este documento descreve o resultado delas. A secao 1.1 resume o que mudou depois da
+> **Fonte da verdade:** as migrations em `supabase/migrations/` (14 arquivos, de `20260818` a
+> `20260831`). Este documento descreve o resultado delas. A secao 1.1 resume o que mudou depois da
 > baseline; onde houver divergencia, vale a migration.
 
 Status do MVP implementado:
@@ -51,6 +51,7 @@ Status do MVP implementado:
 | `20260828_booking_rule_fixes` | Transicoes e janela de inicio (1 hora antes); edicao so de reservas `pending` ou `approved`; RPC `reject_printer_booking`. |
 | `20260829_booking_approved_at` | `printer_bookings.approved_at` (nulo para reservas aprovadas automaticamente). |
 | `20260830_booking_decided_by` | `approved_by` e `rejected_by` (com indices). |
+| `20260831_projects_members_funding` | Projetos, membros, agencias de fomento cadastraveis e fomento por projeto com valores por rubrica (secao 3.13). |
 
 Resumo dos objetos que mais mudam o entendimento do schema:
 
@@ -931,6 +932,31 @@ Regras de integridade:
 - Manutencao nao pode coexistir com reservas ativas no mesmo periodo.
 - A criacao de bloqueio deve falhar se houver reserva ativa sobreposta para a mesma impressora.
 
+### 3.13 Projetos, membros e fomento
+
+Finalidade: cadastrar os projetos do laboratorio, quem participa de cada um e o fomento recebido.
+O coordenador gerencia tudo; cada pesquisador enxerga apenas os projetos de que e membro.
+
+- `projects`: `name` (unico sem diferenciar maiusculas), `description`, `status` (`project_status`:
+  `planning`, `active`, `paused`, `completed`, `archived`), `starts_on`, `ends_on`, `created_by`.
+  Nao ha exclusao: projetos encerrados ficam `archived`.
+- `project_members`: chave `(project_id, profile_id)`. Um pesquisador pode estar em varios projetos.
+- `funding_agencies`: `acronym` (unico), `name`, `is_active`. Vem com FAPESP, CNPq, FINEP,
+  Embrapii e CAPES; o coordenador cadastra outras. Independente do enum `funding_agency`, que
+  continua valendo so para as bolsas por pessoa (`profile_funding_grants`).
+- `project_funding`: um projeto pode ter zero ou varios fomentos (`agency_id`, `process_number`,
+  `grant_name`, vigencia).
+- `project_funding_items`: valor **concedido** por rubrica (`project_funding_category`: `capital`,
+  `custeio`, `bolsas`, `reserva_tecnica`, `outros`), com `amount >= 0`. O total do fomento e a soma
+  dos itens. Gastos e prestacao de contas ficam para um modulo financeiro futuro.
+
+Acesso (RLS): leitura por coordenador ou membro ativo (`private.can_read_project`); escrita direta
+em `projects` e `funding_agencies` so por coordenador; membros e fomento so pelas RPCs
+`replace_project_members` e `replace_project_funding` (coordenador, transacionais).
+
+Proximas etapas deste modulo: quadro kanban de tarefas por projeto e vinculo obrigatorio de
+`printer_bookings` a um projeto.
+
 ## 4. Relacionamentos principais
 
 - `profiles.id` e igual a `auth.users.id`.
@@ -1082,7 +1108,7 @@ Validacoes cobertas pelos testes de banco do MVP:
 - Idiomas nao sao habilidades tecnicas e nao entram em `skills`.
 - Nao havera upload `.gcode` ou `.3mf` no schema do MVP.
 - Nao havera historico detalhado de manutencao alem dos bloqueios.
-- A baseline inicial (`20260818`) e imutavel; mudancas de schema entram em migrations incrementais (hoje ate `20260830`).
+- A baseline inicial (`20260818`) e imutavel; mudancas de schema entram em migrations incrementais (hoje ate `20260831`).
 
 ## 10. Evolucao futura: controle de estoque de materiais
 
