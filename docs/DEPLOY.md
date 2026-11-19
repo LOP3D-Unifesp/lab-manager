@@ -69,8 +69,8 @@ SMTP_HOST=smtp-relay.brevo.com
 SMTP_PORT=587
 SMTP_USER=<login SMTP>
 SMTP_PASS=<chave SMTP>
-SMTP_FROM_EMAIL=<remetente verificado>
-SMTP_FROM_NAME=LO&P3D Lab Manager
+SMTP_FROM_EMAIL=contato@lop3d.com.br
+SMTP_FROM_NAME=LO&P3D Unifesp
 ```
 
 Todos os scripts remotos exigem `CONFIRM_REMOTE_HOST` igual ao hostname do projeto e recusam
@@ -132,7 +132,7 @@ próprio:
 O script informa o remetente e o limite configurados ao final. O limite padrão do script é 100
 e-mails por hora (`SMTP_RATE_LIMIT_PER_HOUR` ajusta).
 
-**Entregabilidade:** enquanto o domínio do remetente não estiver autenticado no Brevo, os e-mails
+**Entregabilidade:** o remetente é `contato@lop3d.com.br`; enquanto o domínio `lop3d.com.br` não estiver autenticado no Brevo (SPF, DKIM e DMARC), os e-mails
 tendem a cair no spam. Veja [PENDENCIAS.md](PENDENCIAS.md).
 
 ## Solução de problemas
