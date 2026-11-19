@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(111);
+select plan(134);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -799,6 +799,121 @@ select throws_ok(
   'P0001', 'workspace_capacity_reached',
   'transactional availability enforces configured workspace capacity'
 );
+
+-- Projects, members and funding.
+select lives_ok(
+  $$ insert into public.projects (id, name) values ('00000000-0000-0000-0000-0000000000c1', 'Projeto Alfa') $$,
+  'coordinator creates a project'
+);
+select lives_ok(
+  $$ select public.replace_project_members('00000000-0000-0000-0000-0000000000c1', array['00000000-0000-0000-0000-000000000102']::uuid[]) $$,
+  'coordinator sets project members'
+);
+select throws_ok(
+  $$ select public.replace_project_members('00000000-0000-0000-0000-0000000000c1', array['00000000-0000-0000-0000-000000000104']::uuid[]) $$,
+  'P0001', 'invalid_project_members',
+  'inactive profiles cannot be project members'
+);
+select lives_ok(
+  $$ select public.replace_project_funding(
+    '00000000-0000-0000-0000-0000000000c1',
+    jsonb_build_array(jsonb_build_object(
+      'agency_id', (select id from public.funding_agencies where acronym = 'FAPESP'),
+      'process_number', '2026/00001-0',
+      'items', jsonb_build_array(
+        jsonb_build_object('category', 'capital', 'amount', 1000),
+        jsonb_build_object('category', 'custeio', 'amount', 250.5)
+      )
+    ))
+  ) $$,
+  'coordinator sets project funding with amounts per category'
+);
+select is(
+  (select sum(amount) from public.project_funding_items),
+  1250.50::numeric,
+  'funding items keep the granted amounts'
+);
+select throws_ok(
+  $$ select public.replace_project_funding(
+    '00000000-0000-0000-0000-0000000000c1',
+    jsonb_build_array(jsonb_build_object(
+      'agency_id', (select id from public.funding_agencies where acronym = 'FAPESP'),
+      'items', jsonb_build_array(jsonb_build_object('category', 'capital', 'amount', -1))
+    ))
+  ) $$,
+  'P0001', 'invalid_funding',
+  'negative funding amounts are rejected'
+);
+select is(
+  (select count(*) from public.project_funding),
+  1::bigint,
+  'a rejected funding replacement keeps the previous funding'
+);
+select throws_ok(
+  $$ select public.replace_project_funding(
+    '00000000-0000-0000-0000-0000000000c1',
+    jsonb_build_array(jsonb_build_object('agency_id', '00000000-0000-0000-0000-00000000dead', 'items', '[]'::jsonb))
+  ) $$,
+  'P0001', 'invalid_funding',
+  'funding requires a registered agency'
+);
+select lives_ok(
+  $$ insert into public.funding_agencies (acronym, name) values ('FUNDECT', 'Fundação de Apoio à Pesquisa de Mato Grosso do Sul') $$,
+  'coordinator registers a new funding agency'
+);
+select throws_ok(
+  $$ insert into public.funding_agencies (acronym) values ('fapesp') $$,
+  '23505', null,
+  'agency acronyms are unique regardless of case'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
+select is((select count(*) from public.projects), 1::bigint, 'project member reads the project');
+select is((select count(*) from public.project_members), 1::bigint, 'project member reads the member list');
+select is((select count(*) from public.project_funding), 1::bigint, 'project member reads the funding');
+select is((select count(*) from public.project_funding_items), 2::bigint, 'project member reads the funding items');
+select throws_ok(
+  $$ insert into public.projects (name) values ('Projeto Beta') $$,
+  '42501', null,
+  'researcher cannot create projects'
+);
+select throws_ok(
+  $$ select public.replace_project_members('00000000-0000-0000-0000-0000000000c1', array[]::uuid[]) $$,
+  'P0001', 'coordinator_required',
+  'researcher cannot change project members'
+);
+select throws_ok(
+  $$ select public.replace_project_funding('00000000-0000-0000-0000-0000000000c1', '[]'::jsonb) $$,
+  'P0001', 'coordinator_required',
+  'researcher cannot change project funding'
+);
+select throws_ok(
+  $$ insert into public.funding_agencies (acronym) values ('XYZ') $$,
+  '42501', null,
+  'researcher cannot register funding agencies'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000103","email":"other@example.com","role":"authenticated"}', true);
+select is((select count(*) from public.projects), 0::bigint, 'non-member cannot read the project');
+select is((select count(*) from public.project_funding_items), 0::bigint, 'non-member cannot read the funding items');
+
+reset role;
+select is(
+  has_table_privilege('anon', 'public.projects', 'SELECT'),
+  false,
+  'anonymous users have no access to projects'
+);
+set local role authenticated;
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
+select lives_ok(
+  $$ select public.replace_project_members('00000000-0000-0000-0000-0000000000c1', array[]::uuid[]) $$,
+  'coordinator removes every project member'
+);
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
+select is((select count(*) from public.projects), 0::bigint, 'a removed member no longer reads the project');
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
 
 select * from finish();
 rollback;

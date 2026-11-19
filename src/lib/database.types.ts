@@ -49,6 +49,20 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"funding_agencies": {
+                  Row: {
+                    "acronym": string,"created_at": string,"id": string,"is_active": boolean,"name": string | null,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "acronym": string,"created_at"?: string,"id"?: string,"is_active"?: boolean,"name"?: string | null,"updated_at"?: string
+                  }
+                  Update: {
+                    "acronym"?: string,"created_at"?: string,"id"?: string,"is_active"?: boolean,"name"?: string | null,"updated_at"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"invitations": {
                   Row: {
                     "accepted_at": string | null,"accepted_by": string | null,"auth_user_id": string | null,"created_at": string,"email": string | null,"expires_at": string,"id": string,"invited_by": string,"last_sent_at": string,"opened_at": string | null,"role": Database["public"]['Enums']["user_role"],"send_count": number,"status": Database["public"]['Enums']["invitation_status"],"updated_at": string
@@ -337,6 +351,104 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"project_funding": {
+                  Row: {
+                    "agency_id": string,"created_at": string,"ends_on": string | null,"grant_name": string | null,"id": string,"process_number": string | null,"project_id": string,"starts_on": string | null,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "agency_id": string,"created_at"?: string,"ends_on"?: string | null,"grant_name"?: string | null,"id"?: string,"process_number"?: string | null,"project_id": string,"starts_on"?: string | null,"updated_at"?: string
+                  }
+                  Update: {
+                    "agency_id"?: string,"created_at"?: string,"ends_on"?: string | null,"grant_name"?: string | null,"id"?: string,"process_number"?: string | null,"project_id"?: string,"starts_on"?: string | null,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "project_funding_agency_id_fkey"
+      columns: ["agency_id"]
+isOneToOne: false
+      referencedRelation: "funding_agencies"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "project_funding_project_id_fkey"
+      columns: ["project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"project_funding_items": {
+                  Row: {
+                    "amount": number,"category": Database["public"]['Enums']["project_funding_category"],"created_at": string,"description": string | null,"funding_id": string,"id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "amount": number,"category": Database["public"]['Enums']["project_funding_category"],"created_at"?: string,"description"?: string | null,"funding_id": string,"id"?: string
+                  }
+                  Update: {
+                    "amount"?: number,"category"?: Database["public"]['Enums']["project_funding_category"],"created_at"?: string,"description"?: string | null,"funding_id"?: string,"id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "project_funding_items_funding_id_fkey"
+      columns: ["funding_id"]
+isOneToOne: false
+      referencedRelation: "project_funding"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"project_members": {
+                  Row: {
+                    "added_by": string | null,"created_at": string,"profile_id": string,"project_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "added_by"?: string | null,"created_at"?: string,"profile_id": string,"project_id": string
+                  }
+                  Update: {
+                    "added_by"?: string | null,"created_at"?: string,"profile_id"?: string,"project_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "project_members_added_by_fkey"
+      columns: ["added_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "project_members_profile_id_fkey"
+      columns: ["profile_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "project_members_project_id_fkey"
+      columns: ["project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"projects": {
+                  Row: {
+                    "created_at": string,"created_by": string,"description": string | null,"ends_on": string | null,"id": string,"name": string,"starts_on": string | null,"status": Database["public"]['Enums']["project_status"],"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string,"description"?: string | null,"ends_on"?: string | null,"id"?: string,"name": string,"starts_on"?: string | null,"status"?: Database["public"]['Enums']["project_status"],"updated_at"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string,"description"?: string | null,"ends_on"?: string | null,"id"?: string,"name"?: string,"starts_on"?: string | null,"status"?: Database["public"]['Enums']["project_status"],"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "projects_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"skills": {
                   Row: {
                     "created_at": string,"description": string | null,"id": string,"is_active": boolean,"name": string,"updated_at": string
@@ -569,6 +681,12 @@ isOneToOne: false
         isOneToOne: false
         isSetofReturn: true
       } },
+"replace_project_funding":
+{ Args: { "p_funding": Json,"p_project_id": string }; Returns: undefined
+                           },
+"replace_project_members":
+{ Args: { "p_profile_ids": (string)[],"p_project_id": string }; Returns: undefined
+                           },
 "save_lab_schedule_period":
 { Args: { "p_ends_at": string,"p_id": string,"p_is_active": boolean,"p_sort_order": number,"p_starts_at": string }; Returns: {
               "created_at": string,
@@ -768,7 +886,7 @@ isOneToOne: false
       } }
           }
           Enums: {
-            "academic_affiliation": "ic"|"extension"|"intern"|"tcc"|"masters"|"phd"|"postdoc"|"visitor"|"technician"|"faculty"|"other","booking_status": "pending"|"approved"|"in_progress"|"completed"|"cancelled"|"failed"|"rejected","funding_agency": "cnpq"|"fapesp"|"capes"|"sus"|"fap"|"other","invitation_status": "pending"|"accepted"|"expired"|"revoked","printer_status": "active"|"maintenance"|"unavailable"|"disabled","user_role": "coordinator"|"researcher"
+            "academic_affiliation": "ic"|"extension"|"intern"|"tcc"|"masters"|"phd"|"postdoc"|"visitor"|"technician"|"faculty"|"other","booking_status": "pending"|"approved"|"in_progress"|"completed"|"cancelled"|"failed"|"rejected","funding_agency": "cnpq"|"fapesp"|"capes"|"sus"|"fap"|"other","invitation_status": "pending"|"accepted"|"expired"|"revoked","printer_status": "active"|"maintenance"|"unavailable"|"disabled","project_funding_category": "capital"|"custeio"|"bolsas"|"reserva_tecnica"|"outros","project_status": "planning"|"active"|"paused"|"completed"|"archived","user_role": "coordinator"|"researcher"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -888,7 +1006,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "academic_affiliation": ["ic", "extension", "intern", "tcc", "masters", "phd", "postdoc", "visitor", "technician", "faculty", "other"],"booking_status": ["pending", "approved", "in_progress", "completed", "cancelled", "failed", "rejected"],"funding_agency": ["cnpq", "fapesp", "capes", "sus", "fap", "other"],"invitation_status": ["pending", "accepted", "expired", "revoked"],"printer_status": ["active", "maintenance", "unavailable", "disabled"],"user_role": ["coordinator", "researcher"]
+            "academic_affiliation": ["ic", "extension", "intern", "tcc", "masters", "phd", "postdoc", "visitor", "technician", "faculty", "other"],"booking_status": ["pending", "approved", "in_progress", "completed", "cancelled", "failed", "rejected"],"funding_agency": ["cnpq", "fapesp", "capes", "sus", "fap", "other"],"invitation_status": ["pending", "accepted", "expired", "revoked"],"printer_status": ["active", "maintenance", "unavailable", "disabled"],"project_funding_category": ["capital", "custeio", "bolsas", "reserva_tecnica", "outros"],"project_status": ["planning", "active", "paused", "completed", "archived"],"user_role": ["coordinator", "researcher"]
           }
         }
 } as const

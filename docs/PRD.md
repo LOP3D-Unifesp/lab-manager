@@ -93,6 +93,17 @@ Funcionalidades:
 - acompanhar status da reserva;
 - aprovação opcional pelo coordenador, com alerta em tempo real de reservas pendentes.
 
+### 5.4 Módulo de projetos
+
+Funcionalidades:
+- coordenador cadastra projetos (nome, descrição, situação e período);
+- coordenador inclui pesquisadores em cada projeto; um pesquisador pode participar de vários;
+- cada projeto tem zero ou vários fomentos (FAPESP, CNPq, FINEP, Embrapii ou outra agência
+  cadastrada), com número do processo, vigência e valor concedido por rubrica (capital, custeio,
+  bolsas, reserva técnica);
+- o pesquisador vê apenas os projetos de que participa;
+- próximas etapas: kanban de tarefas por projeto e vínculo obrigatório de cada impressão a um projeto.
+
 ## 6. Status de reserva
 
 - Pendente
