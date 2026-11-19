@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Clock, ClipboardList, Printer, Users } from "lucide-react";
 
+import { MyTasksBoard } from "../components/projetos/MyTasksBoard";
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
 import { StatCard } from "../components/ui/StatCard";
@@ -199,6 +200,8 @@ export function Dashboard() {
           icon={Clock}
         />
       </section>
+
+      {currentProfile ? <MyTasksBoard profileId={currentProfile.id} /> : null}
 
       <section className="mt-6 grid gap-4 lg:grid-cols-[1.35fr_1fr]">
         <Card>

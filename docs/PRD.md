@@ -102,7 +102,10 @@ Funcionalidades:
   cadastrada), com número do processo, vigência e valor concedido por rubrica (capital, custeio,
   bolsas, reserva técnica);
 - o pesquisador vê apenas os projetos de que participa;
-- próximas etapas: kanban de tarefas por projeto e vínculo obrigatório de cada impressão a um projeto.
+- kanban de tarefas em cada projeto (A fazer, Em andamento, Em revisão, Concluído), com prazo e um ou
+  mais responsáveis, que precisam ser membros do projeto; membros criam e movem tarefas;
+- no Dashboard, "Minhas tarefas" mostra só as tarefas atribuídas à pessoa, de todos os projetos;
+- próxima etapa: vínculo obrigatório de cada impressão a um projeto.
 
 ## 6. Status de reserva
 

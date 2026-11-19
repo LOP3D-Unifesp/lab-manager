@@ -159,3 +159,62 @@ export function getProjectErrorMessage(error: unknown) {
   }
   return text || "Não foi possível concluir a operação.";
 }
+
+// ---------------------------------------------------------------------------
+// Tarefas (kanban)
+// ---------------------------------------------------------------------------
+
+export type TaskStatus = "todo" | "in_progress" | "review" | "done";
+
+export const taskStatusOptions: Array<{ value: TaskStatus; label: string }> = [
+  { value: "todo", label: "A fazer" },
+  { value: "in_progress", label: "Em andamento" },
+  { value: "review", label: "Em revisão" },
+  { value: "done", label: "Concluído" },
+];
+
+export function getTaskStatusLabel(status: TaskStatus) {
+  return taskStatusOptions.find((option) => option.value === status)?.label ?? status;
+}
+
+export type ProjectTask = {
+  id: string;
+  project_id: string;
+  project_name: string | null;
+  title: string;
+  description: string | null;
+  status: TaskStatus;
+  position: number;
+  due_on: string | null;
+  created_by: string;
+  assignees: ProjectMember[];
+};
+
+export function groupTasksByStatus(tasks: ProjectTask[]) {
+  const groups: Record<TaskStatus, ProjectTask[]> = { todo: [], in_progress: [], review: [], done: [] };
+  for (const task of tasks) groups[task.status].push(task);
+  for (const status of Object.keys(groups) as TaskStatus[]) {
+    groups[status].sort((a, b) => a.position - b.position || a.title.localeCompare(b.title, "pt-BR"));
+  }
+  return groups;
+}
+
+// Posição para o card entrar no fim de uma coluna.
+export function getNextTaskPosition(tasks: ProjectTask[], status: TaskStatus) {
+  return tasks.reduce((max, task) => (task.status === status ? Math.max(max, task.position) : max), 0) + 1;
+}
+
+// `today` no formato AAAA-MM-DD; tarefa concluída nunca está atrasada.
+export function isTaskOverdue(task: Pick<ProjectTask, "due_on" | "status">, today: string) {
+  return task.status !== "done" && task.due_on !== null && task.due_on < today;
+}
+
+export function getTaskErrorMessage(error: unknown) {
+  const text = error instanceof Error ? error.message : String(error ?? "");
+  if (text.includes("assignee_must_be_project_member")) return "Só membros do projeto podem ser responsáveis pela tarefa.";
+  if (text.includes("project_access_required")) return "Você não participa deste projeto.";
+  if (text.includes("task_not_found")) return "Tarefa não encontrada.";
+  if (text.includes("project_tasks_title_check")) return "Informe o título da tarefa.";
+  if (text.includes("row-level security")) return "Você não tem permissão para fazer essa alteração.";
+  return getProjectErrorMessage(error);
+}

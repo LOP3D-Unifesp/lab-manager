@@ -19,8 +19,8 @@ O schema cobre:
 
 O Supabase Auth sera a fonte de autenticacao. O PostgreSQL sera a fonte dos dados de dominio da aplicacao.
 
-> **Fonte da verdade:** as migrations em `supabase/migrations/` (14 arquivos, de `20260818` a
-> `20260831`). Este documento descreve o resultado delas. A secao 1.1 resume o que mudou depois da
+> **Fonte da verdade:** as migrations em `supabase/migrations/` (15 arquivos, de `20260818` a
+> `20260901`). Este documento descreve o resultado delas. A secao 1.1 resume o que mudou depois da
 > baseline; onde houver divergencia, vale a migration.
 
 Status do MVP implementado:
@@ -52,6 +52,7 @@ Status do MVP implementado:
 | `20260829_booking_approved_at` | `printer_bookings.approved_at` (nulo para reservas aprovadas automaticamente). |
 | `20260830_booking_decided_by` | `approved_by` e `rejected_by` (com indices). |
 | `20260831_projects_members_funding` | Projetos, membros, agencias de fomento cadastraveis e fomento por projeto com valores por rubrica (secao 3.13). |
+| `20260901_project_tasks` | Tarefas do kanban por projeto e seus responsaveis (secao 3.13). |
 
 Resumo dos objetos que mais mudam o entendimento do schema:
 
@@ -954,8 +955,18 @@ Acesso (RLS): leitura por coordenador ou membro ativo (`private.can_read_project
 em `projects` e `funding_agencies` so por coordenador; membros e fomento so pelas RPCs
 `replace_project_members` e `replace_project_funding` (coordenador, transacionais).
 
-Proximas etapas deste modulo: quadro kanban de tarefas por projeto e vinculo obrigatorio de
-`printer_bookings` a um projeto.
+Kanban de tarefas:
+
+- `project_tasks`: `project_id`, `title`, `description`, `status` (`task_status`: `todo`, `in_progress`,
+  `review`, `done`), `position`, `due_on`, `created_by`. O trigger `append_task_to_column` coloca a
+  tarefa no fim da coluna quando ela e criada ou muda de coluna.
+- `project_task_assignees`: varios responsaveis por tarefa. Uma FK composta com `project_members`
+  garante que so membros do projeto sejam responsaveis, e sair do projeto remove a pessoa das tarefas.
+- Acesso: membros e coordenadores leem, criam e movem tarefas do projeto; so o criador ou um
+  coordenador exclui. Os responsaveis mudam pela RPC `set_task_assignees`.
+- O Dashboard mostra "Minhas tarefas": so as atribuidas a quem esta logado, de todos os projetos.
+
+Proxima etapa deste modulo: vinculo obrigatorio de `printer_bookings` a um projeto.
 
 ## 4. Relacionamentos principais
 
@@ -1108,7 +1119,7 @@ Validacoes cobertas pelos testes de banco do MVP:
 - Idiomas nao sao habilidades tecnicas e nao entram em `skills`.
 - Nao havera upload `.gcode` ou `.3mf` no schema do MVP.
 - Nao havera historico detalhado de manutencao alem dos bloqueios.
-- A baseline inicial (`20260818`) e imutavel; mudancas de schema entram em migrations incrementais (hoje ate `20260831`).
+- A baseline inicial (`20260818`) e imutavel; mudancas de schema entram em migrations incrementais (hoje ate `20260901`).
 
 ## 10. Evolucao futura: controle de estoque de materiais
 

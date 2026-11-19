@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Pencil } from "lucide-react";
+import { ArrowLeft, Pencil, Plus } from "lucide-react";
 
 import { FundingEditor, fundingFormToInput, fundingToForm, type FundingForm } from "../components/projetos/FundingEditor";
+import { KanbanBoard } from "../components/projetos/KanbanBoard";
 import { MembersEditor } from "../components/projetos/MembersEditor";
 import { ProjectFormModal } from "../components/projetos/ProjectFormModal";
+import { TaskModal } from "../components/projetos/TaskModal";
 import { Avatar } from "../components/ui/Avatar";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
@@ -17,25 +19,32 @@ import {
   formatProjectPeriod,
   getFundingCategoryLabel,
   getFundingTotal,
+  getNextTaskPosition,
   getProjectErrorMessage,
   getProjectFundingTotal,
   getProjectStatusLabel,
   getProjectStatusVariant,
+  getTaskErrorMessage,
   type FundingAgencyRecord,
   type Project,
+  type ProjectTask,
+  type TaskStatus,
 } from "../lib/projects";
 import {
   getProject,
   listFundingAgencies,
   listProfiles,
+  listProjectTasks,
   replaceProjectFunding,
   replaceProjectMembers,
+  updateProjectTask,
 } from "../lib/supabaseRepository";
 
-type Aba = "geral" | "membros" | "fomento";
+type Aba = "geral" | "kanban" | "membros" | "fomento";
 
 const abas: Array<{ id: Aba; label: string }> = [
   { id: "geral", label: "Visão geral" },
+  { id: "kanban", label: "Kanban" },
   { id: "membros", label: "Membros" },
   { id: "fomento", label: "Fomento" },
 ];
@@ -55,6 +64,12 @@ export function ProjetoDetalhe() {
   const [agencies, setAgencies] = useState<FundingAgencyRecord[]>([]);
   const [membrosForm, setMembrosForm] = useState<string[]>([]);
   const [fomentoForm, setFomentoForm] = useState<FundingForm[]>([]);
+  const [tarefas, setTarefas] = useState<ProjectTask[]>([]);
+  const [tarefaAberta, setTarefaAberta] = useState<{ task: ProjectTask | null; status: TaskStatus } | null>(null);
+
+  const carregarTarefas = useCallback(async () => {
+    setTarefas(await listProjectTasks(id));
+  }, [id]);
 
   const carregar = useCallback(async () => {
     const data = await getProject(id);
@@ -62,8 +77,9 @@ export function ProjetoDetalhe() {
     if (data) {
       setMembrosForm(data.members.map((member) => member.profile_id));
       setFomentoForm(fundingToForm(data.funding));
+      await carregarTarefas();
     }
-  }, [id]);
+  }, [id, carregarTarefas]);
 
   useEffect(() => {
     let ativo = true;
@@ -92,6 +108,20 @@ export function ProjetoDetalhe() {
       ativo = false;
     };
   }, [isCoordinator]);
+
+  async function moverTarefa(task: ProjectTask, status: TaskStatus) {
+    if (task.status === status) return;
+    const position = getNextTaskPosition(tarefas, status);
+    const anterior = tarefas;
+    setTarefas((current) => current.map((item) => (item.id === task.id ? { ...item, status, position } : item)));
+    try {
+      setErro("");
+      await updateProjectTask(task.id, { status });
+    } catch (error) {
+      setTarefas(anterior);
+      setErro(getTaskErrorMessage(error));
+    }
+  }
 
   async function salvarMembros() {
     try {
@@ -222,6 +252,22 @@ export function ProjetoDetalhe() {
         </Card>
       ) : null}
 
+      {aba === "kanban" ? (
+        <div className="grid gap-4">
+          <div className="flex justify-end">
+            <Button onClick={() => setTarefaAberta({ task: null, status: "todo" })}>
+              <Plus className="mr-2 h-5 w-5" aria-hidden="true" />
+              Nova tarefa
+            </Button>
+          </div>
+          <KanbanBoard
+            tasks={tarefas}
+            onMove={moverTarefa}
+            onOpen={(task) => setTarefaAberta({ task, status: task.status })}
+          />
+        </div>
+      ) : null}
+
       {aba === "membros" ? (
         <Card>
           {isCoordinator ? (
@@ -303,6 +349,25 @@ export function ProjetoDetalhe() {
             </div>
           )}
         </Card>
+      ) : null}
+
+      {tarefaAberta ? (
+        <TaskModal
+          projectId={project.id}
+          task={tarefaAberta.task}
+          members={project.members}
+          defaultStatus={tarefaAberta.status}
+          canDelete={isCoordinator || tarefaAberta.task?.created_by === profile?.id}
+          onClose={() => setTarefaAberta(null)}
+          onSaved={async () => {
+            setTarefaAberta(null);
+            try {
+              await carregarTarefas();
+            } catch (error) {
+              setErro(getTaskErrorMessage(error));
+            }
+          }}
+        />
       ) : null}
 
       {editando ? (

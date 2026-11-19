@@ -6,10 +6,14 @@ import {
   getFundingTotal,
   getProjectErrorMessage,
   getProjectFundingTotal,
+  getNextTaskPosition,
+  groupTasksByStatus,
+  isTaskOverdue,
   isProjectOpen,
   parseAmountInput,
   sortProjects,
   type Project,
+  type ProjectTask,
 } from "./projects";
 
 function project(overrides: Partial<Project>): Project {
@@ -95,5 +99,49 @@ describe("textos", () => {
       "Já existe um projeto com esse nome.",
     );
     expect(getProjectErrorMessage(new Error("coordinator_required"))).toContain("coordenadores");
+  });
+});
+
+function task(overrides: Partial<ProjectTask>): ProjectTask {
+  return {
+    id: "t",
+    project_id: "p",
+    project_name: null,
+    title: "Tarefa",
+    description: null,
+    status: "todo",
+    position: 0,
+    due_on: null,
+    created_by: "u",
+    assignees: [],
+    ...overrides,
+  };
+}
+
+describe("tarefas do kanban", () => {
+  const tasks = [
+    task({ id: "1", title: "B", status: "todo", position: 2 }),
+    task({ id: "2", title: "A", status: "todo", position: 1 }),
+    task({ id: "3", title: "C", status: "done", position: 5 }),
+  ];
+
+  it("agrupa por coluna e ordena por posição", () => {
+    const groups = groupTasksByStatus(tasks);
+    expect(groups.todo.map((t) => t.id)).toEqual(["2", "1"]);
+    expect(groups.done.map((t) => t.id)).toEqual(["3"]);
+    expect(groups.review).toEqual([]);
+  });
+
+  it("calcula a posição para o fim da coluna", () => {
+    expect(getNextTaskPosition(tasks, "todo")).toBe(3);
+    expect(getNextTaskPosition(tasks, "done")).toBe(6);
+    expect(getNextTaskPosition(tasks, "review")).toBe(1);
+  });
+
+  it("marca como atrasada só tarefa não concluída com prazo vencido", () => {
+    expect(isTaskOverdue(task({ due_on: "2026-05-01" }), "2026-05-02")).toBe(true);
+    expect(isTaskOverdue(task({ due_on: "2026-05-02" }), "2026-05-02")).toBe(false);
+    expect(isTaskOverdue(task({ due_on: "2026-05-01", status: "done" }), "2026-05-02")).toBe(false);
+    expect(isTaskOverdue(task({ due_on: null }), "2026-05-02")).toBe(false);
   });
 });

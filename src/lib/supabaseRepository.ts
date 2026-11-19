@@ -5,6 +5,8 @@ import type {
   Project,
   ProjectFunding,
   ProjectStatus,
+  ProjectTask,
+  TaskStatus,
 } from "./projects";
 import {
   AvailabilitySlot,
@@ -975,4 +977,89 @@ export async function createFundingAgency(params: { acronym: string; name: strin
     .single();
   throwIfError(error);
   return data as FundingAgencyRecord;
+}
+
+// ---------------------------------------------------------------------------
+// Tarefas dos projetos (kanban)
+// ---------------------------------------------------------------------------
+
+const taskSelect = [
+  "id",
+  "project_id",
+  "title",
+  "description",
+  "status",
+  "position",
+  "due_on",
+  "created_by",
+  "project:projects(name)",
+  "assignees:project_task_assignees(profile_id, profile:profiles!project_task_assignees_profile_id_fkey(full_name, avatar_url))",
+].join(", ");
+
+type TaskRow = Omit<ProjectTask, "project_name" | "assignees"> & {
+  project: { name: string } | null;
+  assignees: Array<{ profile_id: string; profile: { full_name: string; avatar_url: string | null } | null }>;
+};
+
+function mapTask(row: TaskRow): ProjectTask {
+  const { project, assignees, ...task } = row;
+  return {
+    ...task,
+    project_name: project?.name ?? null,
+    assignees: (assignees ?? [])
+      .map((assignee) => ({
+        profile_id: assignee.profile_id,
+        full_name: assignee.profile?.full_name ?? "",
+        avatar_url: assignee.profile?.avatar_url ?? null,
+      }))
+      .sort((a, b) => a.full_name.localeCompare(b.full_name, "pt-BR")),
+  };
+}
+
+export async function listProjectTasks(projectId: string) {
+  const { data, error } = await client().from("project_tasks").select(taskSelect).eq("project_id", projectId);
+  throwIfError(error);
+  return ((data ?? []) as unknown as TaskRow[]).map(mapTask);
+}
+
+// Tarefas em que a pessoa é responsável, de todos os projetos.
+export async function listMyTasks(profileId: string) {
+  const { data, error } = await client()
+    .from("project_tasks")
+    .select(`${taskSelect}, mine:project_task_assignees!inner(profile_id)`)
+    .eq("mine.profile_id", profileId);
+  throwIfError(error);
+  return ((data ?? []) as unknown as TaskRow[]).map(mapTask);
+}
+
+export type TaskInput = {
+  title: string;
+  description: string | null;
+  status: TaskStatus;
+  due_on: string | null;
+};
+
+export async function createProjectTask(projectId: string, params: TaskInput) {
+  const { data, error } = await client()
+    .from("project_tasks")
+    .insert({ project_id: projectId, ...params })
+    .select("id")
+    .single();
+  throwIfError(error);
+  return (data as { id: string }).id;
+}
+
+export async function updateProjectTask(id: string, params: Partial<TaskInput>) {
+  const { error } = await client().from("project_tasks").update(params).eq("id", id);
+  throwIfError(error);
+}
+
+export async function deleteProjectTask(id: string) {
+  const { error } = await client().from("project_tasks").delete().eq("id", id);
+  throwIfError(error);
+}
+
+export async function setTaskAssignees(taskId: string, profileIds: string[]) {
+  const { error } = await client().rpc("set_task_assignees", { p_task_id: taskId, p_profile_ids: profileIds });
+  throwIfError(error);
 }
