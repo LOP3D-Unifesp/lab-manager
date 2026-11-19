@@ -1,0 +1,186 @@
+import { FormEvent, useState } from "react";
+
+import {
+  createProjectTask,
+  deleteProjectTask,
+  setTaskAssignees,
+  updateProjectTask,
+} from "../../lib/supabaseRepository";
+import {
+  getTaskErrorMessage,
+  taskStatusOptions,
+  type ProjectMember,
+  type ProjectTask,
+  type TaskStatus,
+} from "../../lib/projects";
+import { Avatar } from "../ui/Avatar";
+import { Button } from "../ui/Button";
+import { Modal } from "../ui/Modal";
+
+const inputClassName =
+  "min-h-11 min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary";
+
+type TaskModalProps = {
+  projectId: string;
+  task: ProjectTask | null;
+  members: ProjectMember[];
+  defaultStatus?: TaskStatus;
+  canDelete: boolean;
+  onClose: () => void;
+  onSaved: () => void;
+};
+
+export function TaskModal({
+  canDelete,
+  defaultStatus = "todo",
+  members,
+  onClose,
+  onSaved,
+  projectId,
+  task,
+}: TaskModalProps) {
+  const [title, setTitle] = useState(task?.title ?? "");
+  const [description, setDescription] = useState(task?.description ?? "");
+  const [status, setStatus] = useState<TaskStatus>(task?.status ?? defaultStatus);
+  const [dueOn, setDueOn] = useState(task?.due_on ?? "");
+  const [responsaveis, setResponsaveis] = useState<string[]>(task?.assignees.map((a) => a.profile_id) ?? []);
+  const [erro, setErro] = useState("");
+  const [salvando, setSalvando] = useState(false);
+
+  function alternar(profileId: string) {
+    setResponsaveis((current) =>
+      current.includes(profileId) ? current.filter((id) => id !== profileId) : [...current, profileId],
+    );
+  }
+
+  async function salvar(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const trimmed = title.trim();
+    if (!trimmed) {
+      setErro("Informe o título da tarefa.");
+      return;
+    }
+
+    try {
+      setSalvando(true);
+      setErro("");
+      const base = { title: trimmed, description: description.trim() || null, due_on: dueOn || null };
+      let taskId: string;
+      if (task) {
+        // Ao mudar de coluna, o banco coloca a tarefa no fim da nova coluna.
+        await updateProjectTask(task.id, { ...base, status });
+        taskId = task.id;
+      } else {
+        taskId = await createProjectTask(projectId, { ...base, status });
+      }
+      await setTaskAssignees(taskId, responsaveis);
+      onSaved();
+    } catch (error) {
+      setErro(getTaskErrorMessage(error));
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function excluir() {
+    if (!task || !window.confirm("Excluir esta tarefa? Essa ação não pode ser desfeita.")) return;
+    try {
+      setSalvando(true);
+      await deleteProjectTask(task.id);
+      onSaved();
+    } catch (error) {
+      setErro(getTaskErrorMessage(error));
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <Modal title={task ? "Editar tarefa" : "Nova tarefa"} onClose={onClose}>
+      <form className="grid gap-4" onSubmit={salvar}>
+        <label className="grid gap-2 text-base font-semibold text-text">
+          Título
+          <input className={inputClassName} required value={title} onChange={(e) => setTitle(e.target.value)} />
+        </label>
+        <label className="grid gap-2 text-base font-semibold text-text">
+          Descrição
+          <textarea
+            className={`${inputClassName} min-h-24 py-3`}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+        </label>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="grid gap-2 text-base font-semibold text-text">
+            Coluna
+            <select className={inputClassName} value={status} onChange={(e) => setStatus(e.target.value as TaskStatus)}>
+              {taskStatusOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="grid gap-2 text-base font-semibold text-text">
+            Prazo
+            <input className={inputClassName} type="date" value={dueOn} onChange={(e) => setDueOn(e.target.value)} />
+          </label>
+        </div>
+
+        <fieldset className="grid gap-2">
+          <legend className="mb-1 text-base font-semibold text-text">Responsáveis</legend>
+          {members.length === 0 ? (
+            <p className="text-base text-muted">Inclua membros no projeto para atribuir tarefas.</p>
+          ) : (
+            <div className="grid gap-2 sm:grid-cols-2">
+              {members.map((member) => {
+                const selecionado = responsaveis.includes(member.profile_id);
+                return (
+                  <label
+                    key={member.profile_id}
+                    className={[
+                      "flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 text-base font-semibold transition",
+                      selecionado
+                        ? "border-primary bg-primary-soft text-primary-dark"
+                        : "border-border bg-surface text-text hover:border-primary",
+                    ].join(" ")}
+                  >
+                    <input
+                      checked={selecionado}
+                      className="h-4 w-4 accent-primary"
+                      type="checkbox"
+                      onChange={() => alternar(member.profile_id)}
+                    />
+                    <Avatar avatarUrl={member.avatar_url} name={member.full_name} className="h-8 w-8" />
+                    <span className="min-w-0 truncate">{member.full_name}</span>
+                  </label>
+                );
+              })}
+            </div>
+          )}
+        </fieldset>
+
+        {erro ? (
+          <p className="rounded-lg border border-danger bg-danger-soft p-3 text-base font-semibold text-danger">{erro}</p>
+        ) : null}
+
+        <div className="mt-2 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            {task && canDelete ? (
+              <Button variant="danger" disabled={salvando} onClick={excluir}>
+                Excluir tarefa
+              </Button>
+            ) : null}
+          </div>
+          <div className="flex flex-col-reverse gap-3 sm:flex-row">
+            <Button variant="secondary" onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={salvando}>
+              {salvando ? "Salvando..." : "Salvar tarefa"}
+            </Button>
+          </div>
+        </div>
+      </form>
+    </Modal>
+  );
+}

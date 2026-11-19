@@ -429,6 +429,64 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"project_task_assignees": {
+                  Row: {
+                    "created_at": string,"profile_id": string,"project_id": string,"task_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"profile_id": string,"project_id": string,"task_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"profile_id"?: string,"project_id"?: string,"task_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "project_task_assignees_member_fkey"
+      columns: ["project_id","profile_id"]
+isOneToOne: false
+      referencedRelation: "project_members"
+      referencedColumns: ["project_id","profile_id"]
+    },{
+      foreignKeyName: "project_task_assignees_profile_id_fkey"
+      columns: ["profile_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "project_task_assignees_task_fkey"
+      columns: ["task_id","project_id"]
+isOneToOne: false
+      referencedRelation: "project_tasks"
+      referencedColumns: ["id","project_id"]
+    }
+                  ]
+                },"project_tasks": {
+                  Row: {
+                    "created_at": string,"created_by": string,"description": string | null,"due_on": string | null,"id": string,"position": number,"project_id": string,"status": Database["public"]['Enums']["task_status"],"title": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string,"description"?: string | null,"due_on"?: string | null,"id"?: string,"position"?: number,"project_id": string,"status"?: Database["public"]['Enums']["task_status"],"title": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string,"description"?: string | null,"due_on"?: string | null,"id"?: string,"position"?: number,"project_id"?: string,"status"?: Database["public"]['Enums']["task_status"],"title"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "project_tasks_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "project_tasks_project_id_fkey"
+      columns: ["project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"projects": {
                   Row: {
                     "created_at": string,"created_by": string,"description": string | null,"ends_on": string | null,"id": string,"name": string,"starts_on": string | null,"status": Database["public"]['Enums']["project_status"],"updated_at": string
@@ -757,6 +815,9 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"set_task_assignees":
+{ Args: { "p_profile_ids": (string)[],"p_task_id": string }; Returns: undefined
+                           },
 "update_lab_breaks":
 { Args: { "p_dinner_ends_at": string,"p_dinner_starts_at": string,"p_lunch_ends_at": string,"p_lunch_starts_at": string }; Returns: {
               "acronym": string | null,
@@ -886,7 +947,7 @@ isOneToOne: false
       } }
           }
           Enums: {
-            "academic_affiliation": "ic"|"extension"|"intern"|"tcc"|"masters"|"phd"|"postdoc"|"visitor"|"technician"|"faculty"|"other","booking_status": "pending"|"approved"|"in_progress"|"completed"|"cancelled"|"failed"|"rejected","funding_agency": "cnpq"|"fapesp"|"capes"|"sus"|"fap"|"other","invitation_status": "pending"|"accepted"|"expired"|"revoked","printer_status": "active"|"maintenance"|"unavailable"|"disabled","project_funding_category": "capital"|"custeio"|"bolsas"|"reserva_tecnica"|"outros","project_status": "planning"|"active"|"paused"|"completed"|"archived","user_role": "coordinator"|"researcher"
+            "academic_affiliation": "ic"|"extension"|"intern"|"tcc"|"masters"|"phd"|"postdoc"|"visitor"|"technician"|"faculty"|"other","booking_status": "pending"|"approved"|"in_progress"|"completed"|"cancelled"|"failed"|"rejected","funding_agency": "cnpq"|"fapesp"|"capes"|"sus"|"fap"|"other","invitation_status": "pending"|"accepted"|"expired"|"revoked","printer_status": "active"|"maintenance"|"unavailable"|"disabled","project_funding_category": "capital"|"custeio"|"bolsas"|"reserva_tecnica"|"outros","project_status": "planning"|"active"|"paused"|"completed"|"archived","task_status": "todo"|"in_progress"|"review"|"done","user_role": "coordinator"|"researcher"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -1006,7 +1067,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "academic_affiliation": ["ic", "extension", "intern", "tcc", "masters", "phd", "postdoc", "visitor", "technician", "faculty", "other"],"booking_status": ["pending", "approved", "in_progress", "completed", "cancelled", "failed", "rejected"],"funding_agency": ["cnpq", "fapesp", "capes", "sus", "fap", "other"],"invitation_status": ["pending", "accepted", "expired", "revoked"],"printer_status": ["active", "maintenance", "unavailable", "disabled"],"project_funding_category": ["capital", "custeio", "bolsas", "reserva_tecnica", "outros"],"project_status": ["planning", "active", "paused", "completed", "archived"],"user_role": ["coordinator", "researcher"]
+            "academic_affiliation": ["ic", "extension", "intern", "tcc", "masters", "phd", "postdoc", "visitor", "technician", "faculty", "other"],"booking_status": ["pending", "approved", "in_progress", "completed", "cancelled", "failed", "rejected"],"funding_agency": ["cnpq", "fapesp", "capes", "sus", "fap", "other"],"invitation_status": ["pending", "accepted", "expired", "revoked"],"printer_status": ["active", "maintenance", "unavailable", "disabled"],"project_funding_category": ["capital", "custeio", "bolsas", "reserva_tecnica", "outros"],"project_status": ["planning", "active", "paused", "completed", "archived"],"task_status": ["todo", "in_progress", "review", "done"],"user_role": ["coordinator", "researcher"]
           }
         }
 } as const

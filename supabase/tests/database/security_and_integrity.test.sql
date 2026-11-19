@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(134);
+select plan(155);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -829,7 +829,7 @@ select lives_ok(
   'coordinator sets project funding with amounts per category'
 );
 select is(
-  (select sum(amount) from public.project_funding_items),
+  (select sum(i.amount) from public.project_funding_items i join public.project_funding f on f.id = i.funding_id where f.project_id = '00000000-0000-0000-0000-0000000000c1'),
   1250.50::numeric,
   'funding items keep the granted amounts'
 );
@@ -845,7 +845,7 @@ select throws_ok(
   'negative funding amounts are rejected'
 );
 select is(
-  (select count(*) from public.project_funding),
+  (select count(*) from public.project_funding where project_id = '00000000-0000-0000-0000-0000000000c1'),
   1::bigint,
   'a rejected funding replacement keeps the previous funding'
 );
@@ -914,6 +914,86 @@ select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000
 select is((select count(*) from public.projects), 0::bigint, 'a removed member no longer reads the project');
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
+
+-- Project tasks (kanban).
+select lives_ok(
+  $$ select public.replace_project_members('00000000-0000-0000-0000-0000000000c1', array['00000000-0000-0000-0000-000000000102']::uuid[]) $$,
+  'coordinator adds the researcher back to the project'
+);
+select lives_ok(
+  $$ insert into public.project_tasks (id, project_id, title) values ('00000000-0000-0000-0000-0000000000d1', '00000000-0000-0000-0000-0000000000c1', 'Montar impressora') $$,
+  'coordinator creates a task'
+);
+select lives_ok(
+  $$ select public.set_task_assignees('00000000-0000-0000-0000-0000000000d1', array['00000000-0000-0000-0000-000000000102']::uuid[]) $$,
+  'coordinator assigns a project member to the task'
+);
+select throws_ok(
+  $$ select public.set_task_assignees('00000000-0000-0000-0000-0000000000d1', array['00000000-0000-0000-0000-000000000103']::uuid[]) $$,
+  'P0001', 'assignee_must_be_project_member',
+  'only project members can be assigned to a task'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
+select is((select count(*) from public.project_tasks), 1::bigint, 'project member reads the tasks');
+select is((select count(*) from public.project_task_assignees), 1::bigint, 'project member reads the task assignees');
+select lives_ok(
+  $$ update public.project_tasks set status = 'review' where id = '00000000-0000-0000-0000-0000000000d1' $$,
+  'project member moves a task between columns'
+);
+select is(
+  (select status::text from public.project_tasks where id = '00000000-0000-0000-0000-0000000000d1'),
+  'review',
+  'the task keeps its new column'
+);
+select lives_ok(
+  $$ insert into public.project_tasks (id, project_id, title) values ('00000000-0000-0000-0000-0000000000d2', '00000000-0000-0000-0000-0000000000c1', 'Calibrar mesa') $$,
+  'project member creates a task'
+);
+select throws_ok(
+  $$ insert into public.project_tasks (project_id, title, created_by) values ('00000000-0000-0000-0000-0000000000c1', 'Em nome de outro', '00000000-0000-0000-0000-000000000101') $$,
+  '42501', null,
+  'a task cannot be created in someone else name'
+);
+select lives_ok(
+  $$ delete from public.project_tasks where id = '00000000-0000-0000-0000-0000000000d1' $$,
+  'deleting a task created by someone else is silently ignored'
+);
+select is((select count(*) from public.project_tasks where id = '00000000-0000-0000-0000-0000000000d1'), 1::bigint, 'a member cannot delete a task created by someone else');
+select lives_ok(
+  $$ delete from public.project_tasks where id = '00000000-0000-0000-0000-0000000000d2' $$,
+  'the creator deletes their own task'
+);
+select is((select count(*) from public.project_tasks where id = '00000000-0000-0000-0000-0000000000d2'), 0::bigint, 'the deleted task is gone');
+select lives_ok(
+  $$ insert into public.project_tasks (id, project_id, title, status) values ('00000000-0000-0000-0000-0000000000d3', '00000000-0000-0000-0000-0000000000c1', 'Imprimir peça', 'review') $$,
+  'a task can be created directly in a column'
+);
+select is(
+  (select position from public.project_tasks where id = '00000000-0000-0000-0000-0000000000d3'),
+  (select position + 1 from public.project_tasks where id = '00000000-0000-0000-0000-0000000000d1'),
+  'a task entering a column goes to its end'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000103","email":"other@example.com","role":"authenticated"}', true);
+select is((select count(*) from public.project_tasks), 0::bigint, 'non-member cannot read tasks');
+select throws_ok(
+  $$ insert into public.project_tasks (project_id, title) values ('00000000-0000-0000-0000-0000000000c1', 'Intruso') $$,
+  '42501', null,
+  'non-member cannot create tasks'
+);
+select throws_ok(
+  $$ select public.set_task_assignees('00000000-0000-0000-0000-0000000000d1', array['00000000-0000-0000-0000-000000000102']::uuid[]) $$,
+  'P0001', 'project_access_required',
+  'non-member cannot assign task members'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
+select lives_ok(
+  $$ select public.replace_project_members('00000000-0000-0000-0000-0000000000c1', array[]::uuid[]) $$,
+  'coordinator removes the member from the project'
+);
+select is((select count(*) from public.project_task_assignees where project_id = '00000000-0000-0000-0000-0000000000c1'), 0::bigint, 'removing a member removes them from the tasks');
 
 select * from finish();
 rollback;
