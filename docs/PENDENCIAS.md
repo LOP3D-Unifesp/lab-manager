@@ -3,27 +3,6 @@
 Lista viva do que ainda precisa ser resolvido. Quando um item for concluído, remova-o daqui ou
 mova-o para o histórico do PR correspondente.
 
-## Em andamento
-
-### E-mails de convite caem no spam
-
-- **Sintoma:** o e-mail de convite chega, mas na caixa de spam.
-- **Causa:** o remetente era um e-mail institucional (`@unifesp.br`), mas o envio é feito pelo Brevo,
-  que não está autorizado a falar em nome desse domínio (faltam SPF, DKIM e DMARC).
-- **Situação:** o domínio `lop3d.com.br` foi comprado e o remetente passou a ser
-  `contato@lop3d.com.br` (`SMTP_FROM_EMAIL` no `.env.admin.local`). Falta autenticar o domínio no
-  Brevo, publicando no DNS (Registro.br) os registros SPF, DKIM e DMARC que o Brevo indicar, e
-  rodar `npm run config:remote-auth` para aplicar o remetente no Supabase.
-- **Enquanto isso:** marcar o e-mail como "não é spam" ajuda nos próximos envios.
-- Detalhes do SMTP: [DEPLOY.md](DEPLOY.md#e-mail-de-convites-smtp).
-
-### Site em lop3d.com.br
-
-- O site continua em `https://lop3d-unifesp.github.io/lab-manager/`. Para servi-lo em
-  `lop3d.com.br`: apontar o DNS para o GitHub Pages, definir o domínio em *Settings → Pages*,
-  trocar `VITE_BASE_PATH` no workflow para `/`, atualizar `PUBLIC_SITE_URL` e reaplicar
-  `npm run config:remote-auth`.
-
 ## Segurança e operação
 
 - **Rotacionar credenciais usadas em testes.** Durante a configuração do ambiente de teste, um
