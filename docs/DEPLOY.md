@@ -70,7 +70,7 @@ SMTP_PORT=587
 SMTP_USER=<login SMTP>
 SMTP_PASS=<chave SMTP>
 SMTP_FROM_EMAIL=contato@lop3d.com.br
-SMTP_FROM_NAME=LO&P3D Unifesp
+SMTP_FROM_NAME=LOP3D Unifesp
 ```
 
 Todos os scripts remotos exigem `CONFIRM_REMOTE_HOST` igual ao hostname do projeto e recusam
