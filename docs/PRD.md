@@ -140,6 +140,7 @@ Funcionalidades:
 - o chamado aceita até 3 fotos (tirar na hora, com a câmera do celular ou a webcam do computador, ou anexar), que ficam visíveis na fila e abrem num visualizador em tela cheia, com zoom (botões, roda do mouse, duplo clique ou pinça), arrasto e navegação entre as fotos;
 - chamado **urgente** deixa o equipamento **Parado** na hora (novas reservas deixam de ser aceitas, as futuras não são canceladas); ele só entra em manutenção quando um responsável usa **Iniciar manutenção**, e volta a Ativa se o chamado for cancelado ou resolvido sem isso;
 - **Baixar fotos** reúne as fotos do chamado num arquivo .zip;
+- o Dashboard tem o bloco **Chamados de manutenção**, logo abaixo de "Minhas tarefas": **Para atender** (responsáveis: chamados abertos e os que assumiram) e **Que eu abri** (qualquer pessoa: os seus que seguem ativos); some quando não há nada;
 - o card do equipamento mostra quem abriu cada chamado ativo (nome, data e início da descrição, até 2 chamados);
 - liberar o equipamento da manutenção resolve os chamados que estavam em andamento; ao resolver um chamado, a caixa "Liberar o equipamento também" faz as duas coisas de uma vez;
 - chamados abertos aparecem como contador no item Equipamentos do menu e na campainha, que se organiza em **Pendências** (chamados abertos, com quantos são urgentes, e feedback novo) e **Reservas**; para coordenadores e responsáveis pela manutenção;
