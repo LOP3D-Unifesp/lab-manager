@@ -5,10 +5,18 @@ import { Link, useSearchParams } from "react-router-dom";
 import { BookingLifecycleActions } from "../components/reservas/BookingLifecycleActions";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
+import { Modal } from "../components/ui/Modal";
 import { PageHeader } from "../components/ui/PageHeader";
 import { StatusBadge } from "../components/ui/StatusBadge";
 import { useAuth } from "../lib/auth";
 import { useCurrentProfile } from "../lib/currentUser";
+import {
+  formatAmount,
+  getSpoolLabel,
+  getSpoolsForBooking,
+  parseAmount,
+  type MaterialSpool,
+} from "../lib/inventory";
 import { isProjectOpen, type Project } from "../lib/projects";
 import {
   calcularDuracaoMinutos,
@@ -53,6 +61,8 @@ import {
   listEquipment,
   listProfiles,
   listProjects,
+  listSpools,
+  recordBookingUsage,
   rejectBooking,
   setBookingStatus,
   updateBooking,
@@ -97,6 +107,9 @@ export function Reservas() {
   const [profiles, setProfiles] = useState<PublicProfile[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [spools, setSpools] = useState<MaterialSpool[]>([]);
+  const [usoPendente, setUsoPendente] = useState<{ reserva: EquipmentBooking; status: BookingStatus } | null>(null);
+  const [quantidadeUso, setQuantidadeUso] = useState("");
   const [equipmentMaterials, setEquipmentMaterials] = useState<EquipmentMaterial[]>(
     [],
   );
@@ -123,6 +136,7 @@ export function Reservas() {
   const [novaReserva, setNovaReserva] = useState({
     project_id: "",
     material_id: "",
+    spool_id: "",
     duration_hours: "",
     reservation_date: "",
     starts_at: "",
@@ -140,6 +154,7 @@ export function Reservas() {
       equipmentMaterialsData,
       schedulePeriodsData,
       projectsData,
+      spoolsData,
     ] = await Promise.all([
       listBookings(),
       listMaintenanceBlocks(),
@@ -149,6 +164,7 @@ export function Reservas() {
       listEquipmentMaterials(),
       listLabSchedulePeriods(),
       listProjects(),
+      listSpools(),
     ]);
 
     setBookings(bookingsData);
@@ -159,6 +175,7 @@ export function Reservas() {
     setEquipmentMaterials(equipmentMaterialsData);
     setSchedulePeriods(schedulePeriodsData);
     setProjects(projectsData);
+    setSpools(spoolsData);
   }
 
   useEffect(() => {
@@ -466,6 +483,7 @@ export function Reservas() {
     setNovaReserva({
       project_id: reserva.project_id ?? "",
       material_id: reserva.material_id ?? "",
+      spool_id: reserva.spool_id ?? "",
       duration_hours: String(reserva.estimated_duration_minutes / 60),
       reservation_date: getDataNoFuso(new Date(reserva.starts_at), timezone),
       starts_at: getHorarioNoFuso(new Date(reserva.starts_at), timezone),
@@ -483,6 +501,7 @@ export function Reservas() {
     setNovaReserva({
       project_id: "",
       material_id: "",
+      spool_id: "",
       duration_hours: "",
       reservation_date: "",
       starts_at: "",
@@ -582,6 +601,12 @@ export function Reservas() {
     setNovaReserva((reserva) => ({ ...reserva, equipment_id: equipment.id }));
   }
 
+  const rolosDisponiveis = getSpoolsForBooking(
+    spools,
+    novaReserva.material_id,
+    novaReserva.project_id,
+    reservaEmEdicao?.spool_id ?? null,
+  );
   const equipamentoEscolhido = getEquipamento(novaReserva.equipment_id);
   const usaMaterial = equipmentUsesMaterial(equipamentoEscolhido);
 
@@ -620,6 +645,7 @@ export function Reservas() {
       const bookingParams = {
         equipmentId: novaReserva.equipment_id,
         materialId: usaMaterial ? novaReserva.material_id : null,
+        spoolId: usaMaterial ? novaReserva.spool_id || null : null,
         projectId,
         startsAt: inicioSelecionado.toISOString(),
         durationMinutes: duracaoMinutos,
@@ -650,10 +676,38 @@ export function Reservas() {
       setReservaParaRejeitar(reserva);
       return;
     }
+    if ((status === "completed" || status === "failed") && reserva.spool_id) {
+      setQuantidadeUso(reserva.consumed_amount ? String(reserva.consumed_amount) : "");
+      setUsoPendente({ reserva, status });
+      return;
+    }
     try {
       setSalvando(true);
       setErro("");
       await setBookingStatus(reserva.id, status);
+      await carregarDados();
+    } catch (error) {
+      setErro(getMensagemErroReserva(error));
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  // Conclui (ou marca como falha) e, se informado, abate do rolo o que a impressão usou.
+  async function confirmarUso(informar: boolean) {
+    if (!usoPendente) return;
+    const { reserva, status } = usoPendente;
+    const quantidade = informar ? parseAmount(quantidadeUso) : null;
+    if (informar && quantidade === null) {
+      setErro("Informe uma quantidade válida ou conclua sem informar.");
+      return;
+    }
+    try {
+      setSalvando(true);
+      setErro("");
+      await setBookingStatus(reserva.id, status);
+      if (quantidade !== null) await recordBookingUsage(reserva.id, quantidade);
+      setUsoPendente(null);
       await carregarDados();
     } catch (error) {
       setErro(getMensagemErroReserva(error));
@@ -1116,6 +1170,7 @@ export function Reservas() {
                       setNovaReserva((reserva) => ({
                         ...reserva,
                         project_id: event.target.value,
+                        spool_id: "",
                       }))
                     }
                   >
@@ -1146,6 +1201,7 @@ export function Reservas() {
                       setNovaReserva((reserva) => ({
                         ...reserva,
                         material_id: event.target.value,
+                        spool_id: "",
                         equipment_id: "",
                       }));
                     }}
@@ -1165,6 +1221,30 @@ export function Reservas() {
                       : "Obrigatório para impressoras; escolha antes do equipamento."}
                   </span>
                 </label>
+
+                {novaReserva.material_id && novaReserva.project_id ? (
+                  <label className="grid gap-2 text-base font-semibold text-text">
+                    Rolo (opcional)
+                    <select
+                      className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
+                      value={novaReserva.spool_id}
+                      onChange={(event) => setNovaReserva((reserva) => ({ ...reserva, spool_id: event.target.value }))}
+                    >
+                      <option value="">Sem rolo definido</option>
+                      {rolosDisponiveis.map((rolo) => (
+                        <option key={rolo.id} value={rolo.id}>
+                          {getSpoolLabel(rolo)}
+                          {rolo.project_id ? " (do projeto)" : " (estoque geral)"}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="text-sm font-normal text-muted">
+                      {rolosDisponiveis.length > 0
+                        ? "Só aparecem rolos deste material, do projeto escolhido ou do estoque geral."
+                        : "Nenhum rolo deste material disponível para o projeto; a reserva segue sem rolo."}
+                    </span>
+                  </label>
+                ) : null}
 
                 <label className="grid gap-2 text-base font-semibold text-text">
                   Data
@@ -1611,6 +1691,46 @@ export function Reservas() {
             </div>
           </Card>
         </div>
+      ) : null}
+
+      {usoPendente ? (
+        <Modal
+          title={usoPendente.status === "completed" ? "Concluir impressão" : "Registrar falha"}
+          description={`${usoPendente.reserva.project_name}. Quanto foi usado do rolo? Isso é abatido do inventário.`}
+          onClose={() => setUsoPendente(null)}
+        >
+          <div className="grid gap-4">
+            <label className="grid gap-2 text-base font-semibold text-text">
+              Quantidade usada ({spools.find((item) => item.id === usoPendente.reserva.spool_id)?.unit ?? "g"})
+              <input
+                autoFocus
+                className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
+                inputMode="decimal"
+                value={quantidadeUso}
+                onChange={(event) => setQuantidadeUso(event.target.value)}
+              />
+              {(() => {
+                const rolo = spools.find((item) => item.id === usoPendente.reserva.spool_id);
+                return rolo ? (
+                  <span className="text-sm font-normal text-muted">
+                    Rolo: {getSpoolLabel(rolo)}. Restam {formatAmount(rolo.current_amount, rolo.unit)}.
+                  </span>
+                ) : null;
+              })()}
+            </label>
+            {erro ? (
+              <p className="rounded-lg border border-danger bg-danger-soft p-3 text-base font-semibold text-danger">{erro}</p>
+            ) : null}
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <Button variant="secondary" disabled={salvando} onClick={() => confirmarUso(false)}>
+                Concluir sem informar
+              </Button>
+              <Button disabled={salvando} onClick={() => confirmarUso(true)}>
+                {salvando ? "Salvando..." : "Concluir e abater do rolo"}
+              </Button>
+            </div>
+          </div>
+        </Modal>
       ) : null}
     </div>
   );

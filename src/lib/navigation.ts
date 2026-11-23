@@ -1,6 +1,7 @@
 import {
   CalendarCheck,
   CalendarDays,
+  Boxes,
   CalendarPlus,
   Cpu,
   FolderKanban,
@@ -131,6 +132,16 @@ export const navigationItems: NavigationItem[] = [
     icon: UserRoundCog,
     mobilePlacement: "hidden",
     mobileOrder: 1,
+  },
+  {
+    desktopLabel: "Inventário",
+    desktopSection: "management",
+    desktopOrder: 6.5,
+    mobileLabel: "Inventário",
+    path: "/inventario",
+    icon: Boxes,
+    mobilePlacement: "secondary",
+    mobileOrder: 3.5,
   },
   {
     desktopLabel: "Usuários",

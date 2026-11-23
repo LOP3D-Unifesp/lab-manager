@@ -332,6 +332,8 @@ export type EquipmentBooking = {
   equipment_id: string;
   profile_id: string;
   material_id: string | null;
+  spool_id: string | null;
+  consumed_amount: number | null;
   project_id: string | null;
   project_name: string;
   starts_at: string;
@@ -751,6 +753,7 @@ export function getMensagemErroReserva(error: unknown) {
     ["maintenance_conflict", "O equipamento está em manutenção nesse intervalo."],
     ["incompatible_material", "O material selecionado não é compatível com o equipamento."],
     ["material_required", "Escolha o material da impressão."],
+    ["spool_not_available", "Esse rolo não está disponível para este projeto e material. Escolha outro ou deixe sem rolo."],
     ["equipment_unavailable", "O equipamento selecionado não está ativo."],
     ["equipment_not_found", "Equipamento não encontrado."],
     ["invalid_start_time", "Escolha um horário futuro para a reserva."],

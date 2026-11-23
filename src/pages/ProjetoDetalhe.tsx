@@ -4,6 +4,7 @@ import { ArrowLeft, Pencil, Plus } from "lucide-react";
 
 import { FundingEditor, fundingFormToInput, fundingToForm, type FundingForm } from "../components/projetos/FundingEditor";
 import { KanbanBoard } from "../components/projetos/KanbanBoard";
+import { SpoolCard } from "../components/inventario/SpoolCard";
 import { MembersEditor } from "../components/projetos/MembersEditor";
 import { ProjectFormModal } from "../components/projetos/ProjectFormModal";
 import { TaskModal } from "../components/projetos/TaskModal";
@@ -14,6 +15,7 @@ import { PageHeader } from "../components/ui/PageHeader";
 import { StatusBadge } from "../components/ui/StatusBadge";
 import { useAuth } from "../lib/auth";
 import type { PublicProfile } from "../lib/domain";
+import { formatAmount, type MaterialSpool, type MaterialUnit } from "../lib/inventory";
 import {
   formatCurrencyBRL,
   formatProjectPeriod,
@@ -34,17 +36,20 @@ import {
   getProject,
   listFundingAgencies,
   listProfiles,
+  listProjectConsumption,
   listProjectTasks,
+  listSpools,
   replaceProjectFunding,
   replaceProjectMembers,
   updateProjectTask,
 } from "../lib/supabaseRepository";
 
-type Aba = "geral" | "kanban" | "membros" | "fomento";
+type Aba = "geral" | "kanban" | "insumos" | "membros" | "fomento";
 
 const abas: Array<{ id: Aba; label: string }> = [
   { id: "geral", label: "Visão geral" },
   { id: "kanban", label: "Kanban" },
+  { id: "insumos", label: "Insumos" },
   { id: "membros", label: "Membros" },
   { id: "fomento", label: "Fomento" },
 ];
@@ -65,6 +70,8 @@ export function ProjetoDetalhe() {
   const [membrosForm, setMembrosForm] = useState<string[]>([]);
   const [fomentoForm, setFomentoForm] = useState<FundingForm[]>([]);
   const [tarefas, setTarefas] = useState<ProjectTask[]>([]);
+  const [rolos, setRolos] = useState<MaterialSpool[] | null>(null);
+  const [consumo, setConsumo] = useState<Array<{ name: string; unit: MaterialUnit; total: number }>>([]);
   const [tarefaAberta, setTarefaAberta] = useState<{ task: ProjectTask | null; status: TaskStatus } | null>(null);
 
   const carregarTarefas = useCallback(async () => {
@@ -93,6 +100,21 @@ export function ProjetoDetalhe() {
       ativo = false;
     };
   }, [carregar]);
+
+  useEffect(() => {
+    if (aba !== "insumos" || rolos !== null) return;
+    let ativo = true;
+    Promise.all([listSpools(), listProjectConsumption(id)])
+      .then(([todos, totais]) => {
+        if (!ativo) return;
+        setRolos(todos.filter((item) => item.project_id === id));
+        setConsumo(totais);
+      })
+      .catch((error) => ativo && setErro(getProjectErrorMessage(error)));
+    return () => {
+      ativo = false;
+    };
+  }, [aba, id, rolos]);
 
   useEffect(() => {
     if (!isCoordinator) return;
@@ -265,6 +287,41 @@ export function ProjetoDetalhe() {
             onMove={moverTarefa}
             onOpen={(task) => setTarefaAberta({ task, status: task.status })}
           />
+        </div>
+      ) : null}
+
+      {aba === "insumos" ? (
+        <div className="grid gap-4">
+          {consumo.length > 0 ? (
+            <Card>
+              <h3 className="text-xl font-bold text-text">Consumido nas impressões</h3>
+              <ul className="mt-3 grid gap-1 text-base">
+                {consumo.map((item) => (
+                  <li key={`${item.name}-${item.unit}`} className="flex justify-between gap-3">
+                    <span>{item.name}</span>
+                    <span className="font-semibold">{formatAmount(item.total, item.unit)}</span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          ) : null}
+          {rolos === null ? (
+            <p className="text-lg text-muted">Carregando insumos...</p>
+          ) : rolos.length === 0 ? (
+            <Card>
+              <p className="text-lg font-semibold">Nenhum rolo deste projeto.</p>
+              <p className="mt-1 text-muted">
+                Rolos do estoque geral também podem ser usados nas impressões do projeto. Os rolos exclusivos
+                aparecem aqui quando o coordenador os cadastra em Inventário.
+              </p>
+            </Card>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {rolos.map((rolo) => (
+                <SpoolCard key={rolo.id} spool={rolo} />
+              ))}
+            </div>
+          )}
         </div>
       ) : null}
 

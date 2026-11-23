@@ -109,6 +109,19 @@ Funcionalidades:
 - em Projetos, a vista "Quadro de tarefas" reúne as tarefas de todos os projetos que a pessoa vê (coordenador: todos), com filtros por projeto, responsável e atrasadas;
 - toda nova impressão fica vinculada a um projeto; reservas anteriores mantêm o nome em texto livre.
 
+### 5.5 Módulo de inventário
+
+Funcionalidades:
+- página Inventário com as abas **Rolos** e **Materiais**;
+- cada rolo tem material, cor, fabricante, peso inicial e atual, local e dono: um projeto ou o estoque geral
+  do laboratório; filtros por material, dono, situação e "pouco restante" (até 20%);
+- o coordenador cadastra rolos, ajusta o peso depois de pesar e marca rolos vazios;
+- o catálogo de materiais é editável (categoria, unidade em g ou ml, arquivar);
+- na reserva de uma impressora, o campo opcional **Rolo** lista só os rolos do material escolhido que são do
+  projeto da reserva ou do estoque geral;
+- ao concluir uma impressão com rolo, o app pergunta quantos gramas foram usados e abate do rolo;
+- a aba **Insumos** do projeto mostra os rolos do projeto e o total consumido por material.
+
 ## 6. Status de reserva
 
 - Pendente

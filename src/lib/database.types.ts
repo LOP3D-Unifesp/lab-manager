@@ -71,14 +71,14 @@ isOneToOne: false
                   ]
                 },"equipment_bookings": {
                   Row: {
-                    "approved_at": string | null,"approved_by": string | null,"cancelled_at": string | null,"cancelled_by": string | null,"created_at": string,"ends_at": string,"equipment_id": string,"estimated_duration_minutes": number,"id": string,"material_id": string | null,"notes": string | null,"profile_id": string,"project_id": string | null,"project_name": string,"rejected_at": string | null,"rejected_by": string | null,"rejected_reason": string | null,"starts_at": string,"status": Database["public"]['Enums']["booking_status"],"updated_at": string
+                    "approved_at": string | null,"approved_by": string | null,"cancelled_at": string | null,"cancelled_by": string | null,"consumed_amount": number | null,"created_at": string,"ends_at": string,"equipment_id": string,"estimated_duration_minutes": number,"id": string,"material_id": string | null,"notes": string | null,"profile_id": string,"project_id": string | null,"project_name": string,"rejected_at": string | null,"rejected_by": string | null,"rejected_reason": string | null,"spool_id": string | null,"starts_at": string,"status": Database["public"]['Enums']["booking_status"],"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "approved_at"?: string | null,"approved_by"?: string | null,"cancelled_at"?: string | null,"cancelled_by"?: string | null,"created_at"?: string,"ends_at": string,"equipment_id": string,"estimated_duration_minutes": number,"id"?: string,"material_id"?: string | null,"notes"?: string | null,"profile_id": string,"project_id"?: string | null,"project_name": string,"rejected_at"?: string | null,"rejected_by"?: string | null,"rejected_reason"?: string | null,"starts_at": string,"status"?: Database["public"]['Enums']["booking_status"],"updated_at"?: string
+                    "approved_at"?: string | null,"approved_by"?: string | null,"cancelled_at"?: string | null,"cancelled_by"?: string | null,"consumed_amount"?: number | null,"created_at"?: string,"ends_at": string,"equipment_id": string,"estimated_duration_minutes": number,"id"?: string,"material_id"?: string | null,"notes"?: string | null,"profile_id": string,"project_id"?: string | null,"project_name": string,"rejected_at"?: string | null,"rejected_by"?: string | null,"rejected_reason"?: string | null,"spool_id"?: string | null,"starts_at": string,"status"?: Database["public"]['Enums']["booking_status"],"updated_at"?: string
                   }
                   Update: {
-                    "approved_at"?: string | null,"approved_by"?: string | null,"cancelled_at"?: string | null,"cancelled_by"?: string | null,"created_at"?: string,"ends_at"?: string,"equipment_id"?: string,"estimated_duration_minutes"?: number,"id"?: string,"material_id"?: string | null,"notes"?: string | null,"profile_id"?: string,"project_id"?: string | null,"project_name"?: string,"rejected_at"?: string | null,"rejected_by"?: string | null,"rejected_reason"?: string | null,"starts_at"?: string,"status"?: Database["public"]['Enums']["booking_status"],"updated_at"?: string
+                    "approved_at"?: string | null,"approved_by"?: string | null,"cancelled_at"?: string | null,"cancelled_by"?: string | null,"consumed_amount"?: number | null,"created_at"?: string,"ends_at"?: string,"equipment_id"?: string,"estimated_duration_minutes"?: number,"id"?: string,"material_id"?: string | null,"notes"?: string | null,"profile_id"?: string,"project_id"?: string | null,"project_name"?: string,"rejected_at"?: string | null,"rejected_by"?: string | null,"rejected_reason"?: string | null,"spool_id"?: string | null,"starts_at"?: string,"status"?: Database["public"]['Enums']["booking_status"],"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -122,6 +122,12 @@ isOneToOne: false
       columns: ["rejected_by"]
 isOneToOne: false
       referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "equipment_bookings_spool_id_fkey"
+      columns: ["spool_id"]
+isOneToOne: false
+      referencedRelation: "material_spools"
       referencedColumns: ["id"]
     }
                   ]
@@ -283,16 +289,48 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
-                },"materials": {
+                },"material_spools": {
                   Row: {
-                    "created_at": string,"description": string | null,"id": string,"is_active": boolean,"name": string,"updated_at": string
+                    "color_hex": string | null,"color_name": string,"created_at": string,"created_by": string | null,"current_amount": number,"diameter_mm": number | null,"id": string,"initial_amount": number,"last_dried_on": string | null,"lot_number": string | null,"manufacturer": string | null,"material_id": string,"notes": string | null,"opened_on": string | null,"project_id": string | null,"status": Database["public"]['Enums']["spool_status"],"storage_location": string | null,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"description"?: string | null,"id"?: string,"is_active"?: boolean,"name": string,"updated_at"?: string
+                    "color_hex"?: string | null,"color_name": string,"created_at"?: string,"created_by"?: string | null,"current_amount": number,"diameter_mm"?: number | null,"id"?: string,"initial_amount": number,"last_dried_on"?: string | null,"lot_number"?: string | null,"manufacturer"?: string | null,"material_id": string,"notes"?: string | null,"opened_on"?: string | null,"project_id"?: string | null,"status"?: Database["public"]['Enums']["spool_status"],"storage_location"?: string | null,"updated_at"?: string
                   }
                   Update: {
-                    "created_at"?: string,"description"?: string | null,"id"?: string,"is_active"?: boolean,"name"?: string,"updated_at"?: string
+                    "color_hex"?: string | null,"color_name"?: string,"created_at"?: string,"created_by"?: string | null,"current_amount"?: number,"diameter_mm"?: number | null,"id"?: string,"initial_amount"?: number,"last_dried_on"?: string | null,"lot_number"?: string | null,"manufacturer"?: string | null,"material_id"?: string,"notes"?: string | null,"opened_on"?: string | null,"project_id"?: string | null,"status"?: Database["public"]['Enums']["spool_status"],"storage_location"?: string | null,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "material_spools_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "material_spools_material_id_fkey"
+      columns: ["material_id"]
+isOneToOne: false
+      referencedRelation: "materials"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "material_spools_project_id_fkey"
+      columns: ["project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"materials": {
+                  Row: {
+                    "category": Database["public"]['Enums']["material_category"],"created_at": string,"description": string | null,"id": string,"is_active": boolean,"name": string,"unit": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "category"?: Database["public"]['Enums']["material_category"],"created_at"?: string,"description"?: string | null,"id"?: string,"is_active"?: boolean,"name": string,"unit"?: string,"updated_at"?: string
+                  }
+                  Update: {
+                    "category"?: Database["public"]['Enums']["material_category"],"created_at"?: string,"description"?: string | null,"id"?: string,"is_active"?: boolean,"name"?: string,"unit"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     
@@ -559,6 +597,7 @@ isOneToOne: false
 "approved_by": string | null,
 "cancelled_at": string | null,
 "cancelled_by": string | null,
+"consumed_amount": number | null,
 "created_at": string,
 "ends_at": string,
 "equipment_id": string,
@@ -572,6 +611,7 @@ isOneToOne: false
 "rejected_at": string | null,
 "rejected_by": string | null,
 "rejected_reason": string | null,
+"spool_id": string | null,
 "starts_at": string,
 "status": Database["public"]['Enums']["booking_status"],
 "updated_at": string
@@ -611,11 +651,12 @@ isOneToOne: false
 { Args: { "p_function_url": string,"p_secret": string }; Returns: undefined
                            },
 "create_booking":
-{ Args: { "p_equipment_id": string,"p_estimated_duration_minutes": number,"p_material_id"?: string,"p_notes"?: string,"p_project_id": string,"p_starts_at": string }; Returns: {
+{ Args: { "p_equipment_id": string,"p_estimated_duration_minutes": number,"p_material_id"?: string,"p_notes"?: string,"p_project_id": string,"p_spool_id"?: string,"p_starts_at": string }; Returns: {
               "approved_at": string | null,
 "approved_by": string | null,
 "cancelled_at": string | null,
 "cancelled_by": string | null,
+"consumed_amount": number | null,
 "created_at": string,
 "ends_at": string,
 "equipment_id": string,
@@ -629,6 +670,7 @@ isOneToOne: false
 "rejected_at": string | null,
 "rejected_by": string | null,
 "rejected_reason": string | null,
+"spool_id": string | null,
 "starts_at": string,
 "status": Database["public"]['Enums']["booking_status"],
 "updated_at": string
@@ -689,15 +731,13 @@ isOneToOne: false
               "acronym": string,"invitation_ttl_hours": number,"name": string,"privacy_contact_email": string
             }[]
                            },
-"record_invitation_opened":
-{ Args: Record<PropertyKey, never>; Returns: undefined
-                           },
-"reject_booking":
-{ Args: { "p_booking_id": string,"p_reason"?: string }; Returns: {
+"record_booking_usage":
+{ Args: { "p_amount": number,"p_booking_id": string }; Returns: {
               "approved_at": string | null,
 "approved_by": string | null,
 "cancelled_at": string | null,
 "cancelled_by": string | null,
+"consumed_amount": number | null,
 "created_at": string,
 "ends_at": string,
 "equipment_id": string,
@@ -711,6 +751,41 @@ isOneToOne: false
 "rejected_at": string | null,
 "rejected_by": string | null,
 "rejected_reason": string | null,
+"spool_id": string | null,
+"starts_at": string,
+"status": Database["public"]['Enums']["booking_status"],
+"updated_at": string
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "equipment_bookings"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
+"record_invitation_opened":
+{ Args: Record<PropertyKey, never>; Returns: undefined
+                           },
+"reject_booking":
+{ Args: { "p_booking_id": string,"p_reason"?: string }; Returns: {
+              "approved_at": string | null,
+"approved_by": string | null,
+"cancelled_at": string | null,
+"cancelled_by": string | null,
+"consumed_amount": number | null,
+"created_at": string,
+"ends_at": string,
+"equipment_id": string,
+"estimated_duration_minutes": number,
+"id": string,
+"material_id": string | null,
+"notes": string | null,
+"profile_id": string,
+"project_id": string | null,
+"project_name": string,
+"rejected_at": string | null,
+"rejected_by": string | null,
+"rejected_reason": string | null,
+"spool_id": string | null,
 "starts_at": string,
 "status": Database["public"]['Enums']["booking_status"],
 "updated_at": string
@@ -798,6 +873,7 @@ isOneToOne: false
 "approved_by": string | null,
 "cancelled_at": string | null,
 "cancelled_by": string | null,
+"consumed_amount": number | null,
 "created_at": string,
 "ends_at": string,
 "equipment_id": string,
@@ -811,6 +887,7 @@ isOneToOne: false
 "rejected_at": string | null,
 "rejected_by": string | null,
 "rejected_reason": string | null,
+"spool_id": string | null,
 "starts_at": string,
 "status": Database["public"]['Enums']["booking_status"],
 "updated_at": string
@@ -849,11 +926,12 @@ isOneToOne: false
 { Args: { "p_profile_ids": (string)[],"p_task_id": string }; Returns: undefined
                            },
 "update_booking":
-{ Args: { "p_booking_id": string,"p_equipment_id": string,"p_estimated_duration_minutes": number,"p_material_id"?: string,"p_notes"?: string,"p_project_id": string,"p_starts_at": string }; Returns: {
+{ Args: { "p_booking_id": string,"p_equipment_id": string,"p_estimated_duration_minutes": number,"p_material_id"?: string,"p_notes"?: string,"p_project_id": string,"p_spool_id"?: string,"p_starts_at": string }; Returns: {
               "approved_at": string | null,
 "approved_by": string | null,
 "cancelled_at": string | null,
 "cancelled_by": string | null,
+"consumed_amount": number | null,
 "created_at": string,
 "ends_at": string,
 "equipment_id": string,
@@ -867,6 +945,7 @@ isOneToOne: false
 "rejected_at": string | null,
 "rejected_by": string | null,
 "rejected_reason": string | null,
+"spool_id": string | null,
 "starts_at": string,
 "status": Database["public"]['Enums']["booking_status"],
 "updated_at": string
@@ -978,7 +1057,7 @@ isOneToOne: false
       } }
           }
           Enums: {
-            "academic_affiliation": "ic"|"extension"|"intern"|"tcc"|"masters"|"phd"|"postdoc"|"visitor"|"technician"|"faculty"|"other","booking_status": "pending"|"approved"|"in_progress"|"completed"|"cancelled"|"failed"|"rejected","equipment_status": "active"|"maintenance"|"unavailable"|"disabled","funding_agency": "cnpq"|"fapesp"|"capes"|"sus"|"fap"|"other","invitation_status": "pending"|"accepted"|"expired"|"revoked","project_funding_category": "capital"|"custeio"|"bolsas"|"reserva_tecnica"|"outros","project_status": "planning"|"active"|"paused"|"completed"|"archived","task_status": "todo"|"in_progress"|"review"|"done","user_role": "coordinator"|"researcher"
+            "academic_affiliation": "ic"|"extension"|"intern"|"tcc"|"masters"|"phd"|"postdoc"|"visitor"|"technician"|"faculty"|"other","booking_status": "pending"|"approved"|"in_progress"|"completed"|"cancelled"|"failed"|"rejected","equipment_status": "active"|"maintenance"|"unavailable"|"disabled","funding_agency": "cnpq"|"fapesp"|"capes"|"sus"|"fap"|"other","invitation_status": "pending"|"accepted"|"expired"|"revoked","material_category": "filament"|"resin"|"powder"|"other","project_funding_category": "capital"|"custeio"|"bolsas"|"reserva_tecnica"|"outros","project_status": "planning"|"active"|"paused"|"completed"|"archived","spool_status": "sealed"|"in_use"|"empty"|"discarded","task_status": "todo"|"in_progress"|"review"|"done","user_role": "coordinator"|"researcher"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -1098,7 +1177,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "academic_affiliation": ["ic", "extension", "intern", "tcc", "masters", "phd", "postdoc", "visitor", "technician", "faculty", "other"],"booking_status": ["pending", "approved", "in_progress", "completed", "cancelled", "failed", "rejected"],"equipment_status": ["active", "maintenance", "unavailable", "disabled"],"funding_agency": ["cnpq", "fapesp", "capes", "sus", "fap", "other"],"invitation_status": ["pending", "accepted", "expired", "revoked"],"project_funding_category": ["capital", "custeio", "bolsas", "reserva_tecnica", "outros"],"project_status": ["planning", "active", "paused", "completed", "archived"],"task_status": ["todo", "in_progress", "review", "done"],"user_role": ["coordinator", "researcher"]
+            "academic_affiliation": ["ic", "extension", "intern", "tcc", "masters", "phd", "postdoc", "visitor", "technician", "faculty", "other"],"booking_status": ["pending", "approved", "in_progress", "completed", "cancelled", "failed", "rejected"],"equipment_status": ["active", "maintenance", "unavailable", "disabled"],"funding_agency": ["cnpq", "fapesp", "capes", "sus", "fap", "other"],"invitation_status": ["pending", "accepted", "expired", "revoked"],"material_category": ["filament", "resin", "powder", "other"],"project_funding_category": ["capital", "custeio", "bolsas", "reserva_tecnica", "outros"],"project_status": ["planning", "active", "paused", "completed", "archived"],"spool_status": ["sealed", "in_use", "empty", "discarded"],"task_status": ["todo", "in_progress", "review", "done"],"user_role": ["coordinator", "researcher"]
           }
         }
 } as const

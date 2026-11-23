@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(163);
+select plan(185);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -1086,6 +1086,104 @@ select lives_ok(
   'coordinator removes the member from the project'
 );
 select is((select count(*) from public.project_task_assignees where project_id = '00000000-0000-0000-0000-0000000000c1'), 0::bigint, 'removing a member removes them from the tasks');
+
+-- Inventory: spools, spool choice in bookings and consumption.
+reset role;
+insert into public.material_spools (id, material_id, color_name, initial_amount, current_amount, project_id) values
+  ('00000000-0000-0000-0000-0000000000f1', '30000000-0000-0000-0000-000000000001', 'Branco', 1000, 1000, null),
+  ('00000000-0000-0000-0000-0000000000f2', '30000000-0000-0000-0000-000000000001', 'Preto', 1000, 1000, '00000000-0000-0000-0000-0000000000e1'),
+  ('00000000-0000-0000-0000-0000000000f3', '30000000-0000-0000-0000-000000000002', 'Azul', 500, 500, null);
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
+
+select throws_ok(
+  $$ insert into public.material_spools (material_id, color_name, initial_amount, current_amount) values ('30000000-0000-0000-0000-000000000001', 'Vermelho', 100, 150) $$,
+  '23514', null,
+  'a spool cannot have more weight than it started with'
+);
+select lives_ok(
+  $$ select public.create_booking('20000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-0000000000e1', now() + interval '30 days', 60, '30000000-0000-0000-0000-000000000001', null, '00000000-0000-0000-0000-0000000000f1') $$,
+  'a booking can use a spool from the general stock'
+);
+select is(
+  (select spool_id from public.equipment_bookings where equipment_id = '20000000-0000-0000-0000-000000000001' and starts_at > now() + interval '29 days' and spool_id = '00000000-0000-0000-0000-0000000000f1'),
+  '00000000-0000-0000-0000-0000000000f1'::uuid,
+  'the booking stores the spool'
+);
+select throws_ok(
+  $$ select public.create_booking('20000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-0000000000e2', now() + interval '31 days', 60, '30000000-0000-0000-0000-000000000001', null, '00000000-0000-0000-0000-0000000000f2') $$,
+  'P0001', 'spool_not_available',
+  'a spool of another project cannot be used'
+);
+select throws_ok(
+  $$ select public.create_booking('20000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-0000000000e1', now() + interval '31 days', 60, '30000000-0000-0000-0000-000000000001', null, '00000000-0000-0000-0000-0000000000f3') $$,
+  'P0001', 'spool_not_available',
+  'a spool of another material cannot be used'
+);
+select lives_ok(
+  $$ select public.create_booking('20000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-0000000000e1', now() + interval '32 days', 60, '30000000-0000-0000-0000-000000000001', null, '00000000-0000-0000-0000-0000000000f2') $$,
+  'a booking can use a spool of its own project'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
+select is(
+  (select count(*) from public.material_spools where id in ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-0000000000f2', '00000000-0000-0000-0000-0000000000f3')),
+  3::bigint,
+  'any active user reads the inventory'
+);
+select throws_ok(
+  $$ insert into public.material_spools (material_id, color_name, initial_amount, current_amount) values ('30000000-0000-0000-0000-000000000001', 'Verde', 100, 100) $$,
+  '42501', null,
+  'researcher cannot register spools'
+);
+select lives_ok(
+  $$ update public.material_spools set current_amount = 1 where id = '00000000-0000-0000-0000-0000000000f1' $$,
+  'a researcher update on a spool is silently ignored'
+);
+select is(
+  (select current_amount from public.material_spools where id = '00000000-0000-0000-0000-0000000000f1'),
+  1000.00::numeric,
+  'the spool weight is untouched by a researcher'
+);
+select throws_ok(
+  $$ select public.record_booking_usage((select id from public.equipment_bookings where spool_id = '00000000-0000-0000-0000-0000000000f1'), 10) $$,
+  'P0001', 'booking_forbidden',
+  'a researcher cannot record usage on someone else booking'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
+select throws_ok(
+  $$ select public.record_booking_usage((select id from public.equipment_bookings where spool_id = '00000000-0000-0000-0000-0000000000f2'), 10) $$,
+  'P0001', 'usage_not_allowed',
+  'usage is only recorded once the booking started'
+);
+reset role;
+update public.equipment_bookings set status = 'completed' where spool_id = '00000000-0000-0000-0000-0000000000f1';
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
+select lives_ok(
+  $$ select public.record_booking_usage((select id from public.equipment_bookings where spool_id = '00000000-0000-0000-0000-0000000000f1'), 250) $$,
+  'coordinator records the amount used'
+);
+select is((select current_amount from public.material_spools where id = '00000000-0000-0000-0000-0000000000f1'), 750.00::numeric, 'the amount used is taken off the spool');
+select is((select status::text from public.material_spools where id = '00000000-0000-0000-0000-0000000000f1'), 'in_use', 'a spool that lost weight is in use');
+select lives_ok(
+  $$ select public.record_booking_usage((select id from public.equipment_bookings where spool_id = '00000000-0000-0000-0000-0000000000f1'), 100) $$,
+  'the amount used can be corrected'
+);
+select is((select current_amount from public.material_spools where id = '00000000-0000-0000-0000-0000000000f1'), 900.00::numeric, 'a correction gives the previous amount back first');
+select lives_ok(
+  $$ select public.record_booking_usage((select id from public.equipment_bookings where spool_id = '00000000-0000-0000-0000-0000000000f1'), 5000) $$,
+  'an amount above what is left is capped'
+);
+select is((select current_amount from public.material_spools where id = '00000000-0000-0000-0000-0000000000f1'), 0.00::numeric, 'the spool runs out');
+select is((select status::text from public.material_spools where id = '00000000-0000-0000-0000-0000000000f1'), 'empty', 'an empty spool is marked empty');
+select is((select consumed_amount from public.equipment_bookings where spool_id = '00000000-0000-0000-0000-0000000000f1'), 1000.00::numeric, 'the booking keeps the capped amount');
+select throws_ok(
+  $$ select public.create_booking('20000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-0000000000e1', now() + interval '33 days', 60, '30000000-0000-0000-0000-000000000001', null, '00000000-0000-0000-0000-0000000000f1') $$,
+  'P0001', 'spool_not_available',
+  'an empty spool cannot be chosen'
+);
 
 select * from finish();
 rollback;
