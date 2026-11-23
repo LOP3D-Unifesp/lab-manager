@@ -1,19 +1,23 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { Pencil, Plus } from "lucide-react";
+import { Pencil, Plus, Wrench } from "lucide-react";
 
+import { MaintenanceBlockModal } from "../components/equipamentos/MaintenanceBlockModal";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { Modal } from "../components/ui/Modal";
 import { PageHeader } from "../components/ui/PageHeader";
 import { StatusBadge } from "../components/ui/StatusBadge";
+import { getBlockState, getRelevantBlocks } from "../lib/maintenance";
 import { useAuth } from "../lib/auth";
 import {
   equipmentUsesMaterial,
+  getTimezonePadrao,
   getEquipmentStatusLabel,
   type Equipment,
   type EquipmentMaterial,
   type EquipmentStatus,
   type EquipmentType,
+  type MaintenanceBlock,
   type Material,
 } from "../lib/domain";
 import {
@@ -22,6 +26,7 @@ import {
   listEquipment,
   listEquipmentMaterials,
   listEquipmentTypes,
+  listMaintenanceBlocks,
   listMaterials,
   setEquipmentMaterials,
   updateEquipment,
@@ -60,13 +65,16 @@ function getErrorMessage(error: unknown) {
 }
 
 export function Equipamentos() {
-  const { profile } = useAuth();
+  const { labSettings, profile } = useAuth();
+  const timezone = labSettings?.timezone || getTimezonePadrao();
   const isCoordinator = profile?.role === "coordinator";
   const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
   const [types, setTypes] = useState<EquipmentType[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [equipmentMaterials, setEquipmentMaterialsState] = useState<EquipmentMaterial[]>([]);
   const [filtroTipo, setFiltroTipo] = useState("all");
+  const [blocks, setBlocks] = useState<MaintenanceBlock[]>([]);
+  const [manutencaoDe, setManutencaoDe] = useState<Equipment | null>(null);
   const [modalAberto, setModalAberto] = useState(false);
   const [emEdicao, setEmEdicao] = useState<Equipment | null>(null);
   const [form, setForm] = useState<EquipmentForm | null>(null);
@@ -75,16 +83,18 @@ export function Equipamentos() {
   const [salvando, setSalvando] = useState(false);
 
   async function carregarDados() {
-    const [equipmentData, typesData, materialsData, equipmentMaterialsData] = await Promise.all([
+    const [equipmentData, typesData, materialsData, equipmentMaterialsData, blocksData] = await Promise.all([
       listEquipment(),
       listEquipmentTypes(),
       listMaterials(),
       listEquipmentMaterials(),
+      listMaintenanceBlocks(),
     ]);
     setEquipmentList(equipmentData);
     setTypes(typesData);
     setMaterials(materialsData);
     setEquipmentMaterialsState(equipmentMaterialsData);
+    setBlocks(blocksData);
   }
 
   useEffect(() => {
@@ -297,6 +307,26 @@ export function Equipamentos() {
                       variant={item.status === "active" ? "success" : "warning"}
                     />
                   </div>
+                  {(() => {
+                    const agora = new Date();
+                    const relevantes = getRelevantBlocks(
+                      blocks.filter((block) => block.equipment_id === item.id),
+                      agora,
+                    );
+                    const emCurso = relevantes.find((block) => getBlockState(block, agora) === "active");
+                    const futuros = relevantes.filter((block) => getBlockState(block, agora) === "upcoming").length;
+                    if (!emCurso && futuros === 0) return null;
+                    return (
+                      <p className="mt-3 flex flex-wrap items-center gap-2 text-sm font-semibold text-warning-dark">
+                        <Wrench className="h-4 w-4" aria-hidden="true" />
+                        {emCurso
+                          ? `Em manutenção até ${new Intl.DateTimeFormat("pt-BR", { timeZone: timezone, day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(emCurso.ends_at))}`
+                          : null}
+                        {emCurso && futuros > 0 ? " · " : null}
+                        {futuros > 0 ? `${futuros} bloqueio(s) agendado(s)` : null}
+                      </p>
+                    );
+                  })()}
                   <dl className="mt-4 grid gap-2 text-base leading-6 text-muted">
                     <div>
                       <dt className="font-semibold text-text">Local</dt>
@@ -319,7 +349,17 @@ export function Equipamentos() {
                       </div>
                     ) : null}
                   </dl>
-                  <div className="mt-auto flex justify-end pt-5">
+                  <div className="mt-auto flex items-center justify-end gap-2 pt-5">
+                    {isCoordinator ? (
+                      <Button
+                        className="min-h-9 px-3 py-2 text-sm"
+                        variant="secondary"
+                        onClick={() => setManutencaoDe(item)}
+                      >
+                        <Wrench className="mr-2 h-4 w-4" aria-hidden="true" />
+                        Bloquear manutenção
+                      </Button>
+                    ) : null}
                     <button
                       type="button"
                       title="Editar equipamento"
@@ -346,6 +386,22 @@ export function Equipamentos() {
         <p className="mt-4 rounded-lg border border-danger bg-danger-soft p-3 text-base font-semibold text-danger">
           {erro}
         </p>
+      ) : null}
+
+      {manutencaoDe ? (
+        <MaintenanceBlockModal
+          equipment={manutencaoDe}
+          blocks={blocks.filter((block) => block.equipment_id === manutencaoDe.id)}
+          timezone={timezone}
+          onClose={() => setManutencaoDe(null)}
+          onChanged={async () => {
+            try {
+              setBlocks(await listMaintenanceBlocks());
+            } catch (error) {
+              setErro(getErrorMessage(error));
+            }
+          }}
+        />
       ) : null}
 
       {modalAberto && form ? (

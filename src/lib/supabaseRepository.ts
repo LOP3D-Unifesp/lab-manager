@@ -499,27 +499,6 @@ export async function listAvailability() {
   }));
 }
 
-export async function addAvailabilitySlots(
-  profileId: string,
-  slots: Array<{ weekday: number; periodo: PeriodoId; workMode?: WorkMode }>,
-) {
-  const [availability, activePeriods, installation] = await Promise.all([
-    listAvailability(), listLabSchedulePeriods(), getInstallationState(),
-  ]);
-  const activeIds = new Set(activePeriods.map((period) => period.id));
-  const openDays = installation.settings?.operating_weekdays ?? [1, 2, 3, 4, 5];
-  const current = availability.filter((item) => item.profile_id === profileId
-    && activeIds.has(item.periodo) && openDays.includes(item.weekday));
-  const byKey = new Map(current.map((slot) => [`${slot.weekday}-${slot.periodo}`, {
-    weekday: slot.weekday, periodo: slot.periodo, workMode: slot.work_mode,
-  }]));
-  slots.forEach((slot) => byKey.set(`${slot.weekday}-${slot.periodo}`, {
-    weekday: slot.weekday, periodo: slot.periodo,
-    workMode: slot.workMode ?? ("onsite" satisfies WorkMode),
-  }));
-  await saveProfileAvailability(profileId, [...byKey.values()]);
-}
-
 export async function saveProfileAvailability(
   profileId: string,
   slots: Array<{ weekday: number; periodo: PeriodoId; workMode: WorkMode }>,
@@ -987,6 +966,34 @@ export async function rejectBooking(bookingId: string, reason: string | null) {
   });
   throwIfError(error);
   return data as EquipmentBooking;
+}
+
+// Reservas de um equipamento que ainda ocupam horário (pendentes, aprovadas ou em andamento), para avisar
+// do conflito antes de bloquear para manutenção.
+export async function listActiveBookingsForEquipment(equipmentId: string) {
+  const { data, error } = await client()
+    .from("equipment_bookings")
+    .select("id, project_name, starts_at, ends_at, status, profile:profiles!equipment_bookings_profile_id_fkey(full_name)")
+    .eq("equipment_id", equipmentId)
+    .in("status", ["pending", "approved", "in_progress"])
+    .gt("ends_at", new Date().toISOString())
+    .order("starts_at");
+  throwIfError(error);
+  return ((data ?? []) as unknown as Array<{
+    id: string;
+    project_name: string;
+    starts_at: string;
+    ends_at: string;
+    status: string;
+    profile: { full_name: string } | null;
+  }>).map((row) => ({
+    id: row.id,
+    project_name: row.project_name,
+    starts_at: row.starts_at,
+    ends_at: row.ends_at,
+    status: row.status,
+    person: row.profile?.full_name ?? null,
+  }));
 }
 
 export async function createMaintenanceBlock(params: {

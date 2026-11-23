@@ -550,11 +550,11 @@ Coordenador.
 - A impressora está cadastrada.
 
 **Passos:**  
-1. O coordenador seleciona a impressora.
-2. O coordenador informa o período de manutenção.
+1. Na página **Equipamentos**, o coordenador escolhe o equipamento e abre **Bloquear manutenção**.
+2. O coordenador informa o início e o fim (data e hora); o período pode durar vários dias.
 3. O coordenador registra o motivo do bloqueio.
 4. O sistema valida o período informado.
-5. O sistema verifica se há reservas conflitantes.
+5. O sistema verifica se há reservas conflitantes e, se houver, lista as reservas e não cria o bloqueio até que sejam canceladas ou remanejadas.
 6. O sistema registra o bloqueio de manutenção.
 7. O sistema impede novas reservas para a impressora no período bloqueado.
 
@@ -563,7 +563,8 @@ A impressora fica bloqueada para novas reservas durante o período de manutenç�
 
 **Regras de negócio:**  
 - Apenas coordenadores podem bloquear impressoras para manutenção.
-- O bloqueio deve ter período definido.
+- O bloqueio deve ter período definido, com início no futuro.
+- Os bloqueios em curso ou agendados aparecem no card do equipamento, e é ali que o coordenador os remove; a página Reservas só mostra os bloqueios.
 - Bloqueios de manutenção devem impedir novas reservas no mesmo intervalo.
 - O status da impressora pode indicar manutenção quando aplicável.
 - Reservas já existentes no período devem ser tratadas pelo coordenador antes ou durante o bloqueio, conforme necessidade operacional.
