@@ -146,19 +146,54 @@ describe("chamados no Dashboard", () => {
 
 describe("ações permitidas", () => {
   it("responsáveis tratam o chamado em qualquer etapa ativa", () => {
-    expect(getRequestActions(request({ status: "open" }), "bia", true)).toEqual({ take: true, resolve: true, giveBack: false, cancel: true, reopen: false });
-    expect(getRequestActions(request({ status: "in_progress" }), "bia", true)).toEqual({ take: false, resolve: true, giveBack: true, cancel: true, reopen: false });
+    expect(getRequestActions(request({ status: "open" }), "bia", true)).toMatchObject({ take: true, resolve: true, giveBack: false, cancel: true, reopen: false, waitPart: false, resume: false });
+    expect(getRequestActions(request({ status: "in_progress" }), "bia", true)).toMatchObject({ take: false, resolve: true, giveBack: true, cancel: true, reopen: false, waitPart: true, resume: false });
     expect(getRequestActions(request({ status: "resolved" }), "bia", true).reopen).toBe(true);
   });
 
   it("quem abriu só cancela enquanto está aberto; os outros não fazem nada", () => {
     expect(getRequestActions(request({ status: "open" }), "ana", false).cancel).toBe(true);
     expect(getRequestActions(request({ status: "in_progress" }), "ana", false).cancel).toBe(false);
-    expect(getRequestActions(request({ status: "open" }), "carla", false)).toEqual({ take: false, resolve: false, giveBack: false, cancel: false, reopen: false });
+    expect(getRequestActions(request({ status: "open" }), "carla", false)).toEqual({ take: false, resolve: false, giveBack: false, cancel: false, reopen: false, waitPart: false, resume: false });
   });
 
   it("chamado cancelado é definitivo", () => {
-    expect(getRequestActions(request({ status: "cancelled" }), "bia", true)).toEqual({ take: false, resolve: false, giveBack: false, cancel: false, reopen: false });
+    expect(getRequestActions(request({ status: "cancelled" }), "bia", true)).toEqual({ take: false, resolve: false, giveBack: false, cancel: false, reopen: false, waitPart: false, resume: false });
+  });
+});
+
+describe("aguardando peça", () => {
+  it("conta como chamado ativo e aparece depois dos em andamento", () => {
+    expect(isRequestActive("waiting_part")).toBe(true);
+    const sorted = sortRequests([
+      request({ id: "w", status: "waiting_part", created_at: "2026-06-01T10:00:00Z" }),
+      request({ id: "i", status: "in_progress", created_at: "2026-06-03T10:00:00Z" }),
+      request({ id: "o", status: "open", created_at: "2026-06-05T10:00:00Z" }),
+      request({ id: "r", status: "resolved", created_at: "2026-06-06T10:00:00Z" }),
+    ]);
+    expect(sorted.map((item) => item.id)).toEqual(["o", "i", "w", "r"]);
+  });
+
+  it("o responsável pode marcar que aguarda peça e depois retomar", () => {
+    expect(getRequestActions(request({ status: "in_progress" }), "bia", true)).toMatchObject({ waitPart: true, resume: false });
+    expect(getRequestActions(request({ status: "waiting_part" }), "bia", true)).toMatchObject({
+      take: false,
+      resolve: true,
+      giveBack: true,
+      cancel: true,
+      waitPart: false,
+      resume: true,
+    });
+    expect(getRequestActions(request({ status: "waiting_part" }), "ana", false)).toMatchObject({ cancel: false, resume: false });
+  });
+
+  it("no Dashboard, o que aguarda peça sem responsável continua aparecendo para quem atende", () => {
+    const list = [
+      request({ id: "w1", status: "waiting_part", assigned_to: "bia" }),
+      request({ id: "w2", status: "waiting_part", assigned_to: "dani" }),
+      request({ id: "w3", status: "waiting_part", assigned_to: null }),
+    ];
+    expect(getMyRequestGroups(list, "bia", true).toHandle.map((item) => item.id).sort()).toEqual(["w1", "w3"]);
   });
 });
 

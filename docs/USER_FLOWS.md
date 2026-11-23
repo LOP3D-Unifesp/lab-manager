@@ -560,6 +560,7 @@ A reserva própria é cancelada, permanece no histórico e deixa de bloquear o h
 2. O chamado entra na aba **Chamados** como *Aberto* e aparece como pendência (menu e campainha) para coordenadores e responsáveis pela manutenção.
 3. Um responsável usa **Iniciar manutenção**: o chamado vira *Em andamento* e o equipamento (ativo ou parado) entra em **Em manutenção**, com início registrado. Se o chamado urgente for cancelado ou resolvido sem a manutenção começar, o equipamento volta a *Ativa* sozinho.
 3b. Se a máquina precisa de uma peça, o responsável usa **Pedir peça** no chamado: o pedido de compra já vem preenchido e fica ligado ao chamado, que passa a mostrar a situação da peça.
+3c. Quando a peça pedida é **comprada**, o chamado passa sozinho para *Aguardando peça*; quando ela é **entregue**, o chamado volta para *Em andamento* (ou *Aberto*, se ninguém tinha assumido). O responsável também pode marcar e retomar isso à mão.
 4. Ao terminar, usa **Resolver** (com nota opcional; a caixa "Liberar o equipamento também" já vem marcada) ou **Liberar equipamento**, que também resolve os chamados em andamento.
 5. A aba **Chamados** filtra por tipo de equipamento (a escolha fica salva), equipamento e "só os meus" e ordena por prioridade, data, equipamento ou situação (a escolha fica salva); **Baixar fotos** gera um .zip com as fotos do chamado.
 

@@ -18,11 +18,12 @@ export function getMaintenanceUrgencyVariant(urgency: MaintenanceUrgency): Statu
   return "info";
 }
 
-export type MaintenanceRequestStatus = "open" | "in_progress" | "resolved" | "cancelled";
+export type MaintenanceRequestStatus = "open" | "in_progress" | "waiting_part" | "resolved" | "cancelled";
 
 export const maintenanceRequestStatusOptions: Array<{ value: MaintenanceRequestStatus; label: string }> = [
   { value: "open", label: "Aberto" },
   { value: "in_progress", label: "Em andamento" },
+  { value: "waiting_part", label: "Aguardando peça" },
   { value: "resolved", label: "Resolvido" },
   { value: "cancelled", label: "Cancelado" },
 ];
@@ -33,7 +34,7 @@ export function getMaintenanceRequestStatusLabel(status: MaintenanceRequestStatu
 
 export function getMaintenanceRequestStatusVariant(status: MaintenanceRequestStatus): StatusVariant {
   if (status === "open") return "warning";
-  if (status === "in_progress") return "info";
+  if (status === "in_progress" || status === "waiting_part") return "info";
   if (status === "resolved") return "success";
   return "neutral";
 }
@@ -56,9 +57,9 @@ export type MaintenanceRequest = {
   created_at: string;
 };
 
-// Ainda pede atenção (aberto ou em andamento).
+// Ainda pede atenção (aberto, em andamento ou aguardando peça).
 export function isRequestActive(status: MaintenanceRequestStatus) {
-  return status === "open" || status === "in_progress";
+  return status === "open" || status === "in_progress" || status === "waiting_part";
 }
 
 export type RequestFilters = {
@@ -81,14 +82,15 @@ export function filterRequests(requests: MaintenanceRequest[], filters: RequestF
 
 const URGENCY_RANK: Record<MaintenanceUrgency, number> = { urgent: 0, normal: 1, low: 2 };
 
-// Abertos antes dos em andamento; entre iguais, mais urgentes e mais antigos primeiro. Encerrados por último.
+// Abertos antes dos em andamento e dos que aguardam peça; entre iguais, mais urgentes e mais antigos primeiro.
+// Encerrados por último.
 export function sortRequests(requests: MaintenanceRequest[]) {
   const group = (request: MaintenanceRequest) =>
-    request.status === "open" ? 0 : request.status === "in_progress" ? 1 : 2;
+    request.status === "open" ? 0 : request.status === "in_progress" ? 1 : request.status === "waiting_part" ? 2 : 3;
   return [...requests].sort(
     (a, b) =>
       group(a) - group(b) ||
-      (group(a) < 2
+      (group(a) < 3
         ? URGENCY_RANK[a.urgency] - URGENCY_RANK[b.urgency] ||
           new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
         : new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
@@ -111,7 +113,7 @@ export function isRequestSort(value: unknown): value is RequestSort {
   return requestSortOptions.some((option) => option.value === value);
 }
 
-const STATUS_RANK: Record<MaintenanceRequestStatus, number> = { open: 0, in_progress: 1, resolved: 2, cancelled: 3 };
+const STATUS_RANK: Record<MaintenanceRequestStatus, number> = { open: 0, in_progress: 1, waiting_part: 2, resolved: 3, cancelled: 4 };
 
 const timeOf = (request: MaintenanceRequest) => new Date(request.created_at).getTime();
 
@@ -133,7 +135,11 @@ export function orderRequests(requests: MaintenanceRequest[], sort: RequestSort)
 export function getMyRequestGroups(requests: MaintenanceRequest[], profileId: string, canMaintainNow: boolean) {
   const active = requests.filter((request) => isRequestActive(request.status));
   const toHandle = canMaintainNow
-    ? sortRequests(active.filter((request) => request.status === "open" || request.assigned_to === profileId))
+    ? sortRequests(
+        active.filter(
+          (request) => request.status === "open" || request.assigned_to === profileId || (request.status === "waiting_part" && request.assigned_to === null),
+        ),
+      )
     : [];
   const handled = new Set(toHandle.map((request) => request.id));
   const mine = sortRequests(active.filter((request) => request.requested_by === profileId && !handled.has(request.id)));
@@ -144,19 +150,31 @@ export function countOpenRequests(requests: MaintenanceRequest[], equipmentId: s
   return requests.filter((request) => request.equipment_id === equipmentId && isRequestActive(request.status)).length;
 }
 
-export type RequestActions = { take: boolean; resolve: boolean; giveBack: boolean; cancel: boolean; reopen: boolean };
+export type RequestActions = {
+  take: boolean;
+  resolve: boolean;
+  giveBack: boolean;
+  cancel: boolean;
+  reopen: boolean;
+  /** Marcar como aguardando peça (de em andamento). */
+  waitPart: boolean;
+  /** Retomar a manutenção (de aguardando peça). */
+  resume: boolean;
+};
 
 // O que cada pessoa pode fazer com um chamado: responsáveis e coordenação tratam; quem abriu só cancela enquanto aberto.
 export function getRequestActions(request: MaintenanceRequest, profileId: string | null, canMaintainNow: boolean): RequestActions {
-  const none: RequestActions = { take: false, resolve: false, giveBack: false, cancel: false, reopen: false };
+  const none: RequestActions = { take: false, resolve: false, giveBack: false, cancel: false, reopen: false, waitPart: false, resume: false };
   if (request.status === "cancelled") return none;
   if (canMaintainNow) {
     return {
       take: request.status === "open",
-      resolve: request.status === "open" || request.status === "in_progress",
-      giveBack: request.status === "in_progress",
-      cancel: request.status === "open" || request.status === "in_progress",
+      resolve: isRequestActive(request.status),
+      giveBack: request.status === "in_progress" || request.status === "waiting_part",
+      cancel: isRequestActive(request.status),
       reopen: request.status === "resolved",
+      waitPart: request.status === "in_progress",
+      resume: request.status === "waiting_part",
     };
   }
   return { ...none, cancel: request.status === "open" && request.requested_by === profileId };
