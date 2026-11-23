@@ -550,7 +550,7 @@ A reserva própria é cancelada, permanece no histórico e deixa de bloquear o h
 **Regras de negócio:**
 - Só é possível pedir para projeto em aberto do qual a pessoa é membro; o coordenador pede para qualquer projeto em aberto.
 - Quem pediu edita e cancela enquanto o pedido está *Solicitado*; depois da decisão só o coordenador mexe (e pode cancelar um pedido aprovado).
-- *Recusado*, *Entregue* e *Cancelado* são finais.
+- O coordenador pode voltar uma etapa (desfazer entrega, desfazer compra, voltar para solicitado) e reabrir pedidos recusados ou cancelados; ao desfazer a compra, o valor pago e a data são apagados.
 - O pedido é visível para quem pediu, os membros do projeto e o coordenador.
 
 ### Fluxo 14b - Reportar problema e tratar chamado de manutenção

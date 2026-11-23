@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(286);
+select plan(297);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -1650,6 +1650,36 @@ select lives_ok(
   $$ insert into public.purchase_requests (funding_category, project_id, item, estimated_amount) values ('diarias', '00000000-0000-0000-0000-0000000000c2', 'pgtap diaria', 300) $$,
   'per diems are a valid funding category for a purchase'
 );
+
+-- Purchase requests can be stepped back by the coordinator.
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
+select lives_ok($$ select public.set_purchase_status((select id from public.purchase_requests where item = 'pgtap bico'), 'purchased') $$, 'the coordinator undoes a delivery');
+select is((select delivered_at is null from public.purchase_requests where item = 'pgtap bico'), true, 'undoing the delivery clears the delivery date');
+select is((select actual_amount from public.purchase_requests where item = 'pgtap bico'), 110.00::numeric, 'undoing the delivery keeps the amount paid');
+select lives_ok($$ select public.set_purchase_status((select id from public.purchase_requests where item = 'pgtap bico'), 'approved') $$, 'the coordinator undoes a purchase');
+select is(
+  (select (actual_amount is null and purchased_at is null)::text from public.purchase_requests where item = 'pgtap bico'),
+  'true',
+  'undoing the purchase clears the amount paid and the purchase date'
+);
+select lives_ok($$ select public.set_purchase_status((select id from public.purchase_requests where item = 'pgtap bico'), 'requested') $$, 'the coordinator undoes an approval');
+select is(
+  (select (status = 'requested' and decided_by is null and decided_at is null)::text from public.purchase_requests where item = 'pgtap bico'),
+  'true',
+  'undoing the approval clears the decision'
+);
+select lives_ok($$ select public.set_purchase_status((select id from public.purchase_requests where item = 'pgtap cancelar'), 'requested') $$, 'the coordinator reopens a cancelled request');
+select lives_ok($$ select public.set_purchase_status((select id from public.purchase_requests where item = 'pgtap recusar'), 'requested') $$, 'the coordinator reopens a rejected request');
+select is((select rejected_reason is null from public.purchase_requests where item = 'pgtap recusar'), true, 'reopening clears the rejection reason');
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
+select throws_ok(
+  $$ select public.set_purchase_status((select id from public.purchase_requests where item = 'pgtap recusar'), 'approved') $$,
+  'P0001', 'coordinator_required',
+  'a researcher cannot approve a reopened request'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
 
 select * from finish();
 rollback;
