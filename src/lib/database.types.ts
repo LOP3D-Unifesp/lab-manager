@@ -657,14 +657,14 @@ isOneToOne: false
                   ]
                 },"purchase_requests": {
                   Row: {
-                    "actual_amount": number | null,"created_at": string,"decided_at": string | null,"decided_by": string | null,"delivered_at": string | null,"estimated_amount": number,"funding_category": Database["public"]['Enums']["project_funding_category"] | null,"id": string,"item": string,"maintenance_request_id": string | null,"notes": string | null,"project_id": string | null,"purchased_at": string | null,"quantity": number,"rejected_reason": string | null,"requested_by": string | null,"status": Database["public"]['Enums']["purchase_status"],"updated_at": string,"urgency": Database["public"]['Enums']["purchase_urgency"],"url": string | null
+                    "actual_amount": number | null,"created_at": string,"decided_at": string | null,"decided_by": string | null,"delivered_at": string | null,"estimated_amount": number,"for_maintenance": boolean,"funding_category": Database["public"]['Enums']["project_funding_category"] | null,"id": string,"item": string,"maintenance_request_id": string | null,"notes": string | null,"project_id": string | null,"purchased_at": string | null,"quantity": number,"rejected_reason": string | null,"requested_by": string | null,"status": Database["public"]['Enums']["purchase_status"],"updated_at": string,"urgency": Database["public"]['Enums']["purchase_urgency"],"url": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "actual_amount"?: number | null,"created_at"?: string,"decided_at"?: string | null,"decided_by"?: string | null,"delivered_at"?: string | null,"estimated_amount": number,"funding_category"?: Database["public"]['Enums']["project_funding_category"] | null,"id"?: string,"item": string,"maintenance_request_id"?: string | null,"notes"?: string | null,"project_id"?: string | null,"purchased_at"?: string | null,"quantity"?: number,"rejected_reason"?: string | null,"requested_by"?: string | null,"status"?: Database["public"]['Enums']["purchase_status"],"updated_at"?: string,"urgency"?: Database["public"]['Enums']["purchase_urgency"],"url"?: string | null
+                    "actual_amount"?: number | null,"created_at"?: string,"decided_at"?: string | null,"decided_by"?: string | null,"delivered_at"?: string | null,"estimated_amount": number,"for_maintenance"?: boolean,"funding_category"?: Database["public"]['Enums']["project_funding_category"] | null,"id"?: string,"item": string,"maintenance_request_id"?: string | null,"notes"?: string | null,"project_id"?: string | null,"purchased_at"?: string | null,"quantity"?: number,"rejected_reason"?: string | null,"requested_by"?: string | null,"status"?: Database["public"]['Enums']["purchase_status"],"updated_at"?: string,"urgency"?: Database["public"]['Enums']["purchase_urgency"],"url"?: string | null
                   }
                   Update: {
-                    "actual_amount"?: number | null,"created_at"?: string,"decided_at"?: string | null,"decided_by"?: string | null,"delivered_at"?: string | null,"estimated_amount"?: number,"funding_category"?: Database["public"]['Enums']["project_funding_category"] | null,"id"?: string,"item"?: string,"maintenance_request_id"?: string | null,"notes"?: string | null,"project_id"?: string | null,"purchased_at"?: string | null,"quantity"?: number,"rejected_reason"?: string | null,"requested_by"?: string | null,"status"?: Database["public"]['Enums']["purchase_status"],"updated_at"?: string,"urgency"?: Database["public"]['Enums']["purchase_urgency"],"url"?: string | null
+                    "actual_amount"?: number | null,"created_at"?: string,"decided_at"?: string | null,"decided_by"?: string | null,"delivered_at"?: string | null,"estimated_amount"?: number,"for_maintenance"?: boolean,"funding_category"?: Database["public"]['Enums']["project_funding_category"] | null,"id"?: string,"item"?: string,"maintenance_request_id"?: string | null,"notes"?: string | null,"project_id"?: string | null,"purchased_at"?: string | null,"quantity"?: number,"rejected_reason"?: string | null,"requested_by"?: string | null,"status"?: Database["public"]['Enums']["purchase_status"],"updated_at"?: string,"urgency"?: Database["public"]['Enums']["purchase_urgency"],"url"?: string | null
                   }
                   Relationships: [
                     {
@@ -1096,6 +1096,7 @@ isOneToOne: false
 "decided_by": string | null,
 "delivered_at": string | null,
 "estimated_amount": number,
+"for_maintenance": boolean,
 "funding_category": Database["public"]['Enums']["project_funding_category"] | null,
 "id": string,
 "item": string,
@@ -1273,13 +1274,14 @@ isOneToOne: false
         isSetofReturn: false
       } },
 "update_purchase_request":
-{ Args: { "p_estimated_amount": number,"p_funding_category"?: Database["public"]['Enums']["project_funding_category"],"p_item": string,"p_notes"?: string,"p_project_id"?: string,"p_quantity": number,"p_request_id": string,"p_set_project"?: boolean,"p_urgency"?: Database["public"]['Enums']["purchase_urgency"],"p_url": string }; Returns: {
+{ Args: { "p_estimated_amount": number,"p_for_maintenance"?: boolean,"p_funding_category"?: Database["public"]['Enums']["project_funding_category"],"p_item": string,"p_notes"?: string,"p_project_id"?: string,"p_quantity": number,"p_request_id": string,"p_set_project"?: boolean,"p_urgency"?: Database["public"]['Enums']["purchase_urgency"],"p_url": string }; Returns: {
               "actual_amount": number | null,
 "created_at": string,
 "decided_at": string | null,
 "decided_by": string | null,
 "delivered_at": string | null,
 "estimated_amount": number,
+"for_maintenance": boolean,
 "funding_category": Database["public"]['Enums']["project_funding_category"] | null,
 "id": string,
 "item": string,

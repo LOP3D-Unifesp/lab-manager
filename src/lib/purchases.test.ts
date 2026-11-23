@@ -19,6 +19,7 @@ import {
   parseMoney,
   sortPurchases,
   summarizeByProject,
+  summarizeMaintenanceSpending,
   validatePurchaseForm,
   type PurchaseRequest,
 } from "./purchases";
@@ -41,6 +42,7 @@ function purchase(overrides: Partial<PurchaseRequest>): PurchaseRequest {
     decided_by_name: null,
     maintenance_request_id: null,
     maintenance_equipment_name: null,
+    for_maintenance: false,
     decided_at: null,
     rejected_reason: null,
     actual_amount: null,
@@ -61,7 +63,7 @@ describe("lista de pedidos", () => {
     purchase({ id: "f", status: "cancelled", created_at: "2026-06-08T10:00:00Z" }),
   ];
   const ids = (items: PurchaseRequest[]) => items.map((item) => item.id);
-  const all = { status: "all" as const, projectId: "all", category: "all" as const, mine: false };
+  const all = { status: "all" as const, projectId: "all", category: "all" as const, kind: "all" as const, mine: false };
 
   it("ordena quem espera decisão primeiro (mais antigo antes) e os encerrados por último", () => {
     expect(ids(sortPurchases(list))).toEqual(["c", "b", "d", "a", "e", "f"]);
@@ -72,7 +74,7 @@ describe("lista de pedidos", () => {
       purchase({ id: "g1", project_id: null, project_name: GENERAL_STOCK_LABEL }),
       purchase({ id: "p1", project_id: "alfa" }),
     ];
-    const none = { status: "all" as const, projectId: "all", category: "all" as const, mine: false };
+    const none = { status: "all" as const, projectId: "all", category: "all" as const, kind: "all" as const, mine: false };
     expect(filterPurchases(mixed, { ...none, projectId: "general" }, "ana").map((item) => item.id)).toEqual(["g1"]);
     expect(filterPurchases(mixed, { ...none, projectId: "alfa" }, "ana").map((item) => item.id)).toEqual(["p1"]);
     expect(filterPurchases(mixed, none, "ana")).toHaveLength(2);
@@ -237,6 +239,40 @@ describe("pedido feito a partir de um chamado", () => {
     const note = buildMaintenancePurchaseNote("PC", "a".repeat(500));
     expect(note.endsWith("...")).toBe(true);
     expect(note.length).toBeLessThan(360);
+  });
+});
+
+describe("gastos de manutenção", () => {
+  const list = [
+    purchase({ id: "a", for_maintenance: true, status: "requested", estimated_amount: 100, maintenance_equipment_name: "Bambuzinha" }),
+    purchase({ id: "b", for_maintenance: true, status: "purchased", estimated_amount: 200, actual_amount: 180, maintenance_equipment_name: "Bambuzinha" }),
+    purchase({ id: "c", for_maintenance: true, status: "delivered", estimated_amount: 40, actual_amount: null, maintenance_equipment_name: "Baby Hip" }),
+    purchase({ id: "d", for_maintenance: true, status: "requested", estimated_amount: 70 }),
+    purchase({ id: "e", for_maintenance: true, status: "rejected", estimated_amount: 999 }),
+    purchase({ id: "f", for_maintenance: false, status: "delivered", estimated_amount: 500, actual_amount: 500 }),
+  ];
+
+  it("soma o previsto e o pago só dos pedidos de manutenção, ignorando recusados e cancelados", () => {
+    const spending = summarizeMaintenanceSpending(list);
+    expect(spending).toMatchObject({ estimated: 170, paid: 220, count: 4 });
+  });
+
+  it("separa por equipamento, do maior gasto para o menor, e agrupa o que não tem equipamento", () => {
+    expect(summarizeMaintenanceSpending(list).byEquipment).toEqual([
+      { name: "Bambuzinha", estimated: 100, paid: 180, count: 2 },
+      { name: "Sem equipamento definido", estimated: 70, paid: 0, count: 1 },
+      { name: "Baby Hip", estimated: 0, paid: 40, count: 1 },
+    ]);
+  });
+
+  it("filtra por tipo de compra", () => {
+    const none = { status: "all" as const, projectId: "all", category: "all" as const, mine: false };
+    expect(filterPurchases(list, { ...none, kind: "maintenance" }, "ana").map((item) => item.id)).toEqual(["a", "b", "c", "d", "e"]);
+    expect(filterPurchases(list, { ...none, kind: "other" }, "ana").map((item) => item.id)).toEqual(["f"]);
+  });
+
+  it("sem pedidos de manutenção, o resumo fica zerado", () => {
+    expect(summarizeMaintenanceSpending([purchase({ id: "z" })])).toEqual({ estimated: 0, paid: 0, count: 0, byEquipment: [] });
   });
 });
 

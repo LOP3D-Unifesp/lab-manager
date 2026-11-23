@@ -40,6 +40,8 @@ export function PurchaseFormModal({ defaultProjectId, fromMaintenance, onClose, 
   const [projectId, setProjectId] = useState(purchase ? (purchase.project_id ?? GENERAL_STOCK_VALUE) : defaultProjectId);
   const [category, setCategory] = useState<string>(purchase?.funding_category ?? (fromMaintenance ? "custeio" : ""));
   const [urgency, setUrgency] = useState<PurchaseUrgency>(purchase?.urgency ?? fromMaintenance?.urgency ?? "normal");
+  const linkedToRequest = Boolean(fromMaintenance || purchase?.maintenance_request_id);
+  const [forMaintenance, setForMaintenance] = useState(linkedToRequest || (purchase?.for_maintenance ?? false));
   const [item, setItem] = useState(purchase?.item ?? "");
   const [url, setUrl] = useState(purchase?.url ?? "");
   const [quantity, setQuantity] = useState(String(purchase?.quantity ?? 1));
@@ -67,6 +69,7 @@ export function PurchaseFormModal({ defaultProjectId, fromMaintenance, onClose, 
       notes: notes.trim() || null,
       fundingCategory: category as FundingCategory,
       urgency,
+      forMaintenance: linkedToRequest || forMaintenance,
     };
     try {
       setSalvando(true);
@@ -174,6 +177,21 @@ export function PurchaseFormModal({ defaultProjectId, fromMaintenance, onClose, 
             value={notes}
             onChange={(event) => setNotes(event.target.value)}
           />
+        </label>
+        <label className="flex items-start gap-2 text-base font-semibold text-text">
+          <input
+            checked={linkedToRequest || forMaintenance}
+            className="mt-1 h-4 w-4 accent-primary"
+            disabled={linkedToRequest}
+            type="checkbox"
+            onChange={(event) => setForMaintenance(event.target.checked)}
+          />
+          <span>
+            Gasto de manutenção
+            <span className="block text-sm font-normal text-muted">
+              {linkedToRequest ? "Pedido ligado a um chamado de manutenção." : "Peças e reparos. Entra no resumo de gastos de manutenção, à parte da rubrica."}
+            </span>
+          </span>
         </label>
         <fieldset className="grid gap-2">
           <legend className="mb-1 text-base font-semibold text-text">Urgência</legend>

@@ -19,8 +19,8 @@ O schema cobre:
 
 O Supabase Auth sera a fonte de autenticacao. O PostgreSQL sera a fonte dos dados de dominio da aplicacao.
 
-> **Fonte da verdade:** as migrations em `supabase/migrations/` (32 arquivos, de `20260818` a
-> `20260918`). Este documento descreve o resultado delas. A secao 1.1 resume o que mudou depois da
+> **Fonte da verdade:** as migrations em `supabase/migrations/` (33 arquivos, de `20260818` a
+> `20260919`). Este documento descreve o resultado delas. A secao 1.1 resume o que mudou depois da
 > baseline; onde houver divergencia, vale a migration.
 
 Status do MVP implementado:
@@ -70,6 +70,7 @@ Status do MVP implementado:
 | `20260916_purchase_general_stock` | `purchase_requests.project_id` pode ser nulo: pedido para o estoque geral do laboratorio (secao 3.19). |
 | `20260917_purchase_change_project` | `update_purchase_request` passa a poder mover o pedido para outro projeto ou para o estoque geral (argumentos `p_set_project` e `p_project_id`; secao 3.19). |
 | `20260918_purchase_from_maintenance` | `purchase_requests.maintenance_request_id`: pedido de peca ligado a um chamado de manutencao (secao 3.19). |
+| `20260919_purchase_for_maintenance` | `purchase_requests.for_maintenance`: marca de gasto de manutencao, a parte da rubrica (secao 3.19). |
 
 Resumo dos objetos que mais mudam o entendimento do schema:
 
@@ -1130,6 +1131,10 @@ compra e confirma a entrega.
   `purchase_not_found`.
 - `maintenance_request_id` (opcional, `ON DELETE SET NULL`): o pedido de uma peca feito a partir de um chamado de
   manutencao; o chamado lista as pecas pedidas (as que a pessoa pode ver) e a compra mostra para que equipamento e.
+- `for_maintenance` (boolean, padrao `false`): gasto de manutencao (pecas, reparos), independente da rubrica, para
+  acompanhar quanto se gasta com manutencao. Um gatilho (`private.purchase_maintenance_flag`) forca `true` quando
+  `maintenance_request_id` esta preenchido; nos demais pedidos o autor marca enquanto o pedido esta `requested`
+  (`p_for_maintenance` em `update_purchase_request`; nulo mantem o valor atual).
 - A tabela esta na publicacao `supabase_realtime` (aviso ao coordenador).
 
 ## 4. Relacionamentos principais
@@ -1283,7 +1288,7 @@ Validacoes cobertas pelos testes de banco do MVP:
 - Idiomas nao sao habilidades tecnicas e nao entram em `skills`.
 - Nao havera upload `.gcode` ou `.3mf` no schema do MVP.
 - Nao havera historico detalhado de manutencao alem dos bloqueios.
-- A baseline inicial (`20260818`) e imutavel; mudancas de schema entram em migrations incrementais (hoje ate `20260918`).
+- A baseline inicial (`20260818`) e imutavel; mudancas de schema entram em migrations incrementais (hoje ate `20260919`).
 
 ## 10. Inventario de insumos
 
