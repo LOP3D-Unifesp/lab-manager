@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Clock, ClipboardList, Printer, Users } from "lucide-react";
 
+import { MyMaintenanceRequests } from "../components/equipamentos/MyMaintenanceRequests";
 import { MyTasksBoard } from "../components/projetos/MyTasksBoard";
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
@@ -202,6 +203,8 @@ export function Dashboard() {
       </section>
 
       {currentProfile ? <MyTasksBoard isCoordinator={currentProfile.role === "coordinator"} profileId={currentProfile.id} /> : null}
+
+      <MyMaintenanceRequests />
 
       <section className="mt-6 grid gap-4 lg:grid-cols-[1.35fr_1fr]">
         <Card>
