@@ -550,23 +550,23 @@ Coordenador.
 - A impressora está cadastrada.
 
 **Passos:**  
-1. O coordenador seleciona a impressora.
-2. O coordenador informa o período de manutenção.
-3. O coordenador registra o motivo do bloqueio.
-4. O sistema valida o período informado.
-5. O sistema verifica se há reservas conflitantes.
-6. O sistema registra o bloqueio de manutenção.
-7. O sistema impede novas reservas para a impressora no período bloqueado.
+1. Na página **Equipamentos**, o coordenador escolhe o equipamento e abre **Colocar em manutenção**.
+2. O coordenador informa o motivo e, se quiser, uma previsão de volta e observações. Não é preciso saber quando termina.
+3. O sistema lista as reservas futuras do equipamento; o coordenador pode marcar para cancelá-las junto.
+4. O sistema coloca o equipamento em manutenção **agora** e registra o início.
+5. O equipamento deixa de aceitar novas reservas e o card mostra "Em manutenção desde…" com o motivo.
+6. Quando o reparo termina, o coordenador usa **Liberar equipamento** (e pode anotar o que foi feito); o sistema registra o fim e o equipamento volta a aceitar reservas.
 
-**Resultado esperado:**  
-A impressora fica bloqueada para novas reservas durante o período de manutenção.
+**Resultado esperado:**
+O equipamento fica fora de novas reservas enquanto estiver em manutenção, e cada parada fica registrada com início, fim, motivo e quem fez.
 
-**Regras de negócio:**  
-- Apenas coordenadores podem bloquear impressoras para manutenção.
-- O bloqueio deve ter período definido.
-- Bloqueios de manutenção devem impedir novas reservas no mesmo intervalo.
-- O status da impressora pode indicar manutenção quando aplicável.
-- Reservas já existentes no período devem ser tratadas pelo coordenador antes ou durante o bloqueio, conforme necessidade operacional.
+**Regras de negócio:**
+- Apenas coordenadores colocam equipamentos em manutenção e os liberam.
+- Não há data de fim: a manutenção dura até a liberação. A previsão de volta é informativa.
+- Cada equipamento tem no máximo uma manutenção em aberto.
+- O histórico (início, fim, duração, motivo, quem iniciou e quem liberou) é guardado e consultável em **Histórico** no card, com contagem de paradas e duração média.
+- Reservas em andamento não são canceladas automaticamente; as pendentes ou aprovadas que ainda não começaram podem ser canceladas na hora de colocar em manutenção.
+- O estado "Em manutenção" não é escolhido no formulário de edição do equipamento: ele só muda por Colocar em manutenção e Liberar.
 
 **Estados de erro:**  
 - Usuário sem permissão tenta criar bloqueio.

@@ -756,7 +756,7 @@ export function getMensagemErroReserva(error: unknown) {
     ["spool_not_available", "Esse item do estoque não está disponível para este projeto e material. Escolha outro ou deixe sem item."],
     ["equipment_unavailable", "O equipamento selecionado não está ativo."],
     ["equipment_not_found", "Equipamento não encontrado."],
-    ["invalid_start_time", "Escolha um horário futuro para a reserva."],
+    ["invalid_start_time", "O horário de início precisa ser no futuro."],
     ["booking_not_editable", "Somente reservas pendentes ou aprovadas podem ser editadas."],
     ["invalid_booking_status_transition", "Essa mudança de status não é permitida."],
     ["booking_not_started", "A reserva ainda não começou; aguarde o horário de início."],

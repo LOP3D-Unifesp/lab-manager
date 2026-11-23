@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { CalendarCheck, Check, Clock, History, Pencil, Plus, Printer as PrinterIcon, Trash2, Wrench, X } from "lucide-react";
+import { CalendarCheck, Check, Clock, History, Pencil, Plus, Printer as PrinterIcon, Trash2, X } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import { BookingLifecycleActions } from "../components/reservas/BookingLifecycleActions";
@@ -50,9 +50,7 @@ import {
 } from "../lib/domain";
 import {
   cancelBooking,
-  createMaintenanceBlock,
   createBooking,
-  deleteMaintenanceBlock,
   listBookings,
   listLabSchedulePeriods,
   listMaintenanceBlocks,
@@ -117,7 +115,6 @@ export function Reservas() {
   const [dataAgenda, setDataAgenda] = useState(getHojeNoFuso(timezone));
   const [modalAberto, setModalAberto] = useState(false);
   const [reservaEmEdicao, setReservaEmEdicao] = useState<EquipmentBooking | null>(null);
-  const [modalManutencaoAberto, setModalManutencaoAberto] = useState(false);
   const [reservaParaCancelar, setReservaParaCancelar] =
     useState<EquipmentBooking | null>(null);
   const [reservaParaRejeitar, setReservaParaRejeitar] =
@@ -125,14 +122,6 @@ export function Reservas() {
   const [motivoRejeicao, setMotivoRejeicao] = useState("");
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
-  const [manutencaoForm, setManutencaoForm] = useState({
-    equipment_id: "",
-    date: getHojeNoFuso(timezone),
-    starts_at: "",
-    ends_at: "",
-    reason: "",
-    notes: "",
-  });
   const [novaReserva, setNovaReserva] = useState({
     project_id: "",
     material_id: "",
@@ -510,65 +499,6 @@ export function Reservas() {
     });
   }
 
-  function abrirManutencao(equipmentId = "") {
-    setManutencaoForm({
-      equipment_id: equipmentId,
-      date: dataAgenda,
-      starts_at: "",
-      ends_at: "",
-      reason: "",
-      notes: "",
-    });
-    setErro("");
-    setModalManutencaoAberto(true);
-  }
-
-  async function salvarManutencao(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const inicio = criarDataNoFuso(manutencaoForm.date, manutencaoForm.starts_at, timezone);
-    const fim = criarDataNoFuso(manutencaoForm.date, manutencaoForm.ends_at, timezone);
-    if (!manutencaoForm.equipment_id || !inicio || !fim || inicio >= fim || !manutencaoForm.reason.trim()) {
-      setErro("Informe o equipamento, o motivo e um intervalo válido para a manutenção.");
-      return;
-    }
-
-    if (inicio.getTime() < Date.now()) {
-      setErro("Não é possível criar manutenção em horário que já passou.");
-      return;
-    }
-
-    try {
-      setSalvando(true);
-      setErro("");
-      await createMaintenanceBlock({
-        equipmentId: manutencaoForm.equipment_id,
-        startsAt: inicio.toISOString(),
-        endsAt: fim.toISOString(),
-        reason: manutencaoForm.reason.trim(),
-        notes: manutencaoForm.notes.trim() || null,
-      });
-      setDataAgenda(manutencaoForm.date);
-      await carregarDados();
-      setModalManutencaoAberto(false);
-    } catch (error) {
-      setErro(getMensagemErroReserva(error));
-    } finally {
-      setSalvando(false);
-    }
-  }
-
-  async function removerManutencao(blockId: string) {
-    try {
-      setSalvando(true);
-      await deleteMaintenanceBlock(blockId);
-      await carregarDados();
-    } catch (error) {
-      setErro(getMensagemErroReserva(error));
-    } finally {
-      setSalvando(false);
-    }
-  }
-
   function selecionarImpressora(equipment: Equipment) {
     if (equipmentUsesMaterial(equipment)) {
       if (!novaReserva.material_id) {
@@ -781,12 +711,6 @@ export function Reservas() {
                 </Button>
               </Link>
             )}
-            {isCoordinator ? (
-              <Button fullWidth variant="secondary" onClick={() => abrirManutencao()}>
-                <Wrench className="mr-2 h-5 w-5" aria-hidden="true" />
-                Bloquear manutenção
-              </Button>
-            ) : null}
             <Button fullWidth onClick={abrirModal}>
               <Plus className="mr-2 h-5 w-5" aria-hidden="true" />
               Criar reserva
@@ -967,16 +891,6 @@ export function Reservas() {
                       label={getEquipmentStatusLabel(equipment.status)}
                       variant={equipment.status === "active" ? "success" : "warning"}
                     />
-                    {isCoordinator ? (
-                      <Button
-                        className="min-h-9 px-3 py-2 text-sm"
-                        variant="secondary"
-                        onClick={() => abrirManutencao(equipment.id)}
-                      >
-                        <Wrench className="mr-2 h-4 w-4" aria-hidden="true" />
-                        Manutenção
-                      </Button>
-                    ) : null}
                   </div>
                 </div>
 
@@ -1093,18 +1007,6 @@ export function Reservas() {
                           </p>
                           {block.notes ? <p className="mt-1 text-xs">{block.notes}</p> : null}
                         </div>
-                        {isCoordinator ? (
-                          <button
-                            type="button"
-                            title="Remover bloqueio"
-                            aria-label={`Remover manutenção ${block.reason}`}
-                            onClick={() => removerManutencao(block.id)}
-                            disabled={salvando}
-                            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md hover:bg-white/60"
-                          >
-                            <Trash2 className="h-4 w-4" aria-hidden="true" />
-                          </button>
-                        ) : null}
                       </div>
                     ))}
                   </div>
@@ -1503,106 +1405,6 @@ export function Reservas() {
                   disabled={!formularioReservaCompleto || salvando}
                 >
                   {salvando ? "Salvando..." : reservaEmEdicao ? "Atualizar reserva" : "Salvar reserva"}
-                </Button>
-              </div>
-            </form>
-          </Card>
-        </div>
-      ) : null}
-
-      {modalManutencaoAberto && isCoordinator ? (
-        <div
-          aria-modal="true"
-          className="fixed inset-0 z-50 flex items-end justify-center bg-text/40 px-4 py-6 sm:items-center"
-          role="dialog"
-        >
-          <Card className="max-h-[90vh] w-full max-w-2xl overflow-y-auto shadow-soft">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="text-2xl font-bold text-text">Bloquear para manutenção</h3>
-                <p className="mt-1 text-base text-muted">
-                  O intervalo ficará indisponível para novas reservas.
-                </p>
-              </div>
-              <button
-                type="button"
-                aria-label="Fechar manutenção"
-                className="rounded-lg p-2 text-muted hover:bg-background hover:text-text"
-                onClick={() => { setModalManutencaoAberto(false); setErro(""); }}
-              >
-                <X className="h-6 w-6" aria-hidden="true" />
-              </button>
-            </div>
-
-            <form className="mt-5 grid gap-4" onSubmit={salvarManutencao}>
-              <label className="grid gap-2 font-semibold text-text">
-                Equipamento
-                <select
-                  required
-                  className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal"
-                  value={manutencaoForm.equipment_id}
-                  onChange={(event) => setManutencaoForm((current) => ({ ...current, equipment_id: event.target.value }))}
-                >
-                  <option value="" disabled>Selecione</option>
-                  {equipmentList.map((equipment) => <option key={equipment.id} value={equipment.id}>{equipment.name}</option>)}
-                </select>
-              </label>
-              <div className="grid items-start gap-4 sm:grid-cols-3">
-                <label className="grid gap-2 font-semibold text-text">
-                  Data
-                  <input
-                    required
-                    type="date"
-                    className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal"
-                    value={manutencaoForm.date}
-                    onChange={(event) => setManutencaoForm((current) => ({ ...current, date: event.target.value }))}
-                  />
-                </label>
-                <label className="grid gap-2 font-semibold text-text">
-                  Início
-                  <input
-                    required
-                    type="time"
-                    className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal"
-                    value={manutencaoForm.starts_at}
-                    onChange={(event) => setManutencaoForm((current) => ({ ...current, starts_at: event.target.value }))}
-                  />
-                </label>
-                <label className="grid gap-2 font-semibold text-text">
-                  Fim
-                  <input
-                    required
-                    type="time"
-                    className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal"
-                    value={manutencaoForm.ends_at}
-                    onChange={(event) => setManutencaoForm((current) => ({ ...current, ends_at: event.target.value }))}
-                  />
-                </label>
-              </div>
-              <label className="grid gap-2 font-semibold text-text">
-                Motivo
-                <input
-                  required
-                  className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal"
-                  value={manutencaoForm.reason}
-                  onChange={(event) => setManutencaoForm((current) => ({ ...current, reason: event.target.value }))}
-                />
-              </label>
-              <label className="grid gap-2 font-semibold text-text">
-                Observações
-                <textarea
-                  className="min-h-20 rounded-lg border border-border bg-background px-4 py-3 font-normal"
-                  value={manutencaoForm.notes}
-                  onChange={(event) => setManutencaoForm((current) => ({ ...current, notes: event.target.value }))}
-                />
-              </label>
-              {erro ? <p className="rounded-lg border border-danger bg-danger-soft p-3 font-semibold text-danger">{erro}</p> : null}
-              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                <Button type="button" variant="ghost" onClick={() => { setModalManutencaoAberto(false); setErro(""); }}>
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={salvando}>
-                  {salvando ? "Salvando..." : "Criar bloqueio"}
                 </Button>
               </div>
             </form>

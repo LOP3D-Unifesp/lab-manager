@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, Plus, Trash2, Users, Utensils, X } from "lucide-react";
+import { CalendarDays, Trash2, Users, Utensils, X } from "lucide-react";
 
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
@@ -8,15 +8,14 @@ import {
   getClasseContador,
   getCorDia,
   getDiaAbreviado,
-  isSameSlot,
   type AvailabilitySlot,
   type PeriodoId,
   type WorkMode,
 } from "../lib/domain";
+import { useAuth } from "../lib/auth";
 import { useLabSchedule } from "../lib/labSchedule";
 import { usePesquisadoresCadastrados } from "../lib/pesquisadores";
 import {
-  addAvailabilitySlots,
   deleteAvailabilitySlot,
   listAvailability,
 } from "../lib/supabaseRepository";
@@ -28,11 +27,6 @@ type AgendaEntry = {
   weekday: number;
   periodo: PeriodoId;
   workMode: WorkMode;
-};
-
-type SlotSelection = {
-  weekday: number;
-  periodo: PeriodoId;
 };
 
 type VistaAgenda = "hoje" | "semana";
@@ -73,23 +67,14 @@ function getSemanaAtual(operatingWeekdays: number[]) {
   });
 }
 
-function getSlotKey(slot: SlotSelection) {
-  return `${slot.weekday}-${slot.periodo}`;
-}
-
 export function AgendaLaboratorio() {
+  const { profile } = useAuth();
+  const isCoordinator = profile?.role === "coordinator";
   const { periodos, timeline, operatingWeekdays, workspaceCapacity: limitePorHorario, loadingSchedule } = useLabSchedule();
   const semanaAtual = useMemo(() => getSemanaAtual(operatingWeekdays), [operatingWeekdays]);
   const calendarioRef = useRef<HTMLElement | null>(null);
   const { pesquisadores } = usePesquisadoresCadastrados();
   const [availability, setAvailability] = useState<AvailabilitySlot[]>([]);
-  const [mostrarModal, setMostrarModal] = useState(false);
-  const [pesquisadorSelecionado, setPesquisadorSelecionado] = useState("");
-  const [slotsSelecionados, setSlotsSelecionados] = useState<SlotSelection[]>(
-    [],
-  );
-  const [modoTrabalhoSelecionado, setModoTrabalhoSelecionado] =
-    useState<WorkMode>("onsite");
   const [vistaAgenda, setVistaAgenda] = useState<VistaAgenda>("semana");
   const [mobileAgendaWeekday, setMobileAgendaWeekday] = useState(() => {
     const weekdayHoje = new Date().getDay();
@@ -101,17 +86,6 @@ export function AgendaLaboratorio() {
   const [popupSlot, setPopupSlot] = useState<PopupSlot>(null);
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
-
-  const pesquisadoresOrdenados = useMemo(
-    () =>
-      [...pesquisadores].sort((a, b) =>
-        `${a.nome} ${a.sobrenome}`.localeCompare(
-          `${b.nome} ${b.sobrenome}`,
-          "pt-BR",
-        ),
-      ),
-    [pesquisadores],
-  );
 
   const agenda = useMemo(() => {
     return availability.flatMap<AgendaEntry>((slot) => {
@@ -133,6 +107,17 @@ export function AgendaLaboratorio() {
       };
     });
   }, [availability, pesquisadores]);
+
+  const pesquisadoresOrdenados = useMemo(
+    () =>
+      [...pesquisadores].sort((a, b) =>
+        `${a.nome} ${a.sobrenome}`.localeCompare(
+          `${b.nome} ${b.sobrenome}`,
+          "pt-BR",
+        ),
+      ),
+    [pesquisadores],
+  );
 
   const nomesPesquisadores = useMemo(
     () =>
@@ -168,26 +153,6 @@ export function AgendaLaboratorio() {
       document.removeEventListener("visibilitychange", recarregar);
     };
   }, []);
-
-  useEffect(() => {
-    const idsPesquisadores = pesquisadoresOrdenados.map(
-      (pesquisador) => pesquisador.id,
-    );
-
-    if (
-      idsPesquisadores.length > 0 &&
-      !idsPesquisadores.includes(pesquisadorSelecionado)
-    ) {
-      setPesquisadorSelecionado(idsPesquisadores[0]);
-    }
-  }, [pesquisadoresOrdenados, pesquisadorSelecionado]);
-
-  const pesquisadorAtual = pesquisadoresOrdenados.find(
-    (pesquisador) => pesquisador.id === pesquisadorSelecionado,
-  );
-  const nomePesquisadorSelecionado = pesquisadorAtual
-    ? `${pesquisadorAtual.nome} ${pesquisadorAtual.sobrenome}`
-    : "";
 
   const hoje = new Date().getDay();
   const diaAtual = semanaAtual.find((dia) => dia.weekday === hoje);
@@ -297,25 +262,6 @@ export function AgendaLaboratorio() {
     );
   }
 
-  function slotEstaSelecionado(slot: SlotSelection) {
-    return slotsSelecionados.some((selecionado) =>
-      isSameSlot(selecionado, slot),
-    );
-  }
-
-  function toggleSlot(slot: SlotSelection) {
-    setErro("");
-    setSlotsSelecionados((selecionados) => {
-      if (selecionados.some((selecionado) => isSameSlot(selecionado, slot))) {
-        return selecionados.filter(
-          (selecionado) => !isSameSlot(selecionado, slot),
-        );
-      }
-
-      return [...selecionados, slot];
-    });
-  }
-
   function trocarVista(novaVista: VistaAgenda) {
     setVistaAgenda(novaVista);
     if (novaVista === "hoje") {
@@ -326,11 +272,6 @@ export function AgendaLaboratorio() {
       setMobileAgendaWeekday(semanaAtual[0].weekday);
     }
     calendarioRef.current?.scrollIntoView({ behavior: "smooth" });
-  }
-
-  function abrirModal() {
-    setErro("");
-    setMostrarModal(true);
   }
 
   async function excluirHorario(slotId: string) {
@@ -355,90 +296,6 @@ export function AgendaLaboratorio() {
     }
   }
 
-  function fecharModal() {
-    setMostrarModal(false);
-    setErro("");
-    setSlotsSelecionados([]);
-    setPesquisadorSelecionado(pesquisadoresOrdenados[0]?.id ?? "");
-    setModoTrabalhoSelecionado("onsite");
-  }
-
-  async function registrarHorario(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    const profileIdSelecionado =
-      String(formData.get("pesquisador_id") ?? "") ||
-      pesquisadorSelecionado ||
-      pesquisadoresOrdenados[0]?.id ||
-      "";
-    if (slotsSelecionados.length === 0) {
-      setErro("Selecione pelo menos um horario da semana.");
-      return;
-    }
-
-    if (!profileIdSelecionado) {
-      setErro("Cadastre pelo menos um pesquisador antes de registrar horario.");
-      return;
-    }
-
-    const slotCheio = slotsSelecionados.find((slot) => {
-      const totalAtual = getTotalPresencialDoSlot(slot.weekday, slot.periodo);
-      const jaRegistrado = agenda.some(
-          (entry) =>
-            entry.profileId === profileIdSelecionado &&
-            entry.weekday === slot.weekday &&
-            entry.periodo === slot.periodo,
-      );
-
-      return (
-        totalAtual >= limitePorHorario &&
-        !jaRegistrado &&
-        modoTrabalhoSelecionado === "onsite"
-      );
-    });
-
-    if (slotCheio) {
-      const dia = semanaAtual.find((item) => item.weekday === slotCheio.weekday);
-      const periodo = periodos.find((item) => item.id === slotCheio.periodo);
-      setErro(
-        `${dia?.label} de ${periodo?.label.toLowerCase()} ja esta com o limite de ${limitePorHorario} pesquisadores.`,
-      );
-      return;
-    }
-
-    const slotsNovos = slotsSelecionados.filter(
-      (slot) =>
-        !agenda.some(
-          (entry) =>
-            entry.profileId === profileIdSelecionado &&
-            entry.weekday === slot.weekday &&
-            entry.periodo === slot.periodo,
-        ),
-    );
-
-    if (slotsNovos.length === 0) {
-      setErro("Este pesquisador ja esta registrado nos horarios selecionados.");
-      return;
-    }
-
-    try {
-      setSalvando(true);
-      await addAvailabilitySlots(
-        profileIdSelecionado,
-        slotsNovos.map((slot) => ({
-          ...slot,
-          workMode: modoTrabalhoSelecionado,
-        })),
-      );
-      await carregarDisponibilidade();
-      fecharModal();
-    } catch (error) {
-      setErro(error instanceof Error ? error.message : "Nao foi possivel salvar.");
-    } finally {
-      setSalvando(false);
-    }
-  }
-
   const popupEntriesPresenciais =
     popupSlot?.entries.filter((entry) => entry.workMode === "onsite") ?? [];
   const popupEntriesHomeOffice =
@@ -449,8 +306,8 @@ export function AgendaLaboratorio() {
   return (
     <div>
       <PageHeader
-        title="Agenda do Laboratorio"
-        description="Disponibilidade semanal gravada em availability_slots no Supabase."
+        title="Agenda do Laboratório"
+        description="Quem está no laboratório em cada turno. Cada pessoa registra a própria disponibilidade em Meu perfil."
         action={
           <div className="flex w-full flex-col gap-2 sm:flex-row md:w-auto">
             <Button
@@ -470,14 +327,6 @@ export function AgendaLaboratorio() {
             >
               <CalendarDays aria-hidden="true" className="mr-2 h-5 w-5" />
               Ver semana
-            </Button>
-            <Button
-              className="md:min-h-10 md:px-4 md:py-2 md:text-base"
-              fullWidth
-              onClick={abrirModal}
-            >
-              <Plus aria-hidden="true" className="mr-2 h-5 w-5" />
-              Registrar horario
             </Button>
           </div>
         }
@@ -773,6 +622,7 @@ export function AgendaLaboratorio() {
                               {entry.pesquisador}
                             </span>
                           </span>
+                          {isCoordinator || entry.profileId === profile?.id ? (
                           <button
                             type="button"
                             title="Excluir horario"
@@ -783,6 +633,7 @@ export function AgendaLaboratorio() {
                           >
                             <Trash2 className="h-4 w-4" aria-hidden="true" />
                           </button>
+                          ) : null}
                         </li>
                       ))}
                     </ul>
@@ -813,6 +664,7 @@ export function AgendaLaboratorio() {
                             <span className="rounded-full border border-primary bg-primary-soft px-2.5 py-1 text-xs font-bold text-primary">
                               Home office
                             </span>
+                            {isCoordinator || entry.profileId === profile?.id ? (
                             <button
                               type="button"
                               title="Excluir horario"
@@ -823,6 +675,7 @@ export function AgendaLaboratorio() {
                             >
                               <Trash2 className="h-4 w-4" aria-hidden="true" />
                             </button>
+                            ) : null}
                           </span>
                         </li>
                       ))}
@@ -850,6 +703,7 @@ export function AgendaLaboratorio() {
                             <span className="rounded-full border border-warning bg-warning-soft px-2.5 py-1 text-xs font-bold text-warning-dark">
                               Aula
                             </span>
+                            {isCoordinator || entry.profileId === profile?.id ? (
                             <button
                               type="button"
                               title="Excluir horario"
@@ -860,6 +714,7 @@ export function AgendaLaboratorio() {
                             >
                               <Trash2 className="h-4 w-4" aria-hidden="true" />
                             </button>
+                            ) : null}
                           </span>
                         </li>
                       ))}
@@ -872,185 +727,6 @@ export function AgendaLaboratorio() {
                 Nenhum pesquisador registrado.
               </p>
             )}
-          </Card>
-        </div>
-      ) : null}
-
-      {mostrarModal ? (
-        <div
-          aria-modal="true"
-          className="fixed inset-0 z-50 flex items-end justify-center bg-text/40 px-4 py-6 sm:items-center"
-          role="dialog"
-        >
-          <Card className="max-h-[90vh] w-full max-w-5xl overflow-y-auto shadow-soft">
-            <div className="mb-5 flex items-start justify-between gap-4 border-b border-border pb-4">
-              <div>
-                <h3 className="text-2xl font-bold text-text">
-                  Registrar horario da semana
-                </h3>
-                <p className="mt-1 text-lg text-muted">
-                  Escolha o pesquisador e marque todos os horarios em que ele
-                  trabalha.
-                </p>
-              </div>
-              <button
-                aria-label="Fechar"
-                className="rounded-lg p-2 text-muted transition hover:bg-background hover:text-text"
-                onClick={fecharModal}
-                type="button"
-              >
-                <X aria-hidden="true" className="h-6 w-6" />
-              </button>
-            </div>
-
-            <form onSubmit={registrarHorario}>
-              <div className="mb-5 grid gap-4 md:grid-cols-2">
-                <label className="flex flex-col gap-2 text-base font-semibold text-text">
-                  Pesquisador
-                  <select
-                    name="pesquisador_id"
-                    className="min-h-11 rounded-lg border border-border bg-background px-3 text-lg"
-                    disabled={pesquisadoresOrdenados.length === 0}
-                    value={pesquisadorSelecionado}
-                    onChange={(event) => {
-                      setErro("");
-                      setPesquisadorSelecionado(event.target.value);
-                    }}
-                  >
-                    {pesquisadoresOrdenados.map((pesquisador) => (
-                      <option key={pesquisador.id} value={pesquisador.id}>
-                        {pesquisador.nome} {pesquisador.sobrenome}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="flex flex-col gap-2 text-base font-semibold text-text">
-                  Tipo de trabalho
-                  <select
-                    className="min-h-11 rounded-lg border border-border bg-background px-3 text-lg"
-                    disabled={salvando}
-                    onChange={(event) => {
-                      setErro("");
-                      setModoTrabalhoSelecionado(event.target.value as WorkMode);
-                    }}
-                    value={modoTrabalhoSelecionado}
-                  >
-                    <option value="onsite">Presencial</option>
-                    <option value="remote">Home office</option>
-                  </select>
-                </label>
-              </div>
-
-              <div className="grid gap-3 lg:grid-cols-5">
-                {semanaAtual.map((dia) => (
-                  <div
-                    key={dia.weekday}
-                    className={[
-                      "rounded-lg border border-border p-3",
-                      getCorDia(dia.weekday),
-                    ].join(" ")}
-                  >
-                    <div className="mb-3">
-                      <p className="text-xl font-bold text-text">
-                        {dia.label}
-                      </p>
-                      <p className="text-base text-muted">{dia.numero}</p>
-                    </div>
-
-                    <div className="space-y-2">
-                      {timeline.map((item) => {
-                        if (item.kind === "break") {
-                          return (
-                            <div
-                              aria-label={`${item.label}: ${item.horario}`}
-                              className="flex items-center justify-center gap-2 rounded-lg border border-warning bg-warning-soft px-2 py-2 text-sm font-semibold text-warning-dark"
-                              key={item.id}
-                              role="separator"
-                            >
-                              <Utensils aria-hidden="true" className="h-4 w-4" />
-                              <span>{item.label} · {item.horario}</span>
-                            </div>
-                          );
-                        }
-                        const periodo = item;
-                        const slot = {
-                          weekday: dia.weekday,
-                          periodo: periodo.id,
-                        };
-                        const nomes = getPesquisadoresDoSlot(
-                          dia.weekday,
-                          periodo.id,
-                        );
-                        const totalPresencial = getTotalPresencialDoSlot(
-                          dia.weekday,
-                          periodo.id,
-                        );
-                        const jaRegistrado = nomes.includes(
-                          nomePesquisadorSelecionado,
-                        );
-                        const estaCheio =
-                          totalPresencial >= limitePorHorario &&
-                          !jaRegistrado &&
-                          modoTrabalhoSelecionado === "onsite";
-                        const selecionado = slotEstaSelecionado(slot);
-
-                        return (
-                          <label
-                            key={getSlotKey(slot)}
-                            className={[
-                              "flex min-h-20 cursor-pointer items-start gap-3 rounded-lg border bg-surface p-3 transition",
-                              selecionado
-                                ? "border-primary bg-primary-soft"
-                                : "border-border",
-                              estaCheio
-                                ? "cursor-not-allowed opacity-60"
-                                : "hover:border-primary",
-                            ].join(" ")}
-                          >
-                            <input
-                              checked={selecionado}
-                              className="mt-1 h-5 w-5 accent-primary"
-                              disabled={estaCheio && !selecionado}
-                              onChange={() => toggleSlot(slot)}
-                              type="checkbox"
-                            />
-                            <span>
-                              <span className="block text-lg font-bold text-text">
-                                {periodo.label}
-                              </span>
-                              <span
-                                className={[
-                                  "mt-2 inline-flex min-h-7 items-center rounded-full border px-2.5 py-1 text-sm font-semibold leading-none",
-                                  getClasseContador(totalPresencial),
-                                ].join(" ")}
-                              >
-                                {totalPresencial}/{limitePorHorario}
-                              </span>
-                            </span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {erro ? (
-                <p className="mt-4 rounded-lg border border-danger bg-danger-soft p-3 text-lg font-semibold text-danger">
-                  {erro}
-                </p>
-              ) : null}
-
-              <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                <Button variant="ghost" onClick={fecharModal}>
-                  Cancelar
-                </Button>
-                <Button type="submit" variant="success" disabled={salvando}>
-                  {salvando ? "Salvando..." : "Salvar horarios"}
-                </Button>
-              </div>
-            </form>
           </Card>
         </div>
       ) : null}
