@@ -537,6 +537,22 @@ A reserva própria é cancelada, permanece no histórico e deixa de bloquear o h
 
 ### 5.5 Administração operacional
 
+### Fluxo 14c - Pedir e acompanhar uma compra
+
+**Ator principal:** pesquisador (ou coordenador).
+
+**Passos:**
+1. Em **Compras**, a pessoa usa **Novo pedido**, escolhe o projeto, descreve o item, cola o link, informa a quantidade e o valor estimado e envia. O pedido nasce *Solicitado*.
+2. O coordenador vê o pedido (selo no menu e na campainha) e escolhe **Aprovar** ou **Recusar** (com motivo opcional).
+3. Aprovado, o coordenador compra e usa **Marcar como comprado**, informando o valor pago (já vem preenchido com o estimado).
+4. Quando o item chega, usa **Marcar como entregue**.
+
+**Regras de negócio:**
+- Só é possível pedir para projeto em aberto do qual a pessoa é membro; o coordenador pede para qualquer projeto em aberto.
+- Quem pediu edita e cancela enquanto o pedido está *Solicitado*; depois da decisão só o coordenador mexe (e pode cancelar um pedido aprovado).
+- *Recusado*, *Entregue* e *Cancelado* são finais.
+- O pedido é visível para quem pediu, os membros do projeto e o coordenador.
+
 ### Fluxo 14b - Reportar problema e tratar chamado de manutenção
 
 **Passos:**  

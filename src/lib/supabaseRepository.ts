@@ -1,6 +1,7 @@
 import { supabase } from "./supabaseClient";
 import type { FeedbackKind, FeedbackReport, FeedbackStatus } from "./feedback";
 import type { MaintenanceRequest, MaintenanceRequestStatus, MaintenanceUrgency } from "./maintenanceRequests";
+import type { PurchaseRequest, PurchaseStatus } from "./purchases";
 import type {
   CatalogMaterial,
   MaterialCategory,
@@ -1436,4 +1437,76 @@ export async function getEquipmentName(equipmentId: string) {
   const { data, error } = await client().from("equipment").select("name").eq("id", equipmentId).maybeSingle();
   throwIfError(error);
   return (data as { name: string } | null)?.name ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// Compras
+// ---------------------------------------------------------------------------
+
+type PurchaseRequestRow = Omit<PurchaseRequest, "project_name" | "requested_by_name" | "decided_by_name" | "estimated_amount" | "actual_amount"> & {
+  estimated_amount: number | string;
+  actual_amount: number | string | null;
+  project: { name: string } | null;
+  requester: { full_name: string } | null;
+  decider: { full_name: string } | null;
+};
+
+export async function listPurchaseRequests() {
+  const { data, error } = await client()
+    .from("purchase_requests")
+    .select(
+      "id, project_id, requested_by, item, url, quantity, estimated_amount, notes, status, decided_at, rejected_reason, actual_amount, purchased_at, delivered_at, created_at, project:projects!purchase_requests_project_id_fkey(name), requester:profiles!purchase_requests_requested_by_fkey(full_name), decider:profiles!purchase_requests_decided_by_fkey(full_name)",
+    )
+    .order("created_at", { ascending: false });
+  throwIfError(error);
+  return ((data ?? []) as unknown as PurchaseRequestRow[]).map(({ decider, project, requester, ...row }) => ({
+    ...row,
+    estimated_amount: Number(row.estimated_amount),
+    actual_amount: row.actual_amount === null ? null : Number(row.actual_amount),
+    project_name: project?.name ?? "Projeto removido",
+    requested_by_name: requester?.full_name ?? null,
+    decided_by_name: decider?.full_name ?? null,
+  })) as PurchaseRequest[];
+}
+
+export type PurchaseInput = { item: string; url: string | null; quantity: number; estimatedAmount: number; notes: string | null };
+
+export async function createPurchaseRequest(input: PurchaseInput & { projectId: string }) {
+  const { error } = await client().from("purchase_requests").insert({
+    project_id: input.projectId,
+    item: input.item.trim(),
+    url: input.url?.trim() || null,
+    quantity: input.quantity,
+    estimated_amount: input.estimatedAmount,
+    notes: input.notes?.trim() || null,
+  });
+  throwIfError(error);
+}
+
+export async function updatePurchaseRequest(requestId: string, input: PurchaseInput) {
+  const { error } = await client().rpc("update_purchase_request", {
+    p_request_id: requestId,
+    p_item: input.item,
+    p_url: input.url ?? "",
+    p_quantity: input.quantity,
+    p_estimated_amount: input.estimatedAmount,
+    p_notes: input.notes ?? undefined,
+  });
+  throwIfError(error);
+}
+
+export async function setPurchaseStatus(params: { requestId: string; status: PurchaseStatus; reason?: string | null; actualAmount?: number | null }) {
+  const { error } = await client().rpc("set_purchase_status", {
+    p_request_id: params.requestId,
+    p_status: params.status,
+    p_reason: params.reason ?? undefined,
+    p_actual_amount: params.actualAmount ?? undefined,
+  });
+  throwIfError(error);
+}
+
+export async function countRequestedPurchases() {
+  const { count, error } = await client().from("purchase_requests").select("id", { count: "exact", head: true }).eq("status", "requested");
+  throwIfError(error);
+  return count ?? 0;
 }

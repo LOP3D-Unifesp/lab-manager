@@ -198,7 +198,7 @@ No desktop, usar sidebar fixa, agrupada por finalidade, com um título discreto 
 
 - Dashboard
 - **Trabalho:** Agenda do Laboratório, Reservas, Minhas reservas (pesquisador), Projetos
-- **Recursos:** Equipamentos, Inventário
+- **Recursos:** Equipamentos, Inventário, Compras
 - **Pessoas:** Pesquisadores, Habilidades
 - **Gestão** (coordenador): Usuários, Histórico de reservas, Feedback, Configurações
 

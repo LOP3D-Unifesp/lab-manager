@@ -4,11 +4,12 @@ import { useAuth } from "../../lib/auth";
 import { describeNewRequest, showDesktopAlert } from "../../lib/desktopAlerts";
 import { canMaintain } from "../../lib/domain";
 import type { MaintenanceUrgency } from "../../lib/maintenanceRequests";
-import { countNewFeedback, countOpenMaintenanceRequests, getEquipmentName } from "../../lib/supabaseRepository";
+import { countNewFeedback, countOpenMaintenanceRequests, countRequestedPurchases, getEquipmentName } from "../../lib/supabaseRepository";
 import { supabase } from "../../lib/supabaseClient";
 import { FEEDBACK_CHANGED_EVENT } from "../feedback/FeedbackProvider";
 
 export const MAINTENANCE_REQUESTS_CHANGED_EVENT = "maintenance-requests-changed";
+export const PURCHASES_CHANGED_EVENT = "purchases-changed";
 
 // Plano B quando o canal em tempo real cai.
 const POLL_MS = 60_000;
@@ -20,10 +21,12 @@ type Attention = {
   urgentRequests: number;
   /** Mensagens de feedback ainda não vistas (só para coordenadores). */
   feedback: number;
+  /** Pedidos de compra aguardando decisão (só para coordenadores). */
+  purchases: number;
   total: number;
 };
 
-const emptyAttention: Attention = { maintenanceRequests: 0, urgentRequests: 0, feedback: 0, total: 0 };
+const emptyAttention: Attention = { maintenanceRequests: 0, urgentRequests: 0, feedback: 0, purchases: 0, total: 0 };
 
 const AttentionContext = createContext<Attention>(emptyAttention);
 
@@ -35,14 +38,15 @@ export function AttentionProvider({ children }: { children: ReactNode }) {
   const profileId = profile?.id ?? null;
   const wantsRequests = canMaintain(profile);
   const wantsFeedback = profile?.role === "coordinator";
-  const [counts, setCounts] = useState({ maintenanceRequests: 0, urgentRequests: 0, feedback: 0 });
+  const wantsPurchases = profile?.role === "coordinator";
+  const [counts, setCounts] = useState({ maintenanceRequests: 0, urgentRequests: 0, feedback: 0, purchases: 0 });
   const realtimeOk = useRef(false);
   const lastRequests = useRef<number | null>(null);
 
   useEffect(() => {
     lastRequests.current = null;
-    if (!profileId || (!wantsRequests && !wantsFeedback)) {
-      setCounts({ maintenanceRequests: 0, urgentRequests: 0, feedback: 0 });
+    if (!profileId || (!wantsRequests && !wantsFeedback && !wantsPurchases)) {
+      setCounts({ maintenanceRequests: 0, urgentRequests: 0, feedback: 0, purchases: 0 });
       return undefined;
     }
 
@@ -51,8 +55,9 @@ export function AttentionProvider({ children }: { children: ReactNode }) {
       Promise.all([
         wantsRequests ? countOpenMaintenanceRequests() : Promise.resolve({ open: 0, urgent: 0 }),
         wantsFeedback ? countNewFeedback() : Promise.resolve(0),
+        wantsPurchases ? countRequestedPurchases() : Promise.resolve(0),
       ])
-        .then(([requests, feedback]) => {
+        .then(([requests, feedback, purchases]) => {
           if (!ativo) return;
           // Sem tempo real, um aumento na contagem ainda gera um aviso (genérico) no computador.
           if (!realtimeOk.current && lastRequests.current !== null && requests.open > lastRequests.current) {
@@ -64,7 +69,7 @@ export function AttentionProvider({ children }: { children: ReactNode }) {
             });
           }
           lastRequests.current = requests.open;
-          setCounts({ maintenanceRequests: requests.open, urgentRequests: requests.urgent, feedback });
+          setCounts({ maintenanceRequests: requests.open, urgentRequests: requests.urgent, feedback, purchases });
         })
         .catch(() => undefined);
     };
@@ -83,6 +88,7 @@ export function AttentionProvider({ children }: { children: ReactNode }) {
     const timer = window.setInterval(atualizar, POLL_MS);
     window.addEventListener(FEEDBACK_CHANGED_EVENT, atualizar);
     window.addEventListener(MAINTENANCE_REQUESTS_CHANGED_EVENT, atualizar);
+    window.addEventListener(PURCHASES_CHANGED_EVENT, atualizar);
     document.addEventListener("visibilitychange", atualizar);
 
     let channel: ReturnType<NonNullable<typeof supabase>["channel"]> | null = null;
@@ -108,6 +114,20 @@ export function AttentionProvider({ children }: { children: ReactNode }) {
           }
         });
       }
+      if (wantsPurchases) {
+        channel.on("postgres_changes", { event: "*", schema: "public", table: "purchase_requests" }, (payload) => {
+          atualizar();
+          if (payload.eventType === "INSERT" && (payload.new as { requested_by?: string | null }).requested_by !== profileId) {
+            const row = payload.new as { item?: string };
+            showDesktopAlert({
+              title: "Novo pedido de compra",
+              body: row.item ?? "Há um pedido aguardando aprovação.",
+              path: "/compras",
+              tag: "compra-nova",
+            });
+          }
+        });
+      }
       channel.subscribe((status) => {
         realtimeOk.current = status === "SUBSCRIBED";
       });
@@ -119,12 +139,13 @@ export function AttentionProvider({ children }: { children: ReactNode }) {
       window.clearInterval(timer);
       window.removeEventListener(FEEDBACK_CHANGED_EVENT, atualizar);
       window.removeEventListener(MAINTENANCE_REQUESTS_CHANGED_EVENT, atualizar);
+      window.removeEventListener(PURCHASES_CHANGED_EVENT, atualizar);
       document.removeEventListener("visibilitychange", atualizar);
       if (channel && supabase) void supabase.removeChannel(channel);
     };
-  }, [profileId, wantsRequests, wantsFeedback]);
+  }, [profileId, wantsRequests, wantsFeedback, wantsPurchases]);
 
-  const value = useMemo(() => ({ ...counts, total: counts.maintenanceRequests + counts.feedback }), [counts]);
+  const value = useMemo(() => ({ ...counts, total: counts.maintenanceRequests + counts.feedback + counts.purchases }), [counts]);
 
   return <AttentionContext.Provider value={value}>{children}</AttentionContext.Provider>;
 }
