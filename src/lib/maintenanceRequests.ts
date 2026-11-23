@@ -95,6 +95,18 @@ export function sortRequests(requests: MaintenanceRequest[]) {
   );
 }
 
+// Para o Dashboard: o que a pessoa precisa atender (responsáveis: chamados abertos ou em andamento com ela)
+// e o que ela mesma abriu e segue ativo. Um chamado nunca aparece nos dois grupos.
+export function getMyRequestGroups(requests: MaintenanceRequest[], profileId: string, canMaintainNow: boolean) {
+  const active = requests.filter((request) => isRequestActive(request.status));
+  const toHandle = canMaintainNow
+    ? sortRequests(active.filter((request) => request.status === "open" || request.assigned_to === profileId))
+    : [];
+  const handled = new Set(toHandle.map((request) => request.id));
+  const mine = sortRequests(active.filter((request) => request.requested_by === profileId && !handled.has(request.id)));
+  return { toHandle, mine };
+}
+
 export function countOpenRequests(requests: MaintenanceRequest[], equipmentId: string) {
   return requests.filter((request) => request.equipment_id === equipmentId && isRequestActive(request.status)).length;
 }

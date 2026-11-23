@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   countOpenRequests,
   filterRequests,
+  getMyRequestGroups,
   getRequestActions,
   getRequestErrorMessage,
   isRequestActive,
@@ -78,6 +79,34 @@ describe("chamados", () => {
   it("conta só os chamados ativos de um equipamento", () => {
     expect(countOpenRequests(requests, "eq1")).toBe(3);
     expect(countOpenRequests(requests, "eq2")).toBe(0);
+  });
+});
+
+describe("chamados no Dashboard", () => {
+  const requests = [
+    request({ id: "a", status: "open", requested_by: "ana", created_at: "2026-06-01T10:00:00Z" }),
+    request({ id: "b", status: "in_progress", requested_by: "carla", assigned_to: "bia" }),
+    request({ id: "c", status: "in_progress", requested_by: "carla", assigned_to: "dani" }),
+    request({ id: "d", status: "open", requested_by: "bia", urgency: "urgent" }),
+    request({ id: "e", status: "resolved", requested_by: "bia" }),
+  ];
+  const ids = (list: MaintenanceRequest[]) => list.map((r) => r.id);
+
+  it("responsável vê os abertos e os que assumiu, sem repetir os que ele mesmo abriu", () => {
+    const groups = getMyRequestGroups(requests, "bia", true);
+    expect(ids(groups.toHandle)).toEqual(["d", "a", "b"]);
+    expect(ids(groups.mine)).toEqual([]);
+  });
+
+  it("quem só abre chamados vê apenas os seus que seguem ativos", () => {
+    const groups = getMyRequestGroups(requests, "ana", false);
+    expect(ids(groups.toHandle)).toEqual([]);
+    expect(ids(groups.mine)).toEqual(["a"]);
+    expect(ids(getMyRequestGroups(requests, "carla", false).mine)).toEqual(["b", "c"]);
+  });
+
+  it("chamados encerrados não aparecem", () => {
+    expect(ids(getMyRequestGroups(requests, "bia", false).mine)).toEqual(["d"]);
   });
 });
 
