@@ -71,9 +71,9 @@ export function PurchaseStepModal({ mode, onClose, onDone, purchase }: PurchaseS
           </label>
         ) : (
           <label className="grid gap-2 text-base font-semibold text-text">
-            Valor pago (R$)
+            Valor total pago (R$)
             <input autoFocus className={inputClassName} inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} />
-            <span className="text-sm font-normal text-muted">Estimado no pedido: {formatCurrencyBRL(purchase.estimated_amount)}.</span>
+            <span className="text-sm font-normal text-muted">Total estimado no pedido: {formatCurrencyBRL(purchase.estimated_amount)}.</span>
           </label>
         )}
         {erro ? (

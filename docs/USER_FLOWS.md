@@ -542,7 +542,7 @@ A reserva própria é cancelada, permanece no histórico e deixa de bloquear o h
 **Ator principal:** pesquisador (ou coordenador).
 
 **Passos:**
-1. Em **Compras**, a pessoa usa **Novo pedido**, escolhe para quem é a compra (um projeto ou o **estoque geral do laboratório**) e a **rubrica** (capital para equipamento e material permanente; custeio para consumo e serviços; passagens; diárias), descreve o item, escolhe a **urgência** (baixa, normal ou urgente; urgente sobe o pedido na fila do coordenador), cola o link, informa a quantidade e o valor estimado e envia. O pedido nasce *Solicitado*.
+1. Em **Compras**, a pessoa usa **Novo pedido**, escolhe para quem é a compra (um projeto ou o **estoque geral do laboratório**) e a **rubrica** (capital para equipamento e material permanente; custeio para consumo e serviços; passagens; diárias), descreve o item, escolhe a **urgência** (baixa, normal ou urgente; urgente sobe o pedido na fila do coordenador), cola o link, informa a quantidade e o valor de uma unidade (o app calcula o total) e envia. O pedido nasce *Solicitado*.
 2. O coordenador vê o pedido (selo no menu e na campainha) e escolhe **Aprovar** ou **Recusar** (com motivo opcional).
 3. Aprovado, o coordenador compra e usa **Marcar como comprado**, informando o valor pago (já vem preenchido com o estimado).
 4. Quando o item chega, usa **Marcar como entregue**.

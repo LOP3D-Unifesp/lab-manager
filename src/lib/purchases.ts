@@ -228,13 +228,35 @@ export function isValidPurchaseUrl(value: string) {
   }
 }
 
-// "1.234,56", "1234,5" e "1234.56" viram número; texto inválido vira null.
-export function parseMoney(text: string): number | null {
+// "1.234,56", "1234,5" e "1234.56" viram número; texto inválido vira null. `decimals` limita as casas
+// decimais (2 para valores pagos; o valor unitário aceita até 4, para totais que não dividem certinho).
+export function parseMoney(text: string, decimals = 2): number | null {
   const cleaned = text.trim().replace(/^R\$\s*/i, "");
   if (!cleaned) return null;
   const normalized = /,/.test(cleaned) ? cleaned.replace(/\./g, "").replace(",", ".") : cleaned;
-  if (!/^\d+(\.\d{1,2})?$/.test(normalized)) return null;
+  if (!new RegExp(`^\\d+(\\.\\d{1,${decimals}})?$`).test(normalized)) return null;
   return Number(normalized);
+}
+
+const roundCents = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
+
+// O pedido guarda o total; o formulário pede o valor de uma unidade e multiplica pela quantidade.
+export function calculateTotal(unitAmount: number, quantity: number) {
+  return roundCents(unitAmount * quantity);
+}
+
+// Valor unitário para preencher o formulário ao editar (até 4 casas, sem zeros sobrando além de 2).
+export function formatUnitAmount(total: number, quantity: number) {
+  let text = (total / Math.max(quantity, 1)).toFixed(4);
+  while (text.endsWith("0") && text.split(".")[1].length > 2) text = text.slice(0, -1);
+  return text.replace(".", ",");
+}
+
+// Valor unitário para exibir ao lado do total, só quando ele fecha certinho (2 casas) com a quantidade.
+export function getUnitAmount(total: number, quantity: number): number | null {
+  if (quantity <= 1) return null;
+  const unit = roundCents(total / quantity);
+  return Math.abs(unit * quantity - total) < 0.005 ? unit : null;
 }
 
 export type PurchaseFormValues = { projectId: string; category: string; urgency: string; item: string; url: string; quantity: string; amount: string; notes: string };
@@ -248,9 +270,9 @@ export function validatePurchaseForm(values: PurchaseFormValues) {
   if (values.url.trim() && !isValidPurchaseUrl(values.url)) return "O link precisa começar com http:// ou https://.";
   const quantity = Number(values.quantity);
   if (!Number.isInteger(quantity) || quantity < 1 || quantity > 100000) return "A quantidade precisa ser um número inteiro maior que zero.";
-  const amount = parseMoney(values.amount);
-  if (amount === null) return "Informe o valor estimado, por exemplo 129,90.";
-  if (amount >= 100_000_000) return "Valor alto demais.";
+  const unit = parseMoney(values.amount, 4);
+  if (unit === null) return "Informe o valor unitário, por exemplo 129,90.";
+  if (calculateTotal(unit, quantity) >= 100_000_000) return "Valor alto demais.";
   if (values.notes.length > 1000) return "As observações podem ter até 1000 caracteres.";
   return null;
 }

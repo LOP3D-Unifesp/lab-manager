@@ -1,11 +1,14 @@
 import { FormEvent, useState } from "react";
 
+import { formatCurrencyBRL } from "../../lib/projects";
 import { createPurchaseRequest, updatePurchaseRequest } from "../../lib/supabaseRepository";
 import type { Project } from "../../lib/projects";
 import {
   GENERAL_STOCK_LABEL,
   GENERAL_STOCK_VALUE,
   getPurchaseErrorMessage,
+  calculateTotal,
+  formatUnitAmount,
   parseMoney,
   purchaseCategoryOptions,
   purchaseUrgencyOptions,
@@ -28,10 +31,6 @@ type PurchaseFormModalProps = {
 const inputClassName =
   "min-h-11 min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary";
 
-function formatAmountForInput(value: number) {
-  return value.toFixed(2).replace(".", ",");
-}
-
 export function PurchaseFormModal({ defaultProjectId, onClose, onDone, projects, purchase }: PurchaseFormModalProps) {
   const [projectId, setProjectId] = useState(purchase ? (purchase.project_id ?? GENERAL_STOCK_VALUE) : defaultProjectId);
   const [category, setCategory] = useState<string>(purchase?.funding_category ?? "");
@@ -39,10 +38,14 @@ export function PurchaseFormModal({ defaultProjectId, onClose, onDone, projects,
   const [item, setItem] = useState(purchase?.item ?? "");
   const [url, setUrl] = useState(purchase?.url ?? "");
   const [quantity, setQuantity] = useState(String(purchase?.quantity ?? 1));
-  const [amount, setAmount] = useState(purchase ? formatAmountForInput(purchase.estimated_amount) : "");
+  const [amount, setAmount] = useState(purchase ? formatUnitAmount(purchase.estimated_amount, purchase.quantity) : "");
   const [notes, setNotes] = useState(purchase?.notes ?? "");
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
+
+  const unitValue = parseMoney(amount, 4);
+  const quantityValue = Number(quantity);
+  const previewTotal = unitValue !== null && Number.isInteger(quantityValue) && quantityValue >= 1 ? calculateTotal(unitValue, quantityValue) : null;
 
   async function salvar(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -55,7 +58,7 @@ export function PurchaseFormModal({ defaultProjectId, onClose, onDone, projects,
       item,
       url: url.trim() || null,
       quantity: Number(quantity),
-      estimatedAmount: parseMoney(amount) as number,
+      estimatedAmount: calculateTotal(parseMoney(amount, 4) as number, Number(quantity)),
       notes: notes.trim() || null,
       fundingCategory: category as FundingCategory,
       urgency,
@@ -143,7 +146,7 @@ export function PurchaseFormModal({ defaultProjectId, onClose, onDone, projects,
             <input className={inputClassName} inputMode="numeric" value={quantity} onChange={(event) => setQuantity(event.target.value)} />
           </label>
           <label className="grid gap-2 text-base font-semibold text-text">
-            Valor estimado total (R$)
+            Valor unitário (R$)
             <input
               className={inputClassName}
               inputMode="decimal"
@@ -153,6 +156,12 @@ export function PurchaseFormModal({ defaultProjectId, onClose, onDone, projects,
             />
           </label>
         </div>
+        {previewTotal !== null ? (
+          <p className="-mt-2 text-sm text-muted">
+            Total estimado: <strong className="text-text">{formatCurrencyBRL(previewTotal)}</strong>
+            {Number(quantity) > 1 ? ` (${quantity} × ${formatCurrencyBRL(parseMoney(amount, 4) as number)})` : ""}
+          </p>
+        ) : null}
         <label className="grid gap-2 text-base font-semibold text-text">
           Observações (opcional)
           <textarea

@@ -3,10 +3,13 @@ import { describe, expect, it } from "vitest";
 import {
   countUnseenPurchaseUpdates,
   describePurchaseUpdate,
+  calculateTotal,
   filterPurchases,
+  formatUnitAmount,
   GENERAL_STOCK_LABEL,
   getPurchaseActions,
   getPurchaseUndo,
+  getUnitAmount,
   isNotifiablePurchaseStatus,
   isValidPurchaseUrl,
   parseMoney,
@@ -147,6 +150,27 @@ describe("avisos para quem pediu", () => {
   });
 });
 
+describe("valor unitário e total", () => {
+  it("multiplica o valor unitário pela quantidade", () => {
+    expect(calculateTotal(75.3, 2)).toBe(150.6);
+    expect(calculateTotal(129.9, 3)).toBe(389.7);
+    expect(calculateTotal(0.1, 3)).toBe(0.3);
+    expect(calculateTotal(75.295, 2)).toBe(150.59);
+  });
+
+  it("recupera o valor unitário de um pedido antigo ao editar", () => {
+    expect(formatUnitAmount(150.6, 2)).toBe("75,30");
+    expect(formatUnitAmount(150.59, 2)).toBe("75,295");
+    expect(formatUnitAmount(100, 1)).toBe("100,00");
+  });
+
+  it("mostra o valor unitário só quando fecha certinho com a quantidade", () => {
+    expect(getUnitAmount(150.6, 2)).toBe(75.3);
+    expect(getUnitAmount(150.59, 2)).toBeNull();
+    expect(getUnitAmount(100, 1)).toBeNull();
+  });
+});
+
 describe("totais por projeto", () => {
   it("agrupa o estoque geral como um item à parte do resumo", () => {
     const totals = summarizeByProject([
@@ -188,6 +212,8 @@ describe("valores e links", () => {
     expect(parseMoney("50")).toBe(50);
     expect(parseMoney("abc")).toBeNull();
     expect(parseMoney("")).toBeNull();
+    expect(parseMoney("75,295")).toBeNull();
+    expect(parseMoney("75,295", 4)).toBe(75.295);
     expect(parseMoney("-5")).toBeNull();
   });
 
