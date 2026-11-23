@@ -10,6 +10,7 @@ import {
   type MaintenanceUrgency,
 } from "../../lib/maintenanceRequests";
 import { createMaintenanceRequest, uploadMaintenancePhotos } from "../../lib/supabaseRepository";
+import { WebcamCapture } from "./WebcamCapture";
 import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
 
@@ -26,6 +27,7 @@ export function ReportProblemModal({ equipment, onClose, onDone, openCount }: Re
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [photos, setPhotos] = useState<Array<{ file: File; preview: string }>>([]);
+  const [webcamAberta, setWebcamAberta] = useState(false);
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
   const previewsRef = useRef<string[]>([]);
@@ -33,10 +35,17 @@ export function ReportProblemModal({ equipment, onClose, onDone, openCount }: Re
 
   useEffect(() => () => previewsRef.current.forEach((url) => URL.revokeObjectURL(url)), []);
 
-  function addPhotos(files: FileList | null) {
+  // Celular e tablet abrem a câmera nativa; no computador usamos a webcam do navegador.
+  function tirarFoto() {
+    if (window.matchMedia("(pointer: coarse)").matches) cameraRef.current?.click();
+    else setWebcamAberta(true);
+  }
+
+  function addPhotos(files: FileList | File[] | null) {
     if (!files) return;
-    const accepted = Array.from(files).filter(isAcceptedPhoto);
-    setErro(accepted.length < files.length ? "Só é possível anexar imagens." : "");
+    const list = Array.from(files);
+    const accepted = list.filter(isAcceptedPhoto);
+    setErro(accepted.length < list.length ? "Só é possível anexar imagens." : "");
     setPhotos((current) =>
       [...current, ...accepted.map((file) => ({ file, preview: URL.createObjectURL(file) }))].slice(0, MAX_PHOTOS),
     );
@@ -137,7 +146,7 @@ export function ReportProblemModal({ equipment, onClose, onDone, openCount }: Re
             ))}
             {photos.length < MAX_PHOTOS ? (
               <>
-                <Button variant="secondary" className="min-h-11 px-3 py-2 text-sm" onClick={() => cameraRef.current?.click()}>
+                <Button variant="secondary" className="min-h-11 px-3 py-2 text-sm" onClick={tirarFoto}>
                   <Camera className="mr-2 h-4 w-4" aria-hidden="true" />
                   Tirar foto
                 </Button>
@@ -148,6 +157,15 @@ export function ReportProblemModal({ equipment, onClose, onDone, openCount }: Re
               </>
             ) : null}
           </div>
+          {webcamAberta ? (
+            <WebcamCapture
+              onCapture={(file) => {
+                addPhotos([file]);
+                setWebcamAberta(false);
+              }}
+              onClose={() => setWebcamAberta(false)}
+            />
+          ) : null}
           <p className="text-sm text-muted">Até {MAX_PHOTOS} fotos; elas são reduzidas antes do envio.</p>
           <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(event) => { addPhotos(event.target.files); event.target.value = ""; }} />
           <input ref={galleryRef} type="file" accept="image/*" multiple className="hidden" onChange={(event) => { addPhotos(event.target.files); event.target.value = ""; }} />
