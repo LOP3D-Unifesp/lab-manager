@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(159);
+select plan(163);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -80,13 +80,14 @@ where email = 'revoked@example.com';
 
 insert into public.skills (id, name) values
   ('10000000-0000-0000-0000-000000000001', 'CAD');
-insert into public.printers (id, name, status) values
-  ('20000000-0000-0000-0000-000000000001', 'Printer A', 'active'),
-  ('20000000-0000-0000-0000-000000000002', 'Printer B', 'unavailable');
+insert into public.equipment (id, name, status, type_id) values
+  ('20000000-0000-0000-0000-000000000001', 'Printer A', 'active', (select id from public.equipment_types where name = 'Impressora 3D')),
+  ('20000000-0000-0000-0000-000000000002', 'Printer B', 'unavailable', (select id from public.equipment_types where name = 'Impressora 3D')),
+  ('20000000-0000-0000-0000-000000000003', 'Scanner A', 'active', (select id from public.equipment_types where name = 'Scanner 3D'));
 insert into public.materials (id, name) values
   ('30000000-0000-0000-0000-000000000001', 'PLA'),
   ('30000000-0000-0000-0000-000000000002', 'PETG');
-insert into public.printer_materials (printer_id, material_id) values
+insert into public.equipment_materials (equipment_id, material_id) values
   ('20000000-0000-0000-0000-000000000001', '30000000-0000-0000-0000-000000000001');
 insert into public.availability_slots (profile_id, weekday, starts_at, ends_at, work_mode) values
   ('00000000-0000-0000-0000-000000000102', 1, '08:00', '10:00', 'onsite');
@@ -210,7 +211,7 @@ select is(
 );
 select is(
   (
-    select count(*) from public.printers
+    select count(*) from public.equipment
     where id in (
       '20000000-0000-0000-0000-000000000001',
       '20000000-0000-0000-0000-000000000002'
@@ -384,7 +385,7 @@ select is(
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
 select throws_ok(
-  $$ select public.replace_printer_materials(
+  $$ select public.replace_equipment_materials(
     '20000000-0000-0000-0000-000000000001',
     array['39999999-0000-0000-0000-000000000099'::uuid]
   ) $$,
@@ -392,96 +393,121 @@ select throws_ok(
   'invalid material replacement fails'
 );
 select is(
-  (select count(*) from public.printer_materials where printer_id = '20000000-0000-0000-0000-000000000001'),
+  (select count(*) from public.equipment_materials where equipment_id = '20000000-0000-0000-0000-000000000001'),
   1::bigint,
   'failed material replacement preserves previous rows'
 );
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
 select lives_ok(
-  $$ select public.create_printer_booking(
+  $$ select public.create_booking(
     '20000000-0000-0000-0000-000000000001',
-    '30000000-0000-0000-0000-000000000001',
-    '00000000-0000-0000-0000-0000000000e1', now() + interval '30 minutes', 60, null
+    '00000000-0000-0000-0000-0000000000e1', now() + interval '30 minutes', 60,
+    '30000000-0000-0000-0000-000000000001', null
   ) $$,
   'first booking succeeds'
 );
 select is(
-  (select status::text from public.printer_bookings where project_name = 'First booking'),
+  (select status::text from public.equipment_bookings where project_name = 'First booking'),
   'approved',
   'profile without approval requirement still auto-approves bookings'
 );
 select is(
-  (select approved_at is null from public.printer_bookings where project_name = 'First booking'),
+  (select approved_at is null from public.equipment_bookings where project_name = 'First booking'),
   true,
   'auto-approved bookings do not stamp approved_at (no approval notification)'
 );
 select is(
-  (select approved_by from public.printer_bookings where project_name = 'First booking'),
+  (select approved_by from public.equipment_bookings where project_name = 'First booking'),
   null,
   'auto-approved bookings do not record an approver'
 );
 select throws_ok(
-  $$ select public.create_printer_booking(
+  $$ select public.create_booking(
     '20000000-0000-0000-0000-000000000001',
-    '30000000-0000-0000-0000-000000000001',
-    '00000000-0000-0000-0000-0000000000e2', now() + interval '45 minutes', 60, null
+    '00000000-0000-0000-0000-0000000000e2', now() + interval '45 minutes', 60,
+    '30000000-0000-0000-0000-000000000001', null
   ) $$,
   'P0001', 'booking_conflict',
   'overlapping booking is rejected'
 );
 select is(
-  (select count(*) from public.printer_bookings where printer_id = '20000000-0000-0000-0000-000000000001'),
+  (select count(*) from public.equipment_bookings where equipment_id = '20000000-0000-0000-0000-000000000001'),
   1::bigint,
   'exactly one overlapping booking remains'
 );
 select throws_ok(
-  $$ select public.create_printer_booking(
+  $$ select public.create_booking(
     '20000000-0000-0000-0000-000000000001',
-    '30000000-0000-0000-0000-000000000002',
-    '00000000-0000-0000-0000-0000000000e3', now() + interval '2 days', 60, null
+    '00000000-0000-0000-0000-0000000000e3', now() + interval '2 days', 60,
+    '30000000-0000-0000-0000-000000000002', null
   ) $$,
   'P0001', 'incompatible_material',
   'incompatible material is rejected'
 );
 select throws_ok(
-  $$ select public.create_printer_booking(
+  $$ select public.create_booking(
     '20000000-0000-0000-0000-000000000002',
-    '30000000-0000-0000-0000-000000000001',
-    '00000000-0000-0000-0000-0000000000e4', now() + interval '2 days', 60, null
+    '00000000-0000-0000-0000-0000000000e4', now() + interval '2 days', 60,
+    '30000000-0000-0000-0000-000000000001', null
   ) $$,
-  'P0001', 'printer_unavailable',
+  'P0001', 'equipment_unavailable',
   'unavailable printer is rejected'
 );
 select throws_ok(
-  $$ select public.create_printer_booking(
+  $$ select public.create_booking(
     '20000000-0000-0000-0000-000000000001',
-    '30000000-0000-0000-0000-000000000001',
-    null::uuid, now() + interval '2 days', 60, null
+    '00000000-0000-0000-0000-0000000000e3', now() + interval '2 days', 60
+  ) $$,
+  'P0001', 'material_required',
+  'a printer booking requires a material'
+);
+select lives_ok(
+  $$ select public.create_booking(
+    '20000000-0000-0000-0000-000000000003',
+    '00000000-0000-0000-0000-0000000000e3', now() + interval '2 days', 60
+  ) $$,
+  'equipment whose type does not use material is booked without one'
+);
+select is(
+  (select material_id is null from public.equipment_bookings where project_name = 'Wrong material'),
+  true,
+  'a booking of equipment without material stores no material'
+);
+select throws_ok(
+  $$ insert into public.equipment_types (name, uses_material) values ('Torno', false) $$,
+  '42501', null,
+  'researcher cannot create equipment types'
+);
+select throws_ok(
+  $$ select public.create_booking(
+    '20000000-0000-0000-0000-000000000001',
+    null::uuid, now() + interval '2 days', 60,
+    '30000000-0000-0000-0000-000000000001', null
   ) $$,
   'P0001', 'project_required',
   'a booking requires a project'
 );
 select throws_ok(
-  $$ select public.create_printer_booking(
+  $$ select public.create_booking(
     '20000000-0000-0000-0000-000000000001',
-    '30000000-0000-0000-0000-000000000001',
-    '00000000-0000-0000-0000-0000000000ee', now() + interval '2 days', 60, null
+    '00000000-0000-0000-0000-0000000000ee', now() + interval '2 days', 60,
+    '30000000-0000-0000-0000-000000000001', null
   ) $$,
   'P0001', 'project_not_available',
   'a researcher cannot book on a project they are not a member of'
 );
 select throws_ok(
-  $$ select public.create_printer_booking(
+  $$ select public.create_booking(
     '20000000-0000-0000-0000-000000000001',
-    '30000000-0000-0000-0000-000000000001',
-    '00000000-0000-0000-0000-0000000000ef', now() + interval '2 days', 60, null
+    '00000000-0000-0000-0000-0000000000ef', now() + interval '2 days', 60,
+    '30000000-0000-0000-0000-000000000001', null
   ) $$,
   'P0001', 'project_not_available',
   'a completed project does not accept new bookings'
 );
 select is(
-  (select project_id from public.printer_bookings where project_name = 'First booking'),
+  (select project_id from public.equipment_bookings where project_name = 'First booking'),
   '00000000-0000-0000-0000-0000000000e1'::uuid,
   'a booking stores the project it belongs to'
 );
@@ -498,10 +524,10 @@ select lives_ok(
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
 select throws_ok(
-  $$ select public.create_printer_booking(
+  $$ select public.create_booking(
     '20000000-0000-0000-0000-000000000001',
-    '30000000-0000-0000-0000-000000000001',
-    '00000000-0000-0000-0000-0000000000e5', now() + interval '3 days 30 minutes', 60, null
+    '00000000-0000-0000-0000-0000000000e5', now() + interval '3 days 30 minutes', 60,
+    '30000000-0000-0000-0000-000000000001', null
   ) $$,
   'P0001', 'maintenance_conflict',
   'booking over maintenance is rejected'
@@ -509,52 +535,52 @@ select throws_ok(
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000103","email":"other@example.com","role":"authenticated"}', true);
 select lives_ok(
-  $$ select public.create_printer_booking(
+  $$ select public.create_booking(
     '20000000-0000-0000-0000-000000000001',
-    '30000000-0000-0000-0000-000000000001',
-    '00000000-0000-0000-0000-0000000000e6', now() + interval '4 days', 60, null
+    '00000000-0000-0000-0000-0000000000e6', now() + interval '4 days', 60,
+    '30000000-0000-0000-0000-000000000001', null
   ) $$,
   'another researcher creates their booking'
 );
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
 select throws_ok(
-  $$ select public.cancel_printer_booking(
-    (select id from public.printer_bookings where project_name = 'Other booking')
+  $$ select public.cancel_booking(
+    (select id from public.equipment_bookings where project_name = 'Other booking')
   ) $$,
   'P0001', 'booking_forbidden',
   'researcher cannot cancel another profile booking'
 );
 
 select lives_ok(
-  $$ select public.update_printer_booking(
-    (select id from public.printer_bookings where project_name = 'First booking'),
+  $$ select public.update_booking(
+    (select id from public.equipment_bookings where project_name = 'First booking'),
     '20000000-0000-0000-0000-000000000001',
-    '30000000-0000-0000-0000-000000000001',
-    '00000000-0000-0000-0000-0000000000e7', now() + interval '30 minutes', 90, 'Updated notes'
+    '00000000-0000-0000-0000-0000000000e7', now() + interval '30 minutes', 90,
+    '30000000-0000-0000-0000-000000000001', 'Updated notes'
   ) $$,
   'researcher edits their active booking through RPC'
 );
 select is(
-  (select project_name from public.printer_bookings where notes = 'Updated notes'),
+  (select project_name from public.equipment_bookings where notes = 'Updated notes'),
   'First booking updated',
   'booking edit persists the new operational data'
 );
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000103","email":"other@example.com","role":"authenticated"}', true);
 select throws_ok(
-  $$ select public.update_printer_booking(
-    (select id from public.printer_bookings where project_name = 'First booking updated'),
+  $$ select public.update_booking(
+    (select id from public.equipment_bookings where project_name = 'First booking updated'),
     '20000000-0000-0000-0000-000000000001',
-    '30000000-0000-0000-0000-000000000001',
-    '00000000-0000-0000-0000-0000000000e8', now() + interval '5 days', 60, null
+    '00000000-0000-0000-0000-0000000000e8', now() + interval '5 days', 60,
+    '30000000-0000-0000-0000-000000000001', null
   ) $$,
   'P0001', 'booking_forbidden',
   'researcher cannot edit another profile booking'
 );
 select throws_ok(
-  $$ select public.set_printer_booking_status(
-    (select id from public.printer_bookings where project_name = 'First booking updated'),
+  $$ select public.set_booking_status(
+    (select id from public.equipment_bookings where project_name = 'First booking updated'),
     'in_progress'
   ) $$,
   'P0001', 'coordinator_required',
@@ -572,37 +598,37 @@ select throws_ok(
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
 select lives_ok(
-  $$ select public.set_printer_booking_status(
-    (select id from public.printer_bookings where project_name = 'First booking updated'),
+  $$ select public.set_booking_status(
+    (select id from public.equipment_bookings where project_name = 'First booking updated'),
     'in_progress'
   ) $$,
   'coordinator starts an approved booking'
 );
 select is(
-  (select status::text from public.printer_bookings where project_name = 'First booking updated'),
+  (select status::text from public.equipment_bookings where project_name = 'First booking updated'),
   'in_progress',
   'booking lifecycle status is persisted'
 );
 select throws_ok(
-  $$ select public.update_printer_booking(
-    (select id from public.printer_bookings where project_name = 'First booking updated'),
+  $$ select public.update_booking(
+    (select id from public.equipment_bookings where project_name = 'First booking updated'),
     '20000000-0000-0000-0000-000000000001',
-    '30000000-0000-0000-0000-000000000001',
-    '00000000-0000-0000-0000-0000000000e9', now() + interval '7 days', 60, null
+    '00000000-0000-0000-0000-0000000000e9', now() + interval '7 days', 60,
+    '30000000-0000-0000-0000-000000000001', null
   ) $$,
   'P0001', 'booking_not_editable',
   'in-progress booking data is immutable'
 );
 select lives_ok(
-  $$ select public.set_printer_booking_status(
-    (select id from public.printer_bookings where project_name = 'First booking updated'),
+  $$ select public.set_booking_status(
+    (select id from public.equipment_bookings where project_name = 'First booking updated'),
     'completed'
   ) $$,
   'coordinator completes an in-progress booking'
 );
 select throws_ok(
-  $$ select public.set_printer_booking_status(
-    (select id from public.printer_bookings where project_name = 'First booking updated'),
+  $$ select public.set_booking_status(
+    (select id from public.equipment_bookings where project_name = 'First booking updated'),
     'in_progress'
   ) $$,
   'P0001', 'invalid_booking_status_transition',
@@ -626,21 +652,21 @@ set local role authenticated;
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000110","email":"junior@example.com","role":"authenticated"}', true);
 select lives_ok(
-  $$ select public.create_printer_booking(
+  $$ select public.create_booking(
     '20000000-0000-0000-0000-000000000001',
-    '30000000-0000-0000-0000-000000000001',
-    '00000000-0000-0000-0000-000000000100', now() + interval '10 days', 60, null
+    '00000000-0000-0000-0000-000000000100', now() + interval '10 days', 60,
+    '30000000-0000-0000-0000-000000000001', null
   ) $$,
   'researcher flagged for approval can still create a booking'
 );
 select is(
-  (select status::text from public.printer_bookings where project_name = 'Junior booking'),
+  (select status::text from public.equipment_bookings where project_name = 'Junior booking'),
   'pending',
   'booking from a profile requiring approval starts as pending'
 );
 select throws_ok(
-  $$ select public.set_printer_booking_status(
-    (select id from public.printer_bookings where project_name = 'Junior booking'),
+  $$ select public.set_booking_status(
+    (select id from public.equipment_bookings where project_name = 'Junior booking'),
     'approved'
   ) $$,
   'P0001', 'coordinator_required',
@@ -649,24 +675,24 @@ select throws_ok(
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
 select lives_ok(
-  $$ select public.set_printer_booking_status(
-    (select id from public.printer_bookings where project_name = 'Junior booking'),
+  $$ select public.set_booking_status(
+    (select id from public.equipment_bookings where project_name = 'Junior booking'),
     'approved'
   ) $$,
   'coordinator approves a pending booking'
 );
 select is(
-  (select status::text from public.printer_bookings where project_name = 'Junior booking'),
+  (select status::text from public.equipment_bookings where project_name = 'Junior booking'),
   'approved',
   'approved pending booking is persisted'
 );
 select is(
-  (select approved_at >= now() - interval '5 minutes' from public.printer_bookings where project_name = 'Junior booking'),
+  (select approved_at >= now() - interval '5 minutes' from public.equipment_bookings where project_name = 'Junior booking'),
   true,
   'approving a pending booking stamps approved_at for the researcher notification'
 );
 select is(
-  (select approved_by from public.printer_bookings where project_name = 'Junior booking'),
+  (select approved_by from public.equipment_bookings where project_name = 'Junior booking'),
   '00000000-0000-0000-0000-000000000101'::uuid,
   'approving a pending booking records the coordinator as approver'
 );
@@ -674,16 +700,16 @@ select is(
 -- Rejection lifecycle: distinct from cancellation, with reason, and frees the slot.
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000110","email":"junior@example.com","role":"authenticated"}', true);
 select lives_ok(
-  $$ select public.create_printer_booking(
+  $$ select public.create_booking(
     '20000000-0000-0000-0000-000000000001',
-    '30000000-0000-0000-0000-000000000001',
-    '00000000-0000-0000-0000-000000000101', now() + interval '12 days', 60, null
+    '00000000-0000-0000-0000-000000000101', now() + interval '12 days', 60,
+    '30000000-0000-0000-0000-000000000001', null
   ) $$,
   'researcher flagged for approval creates a second pending booking'
 );
 select throws_ok(
-  $$ select public.reject_printer_booking(
-    (select id from public.printer_bookings where project_name = 'Rejected booking'),
+  $$ select public.reject_booking(
+    (select id from public.equipment_bookings where project_name = 'Rejected booking'),
     'No slot available'
   ) $$,
   'P0001', 'coordinator_required',
@@ -691,38 +717,38 @@ select throws_ok(
 );
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
 select lives_ok(
-  $$ select public.reject_printer_booking(
-    (select id from public.printer_bookings where project_name = 'Rejected booking'),
+  $$ select public.reject_booking(
+    (select id from public.equipment_bookings where project_name = 'Rejected booking'),
     'Impressora reservada para manutenção'
   ) $$,
   'coordinator rejects a pending booking with a reason'
 );
 select is(
-  (select status::text from public.printer_bookings where project_name = 'Rejected booking'),
+  (select status::text from public.equipment_bookings where project_name = 'Rejected booking'),
   'rejected',
   'rejected booking is persisted with the dedicated status'
 );
 select is(
-  (select rejected_reason from public.printer_bookings where project_name = 'Rejected booking'),
+  (select rejected_reason from public.equipment_bookings where project_name = 'Rejected booking'),
   'Impressora reservada para manutenção',
   'rejection reason is persisted'
 );
 select is(
-  (select rejected_by from public.printer_bookings where project_name = 'Rejected booking'),
+  (select rejected_by from public.equipment_bookings where project_name = 'Rejected booking'),
   '00000000-0000-0000-0000-000000000101'::uuid,
   'rejection records the coordinator as author'
 );
 select lives_ok(
-  $$ select public.create_printer_booking(
+  $$ select public.create_booking(
     '20000000-0000-0000-0000-000000000001',
-    '30000000-0000-0000-0000-000000000001',
-    '00000000-0000-0000-0000-000000000102', now() + interval '12 days', 60, null
+    '00000000-0000-0000-0000-000000000102', now() + interval '12 days', 60,
+    '30000000-0000-0000-0000-000000000001', null
   ) $$,
   'rejected booking no longer blocks its time slot'
 );
 select throws_ok(
-  $$ select public.reject_printer_booking(
-    (select id from public.printer_bookings where project_name = 'Slot freed booking'),
+  $$ select public.reject_booking(
+    (select id from public.equipment_bookings where project_name = 'Slot freed booking'),
     null
   ) $$,
   'P0001', 'invalid_booking_status_transition',
@@ -731,8 +757,8 @@ select throws_ok(
 
 -- Temporal validation on the operational lifecycle.
 select throws_ok(
-  $$ select public.set_printer_booking_status(
-    (select id from public.printer_bookings where project_name = 'Junior booking'),
+  $$ select public.set_booking_status(
+    (select id from public.equipment_bookings where project_name = 'Junior booking'),
     'in_progress'
   ) $$,
   'P0001', 'booking_not_started',
@@ -755,15 +781,15 @@ select throws_ok(
 update public.profiles set requires_booking_approval = true
 where id = '00000000-0000-0000-0000-000000000101';
 select lives_ok(
-  $$ select public.create_printer_booking(
+  $$ select public.create_booking(
     '20000000-0000-0000-0000-000000000001',
-    '30000000-0000-0000-0000-000000000001',
-    '00000000-0000-0000-0000-000000000103', now() + interval '11 days', 60, null
+    '00000000-0000-0000-0000-000000000103', now() + interval '11 days', 60,
+    '30000000-0000-0000-0000-000000000001', null
   ) $$,
   'coordinator creates a booking even when flagged for approval'
 );
 select is(
-  (select status::text from public.printer_bookings where project_name = 'Coordinator booking'),
+  (select status::text from public.equipment_bookings where project_name = 'Coordinator booking'),
   'approved',
   'coordinator bookings always auto-approve regardless of the approval flag'
 );

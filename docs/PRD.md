@@ -72,14 +72,15 @@ Funcionalidades:
 - busca por habilidade (prevista; ainda não implementada, veja [PENDENCIAS.md](PENDENCIAS.md));
 - visualização de quem estará no laboratório em determinada data.
 
-### 5.2 Módulo de impressoras
+### 5.2 Módulo de equipamentos
 
 Funcionalidades:
-- cadastro de impressoras pelo coordenador;
+- cadastro de equipamentos pelo coordenador, com tipo (impressora 3D, scanner, cortadora a laser,
+  ferramentas, computador ou outro tipo cadastrado), modelo, patrimônio, local e situação;
 - cadastro de materiais;
-- definição de compatibilidade entre impressora e material;
-- visualização da agenda das impressoras;
-- reserva de impressora;
+- definição de compatibilidade entre impressora e material (só para tipos que usam material);
+- visualização da agenda dos equipamentos;
+- reserva de qualquer equipamento por horário; o material só é pedido para impressoras;
 - bloqueio de horários para manutenção.
 
 ### 5.3 Módulo de reservas

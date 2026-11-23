@@ -18,6 +18,7 @@ import {
   getFundingAgencyLabel,
   getEventoNotificacaoReserva,
   getMensagemErroReserva,
+  equipmentUsesMaterial,
   getRoleLabel,
   getSlotColorClassName,
   getEffectiveWeeklyHours,
@@ -30,7 +31,7 @@ import {
   isSameSlot,
   normalizarCpf,
   normalizarTextoOpcional,
-  printerAcceptsMaterial,
+  equipmentAcceptsMaterial,
   reservaApareceNaAgenda,
   reservaBloqueiaHorario,
   reservaPodeSerCancelada,
@@ -38,15 +39,15 @@ import {
   splitName,
   validarLattes,
   type MaintenanceBlock,
-  type PrinterBooking,
+  type EquipmentBooking,
   type LabScheduleBreakItem,
   type LabSchedulePeriodItem,
 } from "./domain";
 
-function booking(status: PrinterBooking["status"], overrides: Partial<PrinterBooking> = {}): PrinterBooking {
+function booking(status: EquipmentBooking["status"], overrides: Partial<EquipmentBooking> = {}): EquipmentBooking {
   return {
     id: "booking",
-    printer_id: "printer",
+    equipment_id: "equipment",
     profile_id: "profile",
     material_id: "material",
     project_id: null,
@@ -70,7 +71,7 @@ function booking(status: PrinterBooking["status"], overrides: Partial<PrinterBoo
 function maintenanceBlock(overrides: Partial<MaintenanceBlock> = {}): MaintenanceBlock {
   return {
     id: "block",
-    printer_id: "printer",
+    equipment_id: "equipment",
     created_by: "coordinator",
     starts_at: "2030-01-01T10:00:00Z",
     ends_at: "2030-01-01T11:00:00Z",
@@ -309,11 +310,11 @@ describe("conflitos de reserva e manutencao", () => {
   });
 
   it("verifica se a impressora aceita o material informado", () => {
-    const printerMaterials = [{ printer_id: "printer-a", material_id: "pla" }];
+    const equipmentMaterials = [{ equipment_id: "equipment-a", material_id: "pla" }];
 
-    expect(printerAcceptsMaterial(printerMaterials, "printer-a", "pla")).toBe(true);
-    expect(printerAcceptsMaterial(printerMaterials, "printer-a", "petg")).toBe(false);
-    expect(printerAcceptsMaterial(printerMaterials, "printer-b", "pla")).toBe(false);
+    expect(equipmentAcceptsMaterial(equipmentMaterials, "equipment-a", "pla")).toBe(true);
+    expect(equipmentAcceptsMaterial(equipmentMaterials, "equipment-a", "petg")).toBe(false);
+    expect(equipmentAcceptsMaterial(equipmentMaterials, "equipment-b", "pla")).toBe(false);
   });
 
   it("encontra reserva conflitante ignorando a reserva em edicao e estados terminais", () => {
@@ -346,13 +347,26 @@ describe("conflitos de reserva e manutencao", () => {
   });
 
   it("traduz erros conhecidos do backend em mensagens para o usuario", () => {
-    expect(getMensagemErroReserva(new Error("booking_conflict"))).toBe("A impressora já possui uma reserva nesse intervalo.");
-    expect(getMensagemErroReserva(new Error("maintenance_conflict"))).toBe("A impressora está em manutenção nesse intervalo.");
-    expect(getMensagemErroReserva(new Error("incompatible_material"))).toBe("O material selecionado não é compatível com a impressora.");
+    expect(getMensagemErroReserva(new Error("booking_conflict"))).toBe("O equipamento já possui uma reserva nesse intervalo.");
+    expect(getMensagemErroReserva(new Error("maintenance_conflict"))).toBe("O equipamento está em manutenção nesse intervalo.");
+    expect(getMensagemErroReserva(new Error("incompatible_material"))).toBe("O material selecionado não é compatível com o equipamento.");
+    expect(getMensagemErroReserva(new Error("material_required"))).toBe("Escolha o material da impressão.");
+    expect(getMensagemErroReserva(new Error("equipment_unavailable"))).toBe("O equipamento selecionado não está ativo.");
     expect(getMensagemErroReserva(new Error("coordinator_required"))).toBe("Apenas o coordenador pode realizar essa operação.");
     expect(getMensagemErroReserva(new Error("booking_not_started"))).toBe("A reserva ainda não começou; aguarde o horário de início.");
     expect(getMensagemErroReserva(new Error("erro desconhecido"))).toBe("erro desconhecido");
     expect(getMensagemErroReserva("erro sem instancia")).toBe("erro sem instancia");
+  });
+});
+
+describe("equipamentos", () => {
+  const base = { id: "e", name: "E", model: null, location: null, status: "active" as const, notes: null, type_id: "t", asset_tag: null, created_at: "", updated_at: "" };
+
+  it("só pede material para equipamento de tipo que usa material", () => {
+    expect(equipmentUsesMaterial({ ...base, type: { id: "t", name: "Impressora 3D", uses_material: true, is_active: true } })).toBe(true);
+    expect(equipmentUsesMaterial({ ...base, type: { id: "t", name: "Scanner 3D", uses_material: false, is_active: true } })).toBe(false);
+    expect(equipmentUsesMaterial({ ...base, type: null })).toBe(false);
+    expect(equipmentUsesMaterial(undefined)).toBe(false);
   });
 });
 

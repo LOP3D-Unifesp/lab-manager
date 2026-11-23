@@ -19,8 +19,8 @@ O schema cobre:
 
 O Supabase Auth sera a fonte de autenticacao. O PostgreSQL sera a fonte dos dados de dominio da aplicacao.
 
-> **Fonte da verdade:** as migrations em `supabase/migrations/` (16 arquivos, de `20260818` a
-> `20260902`). Este documento descreve o resultado delas. A secao 1.1 resume o que mudou depois da
+> **Fonte da verdade:** as migrations em `supabase/migrations/` (17 arquivos, de `20260818` a
+> `20260903`). Este documento descreve o resultado delas. A secao 1.1 resume o que mudou depois da
 > baseline; onde houver divergencia, vale a migration.
 
 Status do MVP implementado:
@@ -54,6 +54,7 @@ Status do MVP implementado:
 | `20260831_projects_members_funding` | Projetos, membros, agencias de fomento cadastraveis e fomento por projeto com valores por rubrica (secao 3.13). |
 | `20260901_project_tasks` | Tarefas do kanban por projeto e seus responsaveis (secao 3.13). |
 | `20260902_bookings_require_project` | `printer_bookings.project_id`; `create_printer_booking` e `update_printer_booking` passam a receber o projeto (`p_project_id`) em vez do nome. |
+| `20260903_equipment` | Impressoras viram equipamentos: `printers` -> `equipment`, `printer_materials` -> `equipment_materials`, `printer_bookings` -> `equipment_bookings` (e `printer_id` -> `equipment_id`); nova `equipment_types`; material da reserva opcional; RPCs `create_booking`, `update_booking`, `cancel_booking`, `reject_booking`, `set_booking_status` e `replace_equipment_materials` (secao 3.14). |
 
 Resumo dos objetos que mais mudam o entendimento do schema:
 
@@ -653,6 +654,11 @@ Regras de integridade:
 - A disponibilidade representa planejamento, nao confirmacao real de presenca.
 - Pesquisadores so podem alterar a propria disponibilidade.
 
+> **Nomes depois de `20260903`:** as secoes 3.8 a 3.12 foram escritas quando o laboratorio so tinha
+> impressoras. Leia `printers` como `equipment`, `printer_materials` como `equipment_materials`,
+> `printer_bookings` como `equipment_bookings`, `printer_id` como `equipment_id` e `printer_status` como
+> `equipment_status`. O que mudou de regra esta na secao 3.14.
+
 ### 3.8 `printers`
 
 Finalidade: armazenar o cadastro das impressoras 3D gerenciadas pelo laboratorio.
@@ -974,6 +980,23 @@ coordenador pode escolher qualquer projeto em aberto (`planning`, `active` ou `p
 so projetos em aberto de que e membro. Erros: `project_required` e `project_not_available`. Ao editar,
 manter o projeto atual da reserva e sempre permitido, mesmo que ele tenha sido concluido depois.
 
+### 3.14 Equipamentos e tipos
+
+Finalidade: o laboratorio tem mais que impressoras, e todo equipamento pode ser reservado por horario.
+
+- `equipment_types`: `name` (unico sem diferenciar maiusculas), `uses_material`, `is_active`. Vem com
+  Impressora 3D (`uses_material = true`), Scanner 3D, Cortadora a laser, Bancada e ferramentas e
+  Computador; o coordenador cadastra outros. Qualquer usuario ativo le.
+- `equipment`: ganha `type_id` (obrigatorio, `RESTRICT`) e `asset_tag` (patrimonio ou identificacao,
+  opcional). Os equipamentos que ja existiam ficaram como Impressora 3D.
+- `equipment_materials`: compatibilidade de material, so faz sentido para tipos que usam material.
+- `equipment_bookings.material_id` passou a ser anulavel. `create_booking` e `update_booking` exigem
+  material (`material_required`) e compatibilidade (`incompatible_material`) apenas quando o tipo do
+  equipamento usa material; para os demais, o material e ignorado e gravado como nulo.
+- Ordem dos parametros: `create_booking(p_equipment_id, p_project_id, p_starts_at,
+  p_estimated_duration_minutes, p_material_id, p_notes)`; `update_booking` acrescenta `p_booking_id` no
+  inicio. Erros novos: `equipment_unavailable` e `equipment_not_found` (antes `printer_*`).
+
 ## 4. Relacionamentos principais
 
 - `profiles.id` e igual a `auth.users.id`.
@@ -1125,7 +1148,7 @@ Validacoes cobertas pelos testes de banco do MVP:
 - Idiomas nao sao habilidades tecnicas e nao entram em `skills`.
 - Nao havera upload `.gcode` ou `.3mf` no schema do MVP.
 - Nao havera historico detalhado de manutencao alem dos bloqueios.
-- A baseline inicial (`20260818`) e imutavel; mudancas de schema entram em migrations incrementais (hoje ate `20260902`).
+- A baseline inicial (`20260818`) e imutavel; mudancas de schema entram em migrations incrementais (hoje ate `20260903`).
 
 ## 10. Evolucao futura: controle de estoque de materiais
 

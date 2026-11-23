@@ -9,18 +9,18 @@ import { StatusBadge } from "../components/ui/StatusBadge";
 import { useCurrentProfile } from "../lib/currentUser";
 import {
   criarDataLocalSegura,
-  getPrinterStatusLabel,
+  getEquipmentStatusLabel,
   reservaBloqueiaHorario,
   type AvailabilitySlot,
-  type Printer as PrinterType,
-  type PrinterBooking,
+  type Equipment,
+  type EquipmentBooking,
   type PublicProfile,
 } from "../lib/domain";
 import { useLabSchedule } from "../lib/labSchedule";
 import {
   listAvailability,
   listBookings,
-  listPrinters,
+  listEquipment,
   listProfiles,
 } from "../lib/supabaseRepository";
 
@@ -53,7 +53,7 @@ function intervalosSeCruzam(
   return inicioA < fimB && inicioB < fimA;
 }
 
-function reservaEhDaData(reserva: PrinterBooking, data: string) {
+function reservaEhDaData(reserva: EquipmentBooking, data: string) {
   const inicioDia = criarDataLocalSegura(data, "00:00");
 
   if (!inicioDia || !reservaBloqueiaHorario(reserva)) {
@@ -70,7 +70,7 @@ function reservaEhDaData(reserva: PrinterBooking, data: string) {
   );
 }
 
-function reservaEstaEmAndamento(reserva: PrinterBooking, agora: Date) {
+function reservaEstaEmAndamento(reserva: EquipmentBooking, agora: Date) {
   return new Date(reserva.starts_at) <= agora && agora < new Date(reserva.ends_at);
 }
 
@@ -79,8 +79,8 @@ export function Dashboard() {
   const { currentProfile } = useCurrentProfile();
   const [profiles, setProfiles] = useState<PublicProfile[]>([]);
   const [availability, setAvailability] = useState<AvailabilitySlot[]>([]);
-  const [printers, setPrinters] = useState<PrinterType[]>([]);
-  const [bookings, setBookings] = useState<PrinterBooking[]>([]);
+  const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
+  const [bookings, setBookings] = useState<EquipmentBooking[]>([]);
   const [erro, setErro] = useState("");
   const dataHoje = getDataLocalPadrao();
   const agora = useMemo(() => new Date(), []);
@@ -92,15 +92,15 @@ export function Dashboard() {
     Promise.all([
       listProfiles(),
       listAvailability(),
-      listPrinters(),
+      listEquipment(),
       listBookings(),
     ])
-      .then(([profilesData, availabilityData, printersData, bookingsData]) => {
+      .then(([profilesData, availabilityData, equipmentData, bookingsData]) => {
         if (ativo) {
           setErro("");
           setProfiles(profilesData);
           setAvailability(availabilityData);
-          setPrinters(printersData);
+          setEquipmentList(equipmentData);
           setBookings(bookingsData);
         }
       })
@@ -132,7 +132,7 @@ export function Dashboard() {
   const pesquisadoresPresenciaisHoje = profiles.filter((profile) =>
     pesquisadoresHoje.has(profile.id),
   );
-  const impressorasAtivas = printers.filter(
+  const impressorasAtivas = equipmentList.filter(
     (impressora) => impressora.status === "active",
   );
   const reservasHoje = bookings
@@ -154,8 +154,8 @@ export function Dashboard() {
     return new Date(reserva.starts_at) >= agora;
   });
 
-  function getReservasDaImpressora(impressora: PrinterType) {
-    return reservasHoje.filter((reserva) => reserva.printer_id === impressora.id);
+  function getReservasDaImpressora(impressora: Equipment) {
+    return reservasHoje.filter((reserva) => reserva.equipment_id === impressora.id);
   }
 
   return (
@@ -176,8 +176,8 @@ export function Dashboard() {
           icon={Users}
         />
         <StatCard
-          title="Impressoras ativas"
-          value={`${impressorasAtivas.length}/${printers.length}`}
+          title="Equipamentos ativos"
+          value={`${impressorasAtivas.length}/${equipmentList.length}`}
           description="Equipamentos disponiveis para novas reservas."
           icon={Printer}
         />
@@ -193,7 +193,7 @@ export function Dashboard() {
           description={
             proximasReservas[0]
               ? `${proximasReservas[0].project_name} em ${
-                  proximasReservas[0].printer?.name ?? "impressora removida"
+                  proximasReservas[0].equipment?.name ?? "equipamento removido"
                 }`
               : "Nenhuma reserva futura para hoje."
           }
@@ -208,15 +208,15 @@ export function Dashboard() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <h3 className="text-2xl font-bold text-text">
-                Impressoras hoje
+                Equipamentos hoje
               </h3>
             </div>
             <StatusBadge label={dataHoje} variant="neutral" />
           </div>
 
           <div className="mt-5 grid gap-3">
-            {printers.length > 0 ? (
-              printers.map((impressora) => {
+            {equipmentList.length > 0 ? (
+              equipmentList.map((impressora) => {
                 const reservasDaImpressora = getReservasDaImpressora(impressora);
                 const emAndamento = reservasDaImpressora.find((reserva) =>
                   reservaEstaEmAndamento(reserva, agora),
@@ -239,7 +239,7 @@ export function Dashboard() {
                       <StatusBadge
                         label={
                           impressora.status !== "active"
-                            ? getPrinterStatusLabel(impressora.status)
+                            ? getEquipmentStatusLabel(impressora.status)
                             : emAndamento
                               ? "Imprimindo"
                               : "Disponivel"
@@ -272,7 +272,7 @@ export function Dashboard() {
               })
             ) : (
               <p className="rounded-lg border border-dashed border-border bg-background p-4 text-base text-muted">
-                Nenhuma impressora cadastrada.
+                Nenhum equipamento cadastrado.
               </p>
             )}
           </div>

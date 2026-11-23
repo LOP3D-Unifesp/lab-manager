@@ -4,14 +4,14 @@ import {
   getBookingStatusLabel,
   getProximosStatusReserva,
   type BookingStatus,
-  type PrinterBooking,
+  type EquipmentBooking,
 } from "../../lib/domain";
 import { Button } from "../ui/Button";
 
 type Props = {
-  bookings: PrinterBooking[];
+  bookings: EquipmentBooking[];
   disabled: boolean;
-  onChangeStatus: (booking: PrinterBooking, status: BookingStatus) => void;
+  onChangeStatus: (booking: EquipmentBooking, status: BookingStatus) => void;
 };
 
 export function BookingLifecycleActions({ bookings, disabled, onChangeStatus }: Props) {

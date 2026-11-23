@@ -22,10 +22,11 @@ import {
   LabSettings,
   MaintenanceBlock,
   Material,
-  Printer,
-  PrinterBooking,
-  PrinterMaterial,
-  PrinterStatus,
+  Equipment,
+  EquipmentBooking,
+  EquipmentMaterial,
+  EquipmentType,
+  EquipmentStatus,
   PublicProfile,
   PublicLabIdentity,
   ProfileRole,
@@ -538,43 +539,55 @@ export async function deleteAvailabilitySlot(slotId: string) {
     .map((slot) => ({ weekday: slot.weekday, periodo: slot.periodo, workMode: slot.work_mode })));
 }
 
-export async function listPrinters() {
-  const { data, error } = await client()
-    .from("printers")
-    .select("id, name, model, location, status, notes, created_at, updated_at")
-    .order("name");
+const equipmentSelect =
+  "id, name, model, location, status, notes, type_id, asset_tag, created_at, updated_at, type:equipment_types(id, name, uses_material, is_active)";
+
+export async function listEquipment() {
+  const { data, error } = await client().from("equipment").select(equipmentSelect).order("name");
   throwIfError(error);
-  return (data ?? []) as Printer[];
+  return (data ?? []) as unknown as Equipment[];
 }
 
-export async function createPrinter(params: {
+export type EquipmentInput = {
   name: string;
   model: string | null;
   location: string | null;
-  status?: PrinterStatus;
+  status: EquipmentStatus;
   notes: string | null;
-}) {
-  const { data, error } = await client()
-    .from("printers")
-    .insert({ ...params, status: params.status ?? "active" })
-    .select("id, name, model, location, status, notes, created_at, updated_at")
-    .single();
+  type_id: string;
+  asset_tag: string | null;
+};
+
+export async function createEquipment(params: EquipmentInput) {
+  const { data, error } = await client().from("equipment").insert(params).select(equipmentSelect).single();
   throwIfError(error);
-  return data as Printer;
+  return data as unknown as Equipment;
 }
 
-export async function updatePrinter(
-  id: string,
-  params: { name: string; model: string | null; location: string | null; status: PrinterStatus; notes: string | null },
-) {
+export async function updateEquipment(id: string, params: EquipmentInput) {
+  const { data, error } = await client().from("equipment").update(params).eq("id", id).select(equipmentSelect).single();
+  throwIfError(error);
+  return data as unknown as Equipment;
+}
+
+export async function listEquipmentTypes() {
   const { data, error } = await client()
-    .from("printers")
-    .update(params)
-    .eq("id", id)
-    .select("id, name, model, location, status, notes, created_at, updated_at")
+    .from("equipment_types")
+    .select("id, name, uses_material, is_active")
+    .eq("is_active", true)
+    .order("name");
+  throwIfError(error);
+  return (data ?? []) as EquipmentType[];
+}
+
+export async function createEquipmentType(params: { name: string; uses_material: boolean }) {
+  const { data, error } = await client()
+    .from("equipment_types")
+    .insert(params)
+    .select("id, name, uses_material, is_active")
     .single();
   throwIfError(error);
-  return data as Printer;
+  return data as EquipmentType;
 }
 
 export async function listMaterials() {
@@ -597,17 +610,17 @@ export async function createMaterial(params: { name: string; description: string
   return data as Material;
 }
 
-export async function listPrinterMaterials() {
+export async function listEquipmentMaterials() {
   const { data, error } = await client()
-    .from("printer_materials")
-    .select("printer_id, material_id");
+    .from("equipment_materials")
+    .select("equipment_id, material_id");
   throwIfError(error);
-  return (data ?? []) as PrinterMaterial[];
+  return (data ?? []) as EquipmentMaterial[];
 }
 
-export async function setPrinterMaterials(printerId: string, materialIds: string[]) {
-  const { error } = await client().rpc("replace_printer_materials", {
-    p_printer_id: printerId,
+export async function setEquipmentMaterials(equipmentId: string, materialIds: string[]) {
+  const { error } = await client().rpc("replace_equipment_materials", {
+    p_equipment_id: equipmentId,
     p_material_ids: materialIds,
   });
   throwIfError(error);
@@ -615,24 +628,24 @@ export async function setPrinterMaterials(printerId: string, materialIds: string
 
 export async function listBookings() {
   const { data, error } = await client()
-    .from("printer_bookings")
+    .from("equipment_bookings")
     .select(`
-      id, printer_id, profile_id, material_id, project_id, project_name, starts_at, ends_at,
+      id, equipment_id, profile_id, material_id, project_id, project_name, starts_at, ends_at,
       estimated_duration_minutes, status, notes, cancelled_at, cancelled_by,
       rejected_reason, rejected_at, rejected_by, approved_at, approved_by,
-      printer:printers!printer_bookings_printer_id_fkey(id, name, model, location, status, notes, created_at, updated_at),
-      material:materials!printer_bookings_material_id_fkey(id, name, description, is_active),
-      approved_by_profile:profiles!printer_bookings_approved_by_fkey(full_name),
-      rejected_by_profile:profiles!printer_bookings_rejected_by_fkey(full_name),
-      cancelled_by_profile:profiles!printer_bookings_cancelled_by_fkey(full_name),
-      profile:profiles!printer_bookings_profile_id_fkey(id, full_name, email, role, academic_affiliation, funding_grants:profile_funding_grants(agency, agency_other, grant_name, weekly_hours, monthly_value), weekly_workload_hours, lattes_url, nationality_country_code, phone, bio, is_active, requires_booking_approval, avatar_url, created_at, updated_at)
+      equipment:equipment!equipment_bookings_equipment_id_fkey(id, name, model, location, status, notes, type_id, asset_tag, created_at, updated_at, type:equipment_types(id, name, uses_material, is_active)),
+      material:materials!equipment_bookings_material_id_fkey(id, name, description, is_active),
+      approved_by_profile:profiles!equipment_bookings_approved_by_fkey(full_name),
+      rejected_by_profile:profiles!equipment_bookings_rejected_by_fkey(full_name),
+      cancelled_by_profile:profiles!equipment_bookings_cancelled_by_fkey(full_name),
+      profile:profiles!equipment_bookings_profile_id_fkey(id, full_name, email, role, academic_affiliation, funding_grants:profile_funding_grants(agency, agency_other, grant_name, weekly_hours, monthly_value), weekly_workload_hours, lattes_url, nationality_country_code, phone, bio, is_active, requires_booking_approval, avatar_url, created_at, updated_at)
     `)
     .order("starts_at");
   throwIfError(error);
 
   return ((data ?? []) as unknown as Array<Record<string, unknown> & { profile?: Omit<PublicProfile, "first_name" | "last_name"> | null }>).map(
     (booking) => ({ ...booking, profile: booking.profile ? mapPublicProfile(booking.profile) : null }),
-  ) as unknown as PrinterBooking[];
+  ) as unknown as EquipmentBooking[];
 }
 
 // Coordinator feed: pending bookings awaiting a decision plus recent
@@ -642,13 +655,13 @@ export async function listCoordinatorBookingsAlertsSummary(profileId: string, si
   const cutoff = new Date(Date.now() - BOOKING_ALERT_WINDOW_HOURS * 60 * 60 * 1000).toISOString();
 
   let query = client()
-    .from("printer_bookings")
+    .from("equipment_bookings")
     .select(`
       id, project_name, starts_at, status, approved_at, rejected_at, rejected_reason,
       cancelled_at, cancelled_by,
-      printer:printers!printer_bookings_printer_id_fkey(name),
-      profile:profiles!printer_bookings_profile_id_fkey(full_name),
-      cancelled_by_profile:profiles!printer_bookings_cancelled_by_fkey(full_name)
+      equipment:equipment!equipment_bookings_equipment_id_fkey(name),
+      profile:profiles!equipment_bookings_profile_id_fkey(full_name),
+      cancelled_by_profile:profiles!equipment_bookings_cancelled_by_fkey(full_name)
     `)
     .or(`status.eq.pending,and(status.eq.cancelled,cancelled_at.gte.${cutoff},cancelled_by.neq.${profileId})`)
     .order("starts_at");
@@ -666,7 +679,7 @@ export async function listCoordinatorBookingsAlertsSummary(profileId: string, si
     rejected_reason: string | null;
     cancelled_at: string | null;
     cancelled_by: string | null;
-    printer: { name: string } | null;
+    equipment: { name: string } | null;
     profile: { full_name: string } | null;
     cancelled_by_profile: { full_name: string } | null;
   }>).map((booking) => ({
@@ -682,7 +695,7 @@ export async function listCoordinatorBookingsAlertsSummary(profileId: string, si
     cancelled_at: booking.cancelled_at,
     cancelled_by: booking.cancelled_by,
     cancelled_by_name: booking.cancelled_by_profile?.full_name ?? null,
-    printer_name: booking.printer?.name ?? "Impressora removida",
+    equipment_name: booking.equipment?.name ?? "Equipamento removido",
     profile_name: booking.profile?.full_name ?? "Usuário removido",
   })) as BookingAlertSummary[];
 }
@@ -696,14 +709,14 @@ export async function listMyBookingAlertsSummary(profileId: string, signal?: Abo
   const cutoff = new Date(Date.now() - BOOKING_ALERT_WINDOW_HOURS * 60 * 60 * 1000).toISOString();
 
   let query = client()
-    .from("printer_bookings")
+    .from("equipment_bookings")
     .select(`
       id, project_name, starts_at, status, approved_at, rejected_at, rejected_reason,
       cancelled_at, cancelled_by,
-      printer:printers!printer_bookings_printer_id_fkey(name),
-      approved_by_profile:profiles!printer_bookings_approved_by_fkey(full_name),
-      rejected_by_profile:profiles!printer_bookings_rejected_by_fkey(full_name),
-      cancelled_by_profile:profiles!printer_bookings_cancelled_by_fkey(full_name)
+      equipment:equipment!equipment_bookings_equipment_id_fkey(name),
+      approved_by_profile:profiles!equipment_bookings_approved_by_fkey(full_name),
+      rejected_by_profile:profiles!equipment_bookings_rejected_by_fkey(full_name),
+      cancelled_by_profile:profiles!equipment_bookings_cancelled_by_fkey(full_name)
     `)
     .eq("profile_id", profileId)
     .or(
@@ -724,7 +737,7 @@ export async function listMyBookingAlertsSummary(profileId: string, signal?: Abo
     rejected_reason: string | null;
     cancelled_at: string | null;
     cancelled_by: string | null;
-    printer: { name: string } | null;
+    equipment: { name: string } | null;
     approved_by_profile: { full_name: string } | null;
     rejected_by_profile: { full_name: string } | null;
     cancelled_by_profile: { full_name: string } | null;
@@ -741,7 +754,7 @@ export async function listMyBookingAlertsSummary(profileId: string, signal?: Abo
     cancelled_at: booking.cancelled_at,
     cancelled_by: booking.cancelled_by,
     cancelled_by_name: booking.cancelled_by_profile?.full_name ?? null,
-    printer_name: booking.printer?.name ?? "Impressora removida",
+    equipment_name: booking.equipment?.name ?? "Equipamento removido",
     profile_name: "",
   })) as BookingAlertSummary[];
 }
@@ -749,91 +762,91 @@ export async function listMyBookingAlertsSummary(profileId: string, signal?: Abo
 export async function listMaintenanceBlocks() {
   const { data, error } = await client()
     .from("maintenance_blocks")
-    .select("id, printer_id, created_by, starts_at, ends_at, reason, notes, created_at, updated_at")
+    .select("id, equipment_id, created_by, starts_at, ends_at, reason, notes, created_at, updated_at")
     .order("starts_at");
   throwIfError(error);
   return (data ?? []) as MaintenanceBlock[];
 }
 
 export async function createBooking(params: {
-  printerId: string;
-  materialId: string;
+  equipmentId: string;
+  materialId?: string | null;
   projectId: string;
   startsAt: string;
   durationMinutes: number;
   notes?: string | null;
 }) {
-  const { data, error } = await client().rpc("create_printer_booking", {
-    p_printer_id: params.printerId,
-    p_material_id: params.materialId,
+  const { data, error } = await client().rpc("create_booking", {
+    p_equipment_id: params.equipmentId,
+    p_material_id: params.materialId ?? undefined,
     p_project_id: params.projectId,
     p_starts_at: params.startsAt,
     p_estimated_duration_minutes: params.durationMinutes,
     p_notes: params.notes ?? undefined,
   });
   throwIfError(error);
-  return data as PrinterBooking;
+  return data as EquipmentBooking;
 }
 
 export async function updateBooking(
   bookingId: string,
   params: {
-    printerId: string;
-    materialId: string;
+    equipmentId: string;
+    materialId?: string | null;
     projectId: string;
     startsAt: string;
     durationMinutes: number;
     notes?: string | null;
   },
 ) {
-  const { data, error } = await client().rpc("update_printer_booking", {
+  const { data, error } = await client().rpc("update_booking", {
     p_booking_id: bookingId,
-    p_printer_id: params.printerId,
-    p_material_id: params.materialId,
+    p_equipment_id: params.equipmentId,
+    p_material_id: params.materialId ?? undefined,
     p_project_id: params.projectId,
     p_starts_at: params.startsAt,
     p_estimated_duration_minutes: params.durationMinutes,
     p_notes: params.notes ?? undefined,
   });
   throwIfError(error);
-  return data as PrinterBooking;
+  return data as EquipmentBooking;
 }
 
-export async function setBookingStatus(bookingId: string, status: PrinterBooking["status"]) {
-  const { data, error } = await client().rpc("set_printer_booking_status", {
+export async function setBookingStatus(bookingId: string, status: EquipmentBooking["status"]) {
+  const { data, error } = await client().rpc("set_booking_status", {
     p_booking_id: bookingId,
     p_status: status,
   });
   throwIfError(error);
-  return data as PrinterBooking;
+  return data as EquipmentBooking;
 }
 
 export async function cancelBooking(bookingId: string) {
-  const { data, error } = await client().rpc("cancel_printer_booking", {
+  const { data, error } = await client().rpc("cancel_booking", {
     p_booking_id: bookingId,
   });
   throwIfError(error);
-  return data as PrinterBooking;
+  return data as EquipmentBooking;
 }
 
 export async function rejectBooking(bookingId: string, reason: string | null) {
-  const { data, error } = await client().rpc("reject_printer_booking", {
+  const { data, error } = await client().rpc("reject_booking", {
     p_booking_id: bookingId,
     p_reason: reason ?? undefined,
   });
   throwIfError(error);
-  return data as PrinterBooking;
+  return data as EquipmentBooking;
 }
 
 export async function createMaintenanceBlock(params: {
-  printerId: string;
+  equipmentId: string;
   startsAt: string;
   endsAt: string;
   reason: string;
   notes?: string | null;
 }) {
   const { data, error } = await client().rpc("create_maintenance_block", {
-    p_printer_id: params.printerId,
+    p_equipment_id: params.equipmentId,
     p_starts_at: params.startsAt,
     p_ends_at: params.endsAt,
     p_reason: params.reason,

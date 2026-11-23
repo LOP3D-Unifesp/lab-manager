@@ -82,7 +82,7 @@ export function InstallationWizard() {
                 <div>
                   <h2 className="text-2xl font-bold">Identidade do laboratório</h2>
                   <p className="mt-1 text-muted">
-                    Materiais e impressoras poderão ser cadastrados depois, nas telas de administração.
+                    Materiais e equipamentos poderão ser cadastrados depois, nas telas de administração.
                   </p>
                 </div>
                 <label className="grid gap-2 font-semibold">

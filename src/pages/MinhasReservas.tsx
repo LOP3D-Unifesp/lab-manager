@@ -9,7 +9,7 @@ import {
   getBookingStatusLabel,
   getTimezonePadrao,
   type BookingStatus,
-  type PrinterBooking,
+  type EquipmentBooking,
 } from "../lib/domain";
 import { listBookings } from "../lib/supabaseRepository";
 
@@ -37,7 +37,7 @@ const statusFilterOptions: Array<{ value: BookingStatus | "all"; label: string }
 export function MinhasReservas() {
   const { labSettings, profile } = useAuth();
   const timezone = labSettings?.timezone || getTimezonePadrao();
-  const [bookings, setBookings] = useState<PrinterBooking[]>([]);
+  const [bookings, setBookings] = useState<EquipmentBooking[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
   const [statusFiltro, setStatusFiltro] = useState<BookingStatus | "all">("all");
@@ -82,7 +82,7 @@ export function MinhasReservas() {
 
       return (
         reserva.project_name.toLowerCase().includes(termo) ||
-        (reserva.printer?.name ?? "").toLowerCase().includes(termo) ||
+        (reserva.equipment?.name ?? "").toLowerCase().includes(termo) ||
         (reserva.material?.name ?? "").toLowerCase().includes(termo)
       );
     });
@@ -98,7 +98,7 @@ export function MinhasReservas() {
       minute: "2-digit",
     }).format(new Date(valor));
 
-  function detalhesDaReserva(reserva: PrinterBooking) {
+  function detalhesDaReserva(reserva: EquipmentBooking) {
     const decisao =
       reserva.status === "approved" && reserva.approved_by_profile
         ? `Aprovada por ${reserva.approved_by_profile.full_name}`
@@ -142,7 +142,7 @@ export function MinhasReservas() {
           <input
             className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
             onChange={(event) => setBusca(event.target.value)}
-            placeholder="Projeto, impressora ou material"
+            placeholder="Projeto, equipamento ou material"
             type="text"
             value={busca}
           />
@@ -182,7 +182,7 @@ export function MinhasReservas() {
                 <tr className="border-b border-border">
                   <th className="px-4 py-3 text-sm font-semibold text-muted">Data</th>
                   <th className="px-4 py-3 text-sm font-semibold text-muted">Projeto</th>
-                  <th className="px-4 py-3 text-sm font-semibold text-muted">Impressora</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-muted">Equipamento</th>
                   <th className="px-4 py-3 text-sm font-semibold text-muted">Status</th>
                   <th className="px-4 py-3 text-sm font-semibold text-muted">Detalhes</th>
                 </tr>
@@ -200,7 +200,7 @@ export function MinhasReservas() {
                       {reserva.project_name}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-base text-muted">
-                      {reserva.printer?.name ?? "Impressora removida"}
+                      {reserva.equipment?.name ?? "Equipamento removido"}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3">
                       <StatusBadge

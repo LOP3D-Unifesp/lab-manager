@@ -49,6 +49,122 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"equipment": {
+                  Row: {
+                    "asset_tag": string | null,"created_at": string,"id": string,"location": string | null,"model": string | null,"name": string,"notes": string | null,"status": Database["public"]['Enums']["equipment_status"],"type_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "asset_tag"?: string | null,"created_at"?: string,"id"?: string,"location"?: string | null,"model"?: string | null,"name": string,"notes"?: string | null,"status"?: Database["public"]['Enums']["equipment_status"],"type_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "asset_tag"?: string | null,"created_at"?: string,"id"?: string,"location"?: string | null,"model"?: string | null,"name"?: string,"notes"?: string | null,"status"?: Database["public"]['Enums']["equipment_status"],"type_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "equipment_type_id_fkey"
+      columns: ["type_id"]
+isOneToOne: false
+      referencedRelation: "equipment_types"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"equipment_bookings": {
+                  Row: {
+                    "approved_at": string | null,"approved_by": string | null,"cancelled_at": string | null,"cancelled_by": string | null,"created_at": string,"ends_at": string,"equipment_id": string,"estimated_duration_minutes": number,"id": string,"material_id": string | null,"notes": string | null,"profile_id": string,"project_id": string | null,"project_name": string,"rejected_at": string | null,"rejected_by": string | null,"rejected_reason": string | null,"starts_at": string,"status": Database["public"]['Enums']["booking_status"],"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "approved_at"?: string | null,"approved_by"?: string | null,"cancelled_at"?: string | null,"cancelled_by"?: string | null,"created_at"?: string,"ends_at": string,"equipment_id": string,"estimated_duration_minutes": number,"id"?: string,"material_id"?: string | null,"notes"?: string | null,"profile_id": string,"project_id"?: string | null,"project_name": string,"rejected_at"?: string | null,"rejected_by"?: string | null,"rejected_reason"?: string | null,"starts_at": string,"status"?: Database["public"]['Enums']["booking_status"],"updated_at"?: string
+                  }
+                  Update: {
+                    "approved_at"?: string | null,"approved_by"?: string | null,"cancelled_at"?: string | null,"cancelled_by"?: string | null,"created_at"?: string,"ends_at"?: string,"equipment_id"?: string,"estimated_duration_minutes"?: number,"id"?: string,"material_id"?: string | null,"notes"?: string | null,"profile_id"?: string,"project_id"?: string | null,"project_name"?: string,"rejected_at"?: string | null,"rejected_by"?: string | null,"rejected_reason"?: string | null,"starts_at"?: string,"status"?: Database["public"]['Enums']["booking_status"],"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "equipment_bookings_approved_by_fkey"
+      columns: ["approved_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "equipment_bookings_cancelled_by_fkey"
+      columns: ["cancelled_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "equipment_bookings_equipment_id_fkey"
+      columns: ["equipment_id"]
+isOneToOne: false
+      referencedRelation: "equipment"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "equipment_bookings_material_id_fkey"
+      columns: ["material_id"]
+isOneToOne: false
+      referencedRelation: "materials"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "equipment_bookings_profile_id_fkey"
+      columns: ["profile_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "equipment_bookings_project_id_fkey"
+      columns: ["project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "equipment_bookings_rejected_by_fkey"
+      columns: ["rejected_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"equipment_materials": {
+                  Row: {
+                    "created_at": string,"equipment_id": string,"material_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"equipment_id": string,"material_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"equipment_id"?: string,"material_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "equipment_materials_equipment_id_fkey"
+      columns: ["equipment_id"]
+isOneToOne: false
+      referencedRelation: "equipment"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "equipment_materials_material_id_fkey"
+      columns: ["material_id"]
+isOneToOne: false
+      referencedRelation: "materials"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"equipment_types": {
+                  Row: {
+                    "created_at": string,"id": string,"is_active": boolean,"name": string,"updated_at": string,"uses_material": boolean
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"id"?: string,"is_active"?: boolean,"name": string,"updated_at"?: string,"uses_material"?: boolean
+                  }
+                  Update: {
+                    "created_at"?: string,"id"?: string,"is_active"?: boolean,"name"?: string,"updated_at"?: string,"uses_material"?: boolean
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"funding_agencies": {
                   Row: {
                     "acronym": string,"created_at": string,"id": string,"is_active": boolean,"name": string | null,"updated_at": string
@@ -143,14 +259,14 @@ isOneToOne: false
                   ]
                 },"maintenance_blocks": {
                   Row: {
-                    "created_at": string,"created_by": string,"ends_at": string,"id": string,"notes": string | null,"printer_id": string,"reason": string,"starts_at": string,"updated_at": string
+                    "created_at": string,"created_by": string,"ends_at": string,"equipment_id": string,"id": string,"notes": string | null,"reason": string,"starts_at": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"created_by": string,"ends_at": string,"id"?: string,"notes"?: string | null,"printer_id": string,"reason": string,"starts_at": string,"updated_at"?: string
+                    "created_at"?: string,"created_by": string,"ends_at": string,"equipment_id": string,"id"?: string,"notes"?: string | null,"reason": string,"starts_at": string,"updated_at"?: string
                   }
                   Update: {
-                    "created_at"?: string,"created_by"?: string,"ends_at"?: string,"id"?: string,"notes"?: string | null,"printer_id"?: string,"reason"?: string,"starts_at"?: string,"updated_at"?: string
+                    "created_at"?: string,"created_by"?: string,"ends_at"?: string,"equipment_id"?: string,"id"?: string,"notes"?: string | null,"reason"?: string,"starts_at"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -160,10 +276,10 @@ isOneToOne: false
       referencedRelation: "profiles"
       referencedColumns: ["id"]
     },{
-      foreignKeyName: "maintenance_blocks_printer_id_fkey"
-      columns: ["printer_id"]
+      foreignKeyName: "maintenance_blocks_equipment_id_fkey"
+      columns: ["equipment_id"]
 isOneToOne: false
-      referencedRelation: "printers"
+      referencedRelation: "equipment"
       referencedColumns: ["id"]
     }
                   ]
@@ -177,102 +293,6 @@ isOneToOne: false
                   }
                   Update: {
                     "created_at"?: string,"description"?: string | null,"id"?: string,"is_active"?: boolean,"name"?: string,"updated_at"?: string
-                  }
-                  Relationships: [
-                    
-                  ]
-                },"printer_bookings": {
-                  Row: {
-                    "approved_at": string | null,"approved_by": string | null,"cancelled_at": string | null,"cancelled_by": string | null,"created_at": string,"ends_at": string,"estimated_duration_minutes": number,"id": string,"material_id": string,"notes": string | null,"printer_id": string,"profile_id": string,"project_id": string | null,"project_name": string,"rejected_at": string | null,"rejected_by": string | null,"rejected_reason": string | null,"starts_at": string,"status": Database["public"]['Enums']["booking_status"],"updated_at": string
-                  }
-                  ComputedFields: never
-                  Insert: {
-                    "approved_at"?: string | null,"approved_by"?: string | null,"cancelled_at"?: string | null,"cancelled_by"?: string | null,"created_at"?: string,"ends_at": string,"estimated_duration_minutes": number,"id"?: string,"material_id": string,"notes"?: string | null,"printer_id": string,"profile_id": string,"project_id"?: string | null,"project_name": string,"rejected_at"?: string | null,"rejected_by"?: string | null,"rejected_reason"?: string | null,"starts_at": string,"status"?: Database["public"]['Enums']["booking_status"],"updated_at"?: string
-                  }
-                  Update: {
-                    "approved_at"?: string | null,"approved_by"?: string | null,"cancelled_at"?: string | null,"cancelled_by"?: string | null,"created_at"?: string,"ends_at"?: string,"estimated_duration_minutes"?: number,"id"?: string,"material_id"?: string,"notes"?: string | null,"printer_id"?: string,"profile_id"?: string,"project_id"?: string | null,"project_name"?: string,"rejected_at"?: string | null,"rejected_by"?: string | null,"rejected_reason"?: string | null,"starts_at"?: string,"status"?: Database["public"]['Enums']["booking_status"],"updated_at"?: string
-                  }
-                  Relationships: [
-                    {
-      foreignKeyName: "printer_bookings_approved_by_fkey"
-      columns: ["approved_by"]
-isOneToOne: false
-      referencedRelation: "profiles"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "printer_bookings_cancelled_by_fkey"
-      columns: ["cancelled_by"]
-isOneToOne: false
-      referencedRelation: "profiles"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "printer_bookings_material_id_fkey"
-      columns: ["material_id"]
-isOneToOne: false
-      referencedRelation: "materials"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "printer_bookings_printer_id_fkey"
-      columns: ["printer_id"]
-isOneToOne: false
-      referencedRelation: "printers"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "printer_bookings_profile_id_fkey"
-      columns: ["profile_id"]
-isOneToOne: false
-      referencedRelation: "profiles"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "printer_bookings_project_id_fkey"
-      columns: ["project_id"]
-isOneToOne: false
-      referencedRelation: "projects"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "printer_bookings_rejected_by_fkey"
-      columns: ["rejected_by"]
-isOneToOne: false
-      referencedRelation: "profiles"
-      referencedColumns: ["id"]
-    }
-                  ]
-                },"printer_materials": {
-                  Row: {
-                    "created_at": string,"material_id": string,"printer_id": string
-                  }
-                  ComputedFields: never
-                  Insert: {
-                    "created_at"?: string,"material_id": string,"printer_id": string
-                  }
-                  Update: {
-                    "created_at"?: string,"material_id"?: string,"printer_id"?: string
-                  }
-                  Relationships: [
-                    {
-      foreignKeyName: "printer_materials_material_id_fkey"
-      columns: ["material_id"]
-isOneToOne: false
-      referencedRelation: "materials"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "printer_materials_printer_id_fkey"
-      columns: ["printer_id"]
-isOneToOne: false
-      referencedRelation: "printers"
-      referencedColumns: ["id"]
-    }
-                  ]
-                },"printers": {
-                  Row: {
-                    "created_at": string,"id": string,"location": string | null,"model": string | null,"name": string,"notes": string | null,"status": Database["public"]['Enums']["printer_status"],"updated_at": string
-                  }
-                  ComputedFields: never
-                  Insert: {
-                    "created_at"?: string,"id"?: string,"location"?: string | null,"model"?: string | null,"name": string,"notes"?: string | null,"status"?: Database["public"]['Enums']["printer_status"],"updated_at"?: string
-                  }
-                  Update: {
-                    "created_at"?: string,"id"?: string,"location"?: string | null,"model"?: string | null,"name"?: string,"notes"?: string | null,"status"?: Database["public"]['Enums']["printer_status"],"updated_at"?: string
                   }
                   Relationships: [
                     
@@ -533,7 +553,7 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "cancel_printer_booking":
+            "cancel_booking":
 { Args: { "p_booking_id": string }; Returns: {
               "approved_at": string | null,
 "approved_by": string | null,
@@ -541,11 +561,11 @@ isOneToOne: false
 "cancelled_by": string | null,
 "created_at": string,
 "ends_at": string,
+"equipment_id": string,
 "estimated_duration_minutes": number,
 "id": string,
-"material_id": string,
+"material_id": string | null,
 "notes": string | null,
-"printer_id": string,
 "profile_id": string,
 "project_id": string | null,
 "project_name": string,
@@ -558,7 +578,7 @@ isOneToOne: false
             }
                           SetofOptions: {
         from: "*"
-        to: "printer_bookings"
+        to: "equipment_bookings"
         isOneToOne: true
         isSetofReturn: false
       } },
@@ -590,37 +610,19 @@ isOneToOne: false
 "configure_invitation_cleanup":
 { Args: { "p_function_url": string,"p_secret": string }; Returns: undefined
                            },
-"create_maintenance_block":
-{ Args: { "p_ends_at": string,"p_notes"?: string,"p_printer_id": string,"p_reason": string,"p_starts_at": string }; Returns: {
-              "created_at": string,
-"created_by": string,
-"ends_at": string,
-"id": string,
-"notes": string | null,
-"printer_id": string,
-"reason": string,
-"starts_at": string,
-"updated_at": string
-            }
-                          SetofOptions: {
-        from: "*"
-        to: "maintenance_blocks"
-        isOneToOne: true
-        isSetofReturn: false
-      } },
-"create_printer_booking":
-{ Args: { "p_estimated_duration_minutes": number,"p_material_id": string,"p_notes"?: string,"p_printer_id": string,"p_project_id": string,"p_starts_at": string }; Returns: {
+"create_booking":
+{ Args: { "p_equipment_id": string,"p_estimated_duration_minutes": number,"p_material_id"?: string,"p_notes"?: string,"p_project_id": string,"p_starts_at": string }; Returns: {
               "approved_at": string | null,
 "approved_by": string | null,
 "cancelled_at": string | null,
 "cancelled_by": string | null,
 "created_at": string,
 "ends_at": string,
+"equipment_id": string,
 "estimated_duration_minutes": number,
 "id": string,
-"material_id": string,
+"material_id": string | null,
 "notes": string | null,
-"printer_id": string,
 "profile_id": string,
 "project_id": string | null,
 "project_name": string,
@@ -633,7 +635,25 @@ isOneToOne: false
             }
                           SetofOptions: {
         from: "*"
-        to: "printer_bookings"
+        to: "equipment_bookings"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
+"create_maintenance_block":
+{ Args: { "p_ends_at": string,"p_equipment_id": string,"p_notes"?: string,"p_reason": string,"p_starts_at": string }; Returns: {
+              "created_at": string,
+"created_by": string,
+"ends_at": string,
+"equipment_id": string,
+"id": string,
+"notes": string | null,
+"reason": string,
+"starts_at": string,
+"updated_at": string
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "maintenance_blocks"
         isOneToOne: true
         isSetofReturn: false
       } },
@@ -672,7 +692,7 @@ isOneToOne: false
 "record_invitation_opened":
 { Args: Record<PropertyKey, never>; Returns: undefined
                            },
-"reject_printer_booking":
+"reject_booking":
 { Args: { "p_booking_id": string,"p_reason"?: string }; Returns: {
               "approved_at": string | null,
 "approved_by": string | null,
@@ -680,11 +700,11 @@ isOneToOne: false
 "cancelled_by": string | null,
 "created_at": string,
 "ends_at": string,
+"equipment_id": string,
 "estimated_duration_minutes": number,
 "id": string,
-"material_id": string,
+"material_id": string | null,
 "notes": string | null,
-"printer_id": string,
 "profile_id": string,
 "project_id": string | null,
 "project_name": string,
@@ -697,19 +717,19 @@ isOneToOne: false
             }
                           SetofOptions: {
         from: "*"
-        to: "printer_bookings"
+        to: "equipment_bookings"
         isOneToOne: true
         isSetofReturn: false
       } },
-"replace_printer_materials":
-{ Args: { "p_material_ids": (string)[],"p_printer_id": string }; Returns: {
+"replace_equipment_materials":
+{ Args: { "p_equipment_id": string,"p_material_ids": (string)[] }; Returns: {
               "created_at": string,
-"material_id": string,
-"printer_id": string
+"equipment_id": string,
+"material_id": string
             }[]
                           SetofOptions: {
         from: "*"
-        to: "printer_materials"
+        to: "equipment_materials"
         isOneToOne: false
         isSetofReturn: true
       } },
@@ -772,6 +792,35 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"set_booking_status":
+{ Args: { "p_booking_id": string,"p_status": Database["public"]['Enums']["booking_status"] }; Returns: {
+              "approved_at": string | null,
+"approved_by": string | null,
+"cancelled_at": string | null,
+"cancelled_by": string | null,
+"created_at": string,
+"ends_at": string,
+"equipment_id": string,
+"estimated_duration_minutes": number,
+"id": string,
+"material_id": string | null,
+"notes": string | null,
+"profile_id": string,
+"project_id": string | null,
+"project_name": string,
+"rejected_at": string | null,
+"rejected_by": string | null,
+"rejected_reason": string | null,
+"starts_at": string,
+"status": Database["public"]['Enums']["booking_status"],
+"updated_at": string
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "equipment_bookings"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
 "set_my_avatar_url":
 { Args: { "p_avatar_url": string }; Returns: {
               "academic_affiliation": Database["public"]['Enums']["academic_affiliation"] | null,
@@ -796,19 +845,22 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
-"set_printer_booking_status":
-{ Args: { "p_booking_id": string,"p_status": Database["public"]['Enums']["booking_status"] }; Returns: {
+"set_task_assignees":
+{ Args: { "p_profile_ids": (string)[],"p_task_id": string }; Returns: undefined
+                           },
+"update_booking":
+{ Args: { "p_booking_id": string,"p_equipment_id": string,"p_estimated_duration_minutes": number,"p_material_id"?: string,"p_notes"?: string,"p_project_id": string,"p_starts_at": string }; Returns: {
               "approved_at": string | null,
 "approved_by": string | null,
 "cancelled_at": string | null,
 "cancelled_by": string | null,
 "created_at": string,
 "ends_at": string,
+"equipment_id": string,
 "estimated_duration_minutes": number,
 "id": string,
-"material_id": string,
+"material_id": string | null,
 "notes": string | null,
-"printer_id": string,
 "profile_id": string,
 "project_id": string | null,
 "project_name": string,
@@ -821,13 +873,10 @@ isOneToOne: false
             }
                           SetofOptions: {
         from: "*"
-        to: "printer_bookings"
+        to: "equipment_bookings"
         isOneToOne: true
         isSetofReturn: false
       } },
-"set_task_assignees":
-{ Args: { "p_profile_ids": (string)[],"p_task_id": string }; Returns: undefined
-                           },
 "update_lab_breaks":
 { Args: { "p_dinner_ends_at": string,"p_dinner_starts_at": string,"p_lunch_ends_at": string,"p_lunch_starts_at": string }; Returns: {
               "acronym": string | null,
@@ -926,39 +975,10 @@ isOneToOne: false
         to: "profiles"
         isOneToOne: true
         isSetofReturn: false
-      } },
-"update_printer_booking":
-{ Args: { "p_booking_id": string,"p_estimated_duration_minutes": number,"p_material_id": string,"p_notes"?: string,"p_printer_id": string,"p_project_id": string,"p_starts_at": string }; Returns: {
-              "approved_at": string | null,
-"approved_by": string | null,
-"cancelled_at": string | null,
-"cancelled_by": string | null,
-"created_at": string,
-"ends_at": string,
-"estimated_duration_minutes": number,
-"id": string,
-"material_id": string,
-"notes": string | null,
-"printer_id": string,
-"profile_id": string,
-"project_id": string | null,
-"project_name": string,
-"rejected_at": string | null,
-"rejected_by": string | null,
-"rejected_reason": string | null,
-"starts_at": string,
-"status": Database["public"]['Enums']["booking_status"],
-"updated_at": string
-            }
-                          SetofOptions: {
-        from: "*"
-        to: "printer_bookings"
-        isOneToOne: true
-        isSetofReturn: false
       } }
           }
           Enums: {
-            "academic_affiliation": "ic"|"extension"|"intern"|"tcc"|"masters"|"phd"|"postdoc"|"visitor"|"technician"|"faculty"|"other","booking_status": "pending"|"approved"|"in_progress"|"completed"|"cancelled"|"failed"|"rejected","funding_agency": "cnpq"|"fapesp"|"capes"|"sus"|"fap"|"other","invitation_status": "pending"|"accepted"|"expired"|"revoked","printer_status": "active"|"maintenance"|"unavailable"|"disabled","project_funding_category": "capital"|"custeio"|"bolsas"|"reserva_tecnica"|"outros","project_status": "planning"|"active"|"paused"|"completed"|"archived","task_status": "todo"|"in_progress"|"review"|"done","user_role": "coordinator"|"researcher"
+            "academic_affiliation": "ic"|"extension"|"intern"|"tcc"|"masters"|"phd"|"postdoc"|"visitor"|"technician"|"faculty"|"other","booking_status": "pending"|"approved"|"in_progress"|"completed"|"cancelled"|"failed"|"rejected","equipment_status": "active"|"maintenance"|"unavailable"|"disabled","funding_agency": "cnpq"|"fapesp"|"capes"|"sus"|"fap"|"other","invitation_status": "pending"|"accepted"|"expired"|"revoked","project_funding_category": "capital"|"custeio"|"bolsas"|"reserva_tecnica"|"outros","project_status": "planning"|"active"|"paused"|"completed"|"archived","task_status": "todo"|"in_progress"|"review"|"done","user_role": "coordinator"|"researcher"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -1078,7 +1098,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "academic_affiliation": ["ic", "extension", "intern", "tcc", "masters", "phd", "postdoc", "visitor", "technician", "faculty", "other"],"booking_status": ["pending", "approved", "in_progress", "completed", "cancelled", "failed", "rejected"],"funding_agency": ["cnpq", "fapesp", "capes", "sus", "fap", "other"],"invitation_status": ["pending", "accepted", "expired", "revoked"],"printer_status": ["active", "maintenance", "unavailable", "disabled"],"project_funding_category": ["capital", "custeio", "bolsas", "reserva_tecnica", "outros"],"project_status": ["planning", "active", "paused", "completed", "archived"],"task_status": ["todo", "in_progress", "review", "done"],"user_role": ["coordinator", "researcher"]
+            "academic_affiliation": ["ic", "extension", "intern", "tcc", "masters", "phd", "postdoc", "visitor", "technician", "faculty", "other"],"booking_status": ["pending", "approved", "in_progress", "completed", "cancelled", "failed", "rejected"],"equipment_status": ["active", "maintenance", "unavailable", "disabled"],"funding_agency": ["cnpq", "fapesp", "capes", "sus", "fap", "other"],"invitation_status": ["pending", "accepted", "expired", "revoked"],"project_funding_category": ["capital", "custeio", "bolsas", "reserva_tecnica", "outros"],"project_status": ["planning", "active", "paused", "completed", "archived"],"task_status": ["todo", "in_progress", "review", "done"],"user_role": ["coordinator", "researcher"]
           }
         }
 } as const

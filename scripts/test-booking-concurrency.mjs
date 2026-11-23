@@ -37,7 +37,7 @@ const suffix = crypto.randomUUID().slice(0, 8);
 const password = "Concurrency123!";
 const emails = [`concurrent-a-${suffix}@lab.local`, `concurrent-b-${suffix}@lab.local`];
 const userIds = [];
-let printerId;
+let equipmentId;
 let materialId;
 let projectId;
 let originalCapacity;
@@ -67,17 +67,20 @@ try {
   if (materialError) throw materialError;
   materialId = material.id;
 
-  const { data: printer, error: printerError } = await service
-    .from("printers")
-    .insert({ name: `Concurrency Printer ${suffix}`, status: "active" })
+  const { data: printerType, error: typeError } = await service
+    .from("equipment_types").select("id").eq("name", "Impressora 3D").single();
+  if (typeError) throw typeError;
+  const { data: equipment, error: equipmentError } = await service
+    .from("equipment")
+    .insert({ name: `Concurrency Equipment ${suffix}`, status: "active", type_id: printerType.id })
     .select("id")
     .single();
-  if (printerError) throw printerError;
-  printerId = printer.id;
+  if (equipmentError) throw equipmentError;
+  equipmentId = equipment.id;
 
   const { error: compatibilityError } = await service
-    .from("printer_materials")
-    .insert({ printer_id: printerId, material_id: materialId });
+    .from("equipment_materials")
+    .insert({ equipment_id: equipmentId, material_id: materialId });
   if (compatibilityError) throw compatibilityError;
 
   // Toda reserva pertence a um projeto de que a pessoa é membro.
@@ -128,8 +131,8 @@ try {
 
   const startsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
   const results = await Promise.all(
-    clients.map((client) => client.rpc("create_printer_booking", {
-      p_printer_id: printerId,
+    clients.map((client) => client.rpc("create_booking", {
+      p_equipment_id: equipmentId,
       p_material_id: materialId,
       p_project_id: projectId,
       p_starts_at: startsAt,
@@ -144,10 +147,10 @@ try {
   console.log("Concorrência validada: capacidade e reserva aceitaram exatamente uma operação.");
 } finally {
   if (originalCapacity) await service.from("lab_settings").update({ workspace_capacity: originalCapacity }).eq("id", true);
-  if (printerId) await service.from("printer_bookings").delete().eq("printer_id", printerId);
+  if (equipmentId) await service.from("equipment_bookings").delete().eq("equipment_id", equipmentId);
   if (projectId) await service.from("projects").delete().eq("id", projectId);
-  if (printerId) await service.from("printer_materials").delete().eq("printer_id", printerId);
-  if (printerId) await service.from("printers").delete().eq("id", printerId);
+  if (equipmentId) await service.from("equipment_materials").delete().eq("equipment_id", equipmentId);
+  if (equipmentId) await service.from("equipment").delete().eq("id", equipmentId);
   if (materialId) await service.from("materials").delete().eq("id", materialId);
   for (const userId of userIds) await service.auth.admin.deleteUser(userId);
 }
