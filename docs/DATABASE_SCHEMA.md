@@ -19,8 +19,8 @@ O schema cobre:
 
 O Supabase Auth sera a fonte de autenticacao. O PostgreSQL sera a fonte dos dados de dominio da aplicacao.
 
-> **Fonte da verdade:** as migrations em `supabase/migrations/` (29 arquivos, de `20260818` a
-> `20260915`). Este documento descreve o resultado delas. A secao 1.1 resume o que mudou depois da
+> **Fonte da verdade:** as migrations em `supabase/migrations/` (31 arquivos, de `20260818` a
+> `20260917`). Este documento descreve o resultado delas. A secao 1.1 resume o que mudou depois da
 > baseline; onde houver divergencia, vale a migration.
 
 Status do MVP implementado:
@@ -67,6 +67,8 @@ Status do MVP implementado:
 | `20260913_funding_categories_travel` | Rubricas `passagens` e `diarias` em `project_funding_category` (fomentos dos projetos e pedidos de compra). |
 | `20260914_purchase_undo` | `set_purchase_status` passa a aceitar as transicoes de volta do coordenador (secao 3.19). |
 | `20260915_purchase_urgency` | Urgencia do pedido de compra (`purchase_urgency`, `purchase_requests.urgency`) e `update_purchase_request` com o argumento opcional `p_urgency` (secao 3.19). |
+| `20260916_purchase_general_stock` | `purchase_requests.project_id` pode ser nulo: pedido para o estoque geral do laboratorio (secao 3.19). |
+| `20260917_purchase_change_project` | `update_purchase_request` passa a poder mover o pedido para outro projeto ou para o estoque geral (argumentos `p_set_project` e `p_project_id`; secao 3.19). |
 
 Resumo dos objetos que mais mudam o entendimento do schema:
 
@@ -1101,7 +1103,7 @@ iniciam a manutencao e resolvem.
 Finalidade: um membro de projeto pede uma compra (item, link, valor estimado) e a coordenacao aprova,
 compra e confirma a entrega.
 
-- `purchase_requests`: `project_id` (`ON DELETE RESTRICT`), `requested_by` (`ON DELETE SET NULL`), `item`
+- `purchase_requests`: `project_id` (`ON DELETE RESTRICT`; nulo = pedido para o **estoque geral** do laboratorio, como os itens do inventario), `requested_by` (`ON DELETE SET NULL`), `item`
   (2 a 200 caracteres), `url` (opcional, so `http`/`https`, ate 2000), `quantity` (1 a 100000),
   `estimated_amount` (total estimado em reais), `funding_category` (rubrica: `capital`, `custeio`,
   `passagens`, `diarias`, `reserva_tecnica` ou `outros`, nunca `bolsas`; obrigatoria em pedido novo, vazia nos anteriores a
@@ -1113,11 +1115,14 @@ compra e confirma a entrega.
   `delivered -> purchased -> approved -> requested`, `rejected -> requested` e `cancelled -> requested`; voltar
   apaga o que a etapa gravou (data de entrega; valor pago e data da compra; decisao e motivo da recusa).
 - Acesso (RLS): le quem pediu, os membros do projeto e o coordenador. Insere quem for membro de um projeto
-  em aberto (`planning`, `active` ou `paused`) ou o coordenador (`private.can_request_purchase`), sempre em
+  em aberto (`planning`, `active` ou `paused`) ou o coordenador; para o estoque geral (sem projeto), qualquer
+  usuario ativo, e so o autor e o coordenador enxergam o pedido (`private.can_request_purchase`), sempre em
   nome proprio, como `requested` e sem campos de decisao. Nao ha `update` nem `delete` diretos.
 - `update_purchase_request(p_request_id, p_item, p_url, p_quantity, p_estimated_amount, p_notes)`: quem
   pediu (ou o coordenador) edita enquanto o pedido esta `requested`. Erros: `purchase_not_found`,
-  `purchase_forbidden`, `purchase_not_editable`.
+  `purchase_forbidden`, `purchase_not_editable`, `project_not_available`. Tambem move o pedido para outro projeto
+  ou para o estoque geral (`p_set_project` + `p_project_id`, nulo = estoque geral), desde que o autor possa
+  pedir para o destino (`private.can_request_purchase`).
 - `set_purchase_status(p_request_id, p_status, p_reason, p_actual_amount)`: o coordenador aprova, recusa (com
   motivo opcional), marca como comprado (`actual_amount`, padrao o valor estimado) e entregue; quem pediu so
   cancela enquanto `requested`. Erros: `coordinator_required`, `invalid_purchase_transition`,
@@ -1275,7 +1280,7 @@ Validacoes cobertas pelos testes de banco do MVP:
 - Idiomas nao sao habilidades tecnicas e nao entram em `skills`.
 - Nao havera upload `.gcode` ou `.3mf` no schema do MVP.
 - Nao havera historico detalhado de manutencao alem dos bloqueios.
-- A baseline inicial (`20260818`) e imutavel; mudancas de schema entram em migrations incrementais (hoje ate `20260915`).
+- A baseline inicial (`20260818`) e imutavel; mudancas de schema entram em migrations incrementais (hoje ate `20260917`).
 
 ## 10. Inventario de insumos
 

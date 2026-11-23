@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(303);
+select plan(313);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -1698,6 +1698,43 @@ select lives_ok(
   'the urgency can be changed while the request is waiting'
 );
 select is((select urgency::text from public.purchase_requests where item = 'pgtap bico'), 'low', 'the new urgency is kept');
+
+-- Purchase requests for the lab general stock (no project).
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000103","email":"other@example.com","role":"authenticated"}', true);
+select lives_ok(
+  $$ insert into public.purchase_requests (funding_category, project_id, item, estimated_amount) values ('custeio', null, 'pgtap estoque geral', 40) $$,
+  'someone outside any project requests a purchase for the general stock'
+);
+select is((select count(*) from public.purchase_requests where item = 'pgtap estoque geral'), 1::bigint, 'the author sees the general stock request');
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
+select is((select count(*) from public.purchase_requests where item = 'pgtap estoque geral'), 0::bigint, 'a project member does not see someone else general stock request');
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000104","email":"inactive@example.com","role":"authenticated"}', true);
+select throws_ok(
+  $$ insert into public.purchase_requests (funding_category, project_id, item, estimated_amount) values ('custeio', null, 'pgtap inativo', 40) $$,
+  '42501', null,
+  'an inactive user cannot request for the general stock'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
+select is((select count(*) from public.purchase_requests where item = 'pgtap estoque geral'), 1::bigint, 'the coordinator sees the general stock request');
+
+-- A request waiting for a decision can be moved to another project or to the general stock.
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
+select lives_ok($$ select public.update_purchase_request(p_request_id := (select id from public.purchase_requests where item = 'pgtap bico'), p_item := 'pgtap bico', p_url := null, p_quantity := 1, p_estimated_amount := 1, p_set_project := true, p_project_id := null) $$, 'the author moves the request to the general stock');
+select is((select project_id is null from public.purchase_requests where item = 'pgtap bico'), true, 'the request is now for the general stock');
+select lives_ok($$ select public.update_purchase_request(p_request_id := (select id from public.purchase_requests where item = 'pgtap bico'), p_item := 'pgtap bico', p_url := null, p_quantity := 1, p_estimated_amount := 1, p_set_project := true, p_project_id := '00000000-0000-0000-0000-0000000000c2') $$, 'the author moves it back to a project they belong to');
+select is((select project_id from public.purchase_requests where item = 'pgtap bico'), '00000000-0000-0000-0000-0000000000c2'::uuid, 'the request is back in the project');
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000103","email":"other@example.com","role":"authenticated"}', true);
+select throws_ok(
+  $$ select public.update_purchase_request(p_request_id := (select id from public.purchase_requests where item = 'pgtap estoque geral'), p_item := 'pgtap estoque geral', p_url := null, p_quantity := 1, p_estimated_amount := 1, p_set_project := true, p_project_id := '00000000-0000-0000-0000-0000000000c2') $$,
+  'P0001', 'project_not_available',
+  'a request cannot be moved to a project the author does not belong to'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
 
 select * from finish();
 rollback;

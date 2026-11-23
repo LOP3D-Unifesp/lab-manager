@@ -4,6 +4,7 @@ import {
   countUnseenPurchaseUpdates,
   describePurchaseUpdate,
   filterPurchases,
+  GENERAL_STOCK_LABEL,
   getPurchaseActions,
   getPurchaseUndo,
   isNotifiablePurchaseStatus,
@@ -55,6 +56,17 @@ describe("lista de pedidos", () => {
 
   it("ordena quem espera decisão primeiro (mais antigo antes) e os encerrados por último", () => {
     expect(ids(sortPurchases(list))).toEqual(["c", "b", "d", "a", "e", "f"]);
+  });
+
+  it("separa os pedidos do estoque geral dos de projeto", () => {
+    const mixed = [
+      purchase({ id: "g1", project_id: null, project_name: GENERAL_STOCK_LABEL }),
+      purchase({ id: "p1", project_id: "alfa" }),
+    ];
+    const none = { status: "all" as const, projectId: "all", category: "all" as const, mine: false };
+    expect(filterPurchases(mixed, { ...none, projectId: "general" }, "ana").map((item) => item.id)).toEqual(["g1"]);
+    expect(filterPurchases(mixed, { ...none, projectId: "alfa" }, "ana").map((item) => item.id)).toEqual(["p1"]);
+    expect(filterPurchases(mixed, none, "ana")).toHaveLength(2);
   });
 
   it("dentro da mesma etapa, os urgentes vêm antes e os de baixa urgência por último", () => {
@@ -136,6 +148,14 @@ describe("avisos para quem pediu", () => {
 });
 
 describe("totais por projeto", () => {
+  it("agrupa o estoque geral como um item à parte do resumo", () => {
+    const totals = summarizeByProject([
+      purchase({ id: "a", status: "requested", estimated_amount: 100 }),
+      purchase({ id: "b", status: "requested", estimated_amount: 30, project_id: null, project_name: GENERAL_STOCK_LABEL }),
+    ]);
+    expect(totals.map((total) => [total.projectId, total.estimated])).toEqual([["alfa", 100], ["general", 30]]);
+  });
+
   it("separa o previsto do já pago e ignora recusados e cancelados", () => {
     const totals = summarizeByProject([
       purchase({ id: "a", status: "requested", estimated_amount: 100 }),

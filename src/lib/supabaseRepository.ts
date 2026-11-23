@@ -1463,7 +1463,7 @@ export async function listPurchaseRequests() {
     ...row,
     estimated_amount: Number(row.estimated_amount),
     actual_amount: row.actual_amount === null ? null : Number(row.actual_amount),
-    project_name: project?.name ?? "Projeto removido",
+    project_name: project?.name ?? (row.project_id ? "Projeto removido" : "Estoque geral do laboratório"),
     requested_by_name: requester?.full_name ?? null,
     decided_by_name: decider?.full_name ?? null,
   })) as PurchaseRequest[];
@@ -1477,9 +1477,11 @@ export type PurchaseInput = {
   notes: string | null;
   fundingCategory: FundingCategory;
   urgency: PurchaseUrgency;
+  /** Só na edição: novo destino do pedido (projeto, ou nulo para o estoque geral); indefinido mantém o atual. */
+  projectId?: string | null;
 };
 
-export async function createPurchaseRequest(input: PurchaseInput & { projectId: string }) {
+export async function createPurchaseRequest(input: PurchaseInput & { projectId: string | null }) {
   const { error } = await client().from("purchase_requests").insert({
     project_id: input.projectId,
     item: input.item.trim(),
@@ -1503,6 +1505,8 @@ export async function updatePurchaseRequest(requestId: string, input: PurchaseIn
     p_notes: input.notes ?? undefined,
     p_funding_category: input.fundingCategory,
     p_urgency: input.urgency,
+    p_set_project: input.projectId !== undefined,
+    p_project_id: input.projectId ?? undefined,
   });
   throwIfError(error);
 }

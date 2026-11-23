@@ -14,6 +14,7 @@ import { formatMaintenanceDateTime } from "../lib/maintenance";
 import { formatCurrencyBRL, isProjectOpen, type Project } from "../lib/projects";
 import {
   filterPurchases,
+  GENERAL_STOCK_VALUE,
   getPurchaseActions,
   getPurchaseCategoryLabel,
   getPurchaseErrorMessage,
@@ -148,6 +149,7 @@ export function Compras() {
           onChange={(event) => setFilters({ ...filters, projectId: event.target.value })}
         >
           <option value="all">Todos os projetos</option>
+          <option value={GENERAL_STOCK_VALUE}>Estoque geral</option>
           {projetosComPedido.map((project) => (
             <option key={project.id} value={project.id}>
               {project.name}
@@ -309,7 +311,7 @@ export function Compras() {
         <PurchaseFormModal
           projects={projetosAbertos}
           purchase={formulario.purchase}
-          defaultProjectId={filters.projectId !== "all" && projetosAbertos.some((project) => project.id === filters.projectId) ? filters.projectId : projetosAbertos.length === 1 ? projetosAbertos[0].id : ""}
+          defaultProjectId={filters.projectId === GENERAL_STOCK_VALUE || (filters.projectId !== "all" && projetosAbertos.some((project) => project.id === filters.projectId)) ? filters.projectId : projetosAbertos.length === 1 ? projetosAbertos[0].id : ""}
           onClose={() => setFormulario(null)}
           onDone={async () => {
             setFormulario(null);
