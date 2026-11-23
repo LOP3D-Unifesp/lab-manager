@@ -218,3 +218,46 @@ export function getTaskErrorMessage(error: unknown) {
   if (text.includes("row-level security")) return "Você não tem permissão para fazer essa alteração.";
   return getProjectErrorMessage(error);
 }
+
+// ---------------------------------------------------------------------------
+// Quadro geral de tarefas
+// ---------------------------------------------------------------------------
+
+// Cor estável por projeto (derivada do id) para o chip nos cards do quadro geral.
+export function getProjectColor(projectId: string) {
+  let hash = 0;
+  for (let i = 0; i < projectId.length; i += 1) hash = (hash * 31 + projectId.charCodeAt(i)) >>> 0;
+  const hue = hash % 360;
+  return {
+    background: `hsl(${hue} 70% 92%)`,
+    color: `hsl(${hue} 60% 24%)`,
+    border: `hsl(${hue} 50% 70%)`,
+  };
+}
+
+export type TaskFilters = {
+  projectId: string; // "all" ou id do projeto
+  assignee: string; // "all", "me" ou id da pessoa
+  overdueOnly: boolean;
+};
+
+// `today` no formato AAAA-MM-DD.
+export function filterTasks(tasks: ProjectTask[], filters: TaskFilters, meId: string | null, today: string) {
+  return tasks.filter((task) => {
+    if (filters.projectId !== "all" && task.project_id !== filters.projectId) return false;
+    if (filters.assignee !== "all") {
+      const wanted = filters.assignee === "me" ? meId : filters.assignee;
+      if (!wanted || !task.assignees.some((assignee) => assignee.profile_id === wanted)) return false;
+    }
+    return !filters.overdueOnly || isTaskOverdue(task, today);
+  });
+}
+
+// Pessoas que aparecem como responsáveis em alguma tarefa, para o filtro do quadro.
+export function getTaskAssigneeOptions(tasks: ProjectTask[]) {
+  const byId = new Map<string, string>();
+  for (const task of tasks) for (const assignee of task.assignees) byId.set(assignee.profile_id, assignee.full_name);
+  return [...byId.entries()]
+    .map(([profile_id, full_name]) => ({ profile_id, full_name }))
+    .sort((a, b) => a.full_name.localeCompare(b.full_name, "pt-BR"));
+}

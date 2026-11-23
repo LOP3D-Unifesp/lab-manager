@@ -2,6 +2,7 @@ import { useState } from "react";
 import { CalendarDays } from "lucide-react";
 
 import {
+  getProjectColor,
   getTaskStatusLabel,
   groupTasksByStatus,
   isTaskOverdue,
@@ -92,7 +93,12 @@ export function KanbanBoard({ onMove, onOpen, showProject = false, tasks }: Kanb
                   {task.title}
                 </button>
                 {showProject && task.project_name ? (
-                  <p className="text-sm font-semibold text-primary-dark">{task.project_name}</p>
+                  <span
+                    className="w-fit max-w-full truncate rounded-full border px-2 py-0.5 text-xs font-semibold"
+                    style={getProjectColor(task.project_id)}
+                  >
+                    {task.project_name}
+                  </span>
                 ) : null}
                 {task.due_on ? (
                   <p className={["flex items-center gap-1 text-sm", atrasada ? "font-semibold text-danger" : "text-muted"].join(" ")}>

@@ -104,7 +104,8 @@ Funcionalidades:
 - o pesquisador vê apenas os projetos de que participa;
 - kanban de tarefas em cada projeto (A fazer, Em andamento, Em revisão, Concluído), com prazo e um ou
   mais responsáveis, que precisam ser membros do projeto; membros criam e movem tarefas;
-- no Dashboard, "Minhas tarefas" mostra só as tarefas atribuídas à pessoa, de todos os projetos;
+- no Dashboard, "Minhas tarefas" mostra só as tarefas atribuídas à pessoa, de todos os projetos, e permite criar e editar tarefas sem sair da página (a tarefa nova já vem atribuída a quem criou);
+- em Projetos, a vista "Quadro de tarefas" reúne as tarefas de todos os projetos que a pessoa vê (coordenador: todos), com filtros por projeto, responsável e atrasadas;
 - toda nova impressão fica vinculada a um projeto; reservas anteriores mantêm o nome em texto livre.
 
 ## 6. Status de reserva

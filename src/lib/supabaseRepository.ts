@@ -1022,6 +1022,13 @@ export async function listProjectTasks(projectId: string) {
   return ((data ?? []) as unknown as TaskRow[]).map(mapTask);
 }
 
+// Todas as tarefas que a pessoa pode ver (coordenador: todas; pesquisador: as dos seus projetos).
+export async function listVisibleTasks() {
+  const { data, error } = await client().from("project_tasks").select(taskSelect);
+  throwIfError(error);
+  return ((data ?? []) as unknown as TaskRow[]).map(mapTask);
+}
+
 // Tarefas em que a pessoa é responsável, de todos os projetos.
 export async function listMyTasks(profileId: string) {
   const { data, error } = await client()

@@ -1,4 +1,5 @@
 import { FormEvent, useState } from "react";
+import { Link } from "react-router-dom";
 
 import {
   createProjectTask,
@@ -9,6 +10,7 @@ import {
 import {
   getTaskErrorMessage,
   taskStatusOptions,
+  type Project,
   type ProjectMember,
   type ProjectTask,
   type TaskStatus,
@@ -21,31 +23,56 @@ const inputClassName =
   "min-h-11 min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary";
 
 type TaskModalProps = {
-  projectId: string;
+  // Projeto fixo (aba Kanban do projeto): informe também `members`.
+  projectId?: string;
+  members?: ProjectMember[];
+  // Sem projeto fixo (quadro geral e Dashboard): a pessoa escolhe entre estes; ao editar, serve para achar os membros.
+  projects?: Project[];
   task: ProjectTask | null;
-  members: ProjectMember[];
   defaultStatus?: TaskStatus;
+  // Responsáveis sugeridos numa tarefa nova (mantém só quem é membro do projeto escolhido).
+  defaultAssigneeIds?: string[];
   canDelete: boolean;
+  showProjectLink?: boolean;
   onClose: () => void;
   onSaved: () => void;
 };
 
 export function TaskModal({
   canDelete,
+  defaultAssigneeIds = [],
   defaultStatus = "todo",
-  members,
+  members: fixedMembers,
   onClose,
   onSaved,
-  projectId,
+  projectId: fixedProjectId,
+  projects = [],
+  showProjectLink = false,
   task,
 }: TaskModalProps) {
+  const lockedProjectId = task?.project_id ?? fixedProjectId ?? null;
+  const [chosenProjectId, setChosenProjectId] = useState(lockedProjectId ?? (projects.length === 1 ? projects[0].id : ""));
+  const projectId = lockedProjectId ?? chosenProjectId;
+  const project = projects.find((item) => item.id === projectId);
+  const members = fixedMembers ?? project?.members ?? [];
+
   const [title, setTitle] = useState(task?.title ?? "");
   const [description, setDescription] = useState(task?.description ?? "");
   const [status, setStatus] = useState<TaskStatus>(task?.status ?? defaultStatus);
   const [dueOn, setDueOn] = useState(task?.due_on ?? "");
-  const [responsaveis, setResponsaveis] = useState<string[]>(task?.assignees.map((a) => a.profile_id) ?? []);
+  const [responsaveis, setResponsaveis] = useState<string[]>(() => {
+    if (task) return task.assignees.map((a) => a.profile_id);
+    const initialMembers = fixedMembers ?? (projects.length === 1 ? projects[0].members : []);
+    return defaultAssigneeIds.filter((id) => initialMembers.some((member) => member.profile_id === id));
+  });
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
+
+  function escolherProjeto(id: string) {
+    setChosenProjectId(id);
+    const novoMembros = projects.find((item) => item.id === id)?.members ?? [];
+    setResponsaveis(defaultAssigneeIds.filter((memberId) => novoMembros.some((member) => member.profile_id === memberId)));
+  }
 
   function alternar(profileId: string) {
     setResponsaveis((current) =>
@@ -56,6 +83,10 @@ export function TaskModal({
   async function salvar(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const trimmed = title.trim();
+    if (!projectId) {
+      setErro("Escolha o projeto da tarefa.");
+      return;
+    }
     if (!trimmed) {
       setErro("Informe o título da tarefa.");
       return;
@@ -94,9 +125,42 @@ export function TaskModal({
     }
   }
 
+  const semProjetos = !lockedProjectId && projects.length === 0;
+
   return (
     <Modal title={task ? "Editar tarefa" : "Nova tarefa"} onClose={onClose}>
       <form className="grid gap-4" onSubmit={salvar}>
+        {lockedProjectId ? (
+          showProjectLink && task ? (
+            <p className="text-base text-muted">
+              Projeto:{" "}
+              <Link className="font-semibold text-primary underline" to={`/projetos/${lockedProjectId}`} onClick={onClose}>
+                {task.project_name ?? project?.name ?? "Abrir projeto"}
+              </Link>
+            </p>
+          ) : null
+        ) : (
+          <label className="grid gap-2 text-base font-semibold text-text">
+            Projeto
+            <select
+              className={inputClassName}
+              required
+              disabled={semProjetos}
+              value={chosenProjectId}
+              onChange={(e) => escolherProjeto(e.target.value)}
+            >
+              <option value="" disabled>
+                {semProjetos ? "Você não participa de nenhum projeto em aberto" : "Selecione"}
+              </option>
+              {projects.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+
         <label className="grid gap-2 text-base font-semibold text-text">
           Título
           <input className={inputClassName} required value={title} onChange={(e) => setTitle(e.target.value)} />
@@ -128,7 +192,9 @@ export function TaskModal({
 
         <fieldset className="grid gap-2">
           <legend className="mb-1 text-base font-semibold text-text">Responsáveis</legend>
-          {members.length === 0 ? (
+          {!projectId ? (
+            <p className="text-base text-muted">Escolha o projeto para ver os membros.</p>
+          ) : members.length === 0 ? (
             <p className="text-base text-muted">Inclua membros no projeto para atribuir tarefas.</p>
           ) : (
             <div className="grid gap-2 sm:grid-cols-2">
@@ -175,7 +241,7 @@ export function TaskModal({
             <Button variant="secondary" onClick={onClose}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={salvando}>
+            <Button type="submit" disabled={salvando || semProjetos}>
               {salvando ? "Salvando..." : "Salvar tarefa"}
             </Button>
           </div>

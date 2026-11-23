@@ -201,7 +201,7 @@ export function Dashboard() {
         />
       </section>
 
-      {currentProfile ? <MyTasksBoard profileId={currentProfile.id} /> : null}
+      {currentProfile ? <MyTasksBoard isCoordinator={currentProfile.role === "coordinator"} profileId={currentProfile.id} /> : null}
 
       <section className="mt-6 grid gap-4 lg:grid-cols-[1.35fr_1fr]">
         <Card>
