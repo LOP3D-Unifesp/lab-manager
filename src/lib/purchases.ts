@@ -156,6 +156,38 @@ export function summarizeByProject(purchases: PurchaseRequest[]): ProjectPurchas
   return [...map.values()].sort((a, b) => a.projectName.localeCompare(b.projectName, "pt-BR"));
 }
 
+// Novidades de um pedido para quem o fez: só as etapas decididas pelo coordenador.
+export type PurchaseUpdate = {
+  id: string;
+  item: string;
+  status: PurchaseStatus;
+  rejected_reason: string | null;
+  updated_at: string;
+};
+
+export const NOTIFIABLE_PURCHASE_STATUSES: PurchaseStatus[] = ["approved", "rejected", "purchased", "delivered"];
+
+export function isNotifiablePurchaseStatus(status: string): status is PurchaseStatus {
+  return NOTIFIABLE_PURCHASE_STATUSES.includes(status as PurchaseStatus);
+}
+
+export function describePurchaseUpdate(update: Pick<PurchaseUpdate, "item" | "status" | "rejected_reason">) {
+  const item = `“${update.item}”`;
+  if (update.status === "approved") return { title: "Pedido aprovado", body: `${item} foi aprovado.` };
+  if (update.status === "rejected") {
+    return { title: "Pedido recusado", body: update.rejected_reason ? `${item} foi recusado: ${update.rejected_reason}` : `${item} foi recusado.` };
+  }
+  if (update.status === "purchased") return { title: "Pedido comprado", body: `${item} foi comprado.` };
+  return { title: "Pedido entregue", body: `${item} foi entregue.` };
+}
+
+// Quantas novidades chegaram depois da última vez que a pessoa olhou.
+export function countUnseenPurchaseUpdates(updates: PurchaseUpdate[], seenAt: string | null) {
+  if (!seenAt) return 0;
+  const seen = new Date(seenAt).getTime();
+  return updates.filter((update) => new Date(update.updated_at).getTime() > seen).length;
+}
+
 export function isValidPurchaseUrl(value: string) {
   try {
     const url = new URL(value.trim());

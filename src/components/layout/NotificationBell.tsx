@@ -16,6 +16,7 @@ import {
   type DesktopAlertState,
 } from "../../lib/desktopAlerts";
 import { useBookingsAlert } from "../../lib/pendingBookingsAlert";
+import { getPurchaseStatusLabel, getPurchaseStatusVariant } from "../../lib/purchases";
 import { StatusBadge, type StatusVariant } from "../ui/StatusBadge";
 import { useAttention } from "./AttentionProvider";
 
@@ -50,7 +51,7 @@ export function NotificationBell({ align = "right" }: NotificationBellProps) {
   const { notifications, count: bookingCount, error, markSeen } = useBookingsAlert();
   const attention = useAttention();
   const count = bookingCount + attention.total;
-  const receivesAttention = isCoordinator || Boolean(profile?.is_maintainer);
+  const [novos, setNovos] = useState<string[]>([]);
   const [desktopState, setDesktopState] = useState<DesktopAlertState>("unsupported");
 
   const pendencias = [
@@ -103,6 +104,9 @@ export function NotificationBell({ align = "right" }: NotificationBellProps) {
     // Opening the panel counts as reading the outcome notifications,
     // clearing the unseen part of the badge.
     markSeen();
+    // As novidades de compras já vistas somem do selo, mas continuam marcadas como novas enquanto o painel está aberto.
+    setNovos(attention.unseenPurchaseUpdateIds);
+    attention.markPurchaseUpdatesSeen();
     setDesktopState(getDesktopAlertState());
 
     function handlePointerDown(event: PointerEvent) {
@@ -151,7 +155,7 @@ export function NotificationBell({ align = "right" }: NotificationBellProps) {
     setDesktopState(getDesktopAlertState());
   }
 
-  const tudoEmDia = pendencias.length === 0 && notifications.length === 0;
+  const tudoEmDia = pendencias.length === 0 && notifications.length === 0 && attention.purchaseUpdates.length === 0;
 
   return (
     <div ref={containerRef} className="relative">
@@ -215,6 +219,34 @@ export function NotificationBell({ align = "right" }: NotificationBellProps) {
                       {item.detail ? (
                         <span className="shrink-0 rounded-full bg-danger-soft px-2 py-0.5 text-xs font-bold text-danger">{item.detail}</span>
                       ) : null}
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
+            {attention.purchaseUpdates.length > 0 ? (
+              <section>
+                <SectionTitle>Seus pedidos de compra</SectionTitle>
+                <div className="grid gap-1 px-1.5">
+                  {attention.purchaseUpdates.slice(0, 5).map((update) => (
+                    <Link
+                      key={update.id}
+                      to="/compras"
+                      onClick={() => setIsOpen(false)}
+                      className="rounded-md px-3 py-2 text-sm leading-tight transition hover:bg-primary-soft"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="min-w-0 break-words font-bold text-text">{update.item}</p>
+                        <StatusBadge label={getPurchaseStatusLabel(update.status)} variant={getPurchaseStatusVariant(update.status)} />
+                      </div>
+                      {update.status === "rejected" && update.rejected_reason ? (
+                        <p className="mt-0.5 truncate text-xs text-danger-dark">Motivo: {update.rejected_reason}</p>
+                      ) : null}
+                      <p className="mt-0.5 text-xs text-muted">
+                        {formatarDataHora(update.updated_at)}
+                        {novos.includes(update.id) ? " · novo" : ""}
+                      </p>
                     </Link>
                   ))}
                 </div>
@@ -286,7 +318,7 @@ export function NotificationBell({ align = "right" }: NotificationBellProps) {
               <CalendarCheck className="h-4 w-4" aria-hidden="true" />
               Ver todas as reservas
             </Link>
-            {receivesAttention && desktopState !== "unsupported" ? (
+            {desktopState !== "unsupported" ? (
               <div className="mt-1 border-t border-border px-3 py-2">
                 {desktopState === "on" ? (
                   <button
@@ -308,7 +340,7 @@ export function NotificationBell({ align = "right" }: NotificationBellProps) {
                     onClick={ativarAvisos}
                   >
                     <BellRing className="h-4 w-4 shrink-0" aria-hidden="true" />
-                    Receber avisos de chamados no computador
+                    Receber avisos no computador
                   </button>
                 )}
               </div>

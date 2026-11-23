@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  countUnseenPurchaseUpdates,
+  describePurchaseUpdate,
   filterPurchases,
   getPurchaseActions,
   getPurchaseUndo,
+  isNotifiablePurchaseStatus,
   isValidPurchaseUrl,
   parseMoney,
   sortPurchases,
@@ -92,6 +95,32 @@ describe("voltar uma etapa", () => {
   it("quem pediu não desfaz nada", () => {
     expect(getPurchaseActions(purchase({ status: "approved" }), "ana", false).undo).toBeNull();
     expect(getPurchaseActions(purchase({ status: "cancelled" }), "ana", false).undo).toBeNull();
+  });
+});
+
+describe("avisos para quem pediu", () => {
+  it("descreve cada etapa decidida pelo coordenador", () => {
+    expect(describePurchaseUpdate({ item: "Bico", status: "approved", rejected_reason: null })).toEqual({ title: "Pedido aprovado", body: "“Bico” foi aprovado." });
+    expect(describePurchaseUpdate({ item: "Bico", status: "rejected", rejected_reason: "sem verba" }).body).toBe("“Bico” foi recusado: sem verba");
+    expect(describePurchaseUpdate({ item: "Bico", status: "rejected", rejected_reason: null }).body).toBe("“Bico” foi recusado.");
+    expect(describePurchaseUpdate({ item: "Bico", status: "purchased", rejected_reason: null }).title).toBe("Pedido comprado");
+    expect(describePurchaseUpdate({ item: "Bico", status: "delivered", rejected_reason: null }).body).toBe("“Bico” foi entregue.");
+  });
+
+  it("só avisa as etapas decididas, não pedidos solicitados ou cancelados", () => {
+    expect(isNotifiablePurchaseStatus("approved")).toBe(true);
+    expect(isNotifiablePurchaseStatus("requested")).toBe(false);
+    expect(isNotifiablePurchaseStatus("cancelled")).toBe(false);
+  });
+
+  it("conta só as novidades depois da última visita", () => {
+    const updates = [
+      { id: "a", item: "A", status: "approved" as const, rejected_reason: null, updated_at: "2026-06-10T12:00:00Z" },
+      { id: "b", item: "B", status: "delivered" as const, rejected_reason: null, updated_at: "2026-06-10T09:00:00Z" },
+    ];
+    expect(countUnseenPurchaseUpdates(updates, "2026-06-10T10:00:00Z")).toBe(1);
+    expect(countUnseenPurchaseUpdates(updates, "2026-06-10T13:00:00Z")).toBe(0);
+    expect(countUnseenPurchaseUpdates(updates, null)).toBe(0);
   });
 });
 

@@ -154,7 +154,8 @@ Funcionalidades:
 - cada pedido é visível para quem pediu, para os membros do projeto e para o coordenador;
 - filtros por situação (padrão: em andamento), projeto, rubrica e "só os meus pedidos"; **Resumo por projeto** com o previsto (ainda não comprado) e o pago (comprado e entregue);
 - o link do item abre em outra aba, sem repassar a origem da página;
-- o coordenador vê o contador de pedidos aguardando aprovação no item Compras do menu e em **Pendências** na campainha, e recebe aviso no computador quando chega um pedido novo.
+- o coordenador vê o contador de pedidos aguardando aprovação no item Compras do menu e em **Pendências** na campainha, e recebe aviso no computador quando chega um pedido novo;
+- quem pediu é avisado das decisões sobre os próprios pedidos (aprovado, recusado com o motivo, comprado, entregue): selo no item Compras do menu, seção **Seus pedidos de compra** na campainha (a novidade fica marcada como "novo" enquanto o painel está aberto) e aviso no computador, em tempo real; o selo some ao abrir a campainha ou a página Compras.
 
 ## 6. Status de reserva
 
