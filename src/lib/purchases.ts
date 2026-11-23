@@ -8,6 +8,10 @@ export function getPurchaseCategoryLabel(category: FundingCategory | null) {
   return category ? (fundingCategoryOptions.find((option) => option.value === category)?.label ?? category) : "Sem rubrica";
 }
 
+// Pedido sem projeto: compra para o estoque geral do laboratório (a mesma ideia do Inventário).
+export const GENERAL_STOCK_VALUE = "general";
+export const GENERAL_STOCK_LABEL = "Estoque geral do laboratório";
+
 export type PurchaseUrgency = "low" | "normal" | "urgent";
 
 export const purchaseUrgencyOptions: Array<{ value: PurchaseUrgency; label: string; hint: string }> = [
@@ -51,7 +55,8 @@ export function getPurchaseStatusVariant(status: PurchaseStatus): StatusVariant 
 
 export type PurchaseRequest = {
   id: string;
-  project_id: string;
+  /** Nulo quando o pedido é para o estoque geral. */
+  project_id: string | null;
   project_name: string;
   requested_by: string | null;
   requested_by_name: string | null;
@@ -79,7 +84,7 @@ export function isPurchaseOpen(status: PurchaseStatus) {
 
 export type PurchaseFilters = {
   status: "open" | "all" | PurchaseStatus;
-  projectId: string; // "all" ou id
+  projectId: string; // "all", "general" (estoque geral) ou id do projeto
   category: "all" | FundingCategory;
   mine: boolean;
 };
@@ -88,7 +93,9 @@ export function filterPurchases(purchases: PurchaseRequest[], filters: PurchaseF
   return purchases.filter((purchase) => {
     if (filters.status === "open" && !isPurchaseOpen(purchase.status)) return false;
     if (filters.status !== "open" && filters.status !== "all" && purchase.status !== filters.status) return false;
-    if (filters.projectId !== "all" && purchase.project_id !== filters.projectId) return false;
+    if (filters.projectId === GENERAL_STOCK_VALUE) {
+      if (purchase.project_id !== null) return false;
+    } else if (filters.projectId !== "all" && purchase.project_id !== filters.projectId) return false;
     if (filters.category !== "all" && purchase.funding_category !== filters.category) return false;
     if (filters.mine && purchase.requested_by !== profileId) return false;
     return true;
@@ -161,8 +168,9 @@ export function summarizeByProject(purchases: PurchaseRequest[]): ProjectPurchas
   const map = new Map<string, ProjectPurchaseTotals>();
   for (const purchase of purchases) {
     if (purchase.status === "rejected" || purchase.status === "cancelled") continue;
-    const current = map.get(purchase.project_id) ?? {
-      projectId: purchase.project_id,
+    const key = purchase.project_id ?? GENERAL_STOCK_VALUE;
+    const current = map.get(key) ?? {
+      projectId: key,
       projectName: purchase.project_name,
       estimated: 0,
       paid: 0,
@@ -174,7 +182,7 @@ export function summarizeByProject(purchases: PurchaseRequest[]): ProjectPurchas
     } else {
       current.estimated += purchase.estimated_amount;
     }
-    map.set(purchase.project_id, current);
+    map.set(key, current);
   }
   return [...map.values()].sort((a, b) => a.projectName.localeCompare(b.projectName, "pt-BR"));
 }
@@ -232,7 +240,7 @@ export function parseMoney(text: string): number | null {
 export type PurchaseFormValues = { projectId: string; category: string; urgency: string; item: string; url: string; quantity: string; amount: string; notes: string };
 
 export function validatePurchaseForm(values: PurchaseFormValues) {
-  if (!values.projectId) return "Escolha o projeto.";
+  if (!values.projectId) return "Escolha o projeto ou o estoque geral.";
   if (!purchaseCategoryOptions.some((option) => option.value === values.category)) return "Escolha a rubrica do item.";
   if (!purchaseUrgencyOptions.some((option) => option.value === values.urgency)) return "Escolha a urgência.";
   const item = values.item.trim();

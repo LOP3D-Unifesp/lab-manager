@@ -1463,7 +1463,7 @@ export async function listPurchaseRequests() {
     ...row,
     estimated_amount: Number(row.estimated_amount),
     actual_amount: row.actual_amount === null ? null : Number(row.actual_amount),
-    project_name: project?.name ?? "Projeto removido",
+    project_name: project?.name ?? (row.project_id ? "Projeto removido" : "Estoque geral do laboratório"),
     requested_by_name: requester?.full_name ?? null,
     decided_by_name: decider?.full_name ?? null,
   })) as PurchaseRequest[];
@@ -1479,7 +1479,7 @@ export type PurchaseInput = {
   urgency: PurchaseUrgency;
 };
 
-export async function createPurchaseRequest(input: PurchaseInput & { projectId: string }) {
+export async function createPurchaseRequest(input: PurchaseInput & { projectId: string | null }) {
   const { error } = await client().from("purchase_requests").insert({
     project_id: input.projectId,
     item: input.item.trim(),

@@ -3,6 +3,8 @@ import { FormEvent, useState } from "react";
 import { createPurchaseRequest, updatePurchaseRequest } from "../../lib/supabaseRepository";
 import type { Project } from "../../lib/projects";
 import {
+  GENERAL_STOCK_LABEL,
+  GENERAL_STOCK_VALUE,
   getPurchaseErrorMessage,
   parseMoney,
   purchaseCategoryOptions,
@@ -31,7 +33,7 @@ function formatAmountForInput(value: number) {
 }
 
 export function PurchaseFormModal({ defaultProjectId, onClose, onDone, projects, purchase }: PurchaseFormModalProps) {
-  const [projectId, setProjectId] = useState(purchase?.project_id ?? defaultProjectId);
+  const [projectId, setProjectId] = useState(purchase ? (purchase.project_id ?? GENERAL_STOCK_VALUE) : defaultProjectId);
   const [category, setCategory] = useState<string>(purchase?.funding_category ?? "");
   const [urgency, setUrgency] = useState<PurchaseUrgency>(purchase?.urgency ?? "normal");
   const [item, setItem] = useState(purchase?.item ?? "");
@@ -62,7 +64,7 @@ export function PurchaseFormModal({ defaultProjectId, onClose, onDone, projects,
       setSalvando(true);
       setErro("");
       if (purchase) await updatePurchaseRequest(purchase.id, input);
-      else await createPurchaseRequest({ ...input, projectId });
+      else await createPurchaseRequest({ ...input, projectId: projectId === GENERAL_STOCK_VALUE ? null : projectId });
       await onDone();
     } catch (error) {
       setErro(getPurchaseErrorMessage(error));
@@ -79,7 +81,7 @@ export function PurchaseFormModal({ defaultProjectId, onClose, onDone, projects,
     >
       <form className="grid gap-4" onSubmit={salvar}>
         <label className="grid gap-2 text-base font-semibold text-text">
-          Projeto
+          Para quem é a compra
           <select
             className={inputClassName}
             disabled={Boolean(purchase)}
@@ -89,14 +91,15 @@ export function PurchaseFormModal({ defaultProjectId, onClose, onDone, projects,
             <option value="" disabled>
               Selecione
             </option>
+            <option value={GENERAL_STOCK_VALUE}>{GENERAL_STOCK_LABEL}</option>
             {projects.map((project) => (
               <option key={project.id} value={project.id}>
                 {project.name}
               </option>
             ))}
           </select>
-          {projects.length === 0 ? (
-            <span className="text-sm font-normal text-danger">Você não participa de nenhum projeto em aberto.</span>
+          {projects.length === 0 && !purchase ? (
+            <span className="text-sm font-normal text-muted">Você não participa de nenhum projeto em aberto; só dá para pedir para o estoque geral.</span>
           ) : null}
         </label>
         <label className="grid gap-2 text-base font-semibold text-text">
@@ -184,7 +187,7 @@ export function PurchaseFormModal({ defaultProjectId, onClose, onDone, projects,
           <Button variant="secondary" onClick={onClose}>
             Cancelar
           </Button>
-          <Button type="submit" disabled={salvando || projects.length === 0}>
+          <Button type="submit" disabled={salvando}>
             {salvando ? "Salvando..." : purchase ? "Salvar alterações" : "Enviar pedido"}
           </Button>
         </div>

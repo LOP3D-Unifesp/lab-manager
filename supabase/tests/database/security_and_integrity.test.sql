@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(303);
+select plan(308);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -1698,6 +1698,27 @@ select lives_ok(
   'the urgency can be changed while the request is waiting'
 );
 select is((select urgency::text from public.purchase_requests where item = 'pgtap bico'), 'low', 'the new urgency is kept');
+
+-- Purchase requests for the lab general stock (no project).
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000103","email":"other@example.com","role":"authenticated"}', true);
+select lives_ok(
+  $$ insert into public.purchase_requests (funding_category, project_id, item, estimated_amount) values ('custeio', null, 'pgtap estoque geral', 40) $$,
+  'someone outside any project requests a purchase for the general stock'
+);
+select is((select count(*) from public.purchase_requests where item = 'pgtap estoque geral'), 1::bigint, 'the author sees the general stock request');
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
+select is((select count(*) from public.purchase_requests where item = 'pgtap estoque geral'), 0::bigint, 'a project member does not see someone else general stock request');
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000104","email":"inactive@example.com","role":"authenticated"}', true);
+select throws_ok(
+  $$ insert into public.purchase_requests (funding_category, project_id, item, estimated_amount) values ('custeio', null, 'pgtap inativo', 40) $$,
+  '42501', null,
+  'an inactive user cannot request for the general stock'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
+select is((select count(*) from public.purchase_requests where item = 'pgtap estoque geral'), 1::bigint, 'the coordinator sees the general stock request');
 
 select * from finish();
 rollback;
