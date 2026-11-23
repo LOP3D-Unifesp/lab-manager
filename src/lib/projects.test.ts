@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   filterProjects,
+  filterTasks,
+  getProjectColor,
+  getTaskAssigneeOptions,
   formatProjectPeriod,
   getFundingTotal,
   getProjectErrorMessage,
@@ -143,5 +146,39 @@ describe("tarefas do kanban", () => {
     expect(isTaskOverdue(task({ due_on: "2026-05-02" }), "2026-05-02")).toBe(false);
     expect(isTaskOverdue(task({ due_on: "2026-05-01", status: "done" }), "2026-05-02")).toBe(false);
     expect(isTaskOverdue(task({ due_on: null }), "2026-05-02")).toBe(false);
+  });
+});
+
+describe("quadro geral de tarefas", () => {
+  const ana = { profile_id: "ana", full_name: "Ana", avatar_url: null };
+  const bia = { profile_id: "bia", full_name: "Bia", avatar_url: null };
+  const tasks = [
+    task({ id: "1", project_id: "p1", assignees: [ana], due_on: "2026-05-01" }),
+    task({ id: "2", project_id: "p1", assignees: [ana, bia] }),
+    task({ id: "3", project_id: "p2", assignees: [bia], due_on: "2026-05-01", status: "done" }),
+    task({ id: "4", project_id: "p2", assignees: [] }),
+  ];
+  const all = { projectId: "all", assignee: "all", overdueOnly: false };
+  const ids = (list: ProjectTask[]) => list.map((t) => t.id);
+
+  it("filtra por projeto, responsável e atrasadas", () => {
+    expect(ids(filterTasks(tasks, all, "ana", "2026-05-02"))).toEqual(["1", "2", "3", "4"]);
+    expect(ids(filterTasks(tasks, { ...all, projectId: "p2" }, "ana", "2026-05-02"))).toEqual(["3", "4"]);
+    expect(ids(filterTasks(tasks, { ...all, assignee: "me" }, "ana", "2026-05-02"))).toEqual(["1", "2"]);
+    expect(ids(filterTasks(tasks, { ...all, assignee: "bia" }, "ana", "2026-05-02"))).toEqual(["2", "3"]);
+    expect(ids(filterTasks(tasks, { ...all, overdueOnly: true }, "ana", "2026-05-02"))).toEqual(["1"]);
+  });
+
+  it("o filtro 'eu' não devolve nada sem pessoa logada", () => {
+    expect(filterTasks(tasks, { ...all, assignee: "me" }, null, "2026-05-02")).toEqual([]);
+  });
+
+  it("lista os responsáveis sem repetir e em ordem", () => {
+    expect(getTaskAssigneeOptions(tasks).map((a) => a.full_name)).toEqual(["Ana", "Bia"]);
+  });
+
+  it("gera a mesma cor para o mesmo projeto e cores diferentes entre projetos", () => {
+    expect(getProjectColor("abc")).toEqual(getProjectColor("abc"));
+    expect(getProjectColor("abc").background).not.toBe(getProjectColor("xyz").background);
   });
 });
