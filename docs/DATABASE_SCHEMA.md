@@ -19,8 +19,8 @@ O schema cobre:
 
 O Supabase Auth sera a fonte de autenticacao. O PostgreSQL sera a fonte dos dados de dominio da aplicacao.
 
-> **Fonte da verdade:** as migrations em `supabase/migrations/` (33 arquivos, de `20260818` a
-> `20260919`). Este documento descreve o resultado delas. A secao 1.1 resume o que mudou depois da
+> **Fonte da verdade:** as migrations em `supabase/migrations/` (34 arquivos, de `20260818` a
+> `20260920`). Este documento descreve o resultado delas. A secao 1.1 resume o que mudou depois da
 > baseline; onde houver divergencia, vale a migration.
 
 Status do MVP implementado:
@@ -71,6 +71,7 @@ Status do MVP implementado:
 | `20260917_purchase_change_project` | `update_purchase_request` passa a poder mover o pedido para outro projeto ou para o estoque geral (argumentos `p_set_project` e `p_project_id`; secao 3.19). |
 | `20260918_purchase_from_maintenance` | `purchase_requests.maintenance_request_id`: pedido de peca ligado a um chamado de manutencao (secao 3.19). |
 | `20260919_purchase_for_maintenance` | `purchase_requests.for_maintenance`: marca de gasto de manutencao, a parte da rubrica (secao 3.19). |
+| `20260920_maintenance_waiting_part` | Situacao `waiting_part` (Aguardando peca) em `maintenance_request_status`, sincronizada com as compras ligadas ao chamado (secao 3.18). |
 
 Resumo dos objetos que mais mudam o entendimento do schema:
 
@@ -1079,7 +1080,7 @@ iniciam a manutencao e resolvem.
   responsavel pela manutencao.
 - `maintenance_requests`: `equipment_id` (`ON DELETE RESTRICT`), `requested_by` (`ON DELETE SET NULL`),
   `description` (3 a 2000 caracteres), `urgency` (`maintenance_urgency`: `low`, `normal`, `urgent`),
-  `status` (`maintenance_request_status`: `open`, `in_progress`, `resolved`, `cancelled`), `assigned_to`,
+  `status` (`maintenance_request_status`: `open`, `in_progress`, `waiting_part`, `resolved`, `cancelled`), `assigned_to`,
   `resolution_notes`, `resolved_at`, timestamps.
 - Acesso (RLS): usuario ativo le todos (evita chamado duplicado) e insere em seu nome, sempre `open` e sem
   responsavel. Nao ha `update` direto: mudancas de situacao so pela RPC.
@@ -1088,6 +1089,13 @@ iniciam a manutencao e resolvem.
   responsavel; devolver limpa o responsavel; resolver grava nota e `resolved_at`); quem abriu so cancela
   enquanto `open`. `cancelled` e definitivo. Erros: `maintainer_required`, `request_not_found`,
   `invalid_request_transition`, `invalid_assignee`.
+- `waiting_part` (Aguardando peca): o chamado espera uma peca. Um gatilho em `purchase_requests`
+  (`purchase_requests_sync_maintenance_request`, via `private.sync_request_waiting_part`) coloca o chamado
+  `open` ou `in_progress` em `waiting_part` quando uma compra ligada a ele passa a `purchased` (comprada e ainda
+  nao entregue) e o devolve (`in_progress` se tem responsavel, senao `open`) quando essa compra deixa de ser
+  `purchased` (entregue ou compra desfeita), sem desfazer o que um responsavel marcou a mao. Quem trata o chamado
+  tambem alterna `in_progress` <-> `waiting_part` em `set_maintenance_request_status`. A situacao do equipamento
+  nao muda; liberar o equipamento (`end_equipment_maintenance`) resolve tambem os chamados `waiting_part`.
 - `photo_paths` (ate 3 caminhos): fotos no bucket privado `maintenance-photos`, uma pasta por autor
   (`<profile_id>/<arquivo>.jpg`, ate 5 MB; jpeg, png ou webp). Usuario ativo envia na propria pasta e le todas
   (o app usa URLs assinadas de 1 hora). O app reduz a foto a 1600 px antes de enviar.
@@ -1288,7 +1296,7 @@ Validacoes cobertas pelos testes de banco do MVP:
 - Idiomas nao sao habilidades tecnicas e nao entram em `skills`.
 - Nao havera upload `.gcode` ou `.3mf` no schema do MVP.
 - Nao havera historico detalhado de manutencao alem dos bloqueios.
-- A baseline inicial (`20260818`) e imutavel; mudancas de schema entram em migrations incrementais (hoje ate `20260919`).
+- A baseline inicial (`20260818`) e imutavel; mudancas de schema entram em migrations incrementais (hoje ate `20260920`).
 
 ## 10. Inventario de insumos
 

@@ -147,7 +147,7 @@ export function MaintenanceRequestsPanel({ canMaintainNow, equipment, onChanged,
     event.preventDefault();
     if (!resolving) return;
     const equipmentInMaintenance = equipment.find((item) => item.id === resolving.equipment_id)?.status === "maintenance";
-    const release = releaseToo && resolving.status === "in_progress" && equipmentInMaintenance;
+    const release = releaseToo && (resolving.status === "in_progress" || resolving.status === "waiting_part") && equipmentInMaintenance;
     try {
       setBusyId(resolving.id);
       setErro("");
@@ -217,7 +217,8 @@ export function MaintenanceRequestsPanel({ canMaintainNow, equipment, onChanged,
           value={filters.status}
           onChange={(event) => setFilters({ ...filters, status: event.target.value as RequestFilters["status"] })}
         >
-          <option value="active">Em aberto e em andamento</option>
+          <option value="active">Ativos (em aberto, em andamento e aguardando peça)</option>
+          <option value="waiting_part">Aguardando peça</option>
           <option value="all">Todos</option>
           <option value="resolved">Resolvidos</option>
           <option value="cancelled">Cancelados</option>
@@ -354,6 +355,16 @@ export function MaintenanceRequestsPanel({ canMaintainNow, equipment, onChanged,
                           Iniciar manutenção
                         </Button>
                       ) : null}
+                      {actions.waitPart ? (
+                        <Button className="min-h-9 px-3 py-2 text-sm" variant="secondary" disabled={busy} onClick={() => change(request, "waiting_part")}>
+                          Aguardar peça
+                        </Button>
+                      ) : null}
+                      {actions.resume ? (
+                        <Button className="min-h-9 px-3 py-2 text-sm" variant="secondary" disabled={busy} onClick={() => change(request, "in_progress")}>
+                          Retomar manutenção
+                        </Button>
+                      ) : null}
                       {actions.giveBack ? (
                         <Button className="min-h-9 px-3 py-2 text-sm" variant="ghost" disabled={busy} onClick={() => change(request, "open")}>
                           Devolver à fila
@@ -429,7 +440,7 @@ export function MaintenanceRequestsPanel({ canMaintainNow, equipment, onChanged,
                 onChange={(event) => setNotes(event.target.value)}
               />
             </label>
-            {resolving.status === "in_progress" && equipment.find((item) => item.id === resolving.equipment_id)?.status === "maintenance" ? (
+            {(resolving.status === "in_progress" || resolving.status === "waiting_part") && equipment.find((item) => item.id === resolving.equipment_id)?.status === "maintenance" ? (
               <label className="flex items-start gap-2 text-base font-semibold text-text">
                 <input checked={releaseToo} className="mt-1 h-4 w-4 accent-primary" type="checkbox" onChange={(event) => setReleaseToo(event.target.checked)} />
                 <span>

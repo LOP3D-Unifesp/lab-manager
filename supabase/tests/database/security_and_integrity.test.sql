@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(322);
+select plan(343);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -1767,6 +1767,32 @@ select is(
   true,
   'but a purchase linked to a maintenance request stays a maintenance expense'
 );
+
+-- A maintenance request waits for a part while a purchase made from it is bought and not yet delivered.
+select lives_ok($$ insert into public.maintenance_requests (equipment_id, description) values ('20000000-0000-0000-0000-000000000003', 'pgtap quinto problema') $$, 'a maintenance request is opened');
+select lives_ok($$ select public.set_maintenance_request_status((select id from public.maintenance_requests where description = 'pgtap quinto problema'), 'in_progress') $$, 'a maintainer takes the request');
+select lives_ok(
+  $$ insert into public.purchase_requests (funding_category, project_id, item, estimated_amount, maintenance_request_id) values ('custeio', null, 'pgtap peca quinta', 50, (select id from public.maintenance_requests where description = 'pgtap quinto problema')) $$,
+  'a part is requested from the maintenance request'
+);
+select lives_ok($$ select public.set_purchase_status((select id from public.purchase_requests where item = 'pgtap peca quinta'), 'approved') $$, 'the part purchase is approved');
+select is((select status::text from public.maintenance_requests where description = 'pgtap quinto problema'), 'in_progress', 'approving the part does not change the maintenance request');
+select lives_ok($$ select public.set_purchase_status((select id from public.purchase_requests where item = 'pgtap peca quinta'), 'purchased') $$, 'the part is bought');
+select is((select status::text from public.maintenance_requests where description = 'pgtap quinto problema'), 'waiting_part', 'buying the part puts the maintenance request in waiting for a part');
+select lives_ok($$ select public.set_purchase_status((select id from public.purchase_requests where item = 'pgtap peca quinta'), 'approved') $$, 'the purchase is undone');
+select is((select status::text from public.maintenance_requests where description = 'pgtap quinto problema'), 'in_progress', 'undoing the purchase brings the maintenance request back');
+select lives_ok($$ select public.set_purchase_status((select id from public.purchase_requests where item = 'pgtap peca quinta'), 'purchased') $$, 'the part is bought again');
+select lives_ok($$ select public.set_purchase_status((select id from public.purchase_requests where item = 'pgtap peca quinta'), 'delivered') $$, 'the part is delivered');
+select is((select status::text from public.maintenance_requests where description = 'pgtap quinto problema'), 'in_progress', 'delivering the part resumes the maintenance request');
+select lives_ok($$ select public.set_maintenance_request_status((select id from public.maintenance_requests where description = 'pgtap quinto problema'), 'waiting_part') $$, 'a maintainer sets the request to wait by hand');
+select is((select status::text from public.maintenance_requests where description = 'pgtap quinto problema'), 'waiting_part', 'the request is waiting for a part');
+select lives_ok($$ select public.set_maintenance_request_status((select id from public.maintenance_requests where description = 'pgtap quinto problema'), 'in_progress') $$, 'a maintainer resumes the request');
+select is((select status::text from public.maintenance_requests where description = 'pgtap quinto problema'), 'in_progress', 'the request is in progress again');
+select lives_ok($$ select public.set_purchase_status((select id from public.purchase_requests where item = 'pgtap peca do chamado'), 'approved') $$, 'the part of a request nobody took is approved');
+select lives_ok($$ select public.set_purchase_status((select id from public.purchase_requests where item = 'pgtap peca do chamado'), 'purchased') $$, 'that part is bought');
+select is((select status::text from public.maintenance_requests where description = 'pgtap terceiro problema'), 'waiting_part', 'a request nobody took also waits for the part');
+select lives_ok($$ select public.set_purchase_status((select id from public.purchase_requests where item = 'pgtap peca do chamado'), 'delivered') $$, 'that part is delivered');
+select is((select status::text from public.maintenance_requests where description = 'pgtap terceiro problema'), 'open', 'the request nobody took goes back to open');
 
 select * from finish();
 rollback;
