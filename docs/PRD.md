@@ -146,6 +146,16 @@ Funcionalidades:
 - chamados abertos aparecem como contador no item Equipamentos do menu e na campainha, que se organiza em **Pendências** (chamados abertos, com quantos são urgentes, e feedback novo) e **Reservas**; para coordenadores e responsáveis pela manutenção;
 - os contadores atualizam em tempo real (sem recarregar a página) e, se a pessoa ativar na campainha, o navegador mostra um **aviso no computador** quando alguém abre um chamado (ou envia feedback, para o coordenador) enquanto o app está em segundo plano; vale só com o app aberto numa aba
 
+### 5.8 Compras
+
+Funcionalidades:
+- página **Compras** (grupo Recursos) com o botão **Novo pedido**: projeto, item, link (opcional, só http/https), quantidade, valor estimado total e observações; o pedido só pode ser feito em projeto em aberto de que a pessoa participa (o coordenador, em qualquer projeto em aberto);
+- fluxo **Solicitado → Aprovado → Comprado → Entregue**, ou **Recusado** (com motivo) e **Cancelado**; o coordenador aprova, recusa, marca como comprado (informando o valor pago) e como entregue; quem pediu edita e cancela enquanto ninguém decidiu;
+- cada pedido é visível para quem pediu, para os membros do projeto e para o coordenador;
+- filtros por situação (padrão: em andamento), projeto e "só os meus pedidos"; **Resumo por projeto** com o previsto (ainda não comprado) e o pago (comprado e entregue);
+- o link do item abre em outra aba, sem repassar a origem da página;
+- o coordenador vê o contador de pedidos aguardando aprovação no item Compras do menu e em **Pendências** na campainha, e recebe aviso no computador quando chega um pedido novo.
+
 ## 6. Status de reserva
 
 - Pendente

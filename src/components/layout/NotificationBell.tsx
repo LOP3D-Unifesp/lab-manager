@@ -1,4 +1,4 @@
-import { Bell, BellOff, BellRing, CalendarCheck, CheckCircle2, MessageSquare, Wrench, XCircle } from "lucide-react";
+import { Bell, BellOff, BellRing, CalendarCheck, CheckCircle2, MessageSquare, ShoppingCart, Wrench, XCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -61,6 +61,14 @@ export function NotificationBell({ align = "right" }: NotificationBellProps) {
       icon: Wrench,
       label: attention.maintenanceRequests === 1 ? "1 chamado de manutenção aberto" : `${attention.maintenanceRequests} chamados de manutenção abertos`,
       detail: attention.urgentRequests > 0 ? (attention.urgentRequests === 1 ? "1 urgente" : `${attention.urgentRequests} urgentes`) : null,
+    },
+    {
+      key: "compras",
+      total: attention.purchases,
+      to: "/compras",
+      icon: ShoppingCart,
+      label: attention.purchases === 1 ? "1 pedido de compra aguardando aprovação" : `${attention.purchases} pedidos de compra aguardando aprovação`,
+      detail: null,
     },
     {
       key: "feedback",

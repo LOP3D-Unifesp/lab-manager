@@ -19,8 +19,8 @@ O schema cobre:
 
 O Supabase Auth sera a fonte de autenticacao. O PostgreSQL sera a fonte dos dados de dominio da aplicacao.
 
-> **Fonte da verdade:** as migrations em `supabase/migrations/` (24 arquivos, de `20260818` a
-> `20260910`). Este documento descreve o resultado delas. A secao 1.1 resume o que mudou depois da
+> **Fonte da verdade:** as migrations em `supabase/migrations/` (25 arquivos, de `20260818` a
+> `20260911`). Este documento descreve o resultado delas. A secao 1.1 resume o que mudou depois da
 > baseline; onde houver divergencia, vale a migration.
 
 Status do MVP implementado:
@@ -62,6 +62,7 @@ Status do MVP implementado:
 | `20260908_maintenance_request_photos_and_urgent_block` | Fotos nos chamados (`photo_paths`, bucket privado `maintenance-photos`) e bloqueio automatico do equipamento por chamado urgente (parcialmente substituido pela migration `20260909`; secao 3.18). |
 | `20260909_equipment_stopped_status` | Status `stopped` (Parado) em `equipment_status`; chamado urgente so para o equipamento e "Iniciar manutencao" abre a manutencao (secao 3.18). |
 | `20260910_realtime_requests_and_feedback` | `maintenance_requests` e `feedback_reports` na publicacao `supabase_realtime` (avisos em tempo real). |
+| `20260911_purchase_requests` | Pedidos de compra: `purchase_requests`, `purchase_status`, funcoes `update_purchase_request` e `set_purchase_status` (secao 3.19). |
 
 Resumo dos objetos que mais mudam o entendimento do schema:
 
@@ -1091,6 +1092,30 @@ iniciam a manutencao e resolvem.
   `Chamado: ...`); cancelar ou resolver o ultimo chamado urgente de um equipamento `stopped` o devolve a
   `active`. `end_equipment_maintenance` tambem libera um equipamento `stopped`.
 
+### 3.19 Compras
+
+Finalidade: um membro de projeto pede uma compra (item, link, valor estimado) e a coordenacao aprova,
+compra e confirma a entrega.
+
+- `purchase_requests`: `project_id` (`ON DELETE RESTRICT`), `requested_by` (`ON DELETE SET NULL`), `item`
+  (2 a 200 caracteres), `url` (opcional, so `http`/`https`, ate 2000), `quantity` (1 a 100000),
+  `estimated_amount` (total estimado em reais), `notes` (ate 1000), `status` (`purchase_status`:
+  `requested`, `approved`, `rejected`, `purchased`, `delivered`, `cancelled`), `decided_by`, `decided_at`,
+  `rejected_reason`, `actual_amount` (valor pago), `purchased_at`, `delivered_at`, timestamps.
+- Fluxo: `requested -> approved -> purchased -> delivered`; `requested -> rejected | cancelled`;
+  `approved -> cancelled`. `rejected`, `delivered` e `cancelled` sao finais.
+- Acesso (RLS): le quem pediu, os membros do projeto e o coordenador. Insere quem for membro de um projeto
+  em aberto (`planning`, `active` ou `paused`) ou o coordenador (`private.can_request_purchase`), sempre em
+  nome proprio, como `requested` e sem campos de decisao. Nao ha `update` nem `delete` diretos.
+- `update_purchase_request(p_request_id, p_item, p_url, p_quantity, p_estimated_amount, p_notes)`: quem
+  pediu (ou o coordenador) edita enquanto o pedido esta `requested`. Erros: `purchase_not_found`,
+  `purchase_forbidden`, `purchase_not_editable`.
+- `set_purchase_status(p_request_id, p_status, p_reason, p_actual_amount)`: o coordenador aprova, recusa (com
+  motivo opcional), marca como comprado (`actual_amount`, padrao o valor estimado) e entregue; quem pediu so
+  cancela enquanto `requested`. Erros: `coordinator_required`, `invalid_purchase_transition`,
+  `purchase_not_found`.
+- A tabela esta na publicacao `supabase_realtime` (aviso ao coordenador).
+
 ## 4. Relacionamentos principais
 
 - `profiles.id` e igual a `auth.users.id`.
@@ -1242,7 +1267,7 @@ Validacoes cobertas pelos testes de banco do MVP:
 - Idiomas nao sao habilidades tecnicas e nao entram em `skills`.
 - Nao havera upload `.gcode` ou `.3mf` no schema do MVP.
 - Nao havera historico detalhado de manutencao alem dos bloqueios.
-- A baseline inicial (`20260818`) e imutavel; mudancas de schema entram em migrations incrementais (hoje ate `20260910`).
+- A baseline inicial (`20260818`) e imutavel; mudancas de schema entram em migrations incrementais (hoje ate `20260911`).
 
 ## 10. Inventario de insumos
 

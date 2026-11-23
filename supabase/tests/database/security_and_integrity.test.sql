@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(253);
+select plan(281);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -1528,6 +1528,108 @@ select throws_ok(
 );
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
+
+-- Purchase requests.
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
+select lives_ok($$ insert into public.projects (id, name) values ('00000000-0000-0000-0000-0000000000c2', 'Compras Alfa') $$, 'a coordinator creates a project for the purchase tests');
+select lives_ok(
+  $$ select public.replace_project_members('00000000-0000-0000-0000-0000000000c2', array['00000000-0000-0000-0000-000000000102']::uuid[]) $$,
+  'the researcher joins the project'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
+select lives_ok(
+  $$ insert into public.purchase_requests (project_id, item, url, quantity, estimated_amount) values ('00000000-0000-0000-0000-0000000000c2', 'pgtap bico', 'https://exemplo.com/bico', 2, 120.50) $$,
+  'a project member requests a purchase'
+);
+select throws_ok(
+  $$ insert into public.purchase_requests (project_id, item, estimated_amount, requested_by) values ('00000000-0000-0000-0000-0000000000c2', 'pgtap em nome de outro', 10, '00000000-0000-0000-0000-000000000101') $$,
+  '42501', null,
+  'a purchase cannot be requested in someone else name'
+);
+select throws_ok(
+  $$ insert into public.purchase_requests (project_id, item, estimated_amount, status) values ('00000000-0000-0000-0000-0000000000c2', 'pgtap ja aprovado', 10, 'approved') $$,
+  '42501', null,
+  'a purchase request always starts as requested'
+);
+select throws_ok(
+  $$ insert into public.purchase_requests (project_id, item, url, estimated_amount) values ('00000000-0000-0000-0000-0000000000c2', 'pgtap link ruim', 'javascript:alert(1)', 10) $$,
+  '23514', null,
+  'only http and https links are accepted'
+);
+select throws_ok(
+  $$ insert into public.purchase_requests (project_id, item, estimated_amount) values ('00000000-0000-0000-0000-0000000000c2', 'pgtap valor negativo', -5) $$,
+  '23514', null,
+  'the estimated amount cannot be negative'
+);
+select is((select count(*) from public.purchase_requests where item like 'pgtap%'), 1::bigint, 'the author reads the request');
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000103","email":"other@example.com","role":"authenticated"}', true);
+select throws_ok(
+  $$ insert into public.purchase_requests (project_id, item, estimated_amount) values ('00000000-0000-0000-0000-0000000000c2', 'pgtap de fora', 10) $$,
+  '42501', null,
+  'someone outside the project cannot request a purchase for it'
+);
+select is((select count(*) from public.purchase_requests where item like 'pgtap%'), 0::bigint, 'someone outside the project does not see the request');
+select throws_ok(
+  $$ select public.set_purchase_status((select id from public.purchase_requests where item = 'pgtap bico'), 'approved') $$,
+  'P0001', 'purchase_not_found',
+  'someone outside the project cannot even reach the purchase'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
+select lives_ok(
+  $$ select public.update_purchase_request((select id from public.purchase_requests where item = 'pgtap bico'), 'pgtap bico', 'https://exemplo.com/bico', 3, 150, 'urgente') $$,
+  'the author edits the request while it is waiting'
+);
+select throws_ok(
+  $$ select public.set_purchase_status((select id from public.purchase_requests where item = 'pgtap bico'), 'approved') $$,
+  'P0001', 'coordinator_required',
+  'the author cannot approve their own request'
+);
+select throws_ok(
+  $$ update public.purchase_requests set status = 'approved' $$,
+  '42501', null,
+  'status cannot be changed with a direct update'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
+select lives_ok($$ select public.set_purchase_status((select id from public.purchase_requests where item = 'pgtap bico'), 'approved') $$, 'the coordinator approves');
+select is((select status::text from public.purchase_requests where item = 'pgtap bico'), 'approved', 'the request is approved');
+select throws_ok(
+  $$ select public.update_purchase_request((select id from public.purchase_requests where item = 'pgtap bico'), 'pgtap bico', null, 1, 1) $$,
+  'P0001', 'purchase_not_editable',
+  'an approved request cannot be edited'
+);
+select throws_ok(
+  $$ select public.set_purchase_status((select id from public.purchase_requests where item = 'pgtap bico'), 'delivered') $$,
+  'P0001', 'invalid_purchase_transition',
+  'a request cannot be delivered before being purchased'
+);
+select lives_ok($$ select public.set_purchase_status((select id from public.purchase_requests where item = 'pgtap bico'), 'purchased', null, 110) $$, 'the coordinator marks it as purchased');
+select is((select actual_amount from public.purchase_requests where item = 'pgtap bico'), 110.00::numeric, 'the amount paid is recorded');
+select lives_ok($$ select public.set_purchase_status((select id from public.purchase_requests where item = 'pgtap bico'), 'delivered') $$, 'the coordinator marks it as delivered');
+select throws_ok(
+  $$ select public.set_purchase_status((select id from public.purchase_requests where item = 'pgtap bico'), 'cancelled') $$,
+  'P0001', 'invalid_purchase_transition',
+  'a delivered request is final'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
+select lives_ok(
+  $$ insert into public.purchase_requests (project_id, item, estimated_amount) values ('00000000-0000-0000-0000-0000000000c2', 'pgtap cancelar', 20) $$,
+  'a second request is opened'
+);
+select lives_ok($$ select public.set_purchase_status((select id from public.purchase_requests where item = 'pgtap cancelar'), 'cancelled') $$, 'the author cancels while it is waiting');
+select is((select status::text from public.purchase_requests where item = 'pgtap cancelar'), 'cancelled', 'the request is cancelled');
+select lives_ok(
+  $$ insert into public.purchase_requests (project_id, item, estimated_amount) values ('00000000-0000-0000-0000-0000000000c2', 'pgtap recusar', 30) $$,
+  'a third request is opened'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
+select lives_ok($$ select public.set_purchase_status((select id from public.purchase_requests where item = 'pgtap recusar'), 'rejected', 'sem verba') $$, 'the coordinator rejects with a reason');
+select is((select rejected_reason from public.purchase_requests where item = 'pgtap recusar'), 'sem verba', 'the reason is kept');
 
 select * from finish();
 rollback;

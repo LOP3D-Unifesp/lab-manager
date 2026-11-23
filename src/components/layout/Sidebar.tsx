@@ -68,7 +68,13 @@ export function Sidebar() {
   const visibleNavigationItems = getVisibleDesktopItems(profile?.role);
   const attention = useAttention();
   const badgeFor = (path: string) =>
-    path === "/feedback" ? attention.feedback : path === "/equipamentos" ? attention.maintenanceRequests : undefined;
+    path === "/feedback"
+      ? attention.feedback
+      : path === "/equipamentos"
+        ? attention.maintenanceRequests
+        : path === "/compras"
+          ? attention.purchases
+          : undefined;
 
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 border-r border-border bg-surface px-4 py-5 lg:block">
