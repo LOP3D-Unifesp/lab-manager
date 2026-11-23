@@ -22,6 +22,7 @@ import {
   getPurchaseStatusVariant,
   getPurchaseUrgencyLabel,
   getPurchaseUrgencyVariant,
+  getUnitAmount,
   isValidPurchaseUrl,
   purchaseCategoryOptions,
   purchaseStatusOptions,
@@ -221,6 +222,9 @@ export function Compras() {
                       {getPurchaseCategoryLabel(purchase.funding_category)}
                     </span>
                     Estimado <strong>{formatCurrencyBRL(purchase.estimated_amount)}</strong>
+                    {getUnitAmount(purchase.estimated_amount, purchase.quantity) !== null ? (
+                      <span className="text-muted"> ({purchase.quantity} × {formatCurrencyBRL(getUnitAmount(purchase.estimated_amount, purchase.quantity) as number)})</span>
+                    ) : null}
                     {purchase.actual_amount !== null ? (
                       <>
                         {" "}
