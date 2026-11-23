@@ -141,7 +141,8 @@ Funcionalidades:
 - chamado **urgente** deixa o equipamento **Parado** na hora (novas reservas deixam de ser aceitas, as futuras não são canceladas); ele só entra em manutenção quando um responsável usa **Iniciar manutenção**, e volta a Ativa se o chamado for cancelado ou resolvido sem isso;
 - **Baixar fotos** reúne as fotos do chamado num arquivo .zip;
 - liberar o equipamento da manutenção resolve os chamados que estavam em andamento; ao resolver um chamado, a caixa "Liberar o equipamento também" faz as duas coisas de uma vez;
-- chamados abertos aparecem como contador no item Equipamentos do menu e como **Pendências** na campainha, para coordenadores e responsáveis.
+- chamados abertos aparecem como contador no item Equipamentos do menu e na campainha, que se organiza em **Pendências** (chamados abertos, com quantos são urgentes, e feedback novo) e **Reservas**; para coordenadores e responsáveis pela manutenção;
+- os contadores atualizam em tempo real (sem recarregar a página) e, se a pessoa ativar na campainha, o navegador mostra um **aviso no computador** quando alguém abre um chamado (ou envia feedback, para o coordenador) enquanto o app está em segundo plano; vale só com o app aberto numa aba
 
 ## 6. Status de reserva
 

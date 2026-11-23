@@ -1424,11 +1424,16 @@ export async function setMaintenanceRequestStatus(params: {
   throwIfError(error);
 }
 
+// Chamados abertos (aguardando alguém começar) e quantos deles são urgentes.
 export async function countOpenMaintenanceRequests() {
-  const { count, error } = await client()
-    .from("maintenance_requests")
-    .select("id", { count: "exact", head: true })
-    .eq("status", "open");
+  const { data, error } = await client().from("maintenance_requests").select("urgency").eq("status", "open").limit(500);
   throwIfError(error);
-  return count ?? 0;
+  const rows = (data ?? []) as Array<{ urgency: MaintenanceUrgency }>;
+  return { open: rows.length, urgent: rows.filter((row) => row.urgency === "urgent").length };
+}
+
+export async function getEquipmentName(equipmentId: string) {
+  const { data, error } = await client().from("equipment").select("name").eq("id", equipmentId).maybeSingle();
+  throwIfError(error);
+  return (data as { name: string } | null)?.name ?? null;
 }

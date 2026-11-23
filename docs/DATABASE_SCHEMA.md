@@ -19,8 +19,8 @@ O schema cobre:
 
 O Supabase Auth sera a fonte de autenticacao. O PostgreSQL sera a fonte dos dados de dominio da aplicacao.
 
-> **Fonte da verdade:** as migrations em `supabase/migrations/` (23 arquivos, de `20260818` a
-> `20260909`). Este documento descreve o resultado delas. A secao 1.1 resume o que mudou depois da
+> **Fonte da verdade:** as migrations em `supabase/migrations/` (24 arquivos, de `20260818` a
+> `20260910`). Este documento descreve o resultado delas. A secao 1.1 resume o que mudou depois da
 > baseline; onde houver divergencia, vale a migration.
 
 Status do MVP implementado:
@@ -60,6 +60,8 @@ Status do MVP implementado:
 | `20260906_feedback_reports` | Caixa de sugestoes e erros: `feedback_reports` (secao 3.17). |
 | `20260907_maintenance_requests` | Chamados de manutencao e responsaveis pela manutencao: `maintenance_requests`, `profiles.is_maintainer` (secao 3.18). |
 | `20260908_maintenance_request_photos_and_urgent_block` | Fotos nos chamados (`photo_paths`, bucket privado `maintenance-photos`) e bloqueio automatico do equipamento por chamado urgente (parcialmente substituido pela migration `20260909`; secao 3.18). |
+| `20260909_equipment_stopped_status` | Status `stopped` (Parado) em `equipment_status`; chamado urgente so para o equipamento e "Iniciar manutencao" abre a manutencao (secao 3.18). |
+| `20260910_realtime_requests_and_feedback` | `maintenance_requests` e `feedback_reports` na publicacao `supabase_realtime` (avisos em tempo real). |
 
 Resumo dos objetos que mais mudam o entendimento do schema:
 
@@ -1240,7 +1242,7 @@ Validacoes cobertas pelos testes de banco do MVP:
 - Idiomas nao sao habilidades tecnicas e nao entram em `skills`.
 - Nao havera upload `.gcode` ou `.3mf` no schema do MVP.
 - Nao havera historico detalhado de manutencao alem dos bloqueios.
-- A baseline inicial (`20260818`) e imutavel; mudancas de schema entram em migrations incrementais (hoje ate `20260909`).
+- A baseline inicial (`20260818`) e imutavel; mudancas de schema entram em migrations incrementais (hoje ate `20260910`).
 
 ## 10. Inventario de insumos
 
