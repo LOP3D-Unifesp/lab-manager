@@ -20,7 +20,7 @@ import {
   type MaintenanceEpisode,
 } from "../lib/maintenance";
 import { useAuth } from "../lib/auth";
-import { countOpenRequests, isRequestActive, type MaintenanceRequest } from "../lib/maintenanceRequests";
+import { countOpenRequests, isRequestActive, sortRequests, type MaintenanceRequest } from "../lib/maintenanceRequests";
 import {
   canMaintain,
   equipmentUsesMaterial,
@@ -358,22 +358,7 @@ export function Equipamentos() {
               return (
                 <Card key={item.id} className="flex min-h-full flex-col">
                   <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0 flex-1">
-                      <h3 className="break-words text-2xl font-bold text-text">{item.name}</h3>
-                      {/* Cada parte fica inteira numa linha: a quebra só acontece no separador, nunca no meio do modelo. */}
-                      <p className="mt-2 text-base text-muted">
-                        {[item.type?.name, item.model].filter(Boolean).length > 0
-                          ? [item.type?.name, item.model]
-                              .filter(Boolean)
-                              .map((part, index) => (
-                                <span key={index}>
-                                  {index > 0 ? " · " : ""}
-                                  <span className="whitespace-nowrap">{part}</span>
-                                </span>
-                              ))
-                          : "Modelo não informado"}
-                      </p>
-                    </div>
+                    <h3 className="min-w-0 flex-1 break-words text-2xl font-bold text-text">{item.name}</h3>
                     <span className="shrink-0 whitespace-nowrap">
                       <StatusBadge
                         label={getEquipmentStatusLabel(item.status)}
@@ -381,6 +366,10 @@ export function Equipamentos() {
                       />
                     </span>
                   </div>
+                  {/* Tipo e modelo numa linha própria, com a largura toda do card (o selo não a divide). */}
+                  <p className="mt-2 break-words text-lg text-muted">
+                    {[item.type?.name, item.model].filter(Boolean).join(" · ") || "Modelo não informado"}
+                  </p>
                   {item.status === "stopped" ? (
                     <div className="mt-3 grid gap-1 rounded-lg border border-danger bg-danger-soft p-3 text-sm text-text">
                       <p className="flex items-center gap-2 font-semibold">
@@ -404,6 +393,22 @@ export function Equipamentos() {
                       </div>
                     );
                   })() : null}
+                  {(() => {
+                    const ativos = sortRequests(requests.filter((request) => request.equipment_id === item.id && isRequestActive(request.status)));
+                    if (ativos.length === 0) return null;
+                    return (
+                      <ul className="mt-3 grid gap-1.5 text-sm text-muted">
+                        {ativos.slice(0, 2).map((request) => (
+                          <li key={request.id} className="break-words">
+                            <span className="font-semibold text-text">{request.requested_by_name ?? "Alguém"}</span> abriu um chamado
+                            {request.urgency === "urgent" ? " urgente" : ""} em {formatMaintenanceDateTime(request.created_at, timezone)}:{" "}
+                            “{request.description.length > 90 ? `${request.description.slice(0, 87)}...` : request.description}”
+                          </li>
+                        ))}
+                        {ativos.length > 2 ? <li>+ {ativos.length - 2} outros na aba Chamados</li> : null}
+                      </ul>
+                    );
+                  })()}
                   <dl className="mt-4 grid gap-2 text-base leading-6 text-muted">
                     <div>
                       <dt className="font-semibold text-text">Local</dt>
