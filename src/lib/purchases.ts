@@ -1,4 +1,12 @@
 import type { StatusVariant } from "../components/ui/StatusBadge";
+import { fundingCategoryOptions, type FundingCategory } from "./projects";
+
+// Rubricas em que uma compra pode se enquadrar (bolsas não são compra).
+export const purchaseCategoryOptions = fundingCategoryOptions.filter((option) => option.value !== "bolsas");
+
+export function getPurchaseCategoryLabel(category: FundingCategory | null) {
+  return category ? (fundingCategoryOptions.find((option) => option.value === category)?.label ?? category) : "Sem rubrica";
+}
 
 export type PurchaseStatus = "requested" | "approved" | "rejected" | "purchased" | "delivered" | "cancelled";
 
@@ -33,6 +41,7 @@ export type PurchaseRequest = {
   url: string | null;
   quantity: number;
   estimated_amount: number;
+  funding_category: FundingCategory | null;
   notes: string | null;
   status: PurchaseStatus;
   decided_by_name: string | null;
@@ -52,6 +61,7 @@ export function isPurchaseOpen(status: PurchaseStatus) {
 export type PurchaseFilters = {
   status: "open" | "all" | PurchaseStatus;
   projectId: string; // "all" ou id
+  category: "all" | FundingCategory;
   mine: boolean;
 };
 
@@ -60,6 +70,7 @@ export function filterPurchases(purchases: PurchaseRequest[], filters: PurchaseF
     if (filters.status === "open" && !isPurchaseOpen(purchase.status)) return false;
     if (filters.status !== "open" && filters.status !== "all" && purchase.status !== filters.status) return false;
     if (filters.projectId !== "all" && purchase.project_id !== filters.projectId) return false;
+    if (filters.category !== "all" && purchase.funding_category !== filters.category) return false;
     if (filters.mine && purchase.requested_by !== profileId) return false;
     return true;
   });
@@ -143,10 +154,11 @@ export function parseMoney(text: string): number | null {
   return Number(normalized);
 }
 
-export type PurchaseFormValues = { projectId: string; item: string; url: string; quantity: string; amount: string; notes: string };
+export type PurchaseFormValues = { projectId: string; category: string; item: string; url: string; quantity: string; amount: string; notes: string };
 
 export function validatePurchaseForm(values: PurchaseFormValues) {
   if (!values.projectId) return "Escolha o projeto.";
+  if (!purchaseCategoryOptions.some((option) => option.value === values.category)) return "Escolha a rubrica do item.";
   const item = values.item.trim();
   if (item.length < 2 || item.length > 200) return "Descreva o item (de 2 a 200 caracteres).";
   if (values.url.trim() && !isValidPurchaseUrl(values.url)) return "O link precisa começar com http:// ou https://.";

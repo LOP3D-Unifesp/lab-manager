@@ -657,14 +657,14 @@ isOneToOne: false
                   ]
                 },"purchase_requests": {
                   Row: {
-                    "actual_amount": number | null,"created_at": string,"decided_at": string | null,"decided_by": string | null,"delivered_at": string | null,"estimated_amount": number,"id": string,"item": string,"notes": string | null,"project_id": string,"purchased_at": string | null,"quantity": number,"rejected_reason": string | null,"requested_by": string | null,"status": Database["public"]['Enums']["purchase_status"],"updated_at": string,"url": string | null
+                    "actual_amount": number | null,"created_at": string,"decided_at": string | null,"decided_by": string | null,"delivered_at": string | null,"estimated_amount": number,"funding_category": Database["public"]['Enums']["project_funding_category"] | null,"id": string,"item": string,"notes": string | null,"project_id": string,"purchased_at": string | null,"quantity": number,"rejected_reason": string | null,"requested_by": string | null,"status": Database["public"]['Enums']["purchase_status"],"updated_at": string,"url": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "actual_amount"?: number | null,"created_at"?: string,"decided_at"?: string | null,"decided_by"?: string | null,"delivered_at"?: string | null,"estimated_amount": number,"id"?: string,"item": string,"notes"?: string | null,"project_id": string,"purchased_at"?: string | null,"quantity"?: number,"rejected_reason"?: string | null,"requested_by"?: string | null,"status"?: Database["public"]['Enums']["purchase_status"],"updated_at"?: string,"url"?: string | null
+                    "actual_amount"?: number | null,"created_at"?: string,"decided_at"?: string | null,"decided_by"?: string | null,"delivered_at"?: string | null,"estimated_amount": number,"funding_category"?: Database["public"]['Enums']["project_funding_category"] | null,"id"?: string,"item": string,"notes"?: string | null,"project_id": string,"purchased_at"?: string | null,"quantity"?: number,"rejected_reason"?: string | null,"requested_by"?: string | null,"status"?: Database["public"]['Enums']["purchase_status"],"updated_at"?: string,"url"?: string | null
                   }
                   Update: {
-                    "actual_amount"?: number | null,"created_at"?: string,"decided_at"?: string | null,"decided_by"?: string | null,"delivered_at"?: string | null,"estimated_amount"?: number,"id"?: string,"item"?: string,"notes"?: string | null,"project_id"?: string,"purchased_at"?: string | null,"quantity"?: number,"rejected_reason"?: string | null,"requested_by"?: string | null,"status"?: Database["public"]['Enums']["purchase_status"],"updated_at"?: string,"url"?: string | null
+                    "actual_amount"?: number | null,"created_at"?: string,"decided_at"?: string | null,"decided_by"?: string | null,"delivered_at"?: string | null,"estimated_amount"?: number,"funding_category"?: Database["public"]['Enums']["project_funding_category"] | null,"id"?: string,"item"?: string,"notes"?: string | null,"project_id"?: string,"purchased_at"?: string | null,"quantity"?: number,"rejected_reason"?: string | null,"requested_by"?: string | null,"status"?: Database["public"]['Enums']["purchase_status"],"updated_at"?: string,"url"?: string | null
                   }
                   Relationships: [
                     {
@@ -1090,6 +1090,7 @@ isOneToOne: false
 "decided_by": string | null,
 "delivered_at": string | null,
 "estimated_amount": number,
+"funding_category": Database["public"]['Enums']["project_funding_category"] | null,
 "id": string,
 "item": string,
 "notes": string | null,
@@ -1264,13 +1265,14 @@ isOneToOne: false
         isSetofReturn: false
       } },
 "update_purchase_request":
-{ Args: { "p_estimated_amount": number,"p_item": string,"p_notes"?: string,"p_quantity": number,"p_request_id": string,"p_url": string }; Returns: {
+{ Args: { "p_estimated_amount": number,"p_funding_category"?: Database["public"]['Enums']["project_funding_category"],"p_item": string,"p_notes"?: string,"p_quantity": number,"p_request_id": string,"p_url": string }; Returns: {
               "actual_amount": number | null,
 "created_at": string,
 "decided_at": string | null,
 "decided_by": string | null,
 "delivered_at": string | null,
 "estimated_amount": number,
+"funding_category": Database["public"]['Enums']["project_funding_category"] | null,
 "id": string,
 "item": string,
 "notes": string | null,

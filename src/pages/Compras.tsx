@@ -15,10 +15,12 @@ import { formatCurrencyBRL, isProjectOpen, type Project } from "../lib/projects"
 import {
   filterPurchases,
   getPurchaseActions,
+  getPurchaseCategoryLabel,
   getPurchaseErrorMessage,
   getPurchaseStatusLabel,
   getPurchaseStatusVariant,
   isValidPurchaseUrl,
+  purchaseCategoryOptions,
   purchaseStatusOptions,
   sortPurchases,
   summarizeByProject,
@@ -39,7 +41,7 @@ export function Compras() {
   const [purchases, setPurchases] = useState<PurchaseRequest[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [carregado, setCarregado] = useState(false);
-  const [filters, setFilters] = useState<PurchaseFilters>({ status: "open", projectId: "all", mine: false });
+  const [filters, setFilters] = useState<PurchaseFilters>({ status: "open", projectId: "all", category: "all", mine: false });
   const [formulario, setFormulario] = useState<{ purchase: PurchaseRequest | null } | null>(null);
   const [passo, setPasso] = useState<{ mode: "reject" | "purchase"; purchase: PurchaseRequest } | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
@@ -143,6 +145,19 @@ export function Compras() {
             </option>
           ))}
         </select>
+        <select
+          aria-label="Rubrica"
+          className={selectClassName}
+          value={filters.category}
+          onChange={(event) => setFilters({ ...filters, category: event.target.value as PurchaseFilters["category"] })}
+        >
+          <option value="all">Todas as rubricas</option>
+          {purchaseCategoryOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
         <label className="inline-flex min-h-11 items-center gap-2 text-base font-semibold text-text">
           <input
             checked={filters.mine}
@@ -186,6 +201,9 @@ export function Compras() {
                   </div>
 
                   <p className="text-base text-text">
+                    <span className="mr-2 rounded-full border border-border bg-background px-2 py-0.5 text-sm font-semibold text-muted">
+                      {getPurchaseCategoryLabel(purchase.funding_category)}
+                    </span>
                     Estimado <strong>{formatCurrencyBRL(purchase.estimated_amount)}</strong>
                     {purchase.actual_amount !== null ? (
                       <>
