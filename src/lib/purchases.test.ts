@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildMaintenancePurchaseNote,
   countUnseenPurchaseUpdates,
   describePurchaseUpdate,
   calculateTotal,
@@ -38,6 +39,8 @@ function purchase(overrides: Partial<PurchaseRequest>): PurchaseRequest {
     notes: null,
     status: "requested",
     decided_by_name: null,
+    maintenance_request_id: null,
+    maintenance_equipment_name: null,
     decided_at: null,
     rejected_reason: null,
     actual_amount: null,
@@ -220,6 +223,20 @@ describe("valor unitário e total", () => {
     expect(getUnitAmount(150.6, 2)).toBe(75.3);
     expect(getUnitAmount(150.59, 2)).toBeNull();
     expect(getUnitAmount(100, 1)).toBeNull();
+  });
+});
+
+describe("pedido feito a partir de um chamado", () => {
+  it("resume o chamado nas observações do pedido", () => {
+    expect(buildMaintenancePurchaseNote("Bambuzinha", "Bico entupido\n e   peças soltas")).toBe(
+      "Para o chamado de manutenção em Bambuzinha: Bico entupido e peças soltas",
+    );
+  });
+
+  it("corta descrições muito longas", () => {
+    const note = buildMaintenancePurchaseNote("PC", "a".repeat(500));
+    expect(note.endsWith("...")).toBe(true);
+    expect(note.length).toBeLessThan(360);
   });
 });
 

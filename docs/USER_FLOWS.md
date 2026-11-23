@@ -559,6 +559,7 @@ A reserva própria é cancelada, permanece no histórico e deixa de bloquear o h
 1. Qualquer pessoa abre **Reportar problema** no card do equipamento, descreve o problema, escolhe a urgência e, se quiser, tira ou anexa até 3 fotos. Em chamado **urgente**, o equipamento fica **Parado** (sem novas reservas) assim que o chamado é enviado. Se já houver chamados abertos, o diálogo avisa.
 2. O chamado entra na aba **Chamados** como *Aberto* e aparece como pendência (menu e campainha) para coordenadores e responsáveis pela manutenção.
 3. Um responsável usa **Iniciar manutenção**: o chamado vira *Em andamento* e o equipamento (ativo ou parado) entra em **Em manutenção**, com início registrado. Se o chamado urgente for cancelado ou resolvido sem a manutenção começar, o equipamento volta a *Ativa* sozinho.
+3b. Se a máquina precisa de uma peça, o responsável usa **Pedir peça** no chamado: o pedido de compra já vem preenchido e fica ligado ao chamado, que passa a mostrar a situação da peça.
 4. Ao terminar, usa **Resolver** (com nota opcional; a caixa "Liberar o equipamento também" já vem marcada) ou **Liberar equipamento**, que também resolve os chamados em andamento.
 5. A aba **Chamados** filtra por tipo de equipamento (a escolha fica salva), equipamento e "só os meus" e ordena por prioridade, data, equipamento ou situação (a escolha fica salva); **Baixar fotos** gera um .zip com as fotos do chamado.
 

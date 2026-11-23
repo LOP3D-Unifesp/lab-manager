@@ -5,6 +5,7 @@ import { MoneyInput } from "../ui/MoneyInput";
 import { createPurchaseRequest, updatePurchaseRequest } from "../../lib/supabaseRepository";
 import type { Project } from "../../lib/projects";
 import {
+  buildMaintenancePurchaseNote,
   GENERAL_STOCK_LABEL,
   GENERAL_STOCK_VALUE,
   getPurchaseErrorMessage,
@@ -23,6 +24,8 @@ import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
 
 type PurchaseFormModalProps = {
+  /** Pedido de peça feito a partir de um chamado de manutenção: já vem preenchido e fica ligado ao chamado. */
+  fromMaintenance?: { requestId: string; equipmentName: string; description: string; urgency: PurchaseUrgency };
   projects: Project[];
   purchase: PurchaseRequest | null; // null = novo pedido
   defaultProjectId: string;
@@ -33,15 +36,15 @@ type PurchaseFormModalProps = {
 const inputClassName =
   "min-h-11 min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary";
 
-export function PurchaseFormModal({ defaultProjectId, onClose, onDone, projects, purchase }: PurchaseFormModalProps) {
+export function PurchaseFormModal({ defaultProjectId, fromMaintenance, onClose, onDone, projects, purchase }: PurchaseFormModalProps) {
   const [projectId, setProjectId] = useState(purchase ? (purchase.project_id ?? GENERAL_STOCK_VALUE) : defaultProjectId);
-  const [category, setCategory] = useState<string>(purchase?.funding_category ?? "");
-  const [urgency, setUrgency] = useState<PurchaseUrgency>(purchase?.urgency ?? "normal");
+  const [category, setCategory] = useState<string>(purchase?.funding_category ?? (fromMaintenance ? "custeio" : ""));
+  const [urgency, setUrgency] = useState<PurchaseUrgency>(purchase?.urgency ?? fromMaintenance?.urgency ?? "normal");
   const [item, setItem] = useState(purchase?.item ?? "");
   const [url, setUrl] = useState(purchase?.url ?? "");
   const [quantity, setQuantity] = useState(String(purchase?.quantity ?? 1));
   const [amount, setAmount] = useState(purchase ? formatMoneyField(getUnitAmountForEdit(purchase.estimated_amount, purchase.quantity)) : "");
-  const [notes, setNotes] = useState(purchase?.notes ?? "");
+  const [notes, setNotes] = useState(purchase?.notes ?? (fromMaintenance ? buildMaintenancePurchaseNote(fromMaintenance.equipmentName, fromMaintenance.description) : ""));
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
 
@@ -75,7 +78,7 @@ export function PurchaseFormModal({ defaultProjectId, onClose, onDone, projects,
           ...(projectId !== original ? { projectId: projectId === GENERAL_STOCK_VALUE ? null : projectId } : {}),
         });
       }
-      else await createPurchaseRequest({ ...input, projectId: projectId === GENERAL_STOCK_VALUE ? null : projectId });
+      else await createPurchaseRequest({ ...input, projectId: projectId === GENERAL_STOCK_VALUE ? null : projectId, maintenanceRequestId: fromMaintenance?.requestId ?? null });
       await onDone();
     } catch (error) {
       setErro(getPurchaseErrorMessage(error));
@@ -86,8 +89,8 @@ export function PurchaseFormModal({ defaultProjectId, onClose, onDone, projects,
 
   return (
     <Modal
-      title={purchase ? "Editar pedido" : "Novo pedido de compra"}
-      description="O coordenador analisa o pedido e acompanha até a entrega."
+      title={purchase ? "Editar pedido" : fromMaintenance ? `Pedir peça: ${fromMaintenance.equipmentName}` : "Novo pedido de compra"}
+      description={fromMaintenance ? "O pedido fica ligado ao chamado, e a situação da peça aparece nele." : "O coordenador analisa o pedido e acompanha até a entrega."}
       onClose={onClose}
     >
       <form className="grid gap-4" onSubmit={salvar}>

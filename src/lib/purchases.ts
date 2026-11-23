@@ -69,6 +69,9 @@ export type PurchaseRequest = {
   notes: string | null;
   status: PurchaseStatus;
   decided_by_name: string | null;
+  /** Chamado de manutenção que originou o pedido (uma peça de que a máquina precisa), se houver. */
+  maintenance_request_id: string | null;
+  maintenance_equipment_name: string | null;
   decided_at: string | null;
   rejected_reason: string | null;
   actual_amount: number | null;
@@ -76,6 +79,21 @@ export type PurchaseRequest = {
   delivered_at: string | null;
   created_at: string;
 };
+
+// Peça pedida a partir de um chamado: o que o chamado precisa saber do pedido.
+export type MaintenancePurchase = {
+  id: string;
+  maintenance_request_id: string;
+  item: string;
+  quantity: number;
+  status: PurchaseStatus;
+};
+
+// Texto das observações de um pedido feito a partir de um chamado (limitado para caber nas observações).
+export function buildMaintenancePurchaseNote(equipmentName: string, description: string) {
+  const text = description.trim().replace(/\s+/g, " ");
+  return `Para o chamado de manutenção em ${equipmentName}: ${text.length > 300 ? `${text.slice(0, 297)}...` : text}`;
+}
 
 // Pedidos que ainda estão andando (não chegaram a um estado final).
 export function isPurchaseOpen(status: PurchaseStatus) {
