@@ -1,8 +1,9 @@
-import { LogOut, User } from "lucide-react";
+import { LogOut, MessageSquarePlus, User } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { useAuth } from "../../lib/auth";
+import { useFeedback } from "../feedback/FeedbackProvider";
 import { Avatar } from "../ui/Avatar";
 import { StatusBadge } from "../ui/StatusBadge";
 
@@ -12,6 +13,7 @@ function getRoleLabel(role?: string) {
 
 export function MobileAccountMenu() {
   const { profile, signOut } = useAuth();
+  const { openFeedback } = useFeedback();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -93,6 +95,17 @@ export function MobileAccountMenu() {
               <User className="h-4 w-4 text-primary" aria-hidden="true" />
               Meu perfil
             </Link>
+            <button
+              type="button"
+              onClick={() => {
+                setIsOpen(false);
+                openFeedback();
+              }}
+              className="flex min-h-11 items-center gap-3 rounded-md px-3 text-left text-base font-semibold text-text transition hover:bg-background hover:text-primary"
+            >
+              <MessageSquarePlus className="h-4 w-4 text-primary" aria-hidden="true" />
+              Enviar feedback
+            </button>
             <button
               type="button"
               onClick={handleSignOut}

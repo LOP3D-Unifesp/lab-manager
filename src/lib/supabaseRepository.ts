@@ -1,4 +1,5 @@
 import { supabase } from "./supabaseClient";
+import type { FeedbackKind, FeedbackReport, FeedbackStatus } from "./feedback";
 import type {
   CatalogMaterial,
   MaterialCategory,
@@ -1276,4 +1277,50 @@ export async function deleteProjectTask(id: string) {
 export async function setTaskAssignees(taskId: string, profileIds: string[]) {
   const { error } = await client().rpc("set_task_assignees", { p_task_id: taskId, p_profile_ids: profileIds });
   throwIfError(error);
+}
+
+// ---------------------------------------------------------------------------
+// Feedback (sugestões e erros)
+// ---------------------------------------------------------------------------
+
+export async function createFeedback(params: { kind: FeedbackKind; message: string; pagePath: string; userAgent: string }) {
+  const { error } = await client().from("feedback_reports").insert({
+    kind: params.kind,
+    message: params.message.trim(),
+    page_path: params.pagePath,
+    user_agent: params.userAgent,
+  });
+  throwIfError(error);
+}
+
+// Coordenador: tudo o que foi enviado, com quem enviou.
+export async function listFeedback() {
+  const { data, error } = await client()
+    .from("feedback_reports")
+    .select(
+      "id, kind, message, page_path, user_agent, status, coordinator_note, created_at, author:profiles!feedback_reports_created_by_fkey(full_name, email)",
+    )
+    .order("created_at", { ascending: false });
+  throwIfError(error);
+  return ((data ?? []) as unknown as Array<
+    Omit<FeedbackReport, "author_name" | "author_email"> & { author: { full_name: string; email: string } | null }
+  >).map(({ author, ...row }) => ({
+    ...row,
+    author_name: author?.full_name ?? null,
+    author_email: author?.email ?? null,
+  })) as FeedbackReport[];
+}
+
+export async function updateFeedback(id: string, params: { status: FeedbackStatus; coordinator_note: string | null }) {
+  const { error } = await client().from("feedback_reports").update(params).eq("id", id);
+  throwIfError(error);
+}
+
+export async function countNewFeedback() {
+  const { count, error } = await client()
+    .from("feedback_reports")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "new");
+  throwIfError(error);
+  return count ?? 0;
 }

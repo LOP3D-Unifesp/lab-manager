@@ -9,6 +9,7 @@ import { App } from "./App";
 import { Administracao } from "./pages/Administracao";
 import { AgendaLaboratorio } from "./pages/AgendaLaboratorio";
 import { Dashboard } from "./pages/Dashboard";
+import { Feedback } from "./pages/Feedback";
 import { Equipamentos } from "./pages/Equipamentos";
 import { Habilidades } from "./pages/Habilidades";
 import { HistoricoReservas } from "./pages/HistoricoReservas";
@@ -95,6 +96,7 @@ function ProtectedApp() {
   if (
     (location.pathname.startsWith("/administracao") ||
       location.pathname.startsWith("/usuarios") ||
+      location.pathname.startsWith("/feedback") ||
       location.pathname.startsWith("/reservas/historico")) &&
     profile.role !== "coordinator"
   ) {
@@ -126,6 +128,7 @@ export const router = createBrowserRouter([
           { path: "habilidades", element: <Habilidades /> },
           { path: "agenda", element: <AgendaLaboratorio /> },
           { path: "equipamentos", element: <Equipamentos /> },
+          { path: "feedback", element: <Feedback /> },
           { path: "inventario", element: <Inventario /> },
           { path: "impressoras", element: <Navigate to="/equipamentos" replace /> },
           { path: "reservas", element: <Reservas /> },

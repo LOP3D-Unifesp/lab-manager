@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(205);
+select plan(218);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -1284,6 +1284,86 @@ select lives_ok(
   $$ select public.end_equipment_maintenance('20000000-0000-0000-0000-000000000003') $$,
   'the second maintenance is released'
 );
+
+-- Feedback box.
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
+select lives_ok(
+  $$ insert into public.feedback_reports (kind, message, page_path) values ('bug', 'pgtap erro na tela de reservas', '/reservas') $$,
+  'an active user sends feedback'
+);
+select throws_ok(
+  $$ insert into public.feedback_reports (kind, message, created_by) values ('bug', 'pgtap em nome de outro', '00000000-0000-0000-0000-000000000101') $$,
+  '42501', null,
+  'feedback cannot be sent in someone else name'
+);
+select throws_ok(
+  $$ insert into public.feedback_reports (kind, message, status) values ('bug', 'pgtap ja resolvido', 'done') $$,
+  '42501', null,
+  'feedback always starts as new'
+);
+select throws_ok(
+  $$ insert into public.feedback_reports (kind, message) values ('bug', 'ab') $$,
+  '23514', null,
+  'a feedback message needs at least three characters'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
+select lives_ok(
+  $$ insert into public.feedback_reports (kind, message) values ('suggestion', 'pgtap sugestao da coordenacao') $$,
+  'a coordinator also sends feedback'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
+select is(
+  (select count(*) from public.feedback_reports where message like 'pgtap%'),
+  1::bigint,
+  'a researcher only reads their own feedback'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000103","email":"other@example.com","role":"authenticated"}', true);
+select is(
+  (select count(*) from public.feedback_reports where message like 'pgtap%'),
+  0::bigint,
+  'another researcher does not read it'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
+select is(
+  (select count(*) from public.feedback_reports where message like 'pgtap%'),
+  2::bigint,
+  'the coordinator reads every feedback'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
+select lives_ok(
+  $$ update public.feedback_reports set status = 'done' where message like 'pgtap erro%' $$,
+  'a researcher update on feedback is silently ignored'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
+select is(
+  (select status::text from public.feedback_reports where message like 'pgtap erro%'),
+  'new',
+  'the status was not changed by the researcher'
+);
+select lives_ok(
+  $$ update public.feedback_reports set status = 'seen', coordinator_note = 'Vamos olhar' where message like 'pgtap erro%' $$,
+  'the coordinator handles feedback'
+);
+select is(
+  (select status::text from public.feedback_reports where message like 'pgtap erro%'),
+  'seen',
+  'the status change is kept'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000104","email":"inactive@example.com","role":"authenticated"}', true);
+select throws_ok(
+  $$ insert into public.feedback_reports (kind, message) values ('bug', 'pgtap de inativo') $$,
+  '42501', null,
+  'an inactive profile cannot send feedback'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
 
 select * from finish();
 rollback;
