@@ -1,7 +1,8 @@
 import { FormEvent, useState } from "react";
 
 import { formatCurrencyBRL } from "../../lib/projects";
-import { getPurchaseErrorMessage, parseMoney, type PurchaseRequest } from "../../lib/purchases";
+import { getPurchaseErrorMessage, maskMoneyInput, parseMaskedMoney, type PurchaseRequest } from "../../lib/purchases";
+import { MoneyInput } from "../ui/MoneyInput";
 import { setPurchaseStatus } from "../../lib/supabaseRepository";
 import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
@@ -19,7 +20,7 @@ const inputClassName =
 // Recusar (com motivo) ou marcar como comprado (com o valor pago).
 export function PurchaseStepModal({ mode, onClose, onDone, purchase }: PurchaseStepModalProps) {
   const [reason, setReason] = useState("");
-  const [amount, setAmount] = useState(purchase.estimated_amount.toFixed(2).replace(".", ","));
+  const [amount, setAmount] = useState(maskMoneyInput(purchase.estimated_amount.toFixed(2).replace(".", ",")));
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
 
@@ -27,7 +28,7 @@ export function PurchaseStepModal({ mode, onClose, onDone, purchase }: PurchaseS
     event.preventDefault();
     let actualAmount: number | null = null;
     if (mode === "purchase") {
-      actualAmount = parseMoney(amount);
+      actualAmount = parseMaskedMoney(amount);
       if (actualAmount === null) {
         setErro("Informe o valor pago, por exemplo 129,90.");
         return;
@@ -72,7 +73,7 @@ export function PurchaseStepModal({ mode, onClose, onDone, purchase }: PurchaseS
         ) : (
           <label className="grid gap-2 text-base font-semibold text-text">
             Valor total pago (R$)
-            <input autoFocus className={inputClassName} inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} />
+            <MoneyInput autoFocus className={inputClassName} value={amount} onChange={setAmount} />
             <span className="text-sm font-normal text-muted">Total estimado no pedido: {formatCurrencyBRL(purchase.estimated_amount)}.</span>
           </label>
         )}

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { normalizeTypedDot } from "../components/ui/MoneyInput";
 
 import {
   countUnseenPurchaseUpdates,
@@ -12,6 +13,8 @@ import {
   getUnitAmount,
   isNotifiablePurchaseStatus,
   isValidPurchaseUrl,
+  maskMoneyInput,
+  parseMaskedMoney,
   parseMoney,
   sortPurchases,
   summarizeByProject,
@@ -147,6 +150,57 @@ describe("avisos para quem pediu", () => {
     expect(countUnseenPurchaseUpdates(updates, "2026-06-10T10:00:00Z")).toBe(1);
     expect(countUnseenPurchaseUpdates(updates, "2026-06-10T13:00:00Z")).toBe(0);
     expect(countUnseenPurchaseUpdates(updates, null)).toBe(0);
+  });
+});
+
+describe("máscara do valor", () => {
+  it("coloca o ponto de milhar e mantém a vírgula decimal", () => {
+    expect(maskMoneyInput("1234")).toBe("1.234");
+    expect(maskMoneyInput("1234567,8")).toBe("1.234.567,8");
+    expect(maskMoneyInput("1.234,5")).toBe("1.234,5");
+    expect(maskMoneyInput("50")).toBe("50");
+  });
+
+  it("limita as casas decimais e descarta o que não é número", () => {
+    expect(maskMoneyInput("1234,567")).toBe("1.234,56");
+    expect(maskMoneyInput("1234,567", 4)).toBe("1.234,567");
+    expect(maskMoneyInput("R$ 12a,3,4")).toBe("12,34");
+    expect(maskMoneyInput("abc")).toBe("");
+  });
+
+  it("trata zeros à esquerda e a vírgula sozinha", () => {
+    expect(maskMoneyInput("007")).toBe("7");
+    expect(maskMoneyInput("0,5")).toBe("0,5");
+    expect(maskMoneyInput(",")).toBe("0,");
+    expect(maskMoneyInput("")).toBe("");
+  });
+
+  it("lê o texto mascarado: ponto é milhar e vírgula é decimal", () => {
+    expect(parseMaskedMoney("1.234")).toBe(1234);
+    expect(parseMaskedMoney("1.234,56")).toBe(1234.56);
+    expect(parseMaskedMoney("12,")).toBe(12);
+    expect(parseMaskedMoney("75,295", 4)).toBe(75.295);
+    expect(parseMaskedMoney("75,295")).toBeNull();
+    expect(parseMaskedMoney("")).toBeNull();
+  });
+});
+
+describe("ponto digitado ou colado no campo de valor", () => {
+  it("o ponto digitado vira vírgula decimal", () => {
+    expect(normalizeTypedDot("1.234.567", "1.234.567.")).toBe("1.234.567,");
+    expect(normalizeTypedDot("12", "12.")).toBe("12,");
+    expect(normalizeTypedDot("1.234", "1.2.34")).toBe("1.2,34");
+  });
+
+  it("apagar um dígito não vira decimal por engano", () => {
+    expect(normalizeTypedDot("1.234", "1.23")).toBe("1.23");
+  });
+
+  it("valor colado com ponto e 1 ou 2 dígitos no fim é decimal; com 3 dígitos é milhar", () => {
+    expect(normalizeTypedDot("", "1234.56")).toBe("1234,56");
+    expect(normalizeTypedDot("", "R$ 99.9")).toBe("R$ 99,9");
+    expect(normalizeTypedDot("", "1.234")).toBe("1.234");
+    expect(normalizeTypedDot("", "1.234,56")).toBe("1.234,56");
   });
 });
 

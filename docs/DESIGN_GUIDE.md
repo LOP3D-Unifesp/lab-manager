@@ -258,6 +258,8 @@ Botões devem seguir os padrões definidos neste guia. A ação principal de cad
 
 Campos de formulário devem ter label visível, área de toque confortável, borda clara, estado de foco visível e mensagens de erro textuais. Placeholder não substitui label.
 
+**Valores em reais:** usar `MoneyInput` (`src/components/ui/MoneyInput.tsx`), que formata enquanto a pessoa digita (`1234,5` vira `1.234,5`), aceita o ponto do teclado numérico como vírgula decimal, trata valores colados como `1234.56` e limita as casas decimais. O texto do campo é lido com `parseMaskedMoney` (ponto é milhar e vírgula é decimal), e as regras ficam em `src/lib/purchases.ts` (`maskMoneyInput`). Quantidades inteiras aceitam só dígitos.
+
 ### Listas responsivas
 
 Listas devem aparecer como cards ou linhas simples em mobile. Em desktop, podem se transformar em tabelas ou grids com mais colunas.
