@@ -131,6 +131,38 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"equipment_maintenance": {
+                  Row: {
+                    "created_at": string,"ended_at": string | null,"ended_by": string | null,"equipment_id": string,"expected_return_on": string | null,"id": string,"notes": string | null,"reason": string,"resolution_notes": string | null,"started_at": string,"started_by": string | null,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"ended_at"?: string | null,"ended_by"?: string | null,"equipment_id": string,"expected_return_on"?: string | null,"id"?: string,"notes"?: string | null,"reason": string,"resolution_notes"?: string | null,"started_at"?: string,"started_by"?: string | null,"updated_at"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"ended_at"?: string | null,"ended_by"?: string | null,"equipment_id"?: string,"expected_return_on"?: string | null,"id"?: string,"notes"?: string | null,"reason"?: string,"resolution_notes"?: string | null,"started_at"?: string,"started_by"?: string | null,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "equipment_maintenance_ended_by_fkey"
+      columns: ["ended_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "equipment_maintenance_equipment_id_fkey"
+      columns: ["equipment_id"]
+isOneToOne: false
+      referencedRelation: "equipment"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "equipment_maintenance_started_by_fkey"
+      columns: ["started_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"equipment_materials": {
                   Row: {
                     "created_at": string,"equipment_id": string,"material_id": string
@@ -726,6 +758,27 @@ isOneToOne: false
 "delete_maintenance_block":
 { Args: { "p_block_id": string }; Returns: undefined
                            },
+"end_equipment_maintenance":
+{ Args: { "p_equipment_id": string,"p_notes"?: string }; Returns: {
+              "created_at": string,
+"ended_at": string | null,
+"ended_by": string | null,
+"equipment_id": string,
+"expected_return_on": string | null,
+"id": string,
+"notes": string | null,
+"reason": string,
+"resolution_notes": string | null,
+"started_at": string,
+"started_by": string | null,
+"updated_at": string
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "equipment_maintenance"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
 "get_public_lab_identity":
 { Args: Record<PropertyKey, never>; Returns: {
               "acronym": string,"invitation_ttl_hours": number,"name": string,"privacy_contact_email": string
@@ -925,6 +978,27 @@ isOneToOne: false
 "set_task_assignees":
 { Args: { "p_profile_ids": (string)[],"p_task_id": string }; Returns: undefined
                            },
+"start_equipment_maintenance":
+{ Args: { "p_cancel_bookings"?: boolean,"p_equipment_id": string,"p_expected_return_on"?: string,"p_notes"?: string,"p_reason": string }; Returns: {
+              "created_at": string,
+"ended_at": string | null,
+"ended_by": string | null,
+"equipment_id": string,
+"expected_return_on": string | null,
+"id": string,
+"notes": string | null,
+"reason": string,
+"resolution_notes": string | null,
+"started_at": string,
+"started_by": string | null,
+"updated_at": string
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "equipment_maintenance"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
 "update_booking":
 { Args: { "p_booking_id": string,"p_equipment_id": string,"p_estimated_duration_minutes": number,"p_material_id"?: string,"p_notes"?: string,"p_project_id": string,"p_spool_id"?: string,"p_starts_at": string }; Returns: {
               "approved_at": string | null,

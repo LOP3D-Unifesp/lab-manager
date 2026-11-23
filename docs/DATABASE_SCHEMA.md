@@ -19,8 +19,8 @@ O schema cobre:
 
 O Supabase Auth sera a fonte de autenticacao. O PostgreSQL sera a fonte dos dados de dominio da aplicacao.
 
-> **Fonte da verdade:** as migrations em `supabase/migrations/` (18 arquivos, de `20260818` a
-> `20260904`). Este documento descreve o resultado delas. A secao 1.1 resume o que mudou depois da
+> **Fonte da verdade:** as migrations em `supabase/migrations/` (19 arquivos, de `20260818` a
+> `20260905`). Este documento descreve o resultado delas. A secao 1.1 resume o que mudou depois da
 > baseline; onde houver divergencia, vale a migration.
 
 Status do MVP implementado:
@@ -56,6 +56,7 @@ Status do MVP implementado:
 | `20260902_bookings_require_project` | `printer_bookings.project_id`; `create_printer_booking` e `update_printer_booking` passam a receber o projeto (`p_project_id`) em vez do nome. |
 | `20260903_equipment` | Impressoras viram equipamentos: `printers` -> `equipment`, `printer_materials` -> `equipment_materials`, `printer_bookings` -> `equipment_bookings` (e `printer_id` -> `equipment_id`); nova `equipment_types`; material da reserva opcional; RPCs `create_booking`, `update_booking`, `cancel_booking`, `reject_booking`, `set_booking_status` e `replace_equipment_materials` (secao 3.14). |
 | `20260904_inventory` | `materials.category` e `materials.unit`; nova `material_spools` (rolos com cor, peso e dono); `equipment_bookings.spool_id` e `consumed_amount`; `create_booking` e `update_booking` ganham `p_spool_id`; RPC `record_booking_usage` (secao 3.15). |
+| `20260905_equipment_maintenance` | Manutencao como estado do equipamento, com historico: `equipment_maintenance` e as RPCs `start_equipment_maintenance` e `end_equipment_maintenance` (secao 3.16). |
 
 Resumo dos objetos que mais mudam o entendimento do schema:
 
@@ -1022,6 +1023,27 @@ cada unidade fisica (um rolo de filamento, um frasco de resina) e um item de est
   (devolve o anterior antes de aplicar o novo) e o valor e limitado ao que o rolo ainda tem. Erros:
   `usage_not_allowed`, `booking_without_spool` e `invalid_amount`.
 
+### 3.16 Manutencao do equipamento
+
+Ninguem sabe quando um reparo termina, entao a manutencao e um **estado**, nao um bloqueio com data. O
+equipamento entra em manutencao agora e continua assim ate ser liberado; cada parada fica registrada.
+
+- `equipment_maintenance`: `equipment_id`, `reason`, `notes`, `expected_return_on` (previsao, apenas
+  informativa), `started_at`, `started_by`, `ended_at` (nulo enquanto aberta), `ended_by` e
+  `resolution_notes`. Um indice unico parcial garante **no maximo um episodio aberto por equipamento**.
+  Leitura para qualquer usuario ativo; escrita so pelas RPCs.
+- `start_equipment_maintenance(p_equipment_id, p_reason, p_notes, p_expected_return_on,
+  p_cancel_bookings)`: so coordenador. Cria o episodio, muda `equipment.status` para `maintenance` e,
+  com `p_cancel_bookings`, cancela as reservas `pending` e `approved` que ainda nao comecaram (as em
+  andamento ficam). Erros: `coordinator_required`, `reason_required`, `maintenance_already_open`,
+  `equipment_not_found`.
+- `end_equipment_maintenance(p_equipment_id, p_notes)`: so coordenador. Fecha o episodio e volta o
+  equipamento para `active`. Um equipamento posto em `maintenance` a mao, sem episodio, tambem e
+  liberado. Erro: `not_in_maintenance`.
+- Novas reservas continuam bloqueadas porque as funcoes de reserva so aceitam equipamento `active`.
+- A tabela `maintenance_blocks` (bloqueio com data, secao 3.12) continua existindo e sendo respeitada
+  pelas reservas, mas o app deixou de cria-la.
+
 ## 4. Relacionamentos principais
 
 - `profiles.id` e igual a `auth.users.id`.
@@ -1173,7 +1195,7 @@ Validacoes cobertas pelos testes de banco do MVP:
 - Idiomas nao sao habilidades tecnicas e nao entram em `skills`.
 - Nao havera upload `.gcode` ou `.3mf` no schema do MVP.
 - Nao havera historico detalhado de manutencao alem dos bloqueios.
-- A baseline inicial (`20260818`) e imutavel; mudancas de schema entram em migrations incrementais (hoje ate `20260904`).
+- A baseline inicial (`20260818`) e imutavel; mudancas de schema entram em migrations incrementais (hoje ate `20260905`).
 
 ## 10. Inventario de insumos
 

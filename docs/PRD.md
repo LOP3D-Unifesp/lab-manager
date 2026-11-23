@@ -81,7 +81,7 @@ Funcionalidades:
 - definição de compatibilidade entre impressora e material (só para tipos que usam material);
 - visualização da agenda dos equipamentos;
 - reserva de qualquer equipamento por horário; o material só é pedido para impressoras;
-- bloqueio de horários para manutenção, feito pelo coordenador na página Equipamentos (início e fim em data e hora, inclusive de vários dias; a página Reservas só exibe os bloqueios).
+- manutenção como estado do equipamento: o coordenador coloca em manutenção (sem data de fim, com previsão de volta opcional) e libera depois; início e fim ficam no histórico.
 
 ### 5.3 Módulo de reservas
 

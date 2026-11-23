@@ -1,13 +1,21 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { Pencil, Plus, Wrench } from "lucide-react";
+import { History, Pencil, Plus, Wrench } from "lucide-react";
 
-import { MaintenanceBlockModal } from "../components/equipamentos/MaintenanceBlockModal";
+import { EndMaintenanceModal } from "../components/equipamentos/EndMaintenanceModal";
+import { MaintenanceHistoryModal } from "../components/equipamentos/MaintenanceHistoryModal";
+import { StartMaintenanceModal } from "../components/equipamentos/StartMaintenanceModal";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { Modal } from "../components/ui/Modal";
 import { PageHeader } from "../components/ui/PageHeader";
 import { StatusBadge } from "../components/ui/StatusBadge";
-import { getBlockState, getRelevantBlocks } from "../lib/maintenance";
+import {
+  formatMaintenanceDate,
+  formatMaintenanceDateTime,
+  formatMaintenanceDuration,
+  getOpenEpisode,
+  type MaintenanceEpisode,
+} from "../lib/maintenance";
 import { useAuth } from "../lib/auth";
 import {
   equipmentUsesMaterial,
@@ -17,7 +25,6 @@ import {
   type EquipmentMaterial,
   type EquipmentStatus,
   type EquipmentType,
-  type MaintenanceBlock,
   type Material,
 } from "../lib/domain";
 import {
@@ -26,7 +33,7 @@ import {
   listEquipment,
   listEquipmentMaterials,
   listEquipmentTypes,
-  listMaintenanceBlocks,
+  listMaintenanceEpisodes,
   listMaterials,
   setEquipmentMaterials,
   updateEquipment,
@@ -43,7 +50,7 @@ type EquipmentForm = {
   materialIds: string[];
 };
 
-const statusOptions: EquipmentStatus[] = ["active", "maintenance", "unavailable", "disabled"];
+const statusOptions: EquipmentStatus[] = ["active", "unavailable", "disabled"];
 
 const inputClassName =
   "min-h-11 min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary";
@@ -73,8 +80,10 @@ export function Equipamentos() {
   const [materials, setMaterials] = useState<Material[]>([]);
   const [equipmentMaterials, setEquipmentMaterialsState] = useState<EquipmentMaterial[]>([]);
   const [filtroTipo, setFiltroTipo] = useState("all");
-  const [blocks, setBlocks] = useState<MaintenanceBlock[]>([]);
-  const [manutencaoDe, setManutencaoDe] = useState<Equipment | null>(null);
+  const [episodes, setEpisodes] = useState<MaintenanceEpisode[]>([]);
+  const [iniciarEm, setIniciarEm] = useState<Equipment | null>(null);
+  const [liberarEm, setLiberarEm] = useState<Equipment | null>(null);
+  const [historicoDe, setHistoricoDe] = useState<Equipment | null>(null);
   const [modalAberto, setModalAberto] = useState(false);
   const [emEdicao, setEmEdicao] = useState<Equipment | null>(null);
   const [form, setForm] = useState<EquipmentForm | null>(null);
@@ -83,18 +92,26 @@ export function Equipamentos() {
   const [salvando, setSalvando] = useState(false);
 
   async function carregarDados() {
-    const [equipmentData, typesData, materialsData, equipmentMaterialsData, blocksData] = await Promise.all([
+    const [equipmentData, typesData, materialsData, equipmentMaterialsData, episodesData] = await Promise.all([
       listEquipment(),
       listEquipmentTypes(),
       listMaterials(),
       listEquipmentMaterials(),
-      listMaintenanceBlocks(),
+      listMaintenanceEpisodes(),
     ]);
     setEquipmentList(equipmentData);
     setTypes(typesData);
     setMaterials(materialsData);
     setEquipmentMaterialsState(equipmentMaterialsData);
-    setBlocks(blocksData);
+    setEpisodes(episodesData);
+  }
+
+  async function recarregar() {
+    try {
+      await carregarDados();
+    } catch (error) {
+      setErro(getErrorMessage(error));
+    }
   }
 
   useEffect(() => {
@@ -307,26 +324,20 @@ export function Equipamentos() {
                       variant={item.status === "active" ? "success" : "warning"}
                     />
                   </div>
-                  {(() => {
-                    const agora = new Date();
-                    const relevantes = getRelevantBlocks(
-                      blocks.filter((block) => block.equipment_id === item.id),
-                      agora,
-                    );
-                    const emCurso = relevantes.find((block) => getBlockState(block, agora) === "active");
-                    const futuros = relevantes.filter((block) => getBlockState(block, agora) === "upcoming").length;
-                    if (!emCurso && futuros === 0) return null;
+                  {item.status === "maintenance" ? (() => {
+                    const aberto = getOpenEpisode(episodes, item.id);
                     return (
-                      <p className="mt-3 flex flex-wrap items-center gap-2 text-sm font-semibold text-warning-dark">
-                        <Wrench className="h-4 w-4" aria-hidden="true" />
-                        {emCurso
-                          ? `Em manutenção até ${new Intl.DateTimeFormat("pt-BR", { timeZone: timezone, day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(emCurso.ends_at))}`
-                          : null}
-                        {emCurso && futuros > 0 ? " · " : null}
-                        {futuros > 0 ? `${futuros} bloqueio(s) agendado(s)` : null}
-                      </p>
+                      <div className="mt-3 grid gap-1 rounded-lg border border-warning-dark bg-warning-soft p-3 text-sm text-text">
+                        <p className="flex items-center gap-2 font-semibold">
+                          <Wrench className="h-4 w-4" aria-hidden="true" />
+                          Em manutenção
+                          {aberto ? ` desde ${formatMaintenanceDateTime(aberto.started_at, timezone)} (${formatMaintenanceDuration(aberto.started_at, null, new Date())})` : ""}
+                        </p>
+                        {aberto ? <p>{aberto.reason}</p> : null}
+                        {aberto?.expected_return_on ? <p className="text-muted">Previsão de volta: {formatMaintenanceDate(aberto.expected_return_on)}</p> : null}
+                      </div>
                     );
-                  })()}
+                  })() : null}
                   <dl className="mt-4 grid gap-2 text-base leading-6 text-muted">
                     <div>
                       <dt className="font-semibold text-text">Local</dt>
@@ -350,15 +361,27 @@ export function Equipamentos() {
                     ) : null}
                   </dl>
                   <div className="mt-auto flex items-center justify-end gap-2 pt-5">
-                    {isCoordinator ? (
-                      <Button
-                        className="min-h-9 px-3 py-2 text-sm"
-                        variant="secondary"
-                        onClick={() => setManutencaoDe(item)}
+                    {episodes.some((episode) => episode.equipment_id === item.id) ? (
+                      <button
+                        type="button"
+                        className="inline-flex min-h-9 items-center gap-1 rounded-md px-2 text-sm font-semibold text-muted transition hover:text-primary"
+                        onClick={() => setHistoricoDe(item)}
                       >
-                        <Wrench className="mr-2 h-4 w-4" aria-hidden="true" />
-                        Bloquear manutenção
-                      </Button>
+                        <History className="h-4 w-4" aria-hidden="true" />
+                        Histórico
+                      </button>
+                    ) : null}
+                    {isCoordinator ? (
+                      item.status === "maintenance" ? (
+                        <Button className="min-h-9 px-3 py-2 text-sm" variant="success" onClick={() => setLiberarEm(item)}>
+                          Liberar equipamento
+                        </Button>
+                      ) : (
+                        <Button className="min-h-9 px-3 py-2 text-sm" variant="secondary" onClick={() => setIniciarEm(item)}>
+                          <Wrench className="mr-2 h-4 w-4" aria-hidden="true" />
+                          Colocar em manutenção
+                        </Button>
+                      )
                     ) : null}
                     <button
                       type="button"
@@ -388,19 +411,37 @@ export function Equipamentos() {
         </p>
       ) : null}
 
-      {manutencaoDe ? (
-        <MaintenanceBlockModal
-          equipment={manutencaoDe}
-          blocks={blocks.filter((block) => block.equipment_id === manutencaoDe.id)}
+      {iniciarEm ? (
+        <StartMaintenanceModal
+          equipment={iniciarEm}
           timezone={timezone}
-          onClose={() => setManutencaoDe(null)}
-          onChanged={async () => {
-            try {
-              setBlocks(await listMaintenanceBlocks());
-            } catch (error) {
-              setErro(getErrorMessage(error));
-            }
+          onClose={() => setIniciarEm(null)}
+          onDone={async () => {
+            setIniciarEm(null);
+            await recarregar();
           }}
+        />
+      ) : null}
+
+      {liberarEm ? (
+        <EndMaintenanceModal
+          equipment={liberarEm}
+          episode={getOpenEpisode(episodes, liberarEm.id)}
+          timezone={timezone}
+          onClose={() => setLiberarEm(null)}
+          onDone={async () => {
+            setLiberarEm(null);
+            await recarregar();
+          }}
+        />
+      ) : null}
+
+      {historicoDe ? (
+        <MaintenanceHistoryModal
+          equipment={historicoDe}
+          episodes={episodes.filter((episode) => episode.equipment_id === historicoDe.id)}
+          timezone={timezone}
+          onClose={() => setHistoricoDe(null)}
         />
       ) : null}
 
@@ -501,15 +542,19 @@ export function Equipamentos() {
                 Estado
                 <select
                   className={inputClassName}
+                  disabled={form.status === "maintenance"}
                   value={form.status}
                   onChange={(event) => atualizarForm({ status: event.target.value as EquipmentStatus })}
                 >
-                  {statusOptions.map((status) => (
+                  {(form.status === "maintenance" ? (["maintenance"] as EquipmentStatus[]) : statusOptions).map((status) => (
                     <option key={status} value={status}>
                       {getEquipmentStatusLabel(status)}
                     </option>
                   ))}
                 </select>
+                {form.status === "maintenance" ? (
+                  <span className="text-sm font-normal text-muted">Para tirar da manutenção, use “Liberar equipamento” no card.</span>
+                ) : null}
               </label>
             </div>
 

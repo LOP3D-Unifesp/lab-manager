@@ -996,27 +996,63 @@ export async function listActiveBookingsForEquipment(equipmentId: string) {
   }));
 }
 
-export async function createMaintenanceBlock(params: {
-  equipmentId: string;
-  startsAt: string;
-  endsAt: string;
+export type MaintenanceEpisodeRow = {
+  id: string;
+  equipment_id: string;
   reason: string;
-  notes?: string | null;
-}) {
-  const { data, error } = await client().rpc("create_maintenance_block", {
-    p_equipment_id: params.equipmentId,
-    p_starts_at: params.startsAt,
-    p_ends_at: params.endsAt,
-    p_reason: params.reason,
-    p_notes: params.notes ?? undefined,
-  });
+  notes: string | null;
+  expected_return_on: string | null;
+  started_at: string;
+  ended_at: string | null;
+  resolution_notes: string | null;
+  started_by_profile: { full_name: string } | null;
+  ended_by_profile: { full_name: string } | null;
+};
+
+// Histórico completo de manutenção (episódios abertos e encerrados), do mais recente ao mais antigo.
+export async function listMaintenanceEpisodes() {
+  const { data, error } = await client()
+    .from("equipment_maintenance")
+    .select(
+      "id, equipment_id, reason, notes, expected_return_on, started_at, ended_at, resolution_notes, started_by_profile:profiles!equipment_maintenance_started_by_fkey(full_name), ended_by_profile:profiles!equipment_maintenance_ended_by_fkey(full_name)",
+    )
+    .order("started_at", { ascending: false });
   throwIfError(error);
-  return data as MaintenanceBlock;
+  return ((data ?? []) as unknown as MaintenanceEpisodeRow[]).map((row) => ({
+    id: row.id,
+    equipment_id: row.equipment_id,
+    reason: row.reason,
+    notes: row.notes,
+    expected_return_on: row.expected_return_on,
+    started_at: row.started_at,
+    started_by_name: row.started_by_profile?.full_name ?? null,
+    ended_at: row.ended_at,
+    ended_by_name: row.ended_by_profile?.full_name ?? null,
+    resolution_notes: row.resolution_notes,
+  }));
 }
 
-export async function deleteMaintenanceBlock(blockId: string) {
-  const { error } = await client().rpc("delete_maintenance_block", {
-    p_block_id: blockId,
+export async function startEquipmentMaintenance(params: {
+  equipmentId: string;
+  reason: string;
+  notes?: string | null;
+  expectedReturnOn?: string | null;
+  cancelBookings?: boolean;
+}) {
+  const { error } = await client().rpc("start_equipment_maintenance", {
+    p_equipment_id: params.equipmentId,
+    p_reason: params.reason,
+    p_notes: params.notes ?? undefined,
+    p_expected_return_on: params.expectedReturnOn ?? undefined,
+    p_cancel_bookings: params.cancelBookings ?? false,
+  });
+  throwIfError(error);
+}
+
+export async function endEquipmentMaintenance(equipmentId: string, notes?: string | null) {
+  const { error } = await client().rpc("end_equipment_maintenance", {
+    p_equipment_id: equipmentId,
+    p_notes: notes ?? undefined,
   });
   throwIfError(error);
 }

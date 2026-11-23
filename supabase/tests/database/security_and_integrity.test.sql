@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(185);
+select plan(205);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -1183,6 +1183,106 @@ select throws_ok(
   $$ select public.create_booking('20000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-0000000000e1', now() + interval '33 days', 60, '30000000-0000-0000-0000-000000000001', null, '00000000-0000-0000-0000-0000000000f1') $$,
   'P0001', 'spool_not_available',
   'an empty spool cannot be chosen'
+);
+
+-- Equipment maintenance as a state with history.
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
+select throws_ok(
+  $$ select public.start_equipment_maintenance('20000000-0000-0000-0000-000000000003', 'Troca do bico') $$,
+  'P0001', 'coordinator_required',
+  'a researcher cannot put equipment in maintenance'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
+select throws_ok(
+  $$ select public.start_equipment_maintenance('20000000-0000-0000-0000-000000000003', '   ') $$,
+  'P0001', 'reason_required',
+  'maintenance needs a reason'
+);
+select lives_ok(
+  $$ select public.create_booking('20000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-0000000000e1', now() + interval '50 days', 60) $$,
+  'a future booking exists before the maintenance'
+);
+select lives_ok(
+  $$ select public.start_equipment_maintenance('20000000-0000-0000-0000-000000000003', 'Troca do bico', 'Peça já pedida', (current_date + 7), true) $$,
+  'coordinator puts the equipment in maintenance and cancels its upcoming bookings'
+);
+select is((select status::text from public.equipment where id = '20000000-0000-0000-0000-000000000003'), 'maintenance', 'the equipment status becomes maintenance');
+select is(
+  (select count(*) from public.equipment_maintenance where equipment_id = '20000000-0000-0000-0000-000000000003' and ended_at is null),
+  1::bigint,
+  'one open maintenance episode is recorded'
+);
+select is(
+  (select status::text from public.equipment_bookings where equipment_id = '20000000-0000-0000-0000-000000000003' and starts_at > now() + interval '49 days'),
+  'cancelled',
+  'the upcoming booking was cancelled with the maintenance'
+);
+select throws_ok(
+  $$ select public.start_equipment_maintenance('20000000-0000-0000-0000-000000000003', 'Outra vez') $$,
+  'P0001', 'maintenance_already_open',
+  'an equipment already in maintenance cannot enter it again'
+);
+select throws_ok(
+  $$ select public.create_booking('20000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-0000000000e1', now() + interval '52 days', 60) $$,
+  'P0001', 'equipment_unavailable',
+  'new bookings are refused while in maintenance'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
+select is(
+  (select count(*) from public.equipment_maintenance where equipment_id = '20000000-0000-0000-0000-000000000003'),
+  1::bigint,
+  'any active user reads the maintenance history'
+);
+select throws_ok(
+  $$ insert into public.equipment_maintenance (equipment_id, reason) values ('20000000-0000-0000-0000-000000000003', 'Direto') $$,
+  '42501', null,
+  'maintenance is not written directly'
+);
+select throws_ok(
+  $$ select public.end_equipment_maintenance('20000000-0000-0000-0000-000000000003') $$,
+  'P0001', 'coordinator_required',
+  'a researcher cannot release the equipment'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
+select lives_ok(
+  $$ select public.end_equipment_maintenance('20000000-0000-0000-0000-000000000003', 'Bico trocado e calibrado') $$,
+  'coordinator releases the equipment'
+);
+select is((select status::text from public.equipment where id = '20000000-0000-0000-0000-000000000003'), 'active', 'the equipment is active again');
+select is(
+  (select ended_at is not null and resolution_notes = 'Bico trocado e calibrado' from public.equipment_maintenance where equipment_id = '20000000-0000-0000-0000-000000000003'),
+  true,
+  'the episode keeps when it ended and what was done'
+);
+select throws_ok(
+  $$ select public.end_equipment_maintenance('20000000-0000-0000-0000-000000000003') $$,
+  'P0001', 'not_in_maintenance',
+  'releasing an equipment that is not in maintenance fails'
+);
+
+select lives_ok(
+  $$ select public.create_booking('20000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-0000000000e1', now() + interval '61 days', 60) $$,
+  'another future booking is created'
+);
+reset role;
+update public.equipment_bookings set status = 'in_progress' where equipment_id = '20000000-0000-0000-0000-000000000003' and starts_at > now() + interval '60 days';
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
+select lives_ok(
+  $$ select public.start_equipment_maintenance('20000000-0000-0000-0000-000000000003', 'Segunda parada', null, null, true) $$,
+  'a second maintenance can start after the release'
+);
+select is(
+  (select status::text from public.equipment_bookings where equipment_id = '20000000-0000-0000-0000-000000000003' and starts_at > now() + interval '60 days'),
+  'in_progress',
+  'a booking already in progress is not cancelled'
+);
+select lives_ok(
+  $$ select public.end_equipment_maintenance('20000000-0000-0000-0000-000000000003') $$,
+  'the second maintenance is released'
 );
 
 select * from finish();
