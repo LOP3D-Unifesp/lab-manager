@@ -9,7 +9,10 @@ import {
   getMaintenanceUrgencyVariant,
   getRequestActions,
   getRequestErrorMessage,
-  sortRequests,
+  isRequestSort,
+  orderRequests,
+  requestSortOptions,
+  type RequestSort,
   type MaintenanceRequest,
   type MaintenanceRequestStatus,
   type RequestFilters,
@@ -37,6 +40,16 @@ const selectClassName =
   "min-h-11 min-w-0 rounded-lg border border-border bg-background px-3 text-base font-normal text-text outline-none transition focus:border-primary";
 
 const TYPE_FILTER_KEY = "chamados:tipo";
+const SORT_KEY = "chamados:ordem";
+
+function readSavedSort(): RequestSort {
+  try {
+    const saved = window.localStorage.getItem(SORT_KEY);
+    return isRequestSort(saved) ? saved : "priority";
+  } catch {
+    return "priority";
+  }
+}
 
 function readSavedType() {
   try {
@@ -48,6 +61,7 @@ function readSavedType() {
 
 export function MaintenanceRequestsPanel({ canMaintainNow, equipment, onChanged, profileId, requests, timezone, types }: PanelProps) {
   const [filters, setFilters] = useState<RequestFilters>(() => ({ typeId: readSavedType(), equipmentId: "all", status: "active", mine: false }));
+  const [sort, setSort] = useState<RequestSort>(readSavedSort);
   const [releaseToo, setReleaseToo] = useState(true);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [resolving, setResolving] = useState<MaintenanceRequest | null>(null);
@@ -70,8 +84,8 @@ export function MaintenanceRequestsPanel({ canMaintainNow, equipment, onChanged,
   }, [allPhotoPaths]);
 
   const visible = useMemo(
-    () => sortRequests(filterRequests(requests, filters, profileId)),
-    [requests, filters, profileId],
+    () => orderRequests(filterRequests(requests, filters, profileId), sort),
+    [requests, filters, profileId, sort],
   );
 
   async function change(request: MaintenanceRequest, status: MaintenanceRequestStatus, resolutionNotes?: string) {
@@ -106,6 +120,16 @@ export function MaintenanceRequestsPanel({ canMaintainNow, equipment, onChanged,
       setErro(getRequestErrorMessage(error));
     } finally {
       setBusyId(null);
+    }
+  }
+
+  function changeSort(value: string) {
+    if (!isRequestSort(value)) return;
+    setSort(value);
+    try {
+      window.localStorage.setItem(SORT_KEY, value);
+    } catch {
+      // sem armazenamento local: a ordem só vale nesta visita
     }
   }
 
@@ -178,6 +202,13 @@ export function MaintenanceRequestsPanel({ canMaintainNow, equipment, onChanged,
           {equipment.filter((item) => filters.typeId === "all" || item.type_id === filters.typeId).map((item) => (
             <option key={item.id} value={item.id}>
               {item.name}
+            </option>
+          ))}
+        </select>
+        <select aria-label="Ordenar por" className={selectClassName} value={sort} onChange={(event) => changeSort(event.target.value)}>
+          {requestSortOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              Ordenar: {option.label}
             </option>
           ))}
         </select>

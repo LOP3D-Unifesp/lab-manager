@@ -97,6 +97,39 @@ export function sortRequests(requests: MaintenanceRequest[]) {
 
 // Para o Dashboard: o que a pessoa precisa atender (responsáveis: chamados abertos ou em andamento com ela)
 // e o que ela mesma abriu e segue ativo. Um chamado nunca aparece nos dois grupos.
+export type RequestSort = "priority" | "newest" | "oldest" | "equipment" | "status";
+
+export const requestSortOptions: Array<{ value: RequestSort; label: string }> = [
+  { value: "priority", label: "Prioridade (padrão)" },
+  { value: "newest", label: "Mais recentes" },
+  { value: "oldest", label: "Mais antigos" },
+  { value: "equipment", label: "Equipamento (A–Z)" },
+  { value: "status", label: "Situação" },
+];
+
+export function isRequestSort(value: unknown): value is RequestSort {
+  return requestSortOptions.some((option) => option.value === value);
+}
+
+const STATUS_RANK: Record<MaintenanceRequestStatus, number> = { open: 0, in_progress: 1, resolved: 2, cancelled: 3 };
+
+const timeOf = (request: MaintenanceRequest) => new Date(request.created_at).getTime();
+
+// Ordem da lista de chamados. "Prioridade" é a de sempre (abertos antes dos em andamento, urgentes e mais antigos
+// primeiro, encerrados por último); as demais ordenam só pelo critério escolhido, com a data como desempate.
+export function orderRequests(requests: MaintenanceRequest[], sort: RequestSort) {
+  if (sort === "priority") return sortRequests(requests);
+  const list = [...requests];
+  if (sort === "newest") return list.sort((a, b) => timeOf(b) - timeOf(a));
+  if (sort === "oldest") return list.sort((a, b) => timeOf(a) - timeOf(b));
+  if (sort === "equipment") {
+    return list.sort((a, b) => a.equipment_name.localeCompare(b.equipment_name, "pt-BR") || timeOf(b) - timeOf(a));
+  }
+  return list.sort(
+    (a, b) => STATUS_RANK[a.status] - STATUS_RANK[b.status] || URGENCY_RANK[a.urgency] - URGENCY_RANK[b.urgency] || timeOf(a) - timeOf(b),
+  );
+}
+
 export function getMyRequestGroups(requests: MaintenanceRequest[], profileId: string, canMaintainNow: boolean) {
   const active = requests.filter((request) => isRequestActive(request.status));
   const toHandle = canMaintainNow
