@@ -19,7 +19,7 @@ O documento deve orientar a implementação funcional sem definir modelagem de b
 - Upload de arquivos, parser de `.gcode`, parser de `.3mf`, sugestão automática de horário, relatórios avançados e integração direta com impressoras estão fora do MVP inicial.
 - Status de reserva: `Pendente`, `Aprovada`, `Rejeitada`, `Em andamento`, `Concluída`, `Cancelada` e `Falhou`.
 - Reservas `Pendente`, `Aprovada` e `Em andamento` bloqueiam o horário da impressora.
-- Status de impressora previstos: `Ativa`, `Em manutenção`, `Indisponível` e `Desativada`.
+- Status de impressora previstos: `Ativa`, `Parado` (chamado urgente aberto), `Em manutenção`, `Indisponível` e `Desativada`.
 
 ## 3. Papéis envolvidos
 
@@ -540,10 +540,11 @@ A reserva própria é cancelada, permanece no histórico e deixa de bloquear o h
 ### Fluxo 14b - Reportar problema e tratar chamado de manutenção
 
 **Passos:**  
-1. Qualquer pessoa abre **Reportar problema** no card do equipamento, descreve o problema, escolhe a urgência e, se quiser, tira ou anexa até 3 fotos. Em chamado **urgente**, o equipamento é bloqueado para novas reservas assim que o chamado é enviado. Se já houver chamados abertos, o diálogo avisa.
+1. Qualquer pessoa abre **Reportar problema** no card do equipamento, descreve o problema, escolhe a urgência e, se quiser, tira ou anexa até 3 fotos. Em chamado **urgente**, o equipamento fica **Parado** (sem novas reservas) assim que o chamado é enviado. Se já houver chamados abertos, o diálogo avisa.
 2. O chamado entra na aba **Chamados** como *Aberto* e aparece como pendência (menu e campainha) para coordenadores e responsáveis pela manutenção.
-3. Um responsável usa **Iniciar manutenção** (o chamado vira *Em andamento*) e, se preciso, **Colocar em manutenção** o equipamento.
-4. Ao terminar, usa **Resolver** (com nota opcional) ou **Liberar equipamento**, que também resolve os chamados em andamento.
+3. Um responsável usa **Iniciar manutenção**: o chamado vira *Em andamento* e o equipamento (ativo ou parado) entra em **Em manutenção**, com início registrado. Se o chamado urgente for cancelado ou resolvido sem a manutenção começar, o equipamento volta a *Ativa* sozinho.
+4. Ao terminar, usa **Resolver** (com nota opcional; a caixa "Liberar o equipamento também" já vem marcada) ou **Liberar equipamento**, que também resolve os chamados em andamento.
+5. A aba **Chamados** filtra por tipo de equipamento (a escolha fica salva), equipamento e "só os meus"; **Baixar fotos** gera um .zip com as fotos do chamado.
 
 **Regras de negócio:**
 - Quem abriu só cancela o próprio chamado enquanto está *Aberto*; chamado cancelado não volta.

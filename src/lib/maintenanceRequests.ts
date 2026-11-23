@@ -42,6 +42,7 @@ export type MaintenanceRequest = {
   id: string;
   equipment_id: string;
   equipment_name: string;
+  equipment_type_id: string | null;
   description: string;
   urgency: MaintenanceUrgency;
   status: MaintenanceRequestStatus;
@@ -61,6 +62,7 @@ export function isRequestActive(status: MaintenanceRequestStatus) {
 }
 
 export type RequestFilters = {
+  typeId: string; // "all" ou id do tipo de equipamento
   equipmentId: string; // "all" ou id
   status: MaintenanceRequestStatus | "active" | "all";
   mine: boolean;
@@ -68,6 +70,7 @@ export type RequestFilters = {
 
 export function filterRequests(requests: MaintenanceRequest[], filters: RequestFilters, profileId: string | null) {
   return requests.filter((request) => {
+    if (filters.typeId !== "all" && request.equipment_type_id !== filters.typeId) return false;
     if (filters.equipmentId !== "all" && request.equipment_id !== filters.equipmentId) return false;
     if (filters.status === "active" && !isRequestActive(request.status)) return false;
     if (filters.status !== "active" && filters.status !== "all" && request.status !== filters.status) return false;
