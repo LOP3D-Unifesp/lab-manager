@@ -72,8 +72,8 @@ export function Compras() {
     return projects.filter((project) => ids.has(project.id));
   }, [purchases, projects]);
 
-  async function mudar(purchase: PurchaseRequest, status: PurchaseStatus) {
-    if (status === "cancelled" && !window.confirm("Cancelar este pedido?")) return;
+  async function mudar(purchase: PurchaseRequest, status: PurchaseStatus, confirmacao?: string) {
+    if (confirmacao && !window.confirm(confirmacao)) return;
     try {
       setOcupado(purchase.id);
       setErro("");
@@ -237,15 +237,28 @@ export function Compras() {
                     <p className="text-sm text-muted">Aprovado por {purchase.decided_by_name}</p>
                   ) : null}
 
-                  {actions.edit || actions.cancel || actions.approve || actions.reject || actions.purchase || actions.deliver ? (
+                  {actions.edit || actions.cancel || actions.approve || actions.reject || actions.purchase || actions.deliver || actions.undo ? (
                     <div className="flex flex-wrap justify-end gap-2">
+                      {actions.undo ? (
+                        <Button
+                          className="min-h-9 px-3 py-2 text-sm"
+                          variant="ghost"
+                          disabled={busy}
+                          onClick={() => {
+                            const undo = actions.undo;
+                            if (undo) void mudar(purchase, undo.status, `${undo.label}?${undo.warning ? ` ${undo.warning}` : ""}`);
+                          }}
+                        >
+                          {actions.undo.label}
+                        </Button>
+                      ) : null}
                       {actions.edit ? (
                         <Button className="min-h-9 px-3 py-2 text-sm" variant="ghost" disabled={busy} onClick={() => setFormulario({ purchase })}>
                           Editar
                         </Button>
                       ) : null}
                       {actions.cancel ? (
-                        <Button className="min-h-9 px-3 py-2 text-sm" variant="ghost" disabled={busy} onClick={() => mudar(purchase, "cancelled")}>
+                        <Button className="min-h-9 px-3 py-2 text-sm" variant="ghost" disabled={busy} onClick={() => mudar(purchase, "cancelled", "Cancelar este pedido?")}>
                           Cancelar pedido
                         </Button>
                       ) : null}

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   filterPurchases,
   getPurchaseActions,
+  getPurchaseUndo,
   isValidPurchaseUrl,
   parseMoney,
   sortPurchases,
@@ -64,16 +65,33 @@ describe("lista de pedidos", () => {
 
 describe("ações permitidas", () => {
   it("o coordenador aprova, recusa, compra e entrega conforme a etapa", () => {
-    expect(getPurchaseActions(purchase({ status: "requested" }), "coord", true)).toEqual({ edit: true, cancel: true, approve: true, reject: true, purchase: false, deliver: false });
-    expect(getPurchaseActions(purchase({ status: "approved" }), "coord", true)).toEqual({ edit: false, cancel: true, approve: false, reject: false, purchase: true, deliver: false });
-    expect(getPurchaseActions(purchase({ status: "purchased" }), "coord", true)).toEqual({ edit: false, cancel: false, approve: false, reject: false, purchase: false, deliver: true });
-    expect(getPurchaseActions(purchase({ status: "delivered" }), "coord", true)).toEqual({ edit: false, cancel: false, approve: false, reject: false, purchase: false, deliver: false });
+    expect(getPurchaseActions(purchase({ status: "requested" }), "coord", true)).toEqual({ edit: true, cancel: true, approve: true, reject: true, purchase: false, deliver: false, undo: null });
+    expect(getPurchaseActions(purchase({ status: "approved" }), "coord", true)).toMatchObject({ edit: false, cancel: true, approve: false, reject: false, purchase: true, deliver: false });
+    expect(getPurchaseActions(purchase({ status: "purchased" }), "coord", true)).toMatchObject({ edit: false, cancel: false, approve: false, reject: false, purchase: false, deliver: true });
+    expect(getPurchaseActions(purchase({ status: "delivered" }), "coord", true)).toMatchObject({ edit: false, cancel: false, approve: false, reject: false, purchase: false, deliver: false });
   });
 
   it("quem pediu só edita e cancela enquanto está solicitado", () => {
-    expect(getPurchaseActions(purchase({ status: "requested" }), "ana", false)).toEqual({ edit: true, cancel: true, approve: false, reject: false, purchase: false, deliver: false });
+    expect(getPurchaseActions(purchase({ status: "requested" }), "ana", false)).toEqual({ edit: true, cancel: true, approve: false, reject: false, purchase: false, deliver: false, undo: null });
     expect(getPurchaseActions(purchase({ status: "approved" }), "ana", false).cancel).toBe(false);
     expect(getPurchaseActions(purchase({ status: "requested" }), "bia", false).edit).toBe(false);
+  });
+});
+
+describe("voltar uma etapa", () => {
+  it("o coordenador desfaz cada etapa, e o aviso só aparece quando algo é apagado", () => {
+    expect(getPurchaseUndo("requested")).toBeNull();
+    expect(getPurchaseUndo("approved")?.status).toBe("requested");
+    expect(getPurchaseUndo("purchased")).toMatchObject({ status: "approved", label: "Desfazer compra" });
+    expect(getPurchaseUndo("purchased")?.warning).toMatch(/valor pago/);
+    expect(getPurchaseUndo("delivered")?.status).toBe("purchased");
+    expect(getPurchaseUndo("rejected")?.status).toBe("requested");
+    expect(getPurchaseUndo("cancelled")?.label).toBe("Reabrir pedido");
+  });
+
+  it("quem pediu não desfaz nada", () => {
+    expect(getPurchaseActions(purchase({ status: "approved" }), "ana", false).undo).toBeNull();
+    expect(getPurchaseActions(purchase({ status: "cancelled" }), "ana", false).undo).toBeNull();
   });
 });
 

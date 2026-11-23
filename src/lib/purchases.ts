@@ -95,7 +95,26 @@ export function sortPurchases(purchases: PurchaseRequest[]) {
   });
 }
 
-export type PurchaseActions = { edit: boolean; cancel: boolean; approve: boolean; reject: boolean; purchase: boolean; deliver: boolean };
+export type PurchaseUndo = { status: PurchaseStatus; label: string; warning: string | null };
+
+export type PurchaseActions = {
+  edit: boolean;
+  cancel: boolean;
+  approve: boolean;
+  reject: boolean;
+  purchase: boolean;
+  deliver: boolean;
+  undo: PurchaseUndo | null;
+};
+
+// Só o coordenador volta uma etapa, para corrigir um engano; o que a etapa gravou é apagado.
+export function getPurchaseUndo(status: PurchaseStatus): PurchaseUndo | null {
+  if (status === "approved") return { status: "requested", label: "Voltar para solicitado", warning: null };
+  if (status === "purchased") return { status: "approved", label: "Desfazer compra", warning: "O valor pago e a data da compra serão apagados." };
+  if (status === "delivered") return { status: "purchased", label: "Desfazer entrega", warning: null };
+  if (status === "rejected" || status === "cancelled") return { status: "requested", label: "Reabrir pedido", warning: null };
+  return null;
+}
 
 // O coordenador decide e acompanha até a entrega; quem pediu só edita e cancela enquanto ninguém decidiu.
 export function getPurchaseActions(purchase: PurchaseRequest, profileId: string | null, isCoordinator: boolean): PurchaseActions {
@@ -108,6 +127,7 @@ export function getPurchaseActions(purchase: PurchaseRequest, profileId: string 
     reject: isCoordinator && waiting,
     purchase: isCoordinator && purchase.status === "approved",
     deliver: isCoordinator && purchase.status === "purchased",
+    undo: isCoordinator ? getPurchaseUndo(purchase.status) : null,
   };
 }
 
