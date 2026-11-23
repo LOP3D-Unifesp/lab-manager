@@ -208,7 +208,7 @@ export function ProfileRequired() {
                 />
               </label>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid items-start gap-4 sm:grid-cols-2">
                 <label className="grid min-w-0 gap-2 text-base font-semibold">
                   Crie uma senha
                   <PasswordInput
@@ -274,7 +274,7 @@ export function ProfileRequired() {
           </div>
 
           <form className="mt-6 grid gap-6" onSubmit={handleProfileSubmit}>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid items-start gap-4 sm:grid-cols-2">
               <label className="grid min-w-0 gap-2 text-base font-semibold">
                 Nome completo
                 <input
@@ -307,7 +307,7 @@ export function ProfileRequired() {
               </label>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid items-start gap-4 sm:grid-cols-2">
               <label className="grid min-w-0 gap-2 text-base font-semibold">
                 Data de nascimento
                 <input
@@ -333,7 +333,7 @@ export function ProfileRequired() {
               totalGrantHours={totalGrantHours}
             />
 
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid items-start gap-4 md:grid-cols-3">
               <label className="grid min-w-0 gap-2 text-base font-semibold">
                 Lattes URL
                 <input
@@ -370,7 +370,7 @@ export function ProfileRequired() {
               </label>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid items-start gap-4 md:grid-cols-3">
               <label className="grid min-w-0 gap-2 text-base font-semibold">
                 Telefone
                 <input
@@ -407,7 +407,7 @@ export function ProfileRequired() {
               </label>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid items-start gap-4 sm:grid-cols-2">
               <label className="grid min-w-0 gap-2 text-base font-semibold">
                 Rua
                 <input
@@ -431,7 +431,7 @@ export function ProfileRequired() {
               </label>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid items-start gap-4 md:grid-cols-3">
               <label className="grid min-w-0 gap-2 text-base font-semibold">
                 Complemento
                 <input
@@ -466,7 +466,7 @@ export function ProfileRequired() {
               </label>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid items-start gap-4 sm:grid-cols-2">
               <label className="grid min-w-0 gap-2 text-base font-semibold">
                 Estado
                 <input

@@ -121,7 +121,7 @@ export function FundingEditor({ agencies, disabled, onAgencyCreated, onChange, v
         const total = entry.items.reduce((sum, item) => sum + (parseAmountInput(item.amount) ?? 0), 0);
         return (
           <div key={index} className="grid gap-3 rounded-lg border border-border bg-background p-4">
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid items-start gap-3 sm:grid-cols-2">
               <label className="grid gap-2 text-sm font-semibold">
                 Agência
                 <select

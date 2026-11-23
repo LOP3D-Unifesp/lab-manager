@@ -173,7 +173,7 @@ export function TaskModal({
             onChange={(e) => setDescription(e.target.value)}
           />
         </label>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid items-start gap-4 sm:grid-cols-2">
           <label className="grid gap-2 text-base font-semibold text-text">
             Coluna
             <select className={inputClassName} value={status} onChange={(e) => setStatus(e.target.value as TaskStatus)}>

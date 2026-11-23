@@ -208,7 +208,7 @@ export function Administracao() {
 
       <Card className="mb-5">
         <div className="mb-5 flex items-start gap-3"><div className="rounded-lg bg-primary-soft p-3 text-primary"><Building2 className="h-5 w-5" /></div><div><h2 className="text-2xl font-bold">Laboratório</h2><p className="mt-1 text-muted">Identidade, privacidade, fuso e capacidade presencial.</p></div></div>
-        <form className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" onSubmit={saveSettings}>
+        <form className="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-3" onSubmit={saveSettings}>
           <label className="grid gap-2 font-semibold">Nome<input className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal" required value={labName} onChange={(e) => setLabName(e.target.value)} /></label>
           <label className="grid gap-2 font-semibold">Sigla<input className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal uppercase" required value={labAcronym} onChange={(e) => setLabAcronym(e.target.value)} /></label>
           <label className="grid gap-2 font-semibold">Fuso horário<TimezoneSelect id="admin-timezone" value={labTimezone} onChange={setLabTimezone} /></label>

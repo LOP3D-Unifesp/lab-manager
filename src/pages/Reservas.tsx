@@ -1159,7 +1159,7 @@ export function Reservas() {
             </div>
 
             <form className="mt-5 grid gap-5" onSubmit={salvarReserva}>
-              <div className="grid gap-4 md:grid-cols-[1.4fr_1fr] xl:grid-cols-[1.3fr_0.8fr_0.8fr_0.8fr]">
+              <div className="grid items-start gap-4 md:grid-cols-[1.4fr_1fr] xl:grid-cols-[1.3fr_0.8fr_0.8fr_0.8fr]">
                 <label className="grid gap-2 text-base font-semibold text-text">
                   Projeto
                   <select
@@ -1547,7 +1547,7 @@ export function Reservas() {
                   {equipmentList.map((equipment) => <option key={equipment.id} value={equipment.id}>{equipment.name}</option>)}
                 </select>
               </label>
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid items-start gap-4 sm:grid-cols-3">
                 <label className="grid gap-2 font-semibold text-text">
                   Data
                   <input

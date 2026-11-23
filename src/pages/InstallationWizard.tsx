@@ -94,7 +94,7 @@ export function InstallationWizard() {
                     required
                   />
                 </label>
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid items-start gap-4 sm:grid-cols-2">
                   <label className="grid gap-2 font-semibold">
                     Sigla
                     <input
