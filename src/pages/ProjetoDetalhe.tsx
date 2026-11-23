@@ -195,14 +195,14 @@ export function ProjetoDetalhe() {
         }
       />
 
-      <div role="tablist" className="mb-5 flex gap-2 overflow-x-auto border-b border-border">
+      <div role="tablist" className="mb-5 flex gap-2 overflow-x-auto overflow-y-hidden border-b border-border">
         {abas.map((item) => (
           <button
             key={item.id}
             role="tab"
             aria-selected={aba === item.id}
             className={[
-              "-mb-px whitespace-nowrap border-b-2 px-4 py-3 text-base font-semibold transition",
+              "whitespace-nowrap border-b-2 px-4 py-3 text-base font-semibold transition",
               aba === item.id ? "border-primary text-primary" : "border-transparent text-muted hover:text-text",
             ].join(" ")}
             onClick={() => {
