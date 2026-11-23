@@ -1,7 +1,7 @@
 import { supabase } from "./supabaseClient";
 import type { FeedbackKind, FeedbackReport, FeedbackStatus } from "./feedback";
 import type { MaintenanceRequest, MaintenanceRequestStatus, MaintenanceUrgency } from "./maintenanceRequests";
-import type { PurchaseRequest, PurchaseStatus, PurchaseUpdate, PurchaseUrgency } from "./purchases";
+import type { MaintenancePurchase, PurchaseRequest, PurchaseStatus, PurchaseUpdate, PurchaseUrgency } from "./purchases";
 import type {
   CatalogMaterial,
   MaterialCategory,
@@ -1443,7 +1443,8 @@ export async function getEquipmentName(equipmentId: string) {
 // Compras
 // ---------------------------------------------------------------------------
 
-type PurchaseRequestRow = Omit<PurchaseRequest, "project_name" | "requested_by_name" | "decided_by_name" | "estimated_amount" | "actual_amount"> & {
+type PurchaseRequestRow = Omit<PurchaseRequest, "project_name" | "requested_by_name" | "decided_by_name" | "maintenance_equipment_name" | "estimated_amount" | "actual_amount"> & {
+  maintenance: { equipment: { name: string } | null } | null;
   estimated_amount: number | string;
   actual_amount: number | string | null;
   project: { name: string } | null;
@@ -1455,17 +1456,18 @@ export async function listPurchaseRequests() {
   const { data, error } = await client()
     .from("purchase_requests")
     .select(
-      "id, project_id, requested_by, item, url, quantity, estimated_amount, urgency, funding_category, notes, status, decided_at, rejected_reason, actual_amount, purchased_at, delivered_at, created_at, project:projects!purchase_requests_project_id_fkey(name), requester:profiles!purchase_requests_requested_by_fkey(full_name), decider:profiles!purchase_requests_decided_by_fkey(full_name)",
+      "id, project_id, requested_by, item, url, quantity, estimated_amount, urgency, funding_category, maintenance_request_id, notes, status, decided_at, rejected_reason, actual_amount, purchased_at, delivered_at, created_at, project:projects!purchase_requests_project_id_fkey(name), requester:profiles!purchase_requests_requested_by_fkey(full_name), decider:profiles!purchase_requests_decided_by_fkey(full_name), maintenance:maintenance_requests!purchase_requests_maintenance_request_id_fkey(equipment:equipment!maintenance_requests_equipment_id_fkey(name))",
     )
     .order("created_at", { ascending: false });
   throwIfError(error);
-  return ((data ?? []) as unknown as PurchaseRequestRow[]).map(({ decider, project, requester, ...row }) => ({
+  return ((data ?? []) as unknown as PurchaseRequestRow[]).map(({ decider, maintenance, project, requester, ...row }) => ({
     ...row,
     estimated_amount: Number(row.estimated_amount),
     actual_amount: row.actual_amount === null ? null : Number(row.actual_amount),
     project_name: project?.name ?? (row.project_id ? "Projeto removido" : "Estoque geral do laboratório"),
     requested_by_name: requester?.full_name ?? null,
     decided_by_name: decider?.full_name ?? null,
+    maintenance_equipment_name: maintenance?.equipment?.name ?? null,
   })) as PurchaseRequest[];
 }
 
@@ -1481,7 +1483,7 @@ export type PurchaseInput = {
   projectId?: string | null;
 };
 
-export async function createPurchaseRequest(input: PurchaseInput & { projectId: string | null }) {
+export async function createPurchaseRequest(input: PurchaseInput & { projectId: string | null; maintenanceRequestId?: string | null }) {
   const { error } = await client().from("purchase_requests").insert({
     project_id: input.projectId,
     item: input.item.trim(),
@@ -1490,6 +1492,7 @@ export async function createPurchaseRequest(input: PurchaseInput & { projectId: 
     estimated_amount: input.estimatedAmount,
     funding_category: input.fundingCategory,
     urgency: input.urgency,
+    maintenance_request_id: input.maintenanceRequestId ?? null,
     notes: input.notes?.trim() || null,
   });
   throwIfError(error);
@@ -1519,6 +1522,17 @@ export async function setPurchaseStatus(params: { requestId: string; status: Pur
     p_actual_amount: params.actualAmount ?? undefined,
   });
   throwIfError(error);
+}
+
+// Peças pedidas a partir de chamados de manutenção (só as que a pessoa pode ver) e a situação de cada uma.
+export async function listPurchasesForMaintenance() {
+  const { data, error } = await client()
+    .from("purchase_requests")
+    .select("id, maintenance_request_id, item, quantity, status")
+    .not("maintenance_request_id", "is", null)
+    .order("created_at", { ascending: false });
+  throwIfError(error);
+  return (data ?? []) as unknown as MaintenancePurchase[];
 }
 
 // Pedidos da própria pessoa que o coordenador já decidiu, dos últimos 14 dias (para avisar quem pediu).

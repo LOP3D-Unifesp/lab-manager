@@ -1,4 +1,6 @@
+import { ShoppingCart } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 
 import type { Equipment, EquipmentType } from "../../lib/domain";
 import {
@@ -9,6 +11,7 @@ import {
   getMaintenanceUrgencyVariant,
   getRequestActions,
   getRequestErrorMessage,
+  isRequestActive,
   isRequestSort,
   orderRequests,
   requestSortOptions,
@@ -18,7 +21,17 @@ import {
   type RequestFilters,
 } from "../../lib/maintenanceRequests";
 import { formatMaintenanceDateTime } from "../../lib/maintenance";
-import { endEquipmentMaintenance, getMaintenancePhotoUrls, setMaintenanceRequestStatus } from "../../lib/supabaseRepository";
+import { isProjectOpen, type Project } from "../../lib/projects";
+import { GENERAL_STOCK_VALUE, getPurchaseStatusLabel, getPurchaseStatusVariant, type MaintenancePurchase } from "../../lib/purchases";
+import {
+  endEquipmentMaintenance,
+  getMaintenancePhotoUrls,
+  listProjects,
+  listPurchasesForMaintenance,
+  setMaintenanceRequestStatus,
+} from "../../lib/supabaseRepository";
+import { PURCHASES_CHANGED_EVENT } from "../layout/AttentionProvider";
+import { PurchaseFormModal } from "../compras/PurchaseFormModal";
 import { createZip, slugifyFileName } from "../../lib/zip";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
@@ -70,6 +83,33 @@ export function MaintenanceRequestsPanel({ canMaintainNow, equipment, onChanged,
   const [erro, setErro] = useState("");
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
   const [viewer, setViewer] = useState<{ request: MaintenanceRequest; index: number } | null>(null);
+  const [linkedParts, setLinkedParts] = useState<MaintenancePurchase[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [partFor, setPartFor] = useState<MaintenanceRequest | null>(null);
+
+  // Peças pedidas a partir dos chamados (as que a pessoa pode ver) e, para quem trata chamados, os projetos
+  // em aberto onde ela pode pedir uma peça.
+  useEffect(() => {
+    let ativo = true;
+    const carregar = () => {
+      listPurchasesForMaintenance()
+        .then((data) => ativo && setLinkedParts(data))
+        .catch(() => undefined);
+    };
+    carregar();
+    window.addEventListener(PURCHASES_CHANGED_EVENT, carregar);
+    return () => {
+      ativo = false;
+      window.removeEventListener(PURCHASES_CHANGED_EVENT, carregar);
+    };
+  }, [requests]);
+
+  useEffect(() => {
+    if (!canMaintainNow) return;
+    listProjects()
+      .then((data) => setProjects(data.filter((project) => isProjectOpen(project.status))))
+      .catch(() => undefined);
+  }, [canMaintainNow]);
 
   const allPhotoPaths = useMemo(() => requests.flatMap((request) => request.photo_paths).sort().join("|"), [requests]);
   useEffect(() => {
@@ -286,8 +326,29 @@ export function MaintenanceRequestsPanel({ canMaintainNow, equipment, onChanged,
                       <span className="font-semibold">Solução:</span> {request.resolution_notes}
                     </p>
                   ) : null}
-                  {actions.take || actions.resolve || actions.giveBack || actions.cancel || actions.reopen ? (
+                  {linkedParts.some((part) => part.maintenance_request_id === request.id) ? (
+                    <ul className="grid gap-1.5 rounded-lg border border-border bg-background p-3 text-sm">
+                      {linkedParts
+                        .filter((part) => part.maintenance_request_id === request.id)
+                        .map((part) => (
+                          <li key={part.id} className="flex flex-wrap items-center justify-between gap-2">
+                            <Link to="/compras" className="min-w-0 break-words font-semibold text-primary underline">
+                              Peça: {part.item}
+                              {part.quantity > 1 ? ` × ${part.quantity}` : ""}
+                            </Link>
+                            <StatusBadge label={getPurchaseStatusLabel(part.status)} variant={getPurchaseStatusVariant(part.status)} />
+                          </li>
+                        ))}
+                    </ul>
+                  ) : null}
+                  {actions.take || actions.resolve || actions.giveBack || actions.cancel || actions.reopen || (canMaintainNow && isRequestActive(request.status)) ? (
                     <div className="flex flex-wrap justify-end gap-2">
+                      {canMaintainNow && isRequestActive(request.status) ? (
+                        <Button className="min-h-9 px-3 py-2 text-sm" variant="ghost" disabled={busy} onClick={() => setPartFor(request)}>
+                          <ShoppingCart className="mr-2 h-4 w-4" aria-hidden="true" />
+                          Pedir peça
+                        </Button>
+                      ) : null}
                       {actions.take ? (
                         <Button className="min-h-9 px-3 py-2 text-sm" variant="secondary" disabled={busy} onClick={() => change(request, "in_progress")}>
                           Iniciar manutenção
@@ -321,6 +382,25 @@ export function MaintenanceRequestsPanel({ canMaintainNow, equipment, onChanged,
           })}
         </ul>
       )}
+
+      {partFor ? (
+        <PurchaseFormModal
+          projects={projects}
+          purchase={null}
+          defaultProjectId={GENERAL_STOCK_VALUE}
+          fromMaintenance={{
+            requestId: partFor.id,
+            equipmentName: partFor.equipment_name,
+            description: partFor.description,
+            urgency: partFor.urgency,
+          }}
+          onClose={() => setPartFor(null)}
+          onDone={() => {
+            setPartFor(null);
+            window.dispatchEvent(new Event(PURCHASES_CHANGED_EVENT));
+          }}
+        />
+      ) : null}
 
       {viewer ? (
         <PhotoViewer

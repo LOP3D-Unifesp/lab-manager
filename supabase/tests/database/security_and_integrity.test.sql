@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(313);
+select plan(316);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -1735,6 +1735,22 @@ select throws_ok(
 );
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
+
+-- A purchase request can be linked to a maintenance request (a part the machine needs).
+select lives_ok(
+  $$ insert into public.purchase_requests (funding_category, project_id, item, estimated_amount, maintenance_request_id) values ('custeio', null, 'pgtap peca do chamado', 90, (select id from public.maintenance_requests where description = 'pgtap terceiro problema')) $$,
+  'a purchase request can be linked to a maintenance request'
+);
+select is(
+  (select count(*) from public.purchase_requests where item = 'pgtap peca do chamado' and maintenance_request_id = (select id from public.maintenance_requests where description = 'pgtap terceiro problema')),
+  1::bigint,
+  'the link to the maintenance request is stored'
+);
+select throws_ok(
+  $$ insert into public.purchase_requests (funding_category, project_id, item, estimated_amount, maintenance_request_id) values ('custeio', null, 'pgtap chamado inexistente', 90, '00000000-0000-0000-0000-00000000ffff') $$,
+  '23503', null,
+  'a purchase request cannot point to a maintenance request that does not exist'
+);
 
 select * from finish();
 rollback;

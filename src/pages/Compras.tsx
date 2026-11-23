@@ -208,6 +208,9 @@ export function Compras() {
                       <p className="mt-1 text-sm text-muted">
                         {purchase.project_name} · {purchase.requested_by_name ?? "Alguém"} · {formatMaintenanceDateTime(purchase.created_at, timezone)}
                       </p>
+                      {purchase.maintenance_equipment_name ? (
+                        <p className="mt-1 text-sm font-semibold text-muted">Peça para a manutenção de {purchase.maintenance_equipment_name}</p>
+                      ) : null}
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {purchase.urgency !== "normal" && (purchase.status === "requested" || purchase.status === "approved" || purchase.status === "purchased") ? (
