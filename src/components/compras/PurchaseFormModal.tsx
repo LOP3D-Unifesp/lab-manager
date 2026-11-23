@@ -1,6 +1,7 @@
 import { FormEvent, useState } from "react";
 
 import { formatCurrencyBRL } from "../../lib/projects";
+import { MoneyInput } from "../ui/MoneyInput";
 import { createPurchaseRequest, updatePurchaseRequest } from "../../lib/supabaseRepository";
 import type { Project } from "../../lib/projects";
 import {
@@ -9,7 +10,8 @@ import {
   getPurchaseErrorMessage,
   calculateTotal,
   formatUnitAmount,
-  parseMoney,
+  maskMoneyInput,
+  parseMaskedMoney,
   purchaseCategoryOptions,
   purchaseUrgencyOptions,
   validatePurchaseForm,
@@ -38,12 +40,12 @@ export function PurchaseFormModal({ defaultProjectId, onClose, onDone, projects,
   const [item, setItem] = useState(purchase?.item ?? "");
   const [url, setUrl] = useState(purchase?.url ?? "");
   const [quantity, setQuantity] = useState(String(purchase?.quantity ?? 1));
-  const [amount, setAmount] = useState(purchase ? formatUnitAmount(purchase.estimated_amount, purchase.quantity) : "");
+  const [amount, setAmount] = useState(purchase ? maskMoneyInput(formatUnitAmount(purchase.estimated_amount, purchase.quantity), 4) : "");
   const [notes, setNotes] = useState(purchase?.notes ?? "");
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
 
-  const unitValue = parseMoney(amount, 4);
+  const unitValue = parseMaskedMoney(amount, 4);
   const quantityValue = Number(quantity);
   const previewTotal = unitValue !== null && Number.isInteger(quantityValue) && quantityValue >= 1 ? calculateTotal(unitValue, quantityValue) : null;
 
@@ -58,7 +60,7 @@ export function PurchaseFormModal({ defaultProjectId, onClose, onDone, projects,
       item,
       url: url.trim() || null,
       quantity: Number(quantity),
-      estimatedAmount: calculateTotal(parseMoney(amount, 4) as number, Number(quantity)),
+      estimatedAmount: calculateTotal(parseMaskedMoney(amount, 4) as number, Number(quantity)),
       notes: notes.trim() || null,
       fundingCategory: category as FundingCategory,
       urgency,
@@ -143,23 +145,23 @@ export function PurchaseFormModal({ defaultProjectId, onClose, onDone, projects,
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="grid gap-2 text-base font-semibold text-text">
             Quantidade
-            <input className={inputClassName} inputMode="numeric" value={quantity} onChange={(event) => setQuantity(event.target.value)} />
+            <input className={inputClassName} inputMode="numeric" maxLength={6} value={quantity} onChange={(event) => setQuantity(event.target.value.replace(/\D/g, ""))} />
           </label>
           <label className="grid gap-2 text-base font-semibold text-text">
             Valor unitário (R$)
-            <input
+            <MoneyInput
               className={inputClassName}
-              inputMode="decimal"
+              decimals={4}
               placeholder="129,90"
               value={amount}
-              onChange={(event) => setAmount(event.target.value)}
+              onChange={setAmount}
             />
           </label>
         </div>
         {previewTotal !== null ? (
           <p className="-mt-2 text-sm text-muted">
             Total estimado: <strong className="text-text">{formatCurrencyBRL(previewTotal)}</strong>
-            {Number(quantity) > 1 ? ` (${quantity} × ${formatCurrencyBRL(parseMoney(amount, 4) as number)})` : ""}
+            {Number(quantity) > 1 ? ` (${quantity} × ${formatCurrencyBRL(parseMaskedMoney(amount, 4) as number)})` : ""}
           </p>
         ) : null}
         <label className="grid gap-2 text-base font-semibold text-text">

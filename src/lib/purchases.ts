@@ -238,6 +238,27 @@ export function parseMoney(text: string, decimals = 2): number | null {
   return Number(normalized);
 }
 
+// Máscara do campo de valor: só dígitos e uma vírgula, com ponto a cada 3 dígitos da parte inteira
+// ("1234,5" vira "1.234,5"). Limita as casas decimais e a parte inteira a 9 dígitos.
+export function maskMoneyInput(raw: string, maxDecimals = 2) {
+  const cleaned = raw.replace(/[^\d,]/g, "");
+  const commaIndex = cleaned.indexOf(",");
+  const integerRaw = (commaIndex === -1 ? cleaned : cleaned.slice(0, commaIndex)).slice(0, 9);
+  const decimals = commaIndex === -1 ? null : cleaned.slice(commaIndex + 1).replace(/,/g, "").slice(0, maxDecimals);
+  let integer = integerRaw.replace(/^0+(?=\d)/, "");
+  if (integer === "" && decimals !== null) integer = "0";
+  const grouped = integer.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return decimals === null ? grouped : `${grouped},${decimals}`;
+}
+
+// Lê o texto de um campo com a máscara acima: o ponto é sempre separador de milhar e a vírgula, a decimal.
+export function parseMaskedMoney(text: string, decimals = 2): number | null {
+  const normalized = text.trim().replace(/^R\$\s*/i, "").replace(/\./g, "").replace(",", ".").replace(/\.$/, "");
+  if (!normalized) return null;
+  if (!new RegExp(`^\\d+(\\.\\d{1,${decimals}})?$`).test(normalized)) return null;
+  return Number(normalized);
+}
+
 const roundCents = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
 
 // O pedido guarda o total; o formulário pede o valor de uma unidade e multiplica pela quantidade.
@@ -270,7 +291,7 @@ export function validatePurchaseForm(values: PurchaseFormValues) {
   if (values.url.trim() && !isValidPurchaseUrl(values.url)) return "O link precisa começar com http:// ou https://.";
   const quantity = Number(values.quantity);
   if (!Number.isInteger(quantity) || quantity < 1 || quantity > 100000) return "A quantidade precisa ser um número inteiro maior que zero.";
-  const unit = parseMoney(values.amount, 4);
+  const unit = parseMaskedMoney(values.amount, 4);
   if (unit === null) return "Informe o valor unitário, por exemplo 129,90.";
   if (calculateTotal(unit, quantity) >= 100_000_000) return "Valor alto demais.";
   if (values.notes.length > 1000) return "As observações podem ter até 1000 caracteres.";
