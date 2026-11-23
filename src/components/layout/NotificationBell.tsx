@@ -69,7 +69,7 @@ export function NotificationBell({ align = "right" }: NotificationBellProps) {
       to: "/compras",
       icon: ShoppingCart,
       label: attention.purchases === 1 ? "1 pedido de compra aguardando aprovação" : `${attention.purchases} pedidos de compra aguardando aprovação`,
-      detail: null,
+      detail: attention.urgentPurchases > 0 ? (attention.urgentPurchases === 1 ? "1 urgente" : `${attention.urgentPurchases} urgentes`) : null,
     },
     {
       key: "feedback",

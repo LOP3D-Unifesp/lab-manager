@@ -657,14 +657,14 @@ isOneToOne: false
                   ]
                 },"purchase_requests": {
                   Row: {
-                    "actual_amount": number | null,"created_at": string,"decided_at": string | null,"decided_by": string | null,"delivered_at": string | null,"estimated_amount": number,"funding_category": Database["public"]['Enums']["project_funding_category"] | null,"id": string,"item": string,"notes": string | null,"project_id": string,"purchased_at": string | null,"quantity": number,"rejected_reason": string | null,"requested_by": string | null,"status": Database["public"]['Enums']["purchase_status"],"updated_at": string,"url": string | null
+                    "actual_amount": number | null,"created_at": string,"decided_at": string | null,"decided_by": string | null,"delivered_at": string | null,"estimated_amount": number,"funding_category": Database["public"]['Enums']["project_funding_category"] | null,"id": string,"item": string,"notes": string | null,"project_id": string,"purchased_at": string | null,"quantity": number,"rejected_reason": string | null,"requested_by": string | null,"status": Database["public"]['Enums']["purchase_status"],"updated_at": string,"urgency": Database["public"]['Enums']["purchase_urgency"],"url": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "actual_amount"?: number | null,"created_at"?: string,"decided_at"?: string | null,"decided_by"?: string | null,"delivered_at"?: string | null,"estimated_amount": number,"funding_category"?: Database["public"]['Enums']["project_funding_category"] | null,"id"?: string,"item": string,"notes"?: string | null,"project_id": string,"purchased_at"?: string | null,"quantity"?: number,"rejected_reason"?: string | null,"requested_by"?: string | null,"status"?: Database["public"]['Enums']["purchase_status"],"updated_at"?: string,"url"?: string | null
+                    "actual_amount"?: number | null,"created_at"?: string,"decided_at"?: string | null,"decided_by"?: string | null,"delivered_at"?: string | null,"estimated_amount": number,"funding_category"?: Database["public"]['Enums']["project_funding_category"] | null,"id"?: string,"item": string,"notes"?: string | null,"project_id": string,"purchased_at"?: string | null,"quantity"?: number,"rejected_reason"?: string | null,"requested_by"?: string | null,"status"?: Database["public"]['Enums']["purchase_status"],"updated_at"?: string,"urgency"?: Database["public"]['Enums']["purchase_urgency"],"url"?: string | null
                   }
                   Update: {
-                    "actual_amount"?: number | null,"created_at"?: string,"decided_at"?: string | null,"decided_by"?: string | null,"delivered_at"?: string | null,"estimated_amount"?: number,"funding_category"?: Database["public"]['Enums']["project_funding_category"] | null,"id"?: string,"item"?: string,"notes"?: string | null,"project_id"?: string,"purchased_at"?: string | null,"quantity"?: number,"rejected_reason"?: string | null,"requested_by"?: string | null,"status"?: Database["public"]['Enums']["purchase_status"],"updated_at"?: string,"url"?: string | null
+                    "actual_amount"?: number | null,"created_at"?: string,"decided_at"?: string | null,"decided_by"?: string | null,"delivered_at"?: string | null,"estimated_amount"?: number,"funding_category"?: Database["public"]['Enums']["project_funding_category"] | null,"id"?: string,"item"?: string,"notes"?: string | null,"project_id"?: string,"purchased_at"?: string | null,"quantity"?: number,"rejected_reason"?: string | null,"requested_by"?: string | null,"status"?: Database["public"]['Enums']["purchase_status"],"updated_at"?: string,"urgency"?: Database["public"]['Enums']["purchase_urgency"],"url"?: string | null
                   }
                   Relationships: [
                     {
@@ -1101,6 +1101,7 @@ isOneToOne: false
 "requested_by": string | null,
 "status": Database["public"]['Enums']["purchase_status"],
 "updated_at": string,
+"urgency": Database["public"]['Enums']["purchase_urgency"],
 "url": string | null
             }
                           SetofOptions: {
@@ -1265,7 +1266,7 @@ isOneToOne: false
         isSetofReturn: false
       } },
 "update_purchase_request":
-{ Args: { "p_estimated_amount": number,"p_funding_category"?: Database["public"]['Enums']["project_funding_category"],"p_item": string,"p_notes"?: string,"p_quantity": number,"p_request_id": string,"p_url": string }; Returns: {
+{ Args: { "p_estimated_amount": number,"p_funding_category"?: Database["public"]['Enums']["project_funding_category"],"p_item": string,"p_notes"?: string,"p_quantity": number,"p_request_id": string,"p_urgency"?: Database["public"]['Enums']["purchase_urgency"],"p_url": string }; Returns: {
               "actual_amount": number | null,
 "created_at": string,
 "decided_at": string | null,
@@ -1283,6 +1284,7 @@ isOneToOne: false
 "requested_by": string | null,
 "status": Database["public"]['Enums']["purchase_status"],
 "updated_at": string,
+"urgency": Database["public"]['Enums']["purchase_urgency"],
 "url": string | null
             }
                           SetofOptions: {
@@ -1293,7 +1295,7 @@ isOneToOne: false
       } }
           }
           Enums: {
-            "academic_affiliation": "ic"|"extension"|"intern"|"tcc"|"masters"|"phd"|"postdoc"|"visitor"|"technician"|"faculty"|"other","booking_status": "pending"|"approved"|"in_progress"|"completed"|"cancelled"|"failed"|"rejected","equipment_status": "active"|"maintenance"|"unavailable"|"disabled"|"stopped","feedback_kind": "suggestion"|"bug"|"other","feedback_status": "new"|"seen"|"planned"|"done"|"dismissed","funding_agency": "cnpq"|"fapesp"|"capes"|"sus"|"fap"|"other","invitation_status": "pending"|"accepted"|"expired"|"revoked","maintenance_request_status": "open"|"in_progress"|"resolved"|"cancelled","maintenance_urgency": "low"|"normal"|"urgent","material_category": "filament"|"resin"|"powder"|"other","project_funding_category": "capital"|"custeio"|"bolsas"|"reserva_tecnica"|"outros"|"passagens"|"diarias","project_status": "planning"|"active"|"paused"|"completed"|"archived","purchase_status": "requested"|"approved"|"rejected"|"purchased"|"delivered"|"cancelled","spool_status": "sealed"|"in_use"|"empty"|"discarded","task_status": "todo"|"in_progress"|"review"|"done","user_role": "coordinator"|"researcher"
+            "academic_affiliation": "ic"|"extension"|"intern"|"tcc"|"masters"|"phd"|"postdoc"|"visitor"|"technician"|"faculty"|"other","booking_status": "pending"|"approved"|"in_progress"|"completed"|"cancelled"|"failed"|"rejected","equipment_status": "active"|"maintenance"|"unavailable"|"disabled"|"stopped","feedback_kind": "suggestion"|"bug"|"other","feedback_status": "new"|"seen"|"planned"|"done"|"dismissed","funding_agency": "cnpq"|"fapesp"|"capes"|"sus"|"fap"|"other","invitation_status": "pending"|"accepted"|"expired"|"revoked","maintenance_request_status": "open"|"in_progress"|"resolved"|"cancelled","maintenance_urgency": "low"|"normal"|"urgent","material_category": "filament"|"resin"|"powder"|"other","project_funding_category": "capital"|"custeio"|"bolsas"|"reserva_tecnica"|"outros"|"passagens"|"diarias","project_status": "planning"|"active"|"paused"|"completed"|"archived","purchase_status": "requested"|"approved"|"rejected"|"purchased"|"delivered"|"cancelled","purchase_urgency": "low"|"normal"|"urgent","spool_status": "sealed"|"in_use"|"empty"|"discarded","task_status": "todo"|"in_progress"|"review"|"done","user_role": "coordinator"|"researcher"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -1413,7 +1415,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "academic_affiliation": ["ic", "extension", "intern", "tcc", "masters", "phd", "postdoc", "visitor", "technician", "faculty", "other"],"booking_status": ["pending", "approved", "in_progress", "completed", "cancelled", "failed", "rejected"],"equipment_status": ["active", "maintenance", "unavailable", "disabled", "stopped"],"feedback_kind": ["suggestion", "bug", "other"],"feedback_status": ["new", "seen", "planned", "done", "dismissed"],"funding_agency": ["cnpq", "fapesp", "capes", "sus", "fap", "other"],"invitation_status": ["pending", "accepted", "expired", "revoked"],"maintenance_request_status": ["open", "in_progress", "resolved", "cancelled"],"maintenance_urgency": ["low", "normal", "urgent"],"material_category": ["filament", "resin", "powder", "other"],"project_funding_category": ["capital", "custeio", "bolsas", "reserva_tecnica", "outros", "passagens", "diarias"],"project_status": ["planning", "active", "paused", "completed", "archived"],"purchase_status": ["requested", "approved", "rejected", "purchased", "delivered", "cancelled"],"spool_status": ["sealed", "in_use", "empty", "discarded"],"task_status": ["todo", "in_progress", "review", "done"],"user_role": ["coordinator", "researcher"]
+            "academic_affiliation": ["ic", "extension", "intern", "tcc", "masters", "phd", "postdoc", "visitor", "technician", "faculty", "other"],"booking_status": ["pending", "approved", "in_progress", "completed", "cancelled", "failed", "rejected"],"equipment_status": ["active", "maintenance", "unavailable", "disabled", "stopped"],"feedback_kind": ["suggestion", "bug", "other"],"feedback_status": ["new", "seen", "planned", "done", "dismissed"],"funding_agency": ["cnpq", "fapesp", "capes", "sus", "fap", "other"],"invitation_status": ["pending", "accepted", "expired", "revoked"],"maintenance_request_status": ["open", "in_progress", "resolved", "cancelled"],"maintenance_urgency": ["low", "normal", "urgent"],"material_category": ["filament", "resin", "powder", "other"],"project_funding_category": ["capital", "custeio", "bolsas", "reserva_tecnica", "outros", "passagens", "diarias"],"project_status": ["planning", "active", "paused", "completed", "archived"],"purchase_status": ["requested", "approved", "rejected", "purchased", "delivered", "cancelled"],"purchase_urgency": ["low", "normal", "urgent"],"spool_status": ["sealed", "in_use", "empty", "discarded"],"task_status": ["todo", "in_progress", "review", "done"],"user_role": ["coordinator", "researcher"]
           }
         }
 } as const

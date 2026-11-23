@@ -2,7 +2,15 @@ import { FormEvent, useState } from "react";
 
 import { createPurchaseRequest, updatePurchaseRequest } from "../../lib/supabaseRepository";
 import type { Project } from "../../lib/projects";
-import { getPurchaseErrorMessage, parseMoney, purchaseCategoryOptions, validatePurchaseForm, type PurchaseRequest } from "../../lib/purchases";
+import {
+  getPurchaseErrorMessage,
+  parseMoney,
+  purchaseCategoryOptions,
+  purchaseUrgencyOptions,
+  validatePurchaseForm,
+  type PurchaseRequest,
+  type PurchaseUrgency,
+} from "../../lib/purchases";
 import type { FundingCategory } from "../../lib/projects";
 import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
@@ -25,6 +33,7 @@ function formatAmountForInput(value: number) {
 export function PurchaseFormModal({ defaultProjectId, onClose, onDone, projects, purchase }: PurchaseFormModalProps) {
   const [projectId, setProjectId] = useState(purchase?.project_id ?? defaultProjectId);
   const [category, setCategory] = useState<string>(purchase?.funding_category ?? "");
+  const [urgency, setUrgency] = useState<PurchaseUrgency>(purchase?.urgency ?? "normal");
   const [item, setItem] = useState(purchase?.item ?? "");
   const [url, setUrl] = useState(purchase?.url ?? "");
   const [quantity, setQuantity] = useState(String(purchase?.quantity ?? 1));
@@ -35,7 +44,7 @@ export function PurchaseFormModal({ defaultProjectId, onClose, onDone, projects,
 
   async function salvar(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const invalid = validatePurchaseForm({ projectId, category, item, url, quantity, amount, notes });
+    const invalid = validatePurchaseForm({ projectId, category, urgency, item, url, quantity, amount, notes });
     if (invalid) {
       setErro(invalid);
       return;
@@ -47,6 +56,7 @@ export function PurchaseFormModal({ defaultProjectId, onClose, onDone, projects,
       estimatedAmount: parseMoney(amount) as number,
       notes: notes.trim() || null,
       fundingCategory: category as FundingCategory,
+      urgency,
     };
     try {
       setSalvando(true);
@@ -141,6 +151,32 @@ export function PurchaseFormModal({ defaultProjectId, onClose, onDone, projects,
             onChange={(event) => setNotes(event.target.value)}
           />
         </label>
+        <fieldset className="grid gap-2">
+          <legend className="mb-1 text-base font-semibold text-text">Urgência</legend>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {purchaseUrgencyOptions.map((option) => (
+              <label
+                key={option.value}
+                className={[
+                  "grid cursor-pointer gap-1 rounded-lg border p-3 transition",
+                  urgency === option.value ? "border-primary bg-primary-soft" : "border-border bg-surface hover:border-primary",
+                ].join(" ")}
+              >
+                <span className="flex items-center gap-2 text-base font-semibold text-text">
+                  <input
+                    checked={urgency === option.value}
+                    className="h-4 w-4 accent-primary"
+                    name="urgencia-compra"
+                    type="radio"
+                    onChange={() => setUrgency(option.value)}
+                  />
+                  {option.label}
+                </span>
+                <span className="text-sm text-muted">{option.hint}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
         {erro ? (
           <p className="rounded-lg border border-danger bg-danger-soft p-3 text-base font-semibold text-danger">{erro}</p>
         ) : null}

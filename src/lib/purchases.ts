@@ -8,6 +8,24 @@ export function getPurchaseCategoryLabel(category: FundingCategory | null) {
   return category ? (fundingCategoryOptions.find((option) => option.value === category)?.label ?? category) : "Sem rubrica";
 }
 
+export type PurchaseUrgency = "low" | "normal" | "urgent";
+
+export const purchaseUrgencyOptions: Array<{ value: PurchaseUrgency; label: string; hint: string }> = [
+  { value: "low", label: "Baixa", hint: "Sem pressa" },
+  { value: "normal", label: "Normal", hint: "Para as próximas semanas" },
+  { value: "urgent", label: "Urgente", hint: "Está parando o trabalho" },
+];
+
+export function getPurchaseUrgencyLabel(urgency: PurchaseUrgency) {
+  return purchaseUrgencyOptions.find((option) => option.value === urgency)?.label ?? urgency;
+}
+
+export function getPurchaseUrgencyVariant(urgency: PurchaseUrgency): StatusVariant {
+  if (urgency === "urgent") return "danger";
+  if (urgency === "low") return "neutral";
+  return "info";
+}
+
 export type PurchaseStatus = "requested" | "approved" | "rejected" | "purchased" | "delivered" | "cancelled";
 
 export const purchaseStatusOptions: Array<{ value: PurchaseStatus; label: string }> = [
@@ -41,6 +59,7 @@ export type PurchaseRequest = {
   url: string | null;
   quantity: number;
   estimated_amount: number;
+  urgency: PurchaseUrgency;
   funding_category: FundingCategory | null;
   notes: string | null;
   status: PurchaseStatus;
@@ -85,13 +104,17 @@ const STATUS_ORDER: Record<PurchaseStatus, number> = {
   cancelled: 5,
 };
 
-// Quem precisa de decisão primeiro (mais antigos antes); encerrados por último, os mais recentes antes.
+const URGENCY_RANK: Record<PurchaseUrgency, number> = { urgent: 0, normal: 1, low: 2 };
+
+// Quem precisa de decisão primeiro; dentro da mesma etapa, os urgentes e depois os mais antigos.
+// Encerrados por último, os mais recentes antes.
 export function sortPurchases(purchases: PurchaseRequest[]) {
   return [...purchases].sort((a, b) => {
     const byStatus = STATUS_ORDER[a.status] - STATUS_ORDER[b.status];
     if (byStatus !== 0) return byStatus;
     const delta = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-    return isPurchaseOpen(a.status) ? delta : -delta;
+    if (!isPurchaseOpen(a.status)) return -delta;
+    return URGENCY_RANK[a.urgency] - URGENCY_RANK[b.urgency] || delta;
   });
 }
 
@@ -206,11 +229,12 @@ export function parseMoney(text: string): number | null {
   return Number(normalized);
 }
 
-export type PurchaseFormValues = { projectId: string; category: string; item: string; url: string; quantity: string; amount: string; notes: string };
+export type PurchaseFormValues = { projectId: string; category: string; urgency: string; item: string; url: string; quantity: string; amount: string; notes: string };
 
 export function validatePurchaseForm(values: PurchaseFormValues) {
   if (!values.projectId) return "Escolha o projeto.";
   if (!purchaseCategoryOptions.some((option) => option.value === values.category)) return "Escolha a rubrica do item.";
+  if (!purchaseUrgencyOptions.some((option) => option.value === values.urgency)) return "Escolha a urgência.";
   const item = values.item.trim();
   if (item.length < 2 || item.length > 200) return "Descreva o item (de 2 a 200 caracteres).";
   if (values.url.trim() && !isValidPurchaseUrl(values.url)) return "O link precisa começar com http:// ou https://.";

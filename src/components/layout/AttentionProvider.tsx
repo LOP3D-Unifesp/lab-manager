@@ -24,6 +24,8 @@ type Attention = {
   feedback: number;
   /** Compras que pedem atenção: pedidos aguardando decisão (coordenador) ou novidades dos próprios pedidos (demais). */
   purchases: number;
+  /** Quantos dos pedidos aguardando decisão são urgentes (só coordenador). */
+  urgentPurchases: number;
   /** Novidades recentes dos pedidos da própria pessoa (aprovado, recusado, comprado, entregue); vazio para coordenadores. */
   purchaseUpdates: PurchaseUpdate[];
   /** Ids das novidades que chegaram depois da última visita. */
@@ -38,6 +40,7 @@ const emptyAttention: Attention = {
   urgentRequests: 0,
   feedback: 0,
   purchases: 0,
+  urgentPurchases: 0,
   purchaseUpdates: [],
   unseenPurchaseUpdateIds: [],
   markPurchaseUpdatesSeen: () => undefined,
@@ -63,7 +66,7 @@ export function AttentionProvider({ children }: { children: ReactNode }) {
   const wantsMyPurchases = Boolean(profileId) && profile?.role !== "coordinator";
   const [updates, setUpdates] = useState<PurchaseUpdate[]>([]);
   const [seenAt, setSeenAt] = useState<string | null>(null);
-  const [counts, setCounts] = useState({ maintenanceRequests: 0, urgentRequests: 0, feedback: 0, purchases: 0 });
+  const [counts, setCounts] = useState({ maintenanceRequests: 0, urgentRequests: 0, feedback: 0, purchases: 0, urgentPurchases: 0 });
   const realtimeOk = useRef(false);
   const lastRequests = useRef<number | null>(null);
 
@@ -104,7 +107,7 @@ export function AttentionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     lastRequests.current = null;
     if (!profileId || (!wantsRequests && !wantsFeedback && !wantsPurchases && !wantsMyPurchases)) {
-      setCounts({ maintenanceRequests: 0, urgentRequests: 0, feedback: 0, purchases: 0 });
+      setCounts({ maintenanceRequests: 0, urgentRequests: 0, feedback: 0, purchases: 0, urgentPurchases: 0 });
       setUpdates([]);
       return undefined;
     }
@@ -114,7 +117,7 @@ export function AttentionProvider({ children }: { children: ReactNode }) {
       Promise.all([
         wantsRequests ? countOpenMaintenanceRequests() : Promise.resolve({ open: 0, urgent: 0 }),
         wantsFeedback ? countNewFeedback() : Promise.resolve(0),
-        wantsPurchases ? countRequestedPurchases() : Promise.resolve(0),
+        wantsPurchases ? countRequestedPurchases() : Promise.resolve({ open: 0, urgent: 0 }),
         wantsMyPurchases && profileId ? listMyPurchaseUpdates(profileId) : Promise.resolve([] as PurchaseUpdate[]),
       ])
         .then(([requests, feedback, purchases, myUpdates]) => {
@@ -130,7 +133,7 @@ export function AttentionProvider({ children }: { children: ReactNode }) {
             });
           }
           lastRequests.current = requests.open;
-          setCounts({ maintenanceRequests: requests.open, urgentRequests: requests.urgent, feedback, purchases });
+          setCounts({ maintenanceRequests: requests.open, urgentRequests: requests.urgent, feedback, purchases: purchases.open, urgentPurchases: purchases.urgent });
         })
         .catch(() => undefined);
     };
@@ -196,9 +199,9 @@ export function AttentionProvider({ children }: { children: ReactNode }) {
         channel.on("postgres_changes", { event: "*", schema: "public", table: "purchase_requests" }, (payload) => {
           atualizar();
           if (payload.eventType === "INSERT" && (payload.new as { requested_by?: string | null }).requested_by !== profileId) {
-            const row = payload.new as { item?: string };
+            const row = payload.new as { item?: string; urgency?: string };
             showDesktopAlert({
-              title: "Novo pedido de compra",
+              title: row.urgency === "urgent" ? "Pedido de compra urgente" : "Novo pedido de compra",
               body: row.item ?? "Há um pedido aguardando aprovação.",
               path: "/compras",
               tag: "compra-nova",
