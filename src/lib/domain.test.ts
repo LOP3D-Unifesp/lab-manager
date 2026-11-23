@@ -50,6 +50,8 @@ function booking(status: EquipmentBooking["status"], overrides: Partial<Equipmen
     equipment_id: "equipment",
     profile_id: "profile",
     material_id: "material",
+    spool_id: null,
+    consumed_amount: null,
     project_id: null,
     project_name: "Projeto",
     starts_at: "2030-01-01T10:00:00Z",

@@ -1,5 +1,12 @@
 import { supabase } from "./supabaseClient";
 import type {
+  CatalogMaterial,
+  MaterialCategory,
+  MaterialSpool,
+  MaterialUnit,
+  SpoolStatus,
+} from "./inventory";
+import type {
   FundingAgencyRecord,
   FundingCategory,
   Project,
@@ -600,7 +607,12 @@ export async function listMaterials() {
   return (data ?? []) as Material[];
 }
 
-export async function createMaterial(params: { name: string; description: string | null }) {
+export async function createMaterial(params: {
+  name: string;
+  description: string | null;
+  category?: MaterialCategory;
+  unit?: MaterialUnit;
+}) {
   const { data, error } = await client()
     .from("materials")
     .insert({ ...params, is_active: true })
@@ -608,6 +620,141 @@ export async function createMaterial(params: { name: string; description: string
     .single();
   throwIfError(error);
   return data as Material;
+}
+
+const catalogMaterialSelect = "id, name, description, is_active, category, unit";
+
+// Catálogo completo (inclui arquivados), para a aba Materiais do Inventário.
+export async function listCatalogMaterials() {
+  const { data, error } = await client().from("materials").select(catalogMaterialSelect).order("name");
+  throwIfError(error);
+  return (data ?? []) as CatalogMaterial[];
+}
+
+export async function createCatalogMaterial(params: {
+  name: string;
+  description: string | null;
+  category: MaterialCategory;
+  unit: MaterialUnit;
+}) {
+  const { data, error } = await client()
+    .from("materials")
+    .insert({ ...params, is_active: true })
+    .select(catalogMaterialSelect)
+    .single();
+  throwIfError(error);
+  return data as CatalogMaterial;
+}
+
+export async function updateCatalogMaterial(
+  id: string,
+  params: { name: string; description: string | null; category: MaterialCategory; unit: MaterialUnit; is_active: boolean },
+) {
+  const { error } = await client().from("materials").update(params).eq("id", id);
+  throwIfError(error);
+}
+
+// ---------------------------------------------------------------------------
+// Inventário: rolos
+// ---------------------------------------------------------------------------
+
+const spoolSelect = [
+  "id",
+  "material_id",
+  "color_name",
+  "color_hex",
+  "manufacturer",
+  "diameter_mm",
+  "lot_number",
+  "initial_amount",
+  "current_amount",
+  "status",
+  "project_id",
+  "storage_location",
+  "opened_on",
+  "last_dried_on",
+  "notes",
+  "material:materials(name, unit)",
+  "project:projects(name)",
+].join(", ");
+
+type SpoolRow = Omit<MaterialSpool, "material_name" | "unit" | "project_name" | "initial_amount" | "current_amount" | "diameter_mm"> & {
+  initial_amount: number | string;
+  current_amount: number | string;
+  diameter_mm: number | string | null;
+  material: { name: string; unit: MaterialUnit } | null;
+  project: { name: string } | null;
+};
+
+function mapSpool(row: SpoolRow): MaterialSpool {
+  const { material, project, ...spool } = row;
+  return {
+    ...spool,
+    initial_amount: Number(row.initial_amount),
+    current_amount: Number(row.current_amount),
+    diameter_mm: row.diameter_mm === null ? null : Number(row.diameter_mm),
+    material_name: material?.name ?? "",
+    unit: material?.unit ?? "g",
+    project_name: project?.name ?? null,
+  };
+}
+
+export async function listSpools() {
+  const { data, error } = await client().from("material_spools").select(spoolSelect).order("created_at", { ascending: false });
+  throwIfError(error);
+  return ((data ?? []) as unknown as SpoolRow[]).map(mapSpool);
+}
+
+export type SpoolInput = {
+  material_id: string;
+  color_name: string;
+  color_hex: string | null;
+  manufacturer: string | null;
+  diameter_mm: number | null;
+  lot_number: string | null;
+  initial_amount: number;
+  current_amount: number;
+  status?: SpoolStatus;
+  project_id: string | null;
+  storage_location: string | null;
+  opened_on: string | null;
+  last_dried_on: string | null;
+  notes: string | null;
+};
+
+export async function createSpool(params: SpoolInput) {
+  const { error } = await client().from("material_spools").insert(params);
+  throwIfError(error);
+}
+
+export async function updateSpool(id: string, params: Partial<SpoolInput>) {
+  const { error } = await client().from("material_spools").update(params).eq("id", id);
+  throwIfError(error);
+}
+
+// Registra quanto da impressão saiu do rolo (e abate do saldo). Reenviar corrige o valor.
+export async function recordBookingUsage(bookingId: string, amount: number) {
+  const { error } = await client().rpc("record_booking_usage", { p_booking_id: bookingId, p_amount: amount });
+  throwIfError(error);
+}
+
+// Consumo por material nas impressões de um projeto (soma do que foi abatido dos rolos).
+export async function listProjectConsumption(projectId: string) {
+  const { data, error } = await client()
+    .from("equipment_bookings")
+    .select("consumed_amount, material:materials(name, unit)")
+    .eq("project_id", projectId)
+    .not("consumed_amount", "is", null);
+  throwIfError(error);
+  const totals = new Map<string, { name: string; unit: MaterialUnit; total: number }>();
+  for (const row of (data ?? []) as unknown as Array<{ consumed_amount: number | string; material: { name: string; unit: MaterialUnit } | null }>) {
+    if (!row.material) continue;
+    const key = `${row.material.name}|${row.material.unit}`;
+    const current = totals.get(key) ?? { name: row.material.name, unit: row.material.unit, total: 0 };
+    current.total += Number(row.consumed_amount);
+    totals.set(key, current);
+  }
+  return [...totals.values()].sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
 }
 
 export async function listEquipmentMaterials() {
@@ -630,7 +777,7 @@ export async function listBookings() {
   const { data, error } = await client()
     .from("equipment_bookings")
     .select(`
-      id, equipment_id, profile_id, material_id, project_id, project_name, starts_at, ends_at,
+      id, equipment_id, profile_id, material_id, spool_id, consumed_amount, project_id, project_name, starts_at, ends_at,
       estimated_duration_minutes, status, notes, cancelled_at, cancelled_by,
       rejected_reason, rejected_at, rejected_by, approved_at, approved_by,
       equipment:equipment!equipment_bookings_equipment_id_fkey(id, name, model, location, status, notes, type_id, asset_tag, created_at, updated_at, type:equipment_types(id, name, uses_material, is_active)),
@@ -771,6 +918,7 @@ export async function listMaintenanceBlocks() {
 export async function createBooking(params: {
   equipmentId: string;
   materialId?: string | null;
+  spoolId?: string | null;
   projectId: string;
   startsAt: string;
   durationMinutes: number;
@@ -779,6 +927,7 @@ export async function createBooking(params: {
   const { data, error } = await client().rpc("create_booking", {
     p_equipment_id: params.equipmentId,
     p_material_id: params.materialId ?? undefined,
+    p_spool_id: params.spoolId ?? undefined,
     p_project_id: params.projectId,
     p_starts_at: params.startsAt,
     p_estimated_duration_minutes: params.durationMinutes,
@@ -793,6 +942,7 @@ export async function updateBooking(
   params: {
     equipmentId: string;
     materialId?: string | null;
+    spoolId?: string | null;
     projectId: string;
     startsAt: string;
     durationMinutes: number;
@@ -803,6 +953,7 @@ export async function updateBooking(
     p_booking_id: bookingId,
     p_equipment_id: params.equipmentId,
     p_material_id: params.materialId ?? undefined,
+    p_spool_id: params.spoolId ?? undefined,
     p_project_id: params.projectId,
     p_starts_at: params.startsAt,
     p_estimated_duration_minutes: params.durationMinutes,

@@ -19,8 +19,8 @@ O schema cobre:
 
 O Supabase Auth sera a fonte de autenticacao. O PostgreSQL sera a fonte dos dados de dominio da aplicacao.
 
-> **Fonte da verdade:** as migrations em `supabase/migrations/` (17 arquivos, de `20260818` a
-> `20260903`). Este documento descreve o resultado delas. A secao 1.1 resume o que mudou depois da
+> **Fonte da verdade:** as migrations em `supabase/migrations/` (18 arquivos, de `20260818` a
+> `20260904`). Este documento descreve o resultado delas. A secao 1.1 resume o que mudou depois da
 > baseline; onde houver divergencia, vale a migration.
 
 Status do MVP implementado:
@@ -55,6 +55,7 @@ Status do MVP implementado:
 | `20260901_project_tasks` | Tarefas do kanban por projeto e seus responsaveis (secao 3.13). |
 | `20260902_bookings_require_project` | `printer_bookings.project_id`; `create_printer_booking` e `update_printer_booking` passam a receber o projeto (`p_project_id`) em vez do nome. |
 | `20260903_equipment` | Impressoras viram equipamentos: `printers` -> `equipment`, `printer_materials` -> `equipment_materials`, `printer_bookings` -> `equipment_bookings` (e `printer_id` -> `equipment_id`); nova `equipment_types`; material da reserva opcional; RPCs `create_booking`, `update_booking`, `cancel_booking`, `reject_booking`, `set_booking_status` e `replace_equipment_materials` (secao 3.14). |
+| `20260904_inventory` | `materials.category` e `materials.unit`; nova `material_spools` (rolos com cor, peso e dono); `equipment_bookings.spool_id` e `consumed_amount`; `create_booking` e `update_booking` ganham `p_spool_id`; RPC `record_booking_usage` (secao 3.15). |
 
 Resumo dos objetos que mais mudam o entendimento do schema:
 
@@ -997,6 +998,30 @@ Finalidade: o laboratorio tem mais que impressoras, e todo equipamento pode ser 
   p_estimated_duration_minutes, p_material_id, p_notes)`; `update_booking` acrescenta `p_booking_id` no
   inicio. Erros novos: `equipment_unavailable` e `equipment_not_found` (antes `printer_*`).
 
+### 3.15 Inventario de insumos
+
+Finalidade: saber que rolos existem, quanto resta de cada um e de quem sao. Os MVP anteriores tratavam
+`materials` so como catalogo tecnico; agora ele continua sendo o catalogo (o que e: PLA, PETG, resina) e
+cada unidade fisica e um rolo.
+
+- `materials`: ganha `category` (`material_category`: `filament`, `resin`, `powder`, `other`) e `unit`
+  (`g` ou `ml`). O coordenador edita e arquiva materiais.
+- `material_spools`: `material_id`, `color_name`, `color_hex`, `manufacturer`, `diameter_mm`,
+  `lot_number`, `initial_amount`, `current_amount` (de 0 ate o inicial), `status` (`spool_status`:
+  `sealed`, `in_use`, `empty`, `discarded`), `project_id` (nulo = estoque geral do laboratorio),
+  `storage_location`, `opened_on`, `last_dried_on`, `notes`, `created_by`. O trigger
+  `sync_spool_status` marca o rolo como `empty` ao chegar a zero e como `in_use` quando um rolo lacrado
+  perde peso. Nao ha exclusao: rolos acabados ficam `empty` ou `discarded`.
+- Acesso (RLS): qualquer usuario ativo le o inventario; so o coordenador cadastra e edita rolos.
+- `equipment_bookings.spool_id` (opcional) e `consumed_amount`. `create_booking` e `update_booking`
+  recebem `p_spool_id` (ultimo parametro) e so o aceitam para equipamentos cujo tipo usa material. O
+  rolo precisa ser do material da reserva e do projeto da reserva ou do estoque geral; um rolo novo
+  tambem precisa estar `sealed` ou `in_use` e ter saldo. Erro: `spool_not_available`.
+- `record_booking_usage(p_booking_id, p_amount)`: coordenador ou dono da reserva informa quanto foi
+  usado (reserva em andamento, concluida ou com falha). O valor e abatido do rolo; chamar de novo corrige
+  (devolve o anterior antes de aplicar o novo) e o valor e limitado ao que o rolo ainda tem. Erros:
+  `usage_not_allowed`, `booking_without_spool` e `invalid_amount`.
+
 ## 4. Relacionamentos principais
 
 - `profiles.id` e igual a `auth.users.id`.
@@ -1148,45 +1173,10 @@ Validacoes cobertas pelos testes de banco do MVP:
 - Idiomas nao sao habilidades tecnicas e nao entram em `skills`.
 - Nao havera upload `.gcode` ou `.3mf` no schema do MVP.
 - Nao havera historico detalhado de manutencao alem dos bloqueios.
-- A baseline inicial (`20260818`) e imutavel; mudancas de schema entram em migrations incrementais (hoje ate `20260903`).
+- A baseline inicial (`20260818`) e imutavel; mudancas de schema entram em migrations incrementais (hoje ate `20260904`).
 
-## 10. Evolucao futura: controle de estoque de materiais
+## 10. Inventario de insumos
 
-Esta secao documenta uma evolucao futura fora do MVP. Ela nao deve gerar migrations, SQL executavel ou implementacao nesta etapa.
-
-No MVP, `materials` permanece como catalogo tecnico simples usado para compatibilidade com impressoras e reservas. O controle de estoque de rolos, lotes ou unidades fisicas pode ser modelado futuramente com uma tabela separada.
-
-### Tabela futura `material_inventory`
-
-Finalidade futura: representar rolos, lotes ou unidades fisicas de material, registrando dados operacionais como lote, fabricante, cor, peso, secagem e local de armazenamento.
-
-Campos futuros sugeridos:
-
-| Campo | Tipo PostgreSQL sugerido | Descricao |
-| --- | --- | --- |
-| `id` | `uuid` | Identificador do item de estoque. |
-| `material_id` | `uuid` | Material tecnico associado em `materials.id`. |
-| `lot_number` | `text` | Numero do lote informado pelo fabricante. |
-| `opened_on` | `date` | Data de abertura do rolo, lote ou unidade fisica. |
-| `manufacturer` | `text` | Fabricante do material. |
-| `color` | `text` | Cor do material. |
-| `initial_weight_grams` | `integer` | Peso inicial em gramas. |
-| `current_weight_grams` | `integer` | Peso atual estimado em gramas. |
-| `last_dried_on` | `date` | Data da ultima secagem. |
-| `storage_location` | `text` | Local de armazenamento. |
-| `status` | `text` | Estado operacional futuro, como disponivel, em uso, vazio, descartado ou indisponivel. |
-| `description` | `text` | Observacoes adicionais do item fisico. |
-| `created_at` | `timestamptz` | Data de criacao. |
-| `updated_at` | `timestamptz` | Data da ultima atualizacao. |
-
-Regras futuras sugeridas:
-
-- `material_id` deve referenciar `materials.id`.
-- Cada item pode representar um rolo, lote ou unidade fisica de material.
-- `initial_weight_grams` e `current_weight_grams` devem ser positivos quando preenchidos.
-- `current_weight_grams` nao deve exceder `initial_weight_grams`.
-- `last_dried_on` registra a ultima secagem do item fisico.
-- `status` podera indicar estados como disponivel, em uso, vazio, descartado ou indisponivel.
-- Reservas poderao futuramente vincular opcionalmente um item especifico de `material_inventory`.
-- Reservas poderao futuramente consumir saldo ou peso do item fisico.
-- A regra atual do MVP permanece: o material escolhido na reserva deve existir em `printer_materials` para a impressora selecionada.
+O controle de estoque que esta secao previa como evolucao futura (`material_inventory`) foi implementado
+como `material_spools` e descrito na secao 3.15. Ficam para o futuro: custo e compra de insumos,
+alertas por e-mail de estoque baixo e controle de secagem automatico.

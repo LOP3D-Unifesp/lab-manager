@@ -14,6 +14,7 @@ import { Habilidades } from "./pages/Habilidades";
 import { HistoricoReservas } from "./pages/HistoricoReservas";
 import { Login } from "./pages/Login";
 import { InstallationWizard } from "./pages/InstallationWizard";
+import { Inventario } from "./pages/Inventario";
 import { Invitations } from "./pages/Invitations";
 import { MeuPerfil } from "./pages/MeuPerfil";
 import { MinhasReservas } from "./pages/MinhasReservas";
@@ -125,6 +126,7 @@ export const router = createBrowserRouter([
           { path: "habilidades", element: <Habilidades /> },
           { path: "agenda", element: <AgendaLaboratorio /> },
           { path: "equipamentos", element: <Equipamentos /> },
+          { path: "inventario", element: <Inventario /> },
           { path: "impressoras", element: <Navigate to="/equipamentos" replace /> },
           { path: "reservas", element: <Reservas /> },
           { path: "reservas/minhas", element: <MinhasReservas /> },

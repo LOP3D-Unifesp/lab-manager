@@ -431,7 +431,7 @@ Pesquisador.
 **Passos:**  
 1. O pesquisador inicia a criação de reserva.
 2. O pesquisador seleciona a impressora.
-3. O pesquisador escolhe o projeto (entre os projetos em aberto de que participa) e informa material, data, horário inicial e duração estimada.
+3. O pesquisador escolhe o projeto (entre os projetos em aberto de que participa) e informa material, data, horário inicial e duração estimada. Para impressoras, pode escolher também o rolo (do projeto ou do estoque geral).
 4. O sistema calcula o horário final da reserva.
 5. O sistema valida a disponibilidade da impressora no período.
 6. O sistema valida a compatibilidade entre material e impressora.

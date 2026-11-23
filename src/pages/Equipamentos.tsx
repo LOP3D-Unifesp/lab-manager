@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { PackagePlus, Pencil, Plus } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
@@ -19,7 +19,6 @@ import {
 import {
   createEquipment,
   createEquipmentType,
-  createMaterial,
   listEquipment,
   listEquipmentMaterials,
   listEquipmentTypes,
@@ -71,7 +70,6 @@ export function Equipamentos() {
   const [modalAberto, setModalAberto] = useState(false);
   const [emEdicao, setEmEdicao] = useState<Equipment | null>(null);
   const [form, setForm] = useState<EquipmentForm | null>(null);
-  const [materialForm, setMaterialForm] = useState({ name: "", description: "" });
   const [novoTipo, setNovoTipo] = useState<{ name: string; uses_material: boolean } | null>(null);
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
@@ -204,29 +202,6 @@ export function Equipamentos() {
     }
   }
 
-  async function salvarMaterial(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!isCoordinator) {
-      setErro("Apenas coordenadores podem adicionar materiais.");
-      return;
-    }
-    const name = materialForm.name.trim();
-    if (!name) {
-      setErro("Informe o nome do material.");
-      return;
-    }
-    try {
-      setSalvando(true);
-      await createMaterial({ name, description: toNullable(materialForm.description) });
-      setMaterialForm({ name: "", description: "" });
-      await carregarDados();
-    } catch (error) {
-      setErro(getErrorMessage(error));
-    } finally {
-      setSalvando(false);
-    }
-  }
-
   async function salvarEquipamento(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!isCoordinator || !form) {
@@ -281,59 +256,6 @@ export function Equipamentos() {
           ) : undefined
         }
       />
-
-      <section className="mb-5 rounded-lg border border-border bg-surface p-4">
-        <div className="mb-4 flex items-start gap-3">
-          <div className="rounded-lg bg-primary-soft p-3 text-primary">
-            <PackagePlus className="h-5 w-5" aria-hidden="true" />
-          </div>
-          <div>
-            <h3 className="text-xl font-bold text-text">Materiais</h3>
-            <p className="mt-1 text-base text-muted">
-              Materiais ativos usados nas compatibilidades das impressoras.
-            </p>
-          </div>
-        </div>
-        {isCoordinator ? (
-          <form className="grid gap-3 md:grid-cols-[1fr_1fr_auto]" onSubmit={salvarMaterial}>
-            <input
-              aria-label="Nome do material"
-              placeholder="Nome do material"
-              value={materialForm.name}
-              onChange={(event) => setMaterialForm((current) => ({ ...current, name: event.target.value }))}
-              className={inputClassName}
-            />
-            <input
-              aria-label="Descricao do material"
-              placeholder="Descricao opcional"
-              value={materialForm.description}
-              onChange={(event) => setMaterialForm((current) => ({ ...current, description: event.target.value }))}
-              className={inputClassName}
-            />
-            <Button type="submit" disabled={salvando}>
-              Adicionar material
-            </Button>
-          </form>
-        ) : (
-          <div className="rounded-lg border border-border bg-surface p-4 text-base text-muted">
-            Apenas coordenadores podem cadastrar novos materiais.
-          </div>
-        )}
-        <div className="mt-3 flex flex-wrap gap-2">
-          {materials.length > 0 ? (
-            materials.map((material) => (
-              <span
-                key={material.id}
-                className="rounded-md border border-border bg-background px-3 py-1.5 text-sm font-semibold text-muted"
-              >
-                {material.name}
-              </span>
-            ))
-          ) : (
-            <p className="text-base font-semibold text-muted">Nenhum material cadastrado ainda.</p>
-          )}
-        </div>
-      </section>
 
       {equipmentList.length > 0 ? (
         <>
@@ -571,7 +493,7 @@ export function Equipamentos() {
                   </div>
                 ) : (
                   <p className="rounded-md border border-dashed border-border bg-surface p-3 text-base text-muted">
-                    Cadastre materiais antes de definir compatibilidade.
+                    Cadastre materiais no Inventário antes de definir a compatibilidade.
                   </p>
                 )}
               </fieldset>
