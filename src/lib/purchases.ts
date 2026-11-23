@@ -238,17 +238,29 @@ export function parseMoney(text: string, decimals = 2): number | null {
   return Number(normalized);
 }
 
-// Máscara do campo de valor: só dígitos e uma vírgula, com ponto a cada 3 dígitos da parte inteira
-// ("1234,5" vira "1.234,5"). Limita as casas decimais e a parte inteira a 9 dígitos.
-export function maskMoneyInput(raw: string, maxDecimals = 2) {
-  const cleaned = raw.replace(/[^\d,]/g, "");
-  const commaIndex = cleaned.indexOf(",");
-  const integerRaw = (commaIndex === -1 ? cleaned : cleaned.slice(0, commaIndex)).slice(0, 9);
-  const decimals = commaIndex === -1 ? null : cleaned.slice(commaIndex + 1).replace(/,/g, "").slice(0, maxDecimals);
-  let integer = integerRaw.replace(/^0+(?=\d)/, "");
-  if (integer === "" && decimals !== null) integer = "0";
-  const grouped = integer.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  return decimals === null ? grouped : `${grouped},${decimals}`;
+// Máscara de dinheiro dos campos de valor: os centavos ficam sempre à vista e cada dígito digitado entra pela
+// direita ("1" vira "0,01", "150" vira "1,50", "15059" vira "150,59"), com ponto de milhar. Campo vazio fica vazio.
+// Ao colar um valor completo ("1.234,56", "1234.56") ou um inteiro ("1234" vira "1.234,00"), ele é respeitado.
+export function formatCents(cents: number) {
+  const digits = String(Math.max(0, Math.round(cents))).padStart(3, "0");
+  const integer = digits.slice(0, -2).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return `${integer},${digits.slice(-2)}`;
+}
+
+// Valor numérico (em reais) para o texto do campo, por exemplo 1234.5 vira "1.234,50".
+export function formatMoneyField(value: number) {
+  return formatCents(Math.round((value + Number.EPSILON) * 100));
+}
+
+export function maskCentsInput(raw: string, pasted = false) {
+  if (pasted) {
+    const text = raw.trim().replace(/^R\$\s*/i, "");
+    const decimal = text.match(/^(\d[\d.]*)[.,](\d{1,2})$/);
+    if (decimal) return formatCents(Number(decimal[1].replace(/\./g, "").slice(0, 9) + decimal[2].padEnd(2, "0")));
+    if (/^\d[\d.]*$/.test(text)) return formatCents(Number(text.replace(/\./g, "").slice(0, 9)) * 100);
+  }
+  const digits = raw.replace(/\D/g, "").replace(/^0+/, "").slice(0, 11);
+  return digits === "" ? "" : formatCents(Number(digits));
 }
 
 // Lê o texto de um campo com a máscara acima: o ponto é sempre separador de milhar e a vírgula, a decimal.
@@ -266,11 +278,10 @@ export function calculateTotal(unitAmount: number, quantity: number) {
   return roundCents(unitAmount * quantity);
 }
 
-// Valor unitário para preencher o formulário ao editar (até 4 casas, sem zeros sobrando além de 2).
-export function formatUnitAmount(total: number, quantity: number) {
-  let text = (total / Math.max(quantity, 1)).toFixed(4);
-  while (text.endsWith("0") && text.split(".")[1].length > 2) text = text.slice(0, -1);
-  return text.replace(".", ",");
+// Valor unitário para preencher o formulário ao editar (arredondado em centavos). Um pedido antigo cujo total não
+// divide certinho pela quantidade pode mudar 1 centavo ao ser salvo; o total novo aparece antes de salvar.
+export function getUnitAmountForEdit(total: number, quantity: number) {
+  return roundCents(total / Math.max(quantity, 1));
 }
 
 // Valor unitário para exibir ao lado do total, só quando ele fecha certinho (2 casas) com a quantidade.
@@ -291,7 +302,7 @@ export function validatePurchaseForm(values: PurchaseFormValues) {
   if (values.url.trim() && !isValidPurchaseUrl(values.url)) return "O link precisa começar com http:// ou https://.";
   const quantity = Number(values.quantity);
   if (!Number.isInteger(quantity) || quantity < 1 || quantity > 100000) return "A quantidade precisa ser um número inteiro maior que zero.";
-  const unit = parseMaskedMoney(values.amount, 4);
+  const unit = parseMaskedMoney(values.amount);
   if (unit === null) return "Informe o valor unitário, por exemplo 129,90.";
   if (calculateTotal(unit, quantity) >= 100_000_000) return "Valor alto demais.";
   if (values.notes.length > 1000) return "As observações podem ter até 1000 caracteres.";

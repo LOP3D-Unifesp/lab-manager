@@ -258,7 +258,7 @@ Botões devem seguir os padrões definidos neste guia. A ação principal de cad
 
 Campos de formulário devem ter label visível, área de toque confortável, borda clara, estado de foco visível e mensagens de erro textuais. Placeholder não substitui label.
 
-**Valores em reais:** usar `MoneyInput` (`src/components/ui/MoneyInput.tsx`), que formata enquanto a pessoa digita (`1234,5` vira `1.234,5`), aceita o ponto do teclado numérico como vírgula decimal, trata valores colados como `1234.56` e limita as casas decimais. O texto do campo é lido com `parseMaskedMoney` (ponto é milhar e vírgula é decimal), e as regras ficam em `src/lib/purchases.ts` (`maskMoneyInput`). Quantidades inteiras aceitam só dígitos.
+**Valores em reais:** usar `MoneyInput` (`src/components/ui/MoneyInput.tsx`), que mostra os centavos sempre: cada dígito digitado entra pela direita (`1` vira `0,01`, `150` vira `1,50`, `15059` vira `150,59`), com ponto de milhar; pontos e vírgulas digitados são ignorados e colar um valor completo (`1.234,56`, `1234.56`) é respeitado. O texto do campo é lido com `parseMaskedMoney` (ponto é milhar, vírgula é decimal) e o valor numérico vira texto com `formatMoneyField`; as regras ficam em `src/lib/purchases.ts` (`maskCentsInput`). Quantidades inteiras aceitam só dígitos.
 
 ### Listas responsivas
 

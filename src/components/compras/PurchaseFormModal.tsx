@@ -9,8 +9,8 @@ import {
   GENERAL_STOCK_VALUE,
   getPurchaseErrorMessage,
   calculateTotal,
-  formatUnitAmount,
-  maskMoneyInput,
+  formatMoneyField,
+  getUnitAmountForEdit,
   parseMaskedMoney,
   purchaseCategoryOptions,
   purchaseUrgencyOptions,
@@ -40,12 +40,12 @@ export function PurchaseFormModal({ defaultProjectId, onClose, onDone, projects,
   const [item, setItem] = useState(purchase?.item ?? "");
   const [url, setUrl] = useState(purchase?.url ?? "");
   const [quantity, setQuantity] = useState(String(purchase?.quantity ?? 1));
-  const [amount, setAmount] = useState(purchase ? maskMoneyInput(formatUnitAmount(purchase.estimated_amount, purchase.quantity), 4) : "");
+  const [amount, setAmount] = useState(purchase ? formatMoneyField(getUnitAmountForEdit(purchase.estimated_amount, purchase.quantity)) : "");
   const [notes, setNotes] = useState(purchase?.notes ?? "");
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
 
-  const unitValue = parseMaskedMoney(amount, 4);
+  const unitValue = parseMaskedMoney(amount);
   const quantityValue = Number(quantity);
   const previewTotal = unitValue !== null && Number.isInteger(quantityValue) && quantityValue >= 1 ? calculateTotal(unitValue, quantityValue) : null;
 
@@ -60,7 +60,7 @@ export function PurchaseFormModal({ defaultProjectId, onClose, onDone, projects,
       item,
       url: url.trim() || null,
       quantity: Number(quantity),
-      estimatedAmount: calculateTotal(parseMaskedMoney(amount, 4) as number, Number(quantity)),
+      estimatedAmount: calculateTotal(parseMaskedMoney(amount) as number, Number(quantity)),
       notes: notes.trim() || null,
       fundingCategory: category as FundingCategory,
       urgency,
@@ -151,8 +151,7 @@ export function PurchaseFormModal({ defaultProjectId, onClose, onDone, projects,
             Valor unitário (R$)
             <MoneyInput
               className={inputClassName}
-              decimals={4}
-              placeholder="129,90"
+              placeholder="0,00"
               value={amount}
               onChange={setAmount}
             />
@@ -161,7 +160,7 @@ export function PurchaseFormModal({ defaultProjectId, onClose, onDone, projects,
         {previewTotal !== null ? (
           <p className="-mt-2 text-sm text-muted">
             Total estimado: <strong className="text-text">{formatCurrencyBRL(previewTotal)}</strong>
-            {Number(quantity) > 1 ? ` (${quantity} × ${formatCurrencyBRL(parseMaskedMoney(amount, 4) as number)})` : ""}
+            {Number(quantity) > 1 ? ` (${quantity} × ${formatCurrencyBRL(parseMaskedMoney(amount) as number)})` : ""}
           </p>
         ) : null}
         <label className="grid gap-2 text-base font-semibold text-text">

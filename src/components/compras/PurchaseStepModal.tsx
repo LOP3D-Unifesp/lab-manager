@@ -1,7 +1,7 @@
 import { FormEvent, useState } from "react";
 
 import { formatCurrencyBRL } from "../../lib/projects";
-import { getPurchaseErrorMessage, maskMoneyInput, parseMaskedMoney, type PurchaseRequest } from "../../lib/purchases";
+import { getPurchaseErrorMessage, formatMoneyField, parseMaskedMoney, type PurchaseRequest } from "../../lib/purchases";
 import { MoneyInput } from "../ui/MoneyInput";
 import { setPurchaseStatus } from "../../lib/supabaseRepository";
 import { Button } from "../ui/Button";
@@ -20,7 +20,7 @@ const inputClassName =
 // Recusar (com motivo) ou marcar como comprado (com o valor pago).
 export function PurchaseStepModal({ mode, onClose, onDone, purchase }: PurchaseStepModalProps) {
   const [reason, setReason] = useState("");
-  const [amount, setAmount] = useState(maskMoneyInput(purchase.estimated_amount.toFixed(2).replace(".", ",")));
+  const [amount, setAmount] = useState(formatMoneyField(purchase.estimated_amount));
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
 
