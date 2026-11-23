@@ -19,6 +19,7 @@ import { getMaintenancePhotoUrls, setMaintenanceRequestStatus } from "../../lib/
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { Modal } from "../ui/Modal";
+import { PhotoViewer } from "../ui/PhotoViewer";
 import { StatusBadge } from "../ui/StatusBadge";
 
 type PanelProps = {
@@ -40,6 +41,7 @@ export function MaintenanceRequestsPanel({ canMaintainNow, equipment, onChanged,
   const [busyId, setBusyId] = useState<string | null>(null);
   const [erro, setErro] = useState("");
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
+  const [viewer, setViewer] = useState<{ request: MaintenanceRequest; index: number } | null>(null);
 
   const allPhotoPaths = useMemo(() => requests.flatMap((request) => request.photo_paths).sort().join("|"), [requests]);
   useEffect(() => {
@@ -153,9 +155,15 @@ export function MaintenanceRequestsPanel({ canMaintainNow, equipment, onChanged,
                     <div className="flex flex-wrap gap-2">
                       {request.photo_paths.map((path, index) =>
                         photoUrls[path] ? (
-                          <a key={path} href={photoUrls[path]} target="_blank" rel="noopener noreferrer" aria-label={`Abrir foto ${index + 1}`}>
+                          <button
+                            key={path}
+                            type="button"
+                            aria-label={`Ampliar foto ${index + 1}`}
+                            className="rounded-lg transition hover:opacity-80"
+                            onClick={() => setViewer({ request, index })}
+                          >
                             <img src={photoUrls[path]} alt={`Foto ${index + 1} do chamado`} className="h-20 w-20 rounded-lg border border-border object-cover" />
-                          </a>
+                          </button>
                         ) : (
                           <div key={path} className="h-20 w-20 rounded-lg border border-border bg-background" />
                         ),
@@ -205,6 +213,16 @@ export function MaintenanceRequestsPanel({ canMaintainNow, equipment, onChanged,
           })}
         </ul>
       )}
+
+      {viewer ? (
+        <PhotoViewer
+          photos={viewer.request.photo_paths
+            .filter((path) => photoUrls[path])
+            .map((path, position) => ({ url: photoUrls[path], alt: `Foto ${position + 1} do chamado de ${viewer.request.equipment_name}` }))}
+          startIndex={viewer.index}
+          onClose={() => setViewer(null)}
+        />
+      ) : null}
 
       {resolving ? (
         <Modal
