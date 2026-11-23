@@ -358,16 +358,28 @@ export function Equipamentos() {
               return (
                 <Card key={item.id} className="flex min-h-full flex-col">
                   <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <h3 className="text-2xl font-bold text-text">{item.name}</h3>
-                      <p className="mt-2 text-lg text-muted">
-                        {[item.type?.name, item.model].filter(Boolean).join(" · ") || "Modelo não informado"}
+                    <div className="min-w-0 flex-1">
+                      <h3 className="break-words text-2xl font-bold text-text">{item.name}</h3>
+                      {/* Cada parte fica inteira numa linha: a quebra só acontece no separador, nunca no meio do modelo. */}
+                      <p className="mt-2 text-base text-muted">
+                        {[item.type?.name, item.model].filter(Boolean).length > 0
+                          ? [item.type?.name, item.model]
+                              .filter(Boolean)
+                              .map((part, index) => (
+                                <span key={index}>
+                                  {index > 0 ? " · " : ""}
+                                  <span className="whitespace-nowrap">{part}</span>
+                                </span>
+                              ))
+                          : "Modelo não informado"}
                       </p>
                     </div>
-                    <StatusBadge
-                      label={getEquipmentStatusLabel(item.status)}
-                      variant={item.status === "active" ? "success" : item.status === "stopped" ? "danger" : "warning"}
-                    />
+                    <span className="shrink-0 whitespace-nowrap">
+                      <StatusBadge
+                        label={getEquipmentStatusLabel(item.status)}
+                        variant={item.status === "active" ? "success" : item.status === "stopped" ? "danger" : "warning"}
+                      />
+                    </span>
                   </div>
                   {item.status === "stopped" ? (
                     <div className="mt-3 grid gap-1 rounded-lg border border-danger bg-danger-soft p-3 text-sm text-text">
