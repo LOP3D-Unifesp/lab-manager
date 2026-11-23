@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(246);
+select plan(253);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -1424,9 +1424,10 @@ select is(
   'in_progress:true',
   'the request is in progress and assigned to the maintainer'
 );
-select lives_ok(
+select throws_ok(
   $$ select public.start_equipment_maintenance('20000000-0000-0000-0000-000000000003', 'Limpeza do bico') $$,
-  'a maintainer puts the equipment in maintenance'
+  'P0001', 'maintenance_already_open',
+  'taking the request already put the equipment in maintenance'
 );
 select is((select status::text from public.equipment where id = '20000000-0000-0000-0000-000000000003'), 'maintenance', 'the equipment is in maintenance');
 select lives_ok(
@@ -1482,15 +1483,37 @@ select lives_ok(
   $$ insert into public.maintenance_requests (equipment_id, description, urgency) values ('20000000-0000-0000-0000-000000000003', 'pgtap urgente', 'urgent') $$,
   'a researcher opens an urgent request'
 );
-select is((select status::text from public.equipment where id = '20000000-0000-0000-0000-000000000003'), 'maintenance', 'an urgent request puts the equipment in maintenance');
+select is((select status::text from public.equipment where id = '20000000-0000-0000-0000-000000000003'), 'stopped', 'an urgent request stops the equipment');
+select is(
+  (select count(*) from public.equipment_maintenance where equipment_id = '20000000-0000-0000-0000-000000000003' and ended_at is null),
+  0::bigint,
+  'a stopped equipment has no maintenance episode yet'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
+select lives_ok(
+  $$ select public.set_maintenance_request_status((select id from public.maintenance_requests where description = 'pgtap urgente'), 'in_progress') $$,
+  'a maintainer starts the maintenance of the urgent request'
+);
+select is((select status::text from public.equipment where id = '20000000-0000-0000-0000-000000000003'), 'maintenance', 'starting the request puts the equipment in maintenance');
 select is(
   (select count(*) from public.equipment_maintenance where equipment_id = '20000000-0000-0000-0000-000000000003' and ended_at is null and reason like 'Chamado urgente: pgtap urgente%'),
   1::bigint,
   'the maintenance episode records the urgent request as the reason'
 );
-
-select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
 select lives_ok($$ select public.end_equipment_maintenance('20000000-0000-0000-0000-000000000003', 'pgtap liberado') $$, 'a coordinator releases the equipment');
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
+select lives_ok(
+  $$ insert into public.maintenance_requests (equipment_id, description, urgency) values ('20000000-0000-0000-0000-000000000003', 'pgtap urgente enganado', 'urgent') $$,
+  'a second urgent request is opened'
+);
+select is((select status::text from public.equipment where id = '20000000-0000-0000-0000-000000000003'), 'stopped', 'the equipment is stopped again');
+select lives_ok(
+  $$ select public.set_maintenance_request_status((select id from public.maintenance_requests where description = 'pgtap urgente enganado'), 'cancelled') $$,
+  'the author cancels the urgent request'
+);
+select is((select status::text from public.equipment where id = '20000000-0000-0000-0000-000000000003'), 'active', 'cancelling the last urgent request brings the equipment back to active');
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
 select lives_ok(

@@ -323,6 +323,7 @@ export function Equipamentos() {
         <MaintenanceRequestsPanel
           requests={requests}
           equipment={equipmentList}
+          types={types}
           profileId={profile?.id ?? null}
           canMaintainNow={podeManter}
           timezone={timezone}
@@ -365,9 +366,18 @@ export function Equipamentos() {
                     </div>
                     <StatusBadge
                       label={getEquipmentStatusLabel(item.status)}
-                      variant={item.status === "active" ? "success" : "warning"}
+                      variant={item.status === "active" ? "success" : item.status === "stopped" ? "danger" : "warning"}
                     />
                   </div>
+                  {item.status === "stopped" ? (
+                    <div className="mt-3 grid gap-1 rounded-lg border border-danger bg-danger-soft p-3 text-sm text-text">
+                      <p className="flex items-center gap-2 font-semibold">
+                        <Wrench className="h-4 w-4" aria-hidden="true" />
+                        Parado por chamado urgente
+                      </p>
+                      <p>Não aceita novas reservas. A manutenção começa quando um responsável usar “Iniciar manutenção” em Chamados.</p>
+                    </div>
+                  ) : null}
                   {item.status === "maintenance" ? (() => {
                     const aberto = getOpenEpisode(episodes, item.id);
                     return (
@@ -404,56 +414,60 @@ export function Equipamentos() {
                       </div>
                     ) : null}
                   </dl>
-                  <div className="mt-auto flex items-center justify-end gap-2 pt-5">
-                    {episodes.some((episode) => episode.equipment_id === item.id) ? (
+                  <div className="mt-auto grid gap-3 pt-5">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      {episodes.some((episode) => episode.equipment_id === item.id) ? (
+                        <button
+                          type="button"
+                          className="inline-flex min-h-9 items-center gap-1 whitespace-nowrap rounded-md text-sm font-semibold text-muted transition hover:text-primary"
+                          onClick={() => setHistoricoDe(item)}
+                        >
+                          <History className="h-4 w-4" aria-hidden="true" />
+                          Histórico
+                        </button>
+                      ) : null}
                       <button
                         type="button"
-                        className="inline-flex min-h-9 items-center gap-1 rounded-md px-2 text-sm font-semibold text-muted transition hover:text-primary"
-                        onClick={() => setHistoricoDe(item)}
+                        className="inline-flex min-h-9 items-center gap-1 whitespace-nowrap rounded-md text-sm font-semibold text-muted transition hover:text-primary"
+                        onClick={() => setReportarEm(item)}
                       >
-                        <History className="h-4 w-4" aria-hidden="true" />
-                        Histórico
+                        <MessageSquareWarning className="h-4 w-4" aria-hidden="true" />
+                        Reportar problema
                       </button>
-                    ) : null}
-                    {countOpenRequests(requests, item.id) > 0 ? (
+                      {countOpenRequests(requests, item.id) > 0 ? (
+                        <button
+                          type="button"
+                          className="inline-flex min-h-9 items-center whitespace-nowrap rounded-full bg-warning-soft px-3 text-sm font-semibold text-text transition hover:underline"
+                          onClick={() => setSearchParams({ vista: "chamados" }, { replace: true })}
+                        >
+                          {countOpenRequests(requests, item.id)} {countOpenRequests(requests, item.id) === 1 ? "chamado aberto" : "chamados abertos"}
+                        </button>
+                      ) : null}
+                    </div>
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      {podeManter ? (
+                        item.status === "maintenance" || item.status === "stopped" ? (
+                          <Button className="min-h-9 whitespace-nowrap px-3 py-2 text-sm" variant="success" onClick={() => setLiberarEm(item)}>
+                            Liberar equipamento
+                          </Button>
+                        ) : (
+                          <Button className="min-h-9 whitespace-nowrap px-3 py-2 text-sm" variant="secondary" onClick={() => setIniciarEm(item)}>
+                            <Wrench className="mr-2 h-4 w-4" aria-hidden="true" />
+                            Colocar em manutenção
+                          </Button>
+                        )
+                      ) : null}
                       <button
                         type="button"
-                        className="inline-flex min-h-9 items-center gap-1 rounded-md bg-warning-soft px-2 text-sm font-semibold text-text transition hover:underline"
-                        onClick={() => setSearchParams({ vista: "chamados" }, { replace: true })}
+                        title="Editar equipamento"
+                        aria-label={`Editar ${item.name}`}
+                        disabled={!isCoordinator}
+                        onClick={() => abrirEdicao(item)}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted transition hover:bg-primary-soft hover:text-primary"
                       >
-                        {countOpenRequests(requests, item.id)} {countOpenRequests(requests, item.id) === 1 ? "chamado aberto" : "chamados abertos"}
+                        <Pencil className="h-4 w-4" aria-hidden="true" />
                       </button>
-                    ) : null}
-                    <button
-                      type="button"
-                      className="inline-flex min-h-9 items-center gap-1 rounded-md px-2 text-sm font-semibold text-muted transition hover:text-primary"
-                      onClick={() => setReportarEm(item)}
-                    >
-                      <MessageSquareWarning className="h-4 w-4" aria-hidden="true" />
-                      Reportar problema
-                    </button>
-                    {podeManter ? (
-                      item.status === "maintenance" ? (
-                        <Button className="min-h-9 px-3 py-2 text-sm" variant="success" onClick={() => setLiberarEm(item)}>
-                          Liberar equipamento
-                        </Button>
-                      ) : (
-                        <Button className="min-h-9 px-3 py-2 text-sm" variant="secondary" onClick={() => setIniciarEm(item)}>
-                          <Wrench className="mr-2 h-4 w-4" aria-hidden="true" />
-                          Colocar em manutenção
-                        </Button>
-                      )
-                    ) : null}
-                    <button
-                      type="button"
-                      title="Editar equipamento"
-                      aria-label={`Editar ${item.name}`}
-                      disabled={!isCoordinator}
-                      onClick={() => abrirEdicao(item)}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted transition hover:bg-primary-soft hover:text-primary"
-                    >
-                      <Pencil className="h-4 w-4" aria-hidden="true" />
-                    </button>
+                    </div>
                   </div>
                 </Card>
               );
@@ -616,17 +630,17 @@ export function Equipamentos() {
                 Estado
                 <select
                   className={inputClassName}
-                  disabled={form.status === "maintenance"}
+                  disabled={form.status === "maintenance" || form.status === "stopped"}
                   value={form.status}
                   onChange={(event) => atualizarForm({ status: event.target.value as EquipmentStatus })}
                 >
-                  {(form.status === "maintenance" ? (["maintenance"] as EquipmentStatus[]) : statusOptions).map((status) => (
+                  {(form.status === "maintenance" || form.status === "stopped" ? ([form.status] as EquipmentStatus[]) : statusOptions).map((status) => (
                     <option key={status} value={status}>
                       {getEquipmentStatusLabel(status)}
                     </option>
                   ))}
                 </select>
-                {form.status === "maintenance" ? (
+                {form.status === "maintenance" || form.status === "stopped" ? (
                   <span className="text-sm font-normal text-muted">Para tirar da manutenção, use “Liberar equipamento” no card.</span>
                 ) : null}
               </label>

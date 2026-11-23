@@ -1343,8 +1343,8 @@ export async function countNewFeedback() {
 // Chamados de manutenção
 // ---------------------------------------------------------------------------
 
-type MaintenanceRequestRow = Omit<MaintenanceRequest, "equipment_name" | "requested_by_name" | "assigned_to_name"> & {
-  equipment: { name: string } | null;
+type MaintenanceRequestRow = Omit<MaintenanceRequest, "equipment_name" | "equipment_type_id" | "requested_by_name" | "assigned_to_name"> & {
+  equipment: { name: string; type_id: string } | null;
   requester: { full_name: string } | null;
   assignee: { full_name: string } | null;
 };
@@ -1353,13 +1353,14 @@ export async function listMaintenanceRequests() {
   const { data, error } = await client()
     .from("maintenance_requests")
     .select(
-      "id, equipment_id, description, urgency, status, requested_by, assigned_to, resolution_notes, resolved_at, photo_paths, created_at, equipment:equipment!maintenance_requests_equipment_id_fkey(name), requester:profiles!maintenance_requests_requested_by_fkey(full_name), assignee:profiles!maintenance_requests_assigned_to_fkey(full_name)",
+      "id, equipment_id, description, urgency, status, requested_by, assigned_to, resolution_notes, resolved_at, photo_paths, created_at, equipment:equipment!maintenance_requests_equipment_id_fkey(name, type_id), requester:profiles!maintenance_requests_requested_by_fkey(full_name), assignee:profiles!maintenance_requests_assigned_to_fkey(full_name)",
     )
     .order("created_at", { ascending: false });
   throwIfError(error);
   return ((data ?? []) as unknown as MaintenanceRequestRow[]).map(({ assignee, equipment, requester, ...row }) => ({
     ...row,
     equipment_name: equipment?.name ?? "Equipamento removido",
+    equipment_type_id: equipment?.type_id ?? null,
     requested_by_name: requester?.full_name ?? null,
     assigned_to_name: assignee?.full_name ?? null,
   })) as MaintenanceRequest[];

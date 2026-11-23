@@ -18,6 +18,7 @@ function request(overrides: Partial<MaintenanceRequest>): MaintenanceRequest {
     id: "r",
     equipment_id: "eq1",
     equipment_name: "Impressora A",
+    equipment_type_id: "tipoA",
     description: "Bico entupido",
     urgency: "normal",
     status: "open",
@@ -49,9 +50,9 @@ describe("chamados", () => {
     request({ id: "b", status: "open", urgency: "urgent", created_at: "2026-06-05T10:00:00Z" }),
     request({ id: "c", status: "in_progress", assigned_to: "bia", created_at: "2026-06-02T10:00:00Z" }),
     request({ id: "d", status: "resolved", created_at: "2026-06-08T10:00:00Z" }),
-    request({ id: "e", status: "cancelled", equipment_id: "eq2", created_at: "2026-06-09T10:00:00Z" }),
+    request({ id: "e", status: "cancelled", equipment_id: "eq2", equipment_type_id: "tipoB", created_at: "2026-06-09T10:00:00Z" }),
   ];
-  const all: RequestFilters = { equipmentId: "all", status: "all", mine: false };
+  const all: RequestFilters = { typeId: "all", equipmentId: "all", status: "all", mine: false };
   const ids = (list: MaintenanceRequest[]) => list.map((r) => r.id);
 
   it("considera ativos os abertos e os em andamento", () => {
@@ -65,6 +66,8 @@ describe("chamados", () => {
     expect(ids(filterRequests(requests, { ...all, status: "active" }, "ana"))).toEqual(["a", "b", "c"]);
     expect(ids(filterRequests(requests, { ...all, equipmentId: "eq2" }, "ana"))).toEqual(["e"]);
     expect(ids(filterRequests(requests, { ...all, status: "resolved" }, "ana"))).toEqual(["d"]);
+    expect(ids(filterRequests(requests, { ...all, typeId: "tipoB" }, "ana"))).toEqual(["e"]);
+    expect(ids(filterRequests(requests, { ...all, typeId: "tipoA", status: "active" }, "ana"))).toEqual(["a", "b", "c"]);
     expect(ids(filterRequests(requests, { ...all, mine: true }, "bia"))).toEqual(["c"]);
   });
 

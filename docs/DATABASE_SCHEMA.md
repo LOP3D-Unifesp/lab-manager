@@ -19,8 +19,8 @@ O schema cobre:
 
 O Supabase Auth sera a fonte de autenticacao. O PostgreSQL sera a fonte dos dados de dominio da aplicacao.
 
-> **Fonte da verdade:** as migrations em `supabase/migrations/` (22 arquivos, de `20260818` a
-> `20260908`). Este documento descreve o resultado delas. A secao 1.1 resume o que mudou depois da
+> **Fonte da verdade:** as migrations em `supabase/migrations/` (23 arquivos, de `20260818` a
+> `20260909`). Este documento descreve o resultado delas. A secao 1.1 resume o que mudou depois da
 > baseline; onde houver divergencia, vale a migration.
 
 Status do MVP implementado:
@@ -59,7 +59,7 @@ Status do MVP implementado:
 | `20260905_equipment_maintenance` | Manutencao como estado do equipamento, com historico: `equipment_maintenance` e as RPCs `start_equipment_maintenance` e `end_equipment_maintenance` (secao 3.16). |
 | `20260906_feedback_reports` | Caixa de sugestoes e erros: `feedback_reports` (secao 3.17). |
 | `20260907_maintenance_requests` | Chamados de manutencao e responsaveis pela manutencao: `maintenance_requests`, `profiles.is_maintainer` (secao 3.18). |
-| `20260908_maintenance_request_photos_and_urgent_block` | Fotos nos chamados (`photo_paths`, bucket privado `maintenance-photos`) e bloqueio automatico do equipamento por chamado urgente (secao 3.18). |
+| `20260908_maintenance_request_photos_and_urgent_block` | Fotos nos chamados (`photo_paths`, bucket privado `maintenance-photos`) e bloqueio automatico do equipamento por chamado urgente (parcialmente substituido pela migration `20260909`; secao 3.18). |
 
 Resumo dos objetos que mais mudam o entendimento do schema:
 
@@ -1080,9 +1080,14 @@ iniciam a manutencao e resolvem.
 - `photo_paths` (ate 3 caminhos): fotos no bucket privado `maintenance-photos`, uma pasta por autor
   (`<profile_id>/<arquivo>.jpg`, ate 5 MB; jpeg, png ou webp). Usuario ativo envia na propria pasta e le todas
   (o app usa URLs assinadas de 1 hora). O app reduz a foto a 1600 px antes de enviar.
-- Gatilho `maintenance_requests_block_on_urgent` (apos insert): chamado `urgent` em equipamento `active`,
-  sem manutencao aberta, abre um episodio de manutencao (motivo `Chamado urgente: ...`) e muda o status
-  para `maintenance`. Nao cancela reservas futuras. A liberacao e sempre manual (`end_equipment_maintenance`).
+- Gatilho `maintenance_requests_block_on_urgent` (apos insert): chamado `urgent` em equipamento `active`
+  muda o status para `stopped` (Parado), sem abrir episodio de manutencao. O equipamento deixa de aceitar
+  novas reservas (as funcoes de reserva so aceitam `active`) e as reservas futuras nao sao canceladas.
+- Migration `20260909_equipment_stopped_status`: novo valor `stopped` em `equipment_status`. Em
+  `set_maintenance_request_status`, passar o chamado para `in_progress` ("Iniciar manutencao") coloca o
+  equipamento `active` ou `stopped` em `maintenance` e abre o episodio (motivo `Chamado urgente: ...` ou
+  `Chamado: ...`); cancelar ou resolver o ultimo chamado urgente de um equipamento `stopped` o devolve a
+  `active`. `end_equipment_maintenance` tambem libera um equipamento `stopped`.
 
 ## 4. Relacionamentos principais
 
@@ -1235,7 +1240,7 @@ Validacoes cobertas pelos testes de banco do MVP:
 - Idiomas nao sao habilidades tecnicas e nao entram em `skills`.
 - Nao havera upload `.gcode` ou `.3mf` no schema do MVP.
 - Nao havera historico detalhado de manutencao alem dos bloqueios.
-- A baseline inicial (`20260818`) e imutavel; mudancas de schema entram em migrations incrementais (hoje ate `20260908`).
+- A baseline inicial (`20260818`) e imutavel; mudancas de schema entram em migrations incrementais (hoje ate `20260909`).
 
 ## 10. Inventario de insumos
 

@@ -167,6 +167,7 @@ export function isSameSlot(
 
 export type EquipmentStatus =
   | "active"
+  | "stopped"
   | "maintenance"
   | "unavailable"
   | "disabled";
@@ -803,6 +804,7 @@ export function getProximosStatusReserva(status: BookingStatus): BookingStatus[]
 export function getEquipmentStatusLabel(status: EquipmentStatus) {
   const labels: Record<EquipmentStatus, string> = {
     active: "Ativa",
+    stopped: "Parado",
     maintenance: "Em manutenção",
     unavailable: "Indisponivel",
     disabled: "Desativada",
