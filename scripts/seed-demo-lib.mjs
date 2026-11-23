@@ -10,9 +10,11 @@ export async function seedDemo(environment) {
 
   const { data: material, error: materialError } = await client.from("materials").upsert({ name: "PLA Demo", description: "Material fictício para desenvolvimento", is_active: true }, { onConflict: "name" }).select("id").single();
   if (materialError) throw materialError;
-  const { data: printer, error: printerError } = await client.from("printers").upsert({ name: "Impressora Demo", model: "Modelo local", location: "Bancada de testes", status: "active" }, { onConflict: "name" }).select("id").single();
-  if (printerError) throw printerError;
-  const { error: relationError } = await client.from("printer_materials").upsert({ printer_id: printer.id, material_id: material.id });
+  const { data: printerType, error: typeError } = await client.from("equipment_types").select("id").eq("name", "Impressora 3D").single();
+  if (typeError) throw typeError;
+  const { data: equipment, error: equipmentError } = await client.from("equipment").upsert({ name: "Impressora Demo", model: "Modelo local", location: "Bancada de testes", status: "active", type_id: printerType.id }, { onConflict: "name" }).select("id").single();
+  if (equipmentError) throw equipmentError;
+  const { error: relationError } = await client.from("equipment_materials").upsert({ equipment_id: equipment.id, material_id: material.id });
   if (relationError) throw relationError;
 
   const { data: skill, error: skillError } = await client
@@ -73,10 +75,10 @@ export async function seedDemo(environment) {
   bookingStart.setDate(bookingStart.getDate() + 2);
   bookingStart.setHours(10, 0, 0, 0);
   const bookingEnd = new Date(bookingStart.getTime() + 90 * 60 * 1000);
-  const { error: bookingError } = await client.from("printer_bookings").upsert(
+  const { error: bookingError } = await client.from("equipment_bookings").upsert(
     {
       id: "40000000-0000-0000-0000-000000000001",
-      printer_id: printer.id,
+      equipment_id: equipment.id,
       profile_id: coordinator.id,
       material_id: material.id,
       project_id: project.id,
@@ -100,7 +102,7 @@ export async function seedDemo(environment) {
   const { error: maintenanceError } = await client.from("maintenance_blocks").upsert(
     {
       id: "50000000-0000-0000-0000-000000000001",
-      printer_id: printer.id,
+      equipment_id: equipment.id,
       created_by: coordinator.id,
       starts_at: maintenanceStart.toISOString(),
       ends_at: maintenanceEnd.toISOString(),

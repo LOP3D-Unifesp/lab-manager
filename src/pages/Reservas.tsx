@@ -21,11 +21,12 @@ import {
   getDataNoFuso,
   getHorarioNoFuso,
   getMensagemErroReserva,
-  getPrinterStatusLabel,
+  getEquipmentStatusLabel,
   getTimezonePadrao,
   gerarHorariosReserva,
   intervalosSeCruzam,
-  printerAcceptsMaterial,
+  equipmentAcceptsMaterial,
+  equipmentUsesMaterial,
   reservaApareceNaAgenda,
   reservaBloqueiaHorario,
   reservaPodeSerCancelada,
@@ -34,9 +35,9 @@ import {
   type LabSchedulePeriod,
   type MaintenanceBlock,
   type Material,
-  type Printer,
-  type PrinterBooking,
-  type PrinterMaterial,
+  type Equipment,
+  type EquipmentBooking,
+  type EquipmentMaterial,
   type PublicProfile,
 } from "../lib/domain";
 import {
@@ -48,8 +49,8 @@ import {
   listLabSchedulePeriods,
   listMaintenanceBlocks,
   listMaterials,
-  listPrinterMaterials,
-  listPrinters,
+  listEquipmentMaterials,
+  listEquipment,
   listProfiles,
   listProjects,
   rejectBooking,
@@ -90,29 +91,29 @@ export function Reservas() {
   const timezone = labSettings?.timezone || getTimezonePadrao();
   const { currentProfile } = useCurrentProfile();
   const isCoordinator = currentProfile?.role === "coordinator";
-  const [bookings, setBookings] = useState<PrinterBooking[]>([]);
+  const [bookings, setBookings] = useState<EquipmentBooking[]>([]);
   const [maintenanceBlocks, setMaintenanceBlocks] = useState<MaintenanceBlock[]>([]);
-  const [printers, setPrinters] = useState<Printer[]>([]);
+  const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
   const [profiles, setProfiles] = useState<PublicProfile[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [printerMaterials, setPrinterMaterials] = useState<PrinterMaterial[]>(
+  const [equipmentMaterials, setEquipmentMaterials] = useState<EquipmentMaterial[]>(
     [],
   );
   const [schedulePeriods, setSchedulePeriods] = useState<LabSchedulePeriod[]>([]);
   const [dataAgenda, setDataAgenda] = useState(getHojeNoFuso(timezone));
   const [modalAberto, setModalAberto] = useState(false);
-  const [reservaEmEdicao, setReservaEmEdicao] = useState<PrinterBooking | null>(null);
+  const [reservaEmEdicao, setReservaEmEdicao] = useState<EquipmentBooking | null>(null);
   const [modalManutencaoAberto, setModalManutencaoAberto] = useState(false);
   const [reservaParaCancelar, setReservaParaCancelar] =
-    useState<PrinterBooking | null>(null);
+    useState<EquipmentBooking | null>(null);
   const [reservaParaRejeitar, setReservaParaRejeitar] =
-    useState<PrinterBooking | null>(null);
+    useState<EquipmentBooking | null>(null);
   const [motivoRejeicao, setMotivoRejeicao] = useState("");
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [manutencaoForm, setManutencaoForm] = useState({
-    printer_id: "",
+    equipment_id: "",
     date: getHojeNoFuso(timezone),
     starts_at: "",
     ends_at: "",
@@ -125,7 +126,7 @@ export function Reservas() {
     duration_hours: "",
     reservation_date: "",
     starts_at: "",
-    printer_id: "",
+    equipment_id: "",
     notes: "",
   });
 
@@ -133,29 +134,29 @@ export function Reservas() {
     const [
       bookingsData,
       maintenanceData,
-      printersData,
+      equipmentData,
       profilesData,
       materialsData,
-      printerMaterialsData,
+      equipmentMaterialsData,
       schedulePeriodsData,
       projectsData,
     ] = await Promise.all([
       listBookings(),
       listMaintenanceBlocks(),
-      listPrinters(),
+      listEquipment(),
       listProfiles(),
       listMaterials(),
-      listPrinterMaterials(),
+      listEquipmentMaterials(),
       listLabSchedulePeriods(),
       listProjects(),
     ]);
 
     setBookings(bookingsData);
     setMaintenanceBlocks(maintenanceData);
-    setPrinters(printersData);
+    setEquipmentList(equipmentData);
     setProfiles(profilesData);
     setMaterials(materialsData);
-    setPrinterMaterials(printerMaterialsData);
+    setEquipmentMaterials(equipmentMaterialsData);
     setSchedulePeriods(schedulePeriodsData);
     setProjects(projectsData);
   }
@@ -201,8 +202,8 @@ export function Reservas() {
   }
 
   const impressorasAtivas = useMemo(
-    () => printers.filter((printer) => printer.status === "active"),
-    [printers],
+    () => equipmentList.filter((equipment) => equipment.status === "active"),
+    [equipmentList],
   );
 
   const materiaisAtivos = useMemo(
@@ -219,9 +220,9 @@ export function Reservas() {
   }, [bookings]);
 
   const reservasPorImpressora = useMemo(() => {
-    return bookings.reduce<Record<string, PrinterBooking[]>>(
+    return bookings.reduce<Record<string, EquipmentBooking[]>>(
       (mapa, reserva) => {
-        mapa[reserva.printer_id] = [...(mapa[reserva.printer_id] ?? []), reserva];
+        mapa[reserva.equipment_id] = [...(mapa[reserva.equipment_id] ?? []), reserva];
         return mapa;
       },
       {},
@@ -230,7 +231,7 @@ export function Reservas() {
 
   const manutencoesPorImpressora = useMemo(() => {
     return maintenanceBlocks.reduce<Record<string, MaintenanceBlock[]>>((mapa, block) => {
-      mapa[block.printer_id] = [...(mapa[block.printer_id] ?? []), block];
+      mapa[block.equipment_id] = [...(mapa[block.equipment_id] ?? []), block];
       return mapa;
     }, {});
   }, [maintenanceBlocks]);
@@ -282,14 +283,20 @@ export function Reservas() {
       );
   }, [bookings, currentProfile, dataAgenda]);
 
-  function impressoraAceitaMaterial(printerId: string, materialId: string) {
-    return printerAcceptsMaterial(printerMaterials, printerId, materialId);
+  function getEquipamento(equipmentId: string) {
+    return equipmentList.find((item) => item.id === equipmentId);
   }
 
-  function getMateriaisDaImpressora(printerId: string) {
+  // Equipamento cujo tipo não usa material (scanner, cortadora...) aceita a reserva sem material.
+  function impressoraAceitaMaterial(equipmentId: string, materialId: string) {
+    if (!equipmentUsesMaterial(getEquipamento(equipmentId))) return true;
+    return equipmentAcceptsMaterial(equipmentMaterials, equipmentId, materialId);
+  }
+
+  function getMateriaisDaImpressora(equipmentId: string) {
     const materialIds = new Set(
-      printerMaterials
-        .filter((item) => item.printer_id === printerId)
+      equipmentMaterials
+        .filter((item) => item.equipment_id === equipmentId)
         .map((item) => item.material_id),
     );
 
@@ -314,7 +321,7 @@ export function Reservas() {
   }
 
   // Editing a booking whose start already passed is allowed as long as the
-  // start time itself is left untouched (name/material/printer only).
+  // start time itself is left untouched (name/material/equipment only).
   const inicioMantidoOriginal =
     Boolean(reservaEmEdicao) &&
     Boolean(inicioSelecionado) &&
@@ -324,47 +331,47 @@ export function Reservas() {
     return !horarioSelecionadoJaPassou() || inicioMantidoOriginal;
   }
 
-  function getReservaConflitante(printerId: string) {
+  function getReservaConflitante(equipmentId: string) {
     if (!inicioSelecionado || !fimSelecionado) {
       return null;
     }
 
     return findConflictingBooking(
-      reservasPorImpressora[printerId] ?? [],
+      reservasPorImpressora[equipmentId] ?? [],
       inicioSelecionado,
       fimSelecionado,
       reservaEmEdicao?.id,
     );
   }
 
-  function getManutencaoConflitante(printerId: string) {
+  function getManutencaoConflitante(equipmentId: string) {
     if (!inicioSelecionado || !fimSelecionado) return null;
     return findConflictingMaintenanceBlock(
-      manutencoesPorImpressora[printerId] ?? [],
+      manutencoesPorImpressora[equipmentId] ?? [],
       inicioSelecionado,
       fimSelecionado,
     );
   }
 
-  function getManutencaoNoHorario(printerId: string, horario: string) {
+  function getManutencaoNoHorario(equipmentId: string, horario: string) {
     const inicioHorario = criarDataNoFuso(dataAgenda, horario, timezone);
     if (!inicioHorario) return null;
     const fimHorario = new Date(inicioHorario.getTime() + 30 * 60 * 1000);
-    return (manutencoesPorImpressora[printerId] ?? []).find((block) =>
+    return (manutencoesPorImpressora[equipmentId] ?? []).find((block) =>
       intervalosSeCruzam(inicioHorario, fimHorario, new Date(block.starts_at), new Date(block.ends_at)),
     ) ?? null;
   }
 
-  function getManutencoesDaData(printerId: string) {
+  function getManutencoesDaData(equipmentId: string) {
     const inicioDia = criarDataNoFuso(dataAgenda, "00:00", timezone);
     if (!inicioDia) return [];
     const fimDia = new Date(inicioDia.getTime() + 24 * 60 * 60 * 1000);
-    return (manutencoesPorImpressora[printerId] ?? [])
+    return (manutencoesPorImpressora[equipmentId] ?? [])
       .filter((block) => intervalosSeCruzam(inicioDia, fimDia, new Date(block.starts_at), new Date(block.ends_at)))
       .sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime());
   }
 
-  function getReservaNoHorario(printerId: string, horario: string) {
+  function getReservaNoHorario(equipmentId: string, horario: string) {
     const inicioHorario = criarDataNoFuso(dataAgenda, horario, timezone);
 
     if (!inicioHorario) {
@@ -374,7 +381,7 @@ export function Reservas() {
     const fimHorario = new Date(inicioHorario.getTime() + 30 * 60 * 1000);
 
     return (
-      (reservasPorImpressora[printerId] ?? []).find((reserva) => {
+      (reservasPorImpressora[equipmentId] ?? []).find((reserva) => {
         return (
           reservaBloqueiaHorario(reserva) &&
           intervalosSeCruzam(
@@ -388,7 +395,7 @@ export function Reservas() {
     );
   }
 
-  function getReservasDaData(printerId: string) {
+  function getReservasDaData(equipmentId: string) {
     const inicioDia = criarDataNoFuso(dataAgenda, "00:00", timezone);
 
     if (!inicioDia) {
@@ -397,7 +404,7 @@ export function Reservas() {
 
     const fimDia = new Date(inicioDia.getTime() + 24 * 60 * 60 * 1000);
 
-    return (reservasPorImpressora[printerId] ?? [])
+    return (reservasPorImpressora[equipmentId] ?? [])
       .filter((reserva) => {
         return (
           reservaApareceNaAgenda(reserva) &&
@@ -426,10 +433,10 @@ export function Reservas() {
     );
   }
 
-  function getNomeImpressora(printerId: string) {
+  function getNomeImpressora(equipmentId: string) {
     return (
-      printers.find((printer) => printer.id === printerId)?.name ??
-      "Impressora removida"
+      equipmentList.find((equipment) => equipment.id === equipmentId)?.name ??
+      "Equipamento removido"
     );
   }
 
@@ -440,17 +447,7 @@ export function Reservas() {
     }
 
     if (impressorasAtivas.length === 0) {
-      setErro("Cadastre pelo menos uma impressora ativa antes de reservar.");
-      return;
-    }
-
-    if (materiaisAtivos.length === 0) {
-      setErro("Cadastre pelo menos um material antes de reservar.");
-      return;
-    }
-
-    if (printerMaterials.length === 0) {
-      setErro("Cadastre compatibilidades entre impressoras e materiais.");
+      setErro("Cadastre pelo menos um equipamento ativo antes de reservar.");
       return;
     }
 
@@ -459,20 +456,20 @@ export function Reservas() {
     setModalAberto(true);
   }
 
-  function podeGerenciarReserva(reserva: PrinterBooking) {
+  function podeGerenciarReserva(reserva: EquipmentBooking) {
     return isCoordinator || currentProfile?.id === reserva.profile_id;
   }
 
-  function abrirEdicao(reserva: PrinterBooking) {
+  function abrirEdicao(reserva: EquipmentBooking) {
     if (!podeGerenciarReserva(reserva) || !reservaPodeSerEditada(reserva)) return;
     setReservaEmEdicao(reserva);
     setNovaReserva({
       project_id: reserva.project_id ?? "",
-      material_id: reserva.material_id,
+      material_id: reserva.material_id ?? "",
       duration_hours: String(reserva.estimated_duration_minutes / 60),
       reservation_date: getDataNoFuso(new Date(reserva.starts_at), timezone),
       starts_at: getHorarioNoFuso(new Date(reserva.starts_at), timezone),
-      printer_id: reserva.printer_id,
+      equipment_id: reserva.equipment_id,
       notes: reserva.notes ?? "",
     });
     setErro("");
@@ -489,14 +486,14 @@ export function Reservas() {
       duration_hours: "",
       reservation_date: "",
       starts_at: "",
-      printer_id: "",
+      equipment_id: "",
       notes: "",
     });
   }
 
-  function abrirManutencao(printerId = "") {
+  function abrirManutencao(equipmentId = "") {
     setManutencaoForm({
-      printer_id: printerId,
+      equipment_id: equipmentId,
       date: dataAgenda,
       starts_at: "",
       ends_at: "",
@@ -511,8 +508,8 @@ export function Reservas() {
     event.preventDefault();
     const inicio = criarDataNoFuso(manutencaoForm.date, manutencaoForm.starts_at, timezone);
     const fim = criarDataNoFuso(manutencaoForm.date, manutencaoForm.ends_at, timezone);
-    if (!manutencaoForm.printer_id || !inicio || !fim || inicio >= fim || !manutencaoForm.reason.trim()) {
-      setErro("Informe impressora, motivo e um intervalo válido para a manutenção.");
+    if (!manutencaoForm.equipment_id || !inicio || !fim || inicio >= fim || !manutencaoForm.reason.trim()) {
+      setErro("Informe o equipamento, o motivo e um intervalo válido para a manutenção.");
       return;
     }
 
@@ -525,7 +522,7 @@ export function Reservas() {
       setSalvando(true);
       setErro("");
       await createMaintenanceBlock({
-        printerId: manutencaoForm.printer_id,
+        equipmentId: manutencaoForm.equipment_id,
         startsAt: inicio.toISOString(),
         endsAt: fim.toISOString(),
         reason: manutencaoForm.reason.trim(),
@@ -553,15 +550,17 @@ export function Reservas() {
     }
   }
 
-  function selecionarImpressora(printer: Printer) {
-    if (!novaReserva.material_id) {
-      setErro("Selecione um material antes de escolher a impressora.");
-      return;
-    }
+  function selecionarImpressora(equipment: Equipment) {
+    if (equipmentUsesMaterial(equipment)) {
+      if (!novaReserva.material_id) {
+        setErro("Selecione um material antes de escolher esta impressora.");
+        return;
+      }
 
-    if (!impressoraAceitaMaterial(printer.id, novaReserva.material_id)) {
-      setErro("Esta impressora nao suporta o material selecionado.");
-      return;
+      if (!impressoraAceitaMaterial(equipment.id, novaReserva.material_id)) {
+        setErro("Este equipamento nao suporta o material selecionado.");
+        return;
+      }
     }
 
     if (!horarioSelecionadoValido()) {
@@ -569,19 +568,22 @@ export function Reservas() {
       return;
     }
 
-    if (getReservaConflitante(printer.id)) {
-      setErro("A impressora selecionada nao esta livre nesse horario.");
+    if (getReservaConflitante(equipment.id)) {
+      setErro("O equipamento selecionado nao esta livre nesse horario.");
       return;
     }
 
-    if (getManutencaoConflitante(printer.id)) {
-      setErro("A impressora está bloqueada para manutenção nesse horário.");
+    if (getManutencaoConflitante(equipment.id)) {
+      setErro("O equipamento está bloqueado para manutenção nesse horário.");
       return;
     }
 
     setErro("");
-    setNovaReserva((reserva) => ({ ...reserva, printer_id: printer.id }));
+    setNovaReserva((reserva) => ({ ...reserva, equipment_id: equipment.id }));
   }
+
+  const equipamentoEscolhido = getEquipamento(novaReserva.equipment_id);
+  const usaMaterial = equipmentUsesMaterial(equipamentoEscolhido);
 
   async function salvarReserva(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -589,16 +591,16 @@ export function Reservas() {
 
     if (
       !projectId ||
-      !novaReserva.material_id ||
+      (usaMaterial && !novaReserva.material_id) ||
       !novaReserva.reservation_date ||
       !novaReserva.starts_at ||
-      !novaReserva.printer_id ||
+      !novaReserva.equipment_id ||
       !inicioSelecionado ||
       !fimSelecionado ||
       !duracaoMinutos
     ) {
       setErro(
-        "Preencha projeto, material, data, horario e duracao entre 0,5h e 24h em passos de 0,5h.",
+        "Preencha projeto, equipamento, data, horario e duracao entre 0,5h e 24h em passos de 0,5h (e o material, para impressoras).",
       );
       return;
     }
@@ -608,16 +610,16 @@ export function Reservas() {
       return;
     }
 
-    if (!impressoraAceitaMaterial(novaReserva.printer_id, novaReserva.material_id)) {
-      setErro("Selecione uma impressora compativel com o material.");
+    if (!impressoraAceitaMaterial(novaReserva.equipment_id, novaReserva.material_id)) {
+      setErro("Selecione um equipamento compativel com o material.");
       return;
     }
 
     try {
       setSalvando(true);
       const bookingParams = {
-        printerId: novaReserva.printer_id,
-        materialId: novaReserva.material_id,
+        equipmentId: novaReserva.equipment_id,
+        materialId: usaMaterial ? novaReserva.material_id : null,
         projectId,
         startsAt: inicioSelecionado.toISOString(),
         durationMinutes: duracaoMinutos,
@@ -638,7 +640,7 @@ export function Reservas() {
     }
   }
 
-  async function alterarStatus(reserva: PrinterBooking, status: BookingStatus) {
+  async function alterarStatus(reserva: EquipmentBooking, status: BookingStatus) {
     if (status === "cancelled") {
       setReservaParaCancelar(reserva);
       return;
@@ -696,10 +698,10 @@ export function Reservas() {
 
   const formularioReservaCompleto =
     novaReserva.project_id.length > 0 &&
-    novaReserva.material_id.length > 0 &&
+    (!usaMaterial || novaReserva.material_id.length > 0) &&
     novaReserva.reservation_date.length > 0 &&
     novaReserva.starts_at.length > 0 &&
-    novaReserva.printer_id.length > 0 &&
+    novaReserva.equipment_id.length > 0 &&
     Boolean(duracaoMinutos) &&
     horarioSelecionadoValido();
 
@@ -753,7 +755,7 @@ export function Reservas() {
                 <div>
                   <p className="text-base font-bold text-text">{reserva.project_name}</p>
                   <p className="text-sm text-muted">
-                    {getNomeResponsavel(reserva.profile_id)} · {getNomeImpressora(reserva.printer_id)} ·{" "}
+                    {getNomeResponsavel(reserva.profile_id)} · {getNomeImpressora(reserva.equipment_id)} ·{" "}
                     {formatarDataHora(reserva.starts_at, timezone)}
                   </p>
                 </div>
@@ -784,7 +786,7 @@ export function Reservas() {
 
       <section className="mb-5 flex flex-col gap-3 rounded-lg border border-border bg-surface p-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h3 className="text-xl font-bold text-text">Agenda por impressora</h3>
+          <h3 className="text-xl font-bold text-text">Agenda por equipamento</h3>
           <p className="mt-1 text-base text-muted">
             Horários de reserva e manutenção das {horariosReserva[0]} às{" "}
             {horariosReserva[horariosReserva.length - 1]}, separados por equipamento.
@@ -846,8 +848,8 @@ export function Reservas() {
                     <p className="mt-1 text-sm font-semibold text-muted">
                       {formatarHorario(reserva.starts_at, timezone)} ate{" "}
                       {formatarHorario(reserva.ends_at, timezone)} -{" "}
-                      {reserva.printer?.name ?? "Impressora removida"} -{" "}
-                      {reserva.material?.name ?? "Material removido"}
+                      {reserva.equipment?.name ?? "Equipamento removido"}
+                      {reserva.material_id ? ` - ${reserva.material?.name ?? "Material removido"}` : ""}
                     </p>
                   </div>
                   <div className="flex shrink-0 gap-1">
@@ -881,21 +883,21 @@ export function Reservas() {
         </section>
       ) : null}
 
-      {printers.length > 0 ? (
+      {equipmentList.length > 0 ? (
         <section className="grid gap-4 xl:grid-cols-2">
-          {printers.map((printer) => {
-            const reservasDaData = getReservasDaData(printer.id);
-            const materiaisDaImpressora = getMateriaisDaImpressora(printer.id);
+          {equipmentList.map((equipment) => {
+            const reservasDaData = getReservasDaData(equipment.id);
+            const materiaisDaImpressora = getMateriaisDaImpressora(equipment.id);
 
             return (
-              <Card key={printer.id}>
+              <Card key={equipment.id}>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <h3 className="text-2xl font-bold text-text">
-                      {printer.name}
+                      {equipment.name}
                     </h3>
                     <p className="mt-1 text-base font-semibold text-muted">
-                      {printer.model ?? "Modelo nao informado"}
+                      {equipment.model ?? "Modelo nao informado"}
                     </p>
                     <p className="mt-1 line-clamp-2 text-xs font-semibold leading-5 text-muted">
                       Materiais:{" "}
@@ -908,14 +910,14 @@ export function Reservas() {
                   </div>
                   <div className="flex flex-wrap items-center justify-end gap-2">
                     <StatusBadge
-                      label={getPrinterStatusLabel(printer.status)}
-                      variant={printer.status === "active" ? "success" : "warning"}
+                      label={getEquipmentStatusLabel(equipment.status)}
+                      variant={equipment.status === "active" ? "success" : "warning"}
                     />
                     {isCoordinator ? (
                       <Button
                         className="min-h-9 px-3 py-2 text-sm"
                         variant="secondary"
-                        onClick={() => abrirManutencao(printer.id)}
+                        onClick={() => abrirManutencao(equipment.id)}
                       >
                         <Wrench className="mr-2 h-4 w-4" aria-hidden="true" />
                         Manutenção
@@ -926,8 +928,8 @@ export function Reservas() {
 
                 <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-6">
                   {horariosReserva.map((horario) => {
-                    const reserva = getReservaNoHorario(printer.id, horario);
-                    const manutencao = getManutencaoNoHorario(printer.id, horario);
+                    const reserva = getReservaNoHorario(equipment.id, horario);
+                    const manutencao = getManutencaoNoHorario(equipment.id, horario);
 
                     return (
                       <div
@@ -982,7 +984,7 @@ export function Reservas() {
                           <span className="block text-xs font-semibold opacity-80">
                             {formatarHorario(reserva.starts_at, timezone)} até{" "}
                             {formatarHorario(reserva.ends_at, timezone)} -{" "}
-                            {reserva.material?.name ?? "Material removido"} -{" "}
+                            {reserva.material_id ? `${reserva.material?.name ?? "Material removido"} - ` : ""}
                             {getBookingStatusLabel(reserva.status)}
                           </span>
                           {reserva.status === "rejected" && reserva.rejected_reason ? (
@@ -1023,9 +1025,9 @@ export function Reservas() {
                   </div>
                 ) : null}
 
-                {getManutencoesDaData(printer.id).length > 0 ? (
+                {getManutencoesDaData(equipment.id).length > 0 ? (
                   <div className="mt-4 grid gap-2 border-t border-border pt-3">
-                    {getManutencoesDaData(printer.id).map((block) => (
+                    {getManutencoesDaData(equipment.id).map((block) => (
                       <div
                         key={block.id}
                         className="flex items-center justify-between gap-3 rounded-md border border-amber-400 bg-amber-50 px-3 py-2 text-amber-950"
@@ -1070,7 +1072,7 @@ export function Reservas() {
           <div className="flex items-center gap-3 text-muted">
             <Clock className="h-6 w-6" aria-hidden="true" />
             <p className="text-lg font-semibold">
-              Cadastre pelo menos uma impressora para visualizar a agenda.
+              Cadastre pelo menos um equipamento para visualizar a agenda.
             </p>
           </div>
         </Card>
@@ -1089,7 +1091,7 @@ export function Reservas() {
                   {reservaEmEdicao ? "Editar reserva" : "Criar reserva"}
                 </h3>
                 <p className="mt-1 text-lg text-muted">
-                  Informe os dados e escolha uma impressora compatível.
+                  Informe os dados e escolha um equipamento disponível.
                 </p>
               </div>
               <button
@@ -1137,19 +1139,19 @@ export function Reservas() {
                   Material
                   <select
                     className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
-                    required
+                    required={usaMaterial}
                     value={novaReserva.material_id}
                     onChange={(event) => {
                       setErro("");
                       setNovaReserva((reserva) => ({
                         ...reserva,
                         material_id: event.target.value,
-                        printer_id: "",
+                        equipment_id: "",
                       }));
                     }}
                   >
-                    <option value="" disabled>
-                      Selecione
+                    <option value="" disabled={usaMaterial || !equipamentoEscolhido}>
+                      {equipamentoEscolhido && !usaMaterial ? "Não se aplica" : "Selecione"}
                     </option>
                     {materiaisAtivos.map((material) => (
                       <option key={material.id} value={material.id}>
@@ -1157,6 +1159,11 @@ export function Reservas() {
                       </option>
                     ))}
                   </select>
+                  <span className="text-sm font-normal text-muted">
+                    {equipamentoEscolhido && !usaMaterial
+                      ? "Este equipamento não usa material."
+                      : "Obrigatório para impressoras; escolha antes do equipamento."}
+                  </span>
                 </label>
 
                 <label className="grid gap-2 text-base font-semibold text-text">
@@ -1180,7 +1187,7 @@ export function Reservas() {
                         starts_at: horarioAtualIndisponivel
                           ? ""
                           : reserva.starts_at,
-                        printer_id: "",
+                        equipment_id: "",
                       }));
                     }}
                   />
@@ -1197,7 +1204,7 @@ export function Reservas() {
                       setNovaReserva((reserva) => ({
                         ...reserva,
                         starts_at: event.target.value,
-                        printer_id: "",
+                        equipment_id: "",
                       }));
                     }}
                   >
@@ -1236,7 +1243,7 @@ export function Reservas() {
                       setNovaReserva((reserva) => ({
                         ...reserva,
                         duration_hours: event.target.value,
-                        printer_id: "",
+                        equipment_id: "",
                       }));
                     }}
                   />
@@ -1278,35 +1285,38 @@ export function Reservas() {
                     aria-hidden="true"
                   />
                   <h4 className="text-xl font-bold text-text">
-                    Disponibilidade das impressoras
+                    Disponibilidade dos equipamentos
                   </h4>
                 </div>
 
                 {impressorasAtivas.length > 0 ? (
                   <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    {impressorasAtivas.map((printer) => {
+                    {impressorasAtivas.map((equipment) => {
                       const reservasDaImpressora =
-                        reservasPorImpressora[printer.id] ?? [];
-                      const compativel = novaReserva.material_id
-                        ? impressoraAceitaMaterial(
-                            printer.id,
-                            novaReserva.material_id,
-                          )
-                        : false;
-                      const conflito = getReservaConflitante(printer.id);
-                      const manutencao = getManutencaoConflitante(printer.id);
+                        reservasPorImpressora[equipment.id] ?? [];
+                      const usaMaterialAqui = equipmentUsesMaterial(equipment);
+                      const compativel = !usaMaterialAqui
+                        ? true
+                        : novaReserva.material_id
+                          ? impressoraAceitaMaterial(
+                              equipment.id,
+                              novaReserva.material_id,
+                            )
+                          : false;
+                      const conflito = getReservaConflitante(equipment.id);
+                      const manutencao = getManutencaoConflitante(equipment.id);
                       const disponivel =
                         compativel &&
                         !conflito &&
                         !manutencao &&
                         horarioSelecionadoValido();
-                      const selecionada = novaReserva.printer_id === printer.id;
+                      const selecionada = novaReserva.equipment_id === equipment.id;
                       const materiaisDaImpressora =
-                        getMateriaisDaImpressora(printer.id);
+                        getMateriaisDaImpressora(equipment.id);
 
                       return (
                         <label
-                          key={printer.id}
+                          key={equipment.id}
                           className={[
                             "grid cursor-pointer gap-3 rounded-lg border p-4 transition",
                             selecionada
@@ -1316,39 +1326,42 @@ export function Reservas() {
                               ? "hover:border-primary"
                               : "cursor-not-allowed opacity-65",
                           ].join(" ")}
-                          onClick={() => selecionarImpressora(printer)}
+                          onClick={() => selecionarImpressora(equipment)}
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div>
                               <p className="text-lg font-bold text-text">
-                                {printer.name}
+                                {equipment.name}
                               </p>
                               <p className="mt-1 text-sm font-semibold text-muted">
-                                {printer.model ?? "Modelo nao informado"}
+                                {equipment.model ?? "Modelo nao informado"}
                               </p>
                             </div>
                             <input
                               checked={selecionada}
                               className="mt-1 h-5 w-5 accent-primary"
                               disabled={!disponivel}
-                              name="printer_id"
-                              onChange={() => selecionarImpressora(printer)}
+                              name="equipment_id"
+                              onChange={() => selecionarImpressora(equipment)}
                               type="radio"
                             />
                           </div>
 
                           <div className="flex flex-wrap gap-2">
                             <StatusBadge label="Disponivel" variant="success" />
-                            <StatusBadge
-                              label={
-                                novaReserva.material_id
-                                  ? compativel
-                                    ? "Material ok"
-                                    : "Material incompativel"
-                                  : "Escolha material"
-                              }
-                              variant={compativel ? "info" : "neutral"}
-                            />
+                            {equipment.type ? <StatusBadge label={equipment.type.name} variant="neutral" /> : null}
+                            {usaMaterialAqui ? (
+                              <StatusBadge
+                                label={
+                                  novaReserva.material_id
+                                    ? compativel
+                                      ? "Material ok"
+                                      : "Material incompativel"
+                                    : "Escolha material"
+                                }
+                                variant={compativel ? "info" : "neutral"}
+                              />
+                            ) : null}
                             {horarioSelecionadoJaPassou() ? (
                               <StatusBadge
                                 label="Horario passado"
@@ -1361,14 +1374,16 @@ export function Reservas() {
                             />
                           </div>
 
-                          <p className="line-clamp-2 text-xs font-semibold leading-5 text-muted">
-                            Materiais:{" "}
-                            {materiaisDaImpressora.length > 0
-                              ? materiaisDaImpressora
-                                  .map((material) => material.name)
-                                  .join(", ")
-                              : "Nenhum material compativel"}
-                          </p>
+                          {usaMaterialAqui ? (
+                            <p className="line-clamp-2 text-xs font-semibold leading-5 text-muted">
+                              Materiais:{" "}
+                              {materiaisDaImpressora.length > 0
+                                ? materiaisDaImpressora
+                                    .map((material) => material.name)
+                                    .join(", ")
+                                : "Nenhum material compativel"}
+                            </p>
+                          ) : null}
 
                           <p className="text-sm font-semibold text-muted">
                             {manutencao
@@ -1386,7 +1401,7 @@ export function Reservas() {
                   </div>
                 ) : (
                   <p className="rounded-lg border border-dashed border-border bg-background p-4 text-base text-muted">
-                    Cadastre pelo menos uma impressora ativa antes de criar
+                    Cadastre pelo menos um equipamento ativo antes de criar
                     reservas.
                   </p>
                 )}
@@ -1441,15 +1456,15 @@ export function Reservas() {
 
             <form className="mt-5 grid gap-4" onSubmit={salvarManutencao}>
               <label className="grid gap-2 font-semibold text-text">
-                Impressora
+                Equipamento
                 <select
                   required
                   className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal"
-                  value={manutencaoForm.printer_id}
-                  onChange={(event) => setManutencaoForm((current) => ({ ...current, printer_id: event.target.value }))}
+                  value={manutencaoForm.equipment_id}
+                  onChange={(event) => setManutencaoForm((current) => ({ ...current, equipment_id: event.target.value }))}
                 >
                   <option value="" disabled>Selecione</option>
-                  {printers.map((printer) => <option key={printer.id} value={printer.id}>{printer.name}</option>)}
+                  {equipmentList.map((equipment) => <option key={equipment.id} value={equipment.id}>{equipment.name}</option>)}
                 </select>
               </label>
               <div className="grid gap-4 sm:grid-cols-3">
@@ -1571,7 +1586,7 @@ export function Reservas() {
                 className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
                 value={motivoRejeicao}
                 onChange={(event) => setMotivoRejeicao(event.target.value)}
-                placeholder="Ex.: impressora reservada para manutenção"
+                placeholder="Ex.: equipamento reservado para manutenção"
               />
             </label>
             {erro ? (

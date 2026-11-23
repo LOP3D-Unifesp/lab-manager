@@ -101,13 +101,13 @@ function useBookingsAlertData(profileId: string, isCoordinator: boolean) {
     // The researcher's channel is filtered to their own bookings so realtime
     // payloads never carry other users' booking details to the client.
     const channel = client
-      .channel(`printer_bookings_alert_${profileId}`)
+      .channel(`equipment_bookings_alert_${profileId}`)
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
-          table: "printer_bookings",
+          table: "equipment_bookings",
           ...(isCoordinator ? {} : { filter: `profile_id=eq.${profileId}` }),
         },
         scheduleRefetch,

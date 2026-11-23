@@ -165,7 +165,7 @@ export function isSameSlot(
   return a.weekday === b.weekday && a.periodo === b.periodo;
 }
 
-export type PrinterStatus =
+export type EquipmentStatus =
   | "active"
   | "maintenance"
   | "unavailable"
@@ -296,27 +296,42 @@ export type Material = {
   is_active: boolean;
 };
 
-export type Printer = {
+export type EquipmentType = {
+  id: string;
+  name: string;
+  uses_material: boolean;
+  is_active: boolean;
+};
+
+export type Equipment = {
   id: string;
   name: string;
   model: string | null;
   location: string | null;
-  status: PrinterStatus;
+  status: EquipmentStatus;
   notes: string | null;
+  type_id: string;
+  asset_tag: string | null;
+  type?: EquipmentType | null;
   created_at: string;
   updated_at: string;
 };
 
-export type PrinterMaterial = {
-  printer_id: string;
+// Só equipamentos cujo tipo usa material (impressoras) pedem material na reserva.
+export function equipmentUsesMaterial(equipment: Pick<Equipment, "type"> | null | undefined) {
+  return equipment?.type?.uses_material ?? false;
+}
+
+export type EquipmentMaterial = {
+  equipment_id: string;
   material_id: string;
 };
 
-export type PrinterBooking = {
+export type EquipmentBooking = {
   id: string;
-  printer_id: string;
+  equipment_id: string;
   profile_id: string;
-  material_id: string;
+  material_id: string | null;
   project_id: string | null;
   project_name: string;
   starts_at: string;
@@ -331,7 +346,7 @@ export type PrinterBooking = {
   rejected_by: string | null;
   approved_at: string | null;
   approved_by: string | null;
-  printer?: Printer | null;
+  equipment?: Equipment | null;
   profile?: PublicProfile | null;
   material?: Material | null;
   approved_by_profile?: { full_name: string } | null;
@@ -343,7 +358,7 @@ export type BookingAlertSummary = {
   id: string;
   project_name: string;
   starts_at: string;
-  printer_name: string;
+  equipment_name: string;
   profile_name: string;
   status: BookingStatus;
   approved_at: string | null;
@@ -416,7 +431,7 @@ export type LabScheduleTimelineItem = LabSchedulePeriodItem | LabScheduleBreakIt
 
 export type MaintenanceBlock = {
   id: string;
-  printer_id: string;
+  equipment_id: string;
   created_by: string;
   starts_at: string;
   ends_at: string;
@@ -641,13 +656,13 @@ export function calcularDuracaoMinutos(durationHours: string) {
   return duracaoMinutos;
 }
 
-export function reservaBloqueiaHorario(reserva: PrinterBooking) {
+export function reservaBloqueiaHorario(reserva: EquipmentBooking) {
   return ["pending", "approved", "in_progress"].includes(reserva.status);
 }
 
 // Reservas que "não aconteceram" (canceladas/rejeitadas) não devem ocupar a
 // agenda do dia; concluídas e falhas permanecem como registro operacional.
-export function reservaApareceNaAgenda(reserva: PrinterBooking) {
+export function reservaApareceNaAgenda(reserva: EquipmentBooking) {
   return !["cancelled", "rejected"].includes(reserva.status);
 }
 
@@ -660,18 +675,18 @@ export function intervalosSeCruzam(
   return inicioA < fimB && inicioB < fimA;
 }
 
-export function printerAcceptsMaterial(
-  printerMaterials: PrinterMaterial[],
-  printerId: string,
+export function equipmentAcceptsMaterial(
+  equipmentMaterials: EquipmentMaterial[],
+  equipmentId: string,
   materialId: string,
 ) {
-  return printerMaterials.some(
-    (item) => item.printer_id === printerId && item.material_id === materialId,
+  return equipmentMaterials.some(
+    (item) => item.equipment_id === equipmentId && item.material_id === materialId,
   );
 }
 
 export function findConflictingBooking(
-  bookings: PrinterBooking[],
+  bookings: EquipmentBooking[],
   inicio: Date,
   fim: Date,
   excludeBookingId?: string | null,
@@ -699,11 +714,11 @@ export function findConflictingMaintenanceBlock(
   );
 }
 
-export function reservaPodeSerCancelada(reserva: PrinterBooking) {
+export function reservaPodeSerCancelada(reserva: EquipmentBooking) {
   return ["pending", "approved"].includes(reserva.status);
 }
 
-export function reservaPodeSerEditada(reserva: PrinterBooking) {
+export function reservaPodeSerEditada(reserva: EquipmentBooking) {
   return ["pending", "approved"].includes(reserva.status);
 }
 
@@ -732,11 +747,12 @@ export function getMensagemErroReserva(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
 
   const mensagens: Array<[string, string]> = [
-    ["booking_conflict", "A impressora já possui uma reserva nesse intervalo."],
-    ["maintenance_conflict", "A impressora está em manutenção nesse intervalo."],
-    ["incompatible_material", "O material selecionado não é compatível com a impressora."],
-    ["printer_unavailable", "A impressora selecionada não está ativa."],
-    ["printer_not_found", "Impressora não encontrada."],
+    ["booking_conflict", "O equipamento já possui uma reserva nesse intervalo."],
+    ["maintenance_conflict", "O equipamento está em manutenção nesse intervalo."],
+    ["incompatible_material", "O material selecionado não é compatível com o equipamento."],
+    ["material_required", "Escolha o material da impressão."],
+    ["equipment_unavailable", "O equipamento selecionado não está ativo."],
+    ["equipment_not_found", "Equipamento não encontrado."],
     ["invalid_start_time", "Escolha um horário futuro para a reserva."],
     ["booking_not_editable", "Somente reservas pendentes ou aprovadas podem ser editadas."],
     ["invalid_booking_status_transition", "Essa mudança de status não é permitida."],
@@ -775,8 +791,8 @@ export function getProximosStatusReserva(status: BookingStatus): BookingStatus[]
   return transitions[status];
 }
 
-export function getPrinterStatusLabel(status: PrinterStatus) {
-  const labels: Record<PrinterStatus, string> = {
+export function getEquipmentStatusLabel(status: EquipmentStatus) {
+  const labels: Record<EquipmentStatus, string> = {
     active: "Ativa",
     maintenance: "Em manutenção",
     unavailable: "Indisponivel",

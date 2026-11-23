@@ -174,7 +174,7 @@ export function NotificationBell({ align = "right" }: NotificationBellProps) {
                         <IconeStatus className="h-3.5 w-3.5" aria-hidden="true" />
                       ) : null}
                       {notificacao.profile_name ? `${notificacao.profile_name} · ` : ""}
-                      {notificacao.printer_name}
+                      {notificacao.equipment_name}
                     </p>
                     <p className="mt-0.5 text-muted">
                       {formatarDataHora(notificacao.starts_at)}

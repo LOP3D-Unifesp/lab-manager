@@ -4,7 +4,7 @@ import { History } from "lucide-react";
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
 import { StatusBadge, type StatusVariant } from "../components/ui/StatusBadge";
-import { getBookingStatusLabel, type BookingStatus, type PrinterBooking } from "../lib/domain";
+import { getBookingStatusLabel, type BookingStatus, type EquipmentBooking } from "../lib/domain";
 import { listBookings } from "../lib/supabaseRepository";
 
 const statusVariants: Record<BookingStatus, StatusVariant> = {
@@ -39,7 +39,7 @@ function formatarDataHora(valor: string) {
 }
 
 export function HistoricoReservas() {
-  const [bookings, setBookings] = useState<PrinterBooking[]>([]);
+  const [bookings, setBookings] = useState<EquipmentBooking[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
   const [statusFiltro, setStatusFiltro] = useState<BookingStatus | "all">("all");
@@ -85,7 +85,7 @@ export function HistoricoReservas() {
       return (
         reserva.project_name.toLowerCase().includes(termo) ||
         (reserva.profile?.full_name ?? "").toLowerCase().includes(termo) ||
-        (reserva.printer?.name ?? "").toLowerCase().includes(termo)
+        (reserva.equipment?.name ?? "").toLowerCase().includes(termo)
       );
     });
   }, [bookingsOrdenadas, statusFiltro, busca]);
@@ -117,7 +117,7 @@ export function HistoricoReservas() {
           <input
             className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
             onChange={(event) => setBusca(event.target.value)}
-            placeholder="Projeto, pesquisador ou impressora"
+            placeholder="Projeto, pesquisador ou equipamento"
             type="text"
             value={busca}
           />
@@ -155,7 +155,7 @@ export function HistoricoReservas() {
                   <th className="px-4 py-3 text-sm font-semibold text-muted">Data</th>
                   <th className="px-4 py-3 text-sm font-semibold text-muted">Projeto</th>
                   <th className="px-4 py-3 text-sm font-semibold text-muted">Pesquisador</th>
-                  <th className="px-4 py-3 text-sm font-semibold text-muted">Impressora</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-muted">Equipamento</th>
                   <th className="px-4 py-3 text-sm font-semibold text-muted">Status</th>
                 </tr>
               </thead>
@@ -175,7 +175,7 @@ export function HistoricoReservas() {
                       {reserva.profile?.full_name ?? "Usuário removido"}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-base text-muted">
-                      {reserva.printer?.name ?? "Impressora removida"}
+                      {reserva.equipment?.name ?? "Equipamento removido"}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3">
                       <StatusBadge

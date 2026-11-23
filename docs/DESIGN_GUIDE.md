@@ -187,7 +187,7 @@ No mobile, priorizar acesso rápido a:
 
 - Dashboard;
 - Agenda;
-- Impressoras;
+- Equipamentos;
 - Reservas.
 
 As demais seções (Pesquisadores, Habilidades, Minhas reservas, Meu perfil e, para coordenadores, Usuários, Administração e Histórico de reservas) ficam no menu recolhível ou na área da conta.
@@ -200,7 +200,7 @@ No desktop, usar sidebar fixa com:
 - Pesquisadores
 - Habilidades
 - Agenda do Laboratório
-- Impressoras
+- Equipamentos
 - Reservas
 - Minhas reservas
 - Meu perfil
@@ -224,7 +224,7 @@ Navegação principal do desktop. Deve exibir os links das páginas previstas, e
 
 ### MobileNavigation
 
-Navegação móvel com acesso rápido às áreas mais usadas. Pode ser menu recolhível ou barra inferior. Deve priorizar Dashboard, Agenda, Impressoras e Reservas.
+Navegação móvel com acesso rápido às áreas mais usadas. Pode ser menu recolhível ou barra inferior. Deve priorizar Dashboard, Agenda, Equipamentos e Reservas.
 
 ### PageHeader
 

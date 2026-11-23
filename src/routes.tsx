@@ -9,9 +9,9 @@ import { App } from "./App";
 import { Administracao } from "./pages/Administracao";
 import { AgendaLaboratorio } from "./pages/AgendaLaboratorio";
 import { Dashboard } from "./pages/Dashboard";
+import { Equipamentos } from "./pages/Equipamentos";
 import { Habilidades } from "./pages/Habilidades";
 import { HistoricoReservas } from "./pages/HistoricoReservas";
-import { Impressoras } from "./pages/Impressoras";
 import { Login } from "./pages/Login";
 import { InstallationWizard } from "./pages/InstallationWizard";
 import { Invitations } from "./pages/Invitations";
@@ -124,7 +124,8 @@ export const router = createBrowserRouter([
           { path: "projetos/:id", element: <ProjetoDetalhe /> },
           { path: "habilidades", element: <Habilidades /> },
           { path: "agenda", element: <AgendaLaboratorio /> },
-          { path: "impressoras", element: <Impressoras /> },
+          { path: "equipamentos", element: <Equipamentos /> },
+          { path: "impressoras", element: <Navigate to="/equipamentos" replace /> },
           { path: "reservas", element: <Reservas /> },
           { path: "reservas/minhas", element: <MinhasReservas /> },
           { path: "reservas/historico", element: <HistoricoReservas /> },

@@ -41,7 +41,7 @@ fora do MVP e nao possuem tabelas nesta versao.
 | Bolsas de fomento | Nao | Nao | Leitura; edicao propria via RPC | Leitura e edicao via RPC |
 | Fotos de perfil | Leitura publica (bucket) | Escrita propria | Escrita propria | Escrita propria |
 | Disponibilidade | Nao | Nao | Leitura e edicao propria via RPC | Leitura e edicao de qualquer perfil via RPC |
-| Impressoras/materiais | Nao | Nao | Leitura | Administracao |
+| Equipamentos/materiais | Nao | Nao | Leitura | Administracao |
 | Reservas | Nao | Nao | Leitura, criacao, edicao e cancelamento proprios via RPC (conforme `requires_booking_approval`) | Aprovacao, rejeicao, edicao, cancelamento e ciclo operacional via RPC |
 | Manutencao | Nao | Nao | Leitura | Criacao/remocao via RPC |
 | Aviso de privacidade | Leitura minima | Leitura minima | Leitura minima | Leitura minima |
