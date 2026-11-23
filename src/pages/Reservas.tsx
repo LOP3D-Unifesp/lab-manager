@@ -9,6 +9,7 @@ import { PageHeader } from "../components/ui/PageHeader";
 import { StatusBadge } from "../components/ui/StatusBadge";
 import { useAuth } from "../lib/auth";
 import { useCurrentProfile } from "../lib/currentUser";
+import { isProjectOpen, type Project } from "../lib/projects";
 import {
   calcularDuracaoMinutos,
   criarDataNoFuso,
@@ -50,6 +51,7 @@ import {
   listPrinterMaterials,
   listPrinters,
   listProfiles,
+  listProjects,
   rejectBooking,
   setBookingStatus,
   updateBooking,
@@ -93,6 +95,7 @@ export function Reservas() {
   const [printers, setPrinters] = useState<Printer[]>([]);
   const [profiles, setProfiles] = useState<PublicProfile[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [printerMaterials, setPrinterMaterials] = useState<PrinterMaterial[]>(
     [],
   );
@@ -117,7 +120,7 @@ export function Reservas() {
     notes: "",
   });
   const [novaReserva, setNovaReserva] = useState({
-    project_name: "",
+    project_id: "",
     material_id: "",
     duration_hours: "",
     reservation_date: "",
@@ -135,6 +138,7 @@ export function Reservas() {
       materialsData,
       printerMaterialsData,
       schedulePeriodsData,
+      projectsData,
     ] = await Promise.all([
       listBookings(),
       listMaintenanceBlocks(),
@@ -143,6 +147,7 @@ export function Reservas() {
       listMaterials(),
       listPrinterMaterials(),
       listLabSchedulePeriods(),
+      listProjects(),
     ]);
 
     setBookings(bookingsData);
@@ -152,6 +157,7 @@ export function Reservas() {
     setMaterials(materialsData);
     setPrinterMaterials(printerMaterialsData);
     setSchedulePeriods(schedulePeriodsData);
+    setProjects(projectsData);
   }
 
   useEffect(() => {
@@ -461,7 +467,7 @@ export function Reservas() {
     if (!podeGerenciarReserva(reserva) || !reservaPodeSerEditada(reserva)) return;
     setReservaEmEdicao(reserva);
     setNovaReserva({
-      project_name: reserva.project_name,
+      project_id: reserva.project_id ?? "",
       material_id: reserva.material_id,
       duration_hours: String(reserva.estimated_duration_minutes / 60),
       reservation_date: getDataNoFuso(new Date(reserva.starts_at), timezone),
@@ -478,7 +484,7 @@ export function Reservas() {
     setReservaEmEdicao(null);
     setErro("");
     setNovaReserva({
-      project_name: "",
+      project_id: "",
       material_id: "",
       duration_hours: "",
       reservation_date: "",
@@ -579,10 +585,10 @@ export function Reservas() {
 
   async function salvarReserva(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const projectName = novaReserva.project_name.trim();
+    const projectId = novaReserva.project_id;
 
     if (
-      !projectName ||
+      !projectId ||
       !novaReserva.material_id ||
       !novaReserva.reservation_date ||
       !novaReserva.starts_at ||
@@ -592,7 +598,7 @@ export function Reservas() {
       !duracaoMinutos
     ) {
       setErro(
-        "Preencha nome, material, data, horario e duracao entre 0,5h e 24h em passos de 0,5h.",
+        "Preencha projeto, material, data, horario e duracao entre 0,5h e 24h em passos de 0,5h.",
       );
       return;
     }
@@ -612,7 +618,7 @@ export function Reservas() {
       const bookingParams = {
         printerId: novaReserva.printer_id,
         materialId: novaReserva.material_id,
-        projectName,
+        projectId,
         startsAt: inicioSelecionado.toISOString(),
         durationMinutes: duracaoMinutos,
         notes: novaReserva.notes.trim() || null,
@@ -682,8 +688,14 @@ export function Reservas() {
     }
   }
 
+  // Projetos em aberto que a pessoa vê (a RLS já limita aos seus, exceto coordenador) e, ao editar,
+  // o projeto atual da reserva, mesmo que já tenha sido concluído.
+  const projetosDisponiveis = projects
+    .filter((projeto) => isProjectOpen(projeto.status) || projeto.id === reservaEmEdicao?.project_id)
+    .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+
   const formularioReservaCompleto =
-    novaReserva.project_name.trim().length > 0 &&
+    novaReserva.project_id.length > 0 &&
     novaReserva.material_id.length > 0 &&
     novaReserva.reservation_date.length > 0 &&
     novaReserva.starts_at.length > 0 &&
@@ -1093,18 +1105,32 @@ export function Reservas() {
             <form className="mt-5 grid gap-5" onSubmit={salvarReserva}>
               <div className="grid gap-4 md:grid-cols-[1.4fr_1fr] xl:grid-cols-[1.3fr_0.8fr_0.8fr_0.8fr]">
                 <label className="grid gap-2 text-base font-semibold text-text">
-                  Nome da impressão
-                  <input
+                  Projeto
+                  <select
                     className="min-h-11 min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
                     required
-                    value={novaReserva.project_name}
+                    value={novaReserva.project_id}
                     onChange={(event) =>
                       setNovaReserva((reserva) => ({
                         ...reserva,
-                        project_name: event.target.value,
+                        project_id: event.target.value,
                       }))
                     }
-                  />
+                  >
+                    <option value="" disabled>
+                      {projetosDisponiveis.length > 0 ? "Selecione" : "Nenhum projeto disponível"}
+                    </option>
+                    {projetosDisponiveis.map((projeto) => (
+                      <option key={projeto.id} value={projeto.id}>
+                        {projeto.name}
+                      </option>
+                    ))}
+                  </select>
+                  {projetosDisponiveis.length === 0 ? (
+                    <span className="text-sm font-normal text-muted">
+                      Você ainda não participa de nenhum projeto em aberto. Peça a um coordenador para incluir você em um projeto.
+                    </span>
+                  ) : null}
                 </label>
 
                 <label className="grid gap-2 text-base font-semibold text-text">

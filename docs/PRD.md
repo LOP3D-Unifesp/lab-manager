@@ -88,7 +88,7 @@ Funcionalidades:
 - criar reserva;
 - evitar conflito de horários;
 - vincular reserva a uma impressora;
-- informar material, duração estimada e projeto;
+- informar material, duração estimada e projeto (escolhido na lista de projetos; o pesquisador só vê os projetos em aberto de que participa, o coordenador vê todos);
 - anexar arquivo .gcode ou .3mf em fase futura;
 - acompanhar status da reserva;
 - aprovação opcional pelo coordenador, com alerta em tempo real de reservas pendentes.
@@ -105,7 +105,7 @@ Funcionalidades:
 - kanban de tarefas em cada projeto (A fazer, Em andamento, Em revisão, Concluído), com prazo e um ou
   mais responsáveis, que precisam ser membros do projeto; membros criam e movem tarefas;
 - no Dashboard, "Minhas tarefas" mostra só as tarefas atribuídas à pessoa, de todos os projetos;
-- próxima etapa: vínculo obrigatório de cada impressão a um projeto.
+- toda nova impressão fica vinculada a um projeto; reservas anteriores mantêm o nome em texto livre.
 
 ## 6. Status de reserva
 

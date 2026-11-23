@@ -39,6 +39,7 @@ const emails = [`concurrent-a-${suffix}@lab.local`, `concurrent-b-${suffix}@lab.
 const userIds = [];
 let printerId;
 let materialId;
+let projectId;
 let originalCapacity;
 
 try {
@@ -79,6 +80,19 @@ try {
     .insert({ printer_id: printerId, material_id: materialId });
   if (compatibilityError) throw compatibilityError;
 
+  // Toda reserva pertence a um projeto de que a pessoa é membro.
+  const { data: project, error: projectError } = await service
+    .from("projects")
+    .insert({ name: `Concurrency Project ${suffix}`, created_by: userIds[0] })
+    .select("id")
+    .single();
+  if (projectError) throw projectError;
+  projectId = project.id;
+  const { error: membersError } = await service
+    .from("project_members")
+    .insert(userIds.map((profileId) => ({ project_id: projectId, profile_id: profileId })));
+  if (membersError) throw membersError;
+
   const clients = emails.map(() => createClient(environment.url, environment.publicKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   }));
@@ -114,10 +128,10 @@ try {
 
   const startsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
   const results = await Promise.all(
-    clients.map((client, index) => client.rpc("create_printer_booking", {
+    clients.map((client) => client.rpc("create_printer_booking", {
       p_printer_id: printerId,
       p_material_id: materialId,
-      p_project_name: `Concurrent booking ${index + 1}`,
+      p_project_id: projectId,
       p_starts_at: startsAt,
       p_estimated_duration_minutes: 60,
     })),
@@ -131,6 +145,7 @@ try {
 } finally {
   if (originalCapacity) await service.from("lab_settings").update({ workspace_capacity: originalCapacity }).eq("id", true);
   if (printerId) await service.from("printer_bookings").delete().eq("printer_id", printerId);
+  if (projectId) await service.from("projects").delete().eq("id", projectId);
   if (printerId) await service.from("printer_materials").delete().eq("printer_id", printerId);
   if (printerId) await service.from("printers").delete().eq("id", printerId);
   if (materialId) await service.from("materials").delete().eq("id", materialId);

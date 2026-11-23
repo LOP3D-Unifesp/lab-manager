@@ -48,6 +48,27 @@ export async function seedDemo(environment) {
     );
   if (availabilityError) throw availabilityError;
 
+  const { data: existingProject, error: lookupError } = await client
+    .from("projects")
+    .select("id")
+    .eq("name", "Projeto Demo")
+    .maybeSingle();
+  if (lookupError) throw lookupError;
+  let project = existingProject;
+  if (!project) {
+    const { data: created, error: projectError } = await client
+      .from("projects")
+      .insert({ name: "Projeto Demo", description: "Projeto fictício para desenvolvimento", status: "active", created_by: coordinator.id })
+      .select("id")
+      .single();
+    if (projectError) throw projectError;
+    project = created;
+  }
+  const { error: memberError } = await client
+    .from("project_members")
+    .upsert({ project_id: project.id, profile_id: coordinator.id }, { onConflict: "project_id,profile_id" });
+  if (memberError) throw memberError;
+
   const bookingStart = new Date();
   bookingStart.setDate(bookingStart.getDate() + 2);
   bookingStart.setHours(10, 0, 0, 0);
@@ -58,7 +79,8 @@ export async function seedDemo(environment) {
       printer_id: printer.id,
       profile_id: coordinator.id,
       material_id: material.id,
-      project_name: "Protótipo Demo",
+      project_id: project.id,
+      project_name: "Projeto Demo",
       starts_at: bookingStart.toISOString(),
       ends_at: bookingEnd.toISOString(),
       estimated_duration_minutes: 90,

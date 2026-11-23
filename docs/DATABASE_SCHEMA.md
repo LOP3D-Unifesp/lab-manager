@@ -19,8 +19,8 @@ O schema cobre:
 
 O Supabase Auth sera a fonte de autenticacao. O PostgreSQL sera a fonte dos dados de dominio da aplicacao.
 
-> **Fonte da verdade:** as migrations em `supabase/migrations/` (15 arquivos, de `20260818` a
-> `20260901`). Este documento descreve o resultado delas. A secao 1.1 resume o que mudou depois da
+> **Fonte da verdade:** as migrations em `supabase/migrations/` (16 arquivos, de `20260818` a
+> `20260902`). Este documento descreve o resultado delas. A secao 1.1 resume o que mudou depois da
 > baseline; onde houver divergencia, vale a migration.
 
 Status do MVP implementado:
@@ -53,6 +53,7 @@ Status do MVP implementado:
 | `20260830_booking_decided_by` | `approved_by` e `rejected_by` (com indices). |
 | `20260831_projects_members_funding` | Projetos, membros, agencias de fomento cadastraveis e fomento por projeto com valores por rubrica (secao 3.13). |
 | `20260901_project_tasks` | Tarefas do kanban por projeto e seus responsaveis (secao 3.13). |
+| `20260902_bookings_require_project` | `printer_bookings.project_id`; `create_printer_booking` e `update_printer_booking` passam a receber o projeto (`p_project_id`) em vez do nome. |
 
 Resumo dos objetos que mais mudam o entendimento do schema:
 
@@ -809,7 +810,8 @@ Campos sugeridos:
 | `printer_id` | `uuid` | Sim | Impressora reservada. |
 | `profile_id` | `uuid` | Sim | Pesquisador responsavel pela reserva. |
 | `material_id` | `uuid` | Sim | Material selecionado para a reserva. |
-| `project_name` | `text` | Sim | Nome ou identificacao do projeto. |
+| `project_id` | `uuid` | Nao | Projeto da impressao (`projects.id`, `RESTRICT`). Obrigatorio em reservas novas; nulo so nas reservas anteriores a `20260902`. |
+| `project_name` | `text` | Sim | Copia do nome do projeto no momento da reserva (nas reservas antigas, o texto livre original). |
 | `starts_at` | `timestamptz` | Sim | Inicio da reserva. |
 | `ends_at` | `timestamptz` | Sim | Fim calculado da reserva. |
 | `estimated_duration_minutes` | `integer` | Sim | Duracao estimada informada no MVP para calcular `ends_at`. |
@@ -966,7 +968,11 @@ Kanban de tarefas:
   coordenador exclui. Os responsaveis mudam pela RPC `set_task_assignees`.
 - O Dashboard mostra "Minhas tarefas": so as atribuidas a quem esta logado, de todos os projetos.
 
-Proxima etapa deste modulo: vinculo obrigatorio de `printer_bookings` a um projeto.
+Impressoes: toda reserva nova pertence a um projeto. As RPCs `create_printer_booking` e
+`update_printer_booking` recebem `p_project_id` e gravam `project_name` como copia do nome. O
+coordenador pode escolher qualquer projeto em aberto (`planning`, `active` ou `paused`); o pesquisador,
+so projetos em aberto de que e membro. Erros: `project_required` e `project_not_available`. Ao editar,
+manter o projeto atual da reserva e sempre permitido, mesmo que ele tenha sido concluido depois.
 
 ## 4. Relacionamentos principais
 
@@ -1119,7 +1125,7 @@ Validacoes cobertas pelos testes de banco do MVP:
 - Idiomas nao sao habilidades tecnicas e nao entram em `skills`.
 - Nao havera upload `.gcode` ou `.3mf` no schema do MVP.
 - Nao havera historico detalhado de manutencao alem dos bloqueios.
-- A baseline inicial (`20260818`) e imutavel; mudancas de schema entram em migrations incrementais (hoje ate `20260901`).
+- A baseline inicial (`20260818`) e imutavel; mudancas de schema entram em migrations incrementais (hoje ate `20260902`).
 
 ## 10. Evolucao futura: controle de estoque de materiais
 

@@ -183,14 +183,14 @@ isOneToOne: false
                   ]
                 },"printer_bookings": {
                   Row: {
-                    "approved_at": string | null,"approved_by": string | null,"cancelled_at": string | null,"cancelled_by": string | null,"created_at": string,"ends_at": string,"estimated_duration_minutes": number,"id": string,"material_id": string,"notes": string | null,"printer_id": string,"profile_id": string,"project_name": string,"rejected_at": string | null,"rejected_by": string | null,"rejected_reason": string | null,"starts_at": string,"status": Database["public"]['Enums']["booking_status"],"updated_at": string
+                    "approved_at": string | null,"approved_by": string | null,"cancelled_at": string | null,"cancelled_by": string | null,"created_at": string,"ends_at": string,"estimated_duration_minutes": number,"id": string,"material_id": string,"notes": string | null,"printer_id": string,"profile_id": string,"project_id": string | null,"project_name": string,"rejected_at": string | null,"rejected_by": string | null,"rejected_reason": string | null,"starts_at": string,"status": Database["public"]['Enums']["booking_status"],"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "approved_at"?: string | null,"approved_by"?: string | null,"cancelled_at"?: string | null,"cancelled_by"?: string | null,"created_at"?: string,"ends_at": string,"estimated_duration_minutes": number,"id"?: string,"material_id": string,"notes"?: string | null,"printer_id": string,"profile_id": string,"project_name": string,"rejected_at"?: string | null,"rejected_by"?: string | null,"rejected_reason"?: string | null,"starts_at": string,"status"?: Database["public"]['Enums']["booking_status"],"updated_at"?: string
+                    "approved_at"?: string | null,"approved_by"?: string | null,"cancelled_at"?: string | null,"cancelled_by"?: string | null,"created_at"?: string,"ends_at": string,"estimated_duration_minutes": number,"id"?: string,"material_id": string,"notes"?: string | null,"printer_id": string,"profile_id": string,"project_id"?: string | null,"project_name": string,"rejected_at"?: string | null,"rejected_by"?: string | null,"rejected_reason"?: string | null,"starts_at": string,"status"?: Database["public"]['Enums']["booking_status"],"updated_at"?: string
                   }
                   Update: {
-                    "approved_at"?: string | null,"approved_by"?: string | null,"cancelled_at"?: string | null,"cancelled_by"?: string | null,"created_at"?: string,"ends_at"?: string,"estimated_duration_minutes"?: number,"id"?: string,"material_id"?: string,"notes"?: string | null,"printer_id"?: string,"profile_id"?: string,"project_name"?: string,"rejected_at"?: string | null,"rejected_by"?: string | null,"rejected_reason"?: string | null,"starts_at"?: string,"status"?: Database["public"]['Enums']["booking_status"],"updated_at"?: string
+                    "approved_at"?: string | null,"approved_by"?: string | null,"cancelled_at"?: string | null,"cancelled_by"?: string | null,"created_at"?: string,"ends_at"?: string,"estimated_duration_minutes"?: number,"id"?: string,"material_id"?: string,"notes"?: string | null,"printer_id"?: string,"profile_id"?: string,"project_id"?: string | null,"project_name"?: string,"rejected_at"?: string | null,"rejected_by"?: string | null,"rejected_reason"?: string | null,"starts_at"?: string,"status"?: Database["public"]['Enums']["booking_status"],"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -222,6 +222,12 @@ isOneToOne: false
       columns: ["profile_id"]
 isOneToOne: false
       referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "printer_bookings_project_id_fkey"
+      columns: ["project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
       referencedColumns: ["id"]
     },{
       foreignKeyName: "printer_bookings_rejected_by_fkey"
@@ -541,6 +547,7 @@ isOneToOne: false
 "notes": string | null,
 "printer_id": string,
 "profile_id": string,
+"project_id": string | null,
 "project_name": string,
 "rejected_at": string | null,
 "rejected_by": string | null,
@@ -602,7 +609,7 @@ isOneToOne: false
         isSetofReturn: false
       } },
 "create_printer_booking":
-{ Args: { "p_estimated_duration_minutes": number,"p_material_id": string,"p_notes"?: string,"p_printer_id": string,"p_project_name": string,"p_starts_at": string }; Returns: {
+{ Args: { "p_estimated_duration_minutes": number,"p_material_id": string,"p_notes"?: string,"p_printer_id": string,"p_project_id": string,"p_starts_at": string }; Returns: {
               "approved_at": string | null,
 "approved_by": string | null,
 "cancelled_at": string | null,
@@ -615,6 +622,7 @@ isOneToOne: false
 "notes": string | null,
 "printer_id": string,
 "profile_id": string,
+"project_id": string | null,
 "project_name": string,
 "rejected_at": string | null,
 "rejected_by": string | null,
@@ -678,6 +686,7 @@ isOneToOne: false
 "notes": string | null,
 "printer_id": string,
 "profile_id": string,
+"project_id": string | null,
 "project_name": string,
 "rejected_at": string | null,
 "rejected_by": string | null,
@@ -801,6 +810,7 @@ isOneToOne: false
 "notes": string | null,
 "printer_id": string,
 "profile_id": string,
+"project_id": string | null,
 "project_name": string,
 "rejected_at": string | null,
 "rejected_by": string | null,
@@ -918,7 +928,7 @@ isOneToOne: false
         isSetofReturn: false
       } },
 "update_printer_booking":
-{ Args: { "p_booking_id": string,"p_estimated_duration_minutes": number,"p_material_id": string,"p_notes"?: string,"p_printer_id": string,"p_project_name": string,"p_starts_at": string }; Returns: {
+{ Args: { "p_booking_id": string,"p_estimated_duration_minutes": number,"p_material_id": string,"p_notes"?: string,"p_printer_id": string,"p_project_id": string,"p_starts_at": string }; Returns: {
               "approved_at": string | null,
 "approved_by": string | null,
 "cancelled_at": string | null,
@@ -931,6 +941,7 @@ isOneToOne: false
 "notes": string | null,
 "printer_id": string,
 "profile_id": string,
+"project_id": string | null,
 "project_name": string,
 "rejected_at": string | null,
 "rejected_by": string | null,

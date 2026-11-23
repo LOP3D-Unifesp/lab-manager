@@ -37,7 +37,7 @@ Pages (aplicação de página única). Ele dispara em todo push na `main` e tamb
 
 ```bash
 supabase link --project-ref <project-ref>
-supabase db push                 # aplica todas as migrations (ou: supabase db reset --linked, que APAGA o banco)
+supabase db push --remote        # aplica as migrations pendentes no projeto vinculado (ou: supabase db reset --linked, que APAGA o banco)
 supabase functions deploy        # invite-user, manage-invitation, cleanup-invitations
 supabase secrets set PUBLIC_SITE_URL=https://lop3d-unifesp.github.io/lab-manager
 ```
@@ -152,5 +152,6 @@ Os logs do projeto (Auth, Edge Functions, API) ficam em *Logs* no painel do Supa
 ## Migrations
 
 Migrations não são aplicadas automaticamente. Depois de mergear mudanças de banco na `main`, rode
-`supabase db push` manualmente, depois de conferir o `project-ref` vinculado. Antes de promover:
-faça backup, valide em um banco vazio e execute `npm run test:db`.
+`supabase db push --remote` manualmente, depois de conferir o `project-ref` vinculado (`supabase migration list --remote`
+mostra o que está pendente). Sem `--remote`, esta versão do CLI age no banco **local**. Antes de promover: faça backup,
+valide em um banco vazio e execute `npm run test:db`.
