@@ -182,7 +182,7 @@ export function MaintenanceRequestsPanel({ canMaintainNow, equipment, onChanged,
                     <div className="flex flex-wrap justify-end gap-2">
                       {actions.take ? (
                         <Button className="min-h-9 px-3 py-2 text-sm" variant="secondary" disabled={busy} onClick={() => change(request, "in_progress")}>
-                          Assumir
+                          Iniciar manutenção
                         </Button>
                       ) : null}
                       {actions.giveBack ? (

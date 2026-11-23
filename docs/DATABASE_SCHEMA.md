@@ -1061,7 +1061,7 @@ Finalidade: qualquer pessoa do laboratorio envia uma sugestao ou um erro; a coor
 ### 3.18 Chamados de manutencao
 
 Finalidade: qualquer pessoa avisa que um equipamento tem problema; os responsaveis pela manutencao
-assumem e resolvem.
+iniciam a manutencao e resolvem.
 
 - `profiles.is_maintainer` (boolean, padrao `false`): marca quem faz manutencao. So o coordenador altera
   (RLS de `profiles`). `private.can_maintain()` e verdadeira para perfil ativo que seja coordenador ou
