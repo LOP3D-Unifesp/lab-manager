@@ -7,6 +7,7 @@ import {
   getRequestActions,
   getRequestErrorMessage,
   isRequestActive,
+  orderRequests,
   sortRequests,
   validateRequestDescription,
   type MaintenanceRequest,
@@ -79,6 +80,39 @@ describe("chamados", () => {
   it("conta só os chamados ativos de um equipamento", () => {
     expect(countOpenRequests(requests, "eq1")).toBe(3);
     expect(countOpenRequests(requests, "eq2")).toBe(0);
+  });
+});
+
+describe("ordenar a lista de chamados", () => {
+  const list = [
+    request({ id: "a", equipment_name: "Impressora B", status: "open", urgency: "low", created_at: "2026-06-03T10:00:00Z" }),
+    request({ id: "b", equipment_name: "Computador", status: "in_progress", urgency: "urgent", created_at: "2026-06-01T10:00:00Z" }),
+    request({ id: "c", equipment_name: "Impressora A", status: "open", urgency: "urgent", created_at: "2026-06-02T10:00:00Z" }),
+    request({ id: "d", equipment_name: "Impressora A", status: "resolved", urgency: "normal", created_at: "2026-06-04T10:00:00Z" }),
+  ];
+  const ids = (items: MaintenanceRequest[]) => items.map((item) => item.id);
+
+  it("prioridade mantém a ordem de sempre", () => {
+    expect(ids(orderRequests(list, "priority"))).toEqual(["c", "a", "b", "d"]);
+  });
+
+  it("ordena por data, do mais novo ou do mais antigo", () => {
+    expect(ids(orderRequests(list, "newest"))).toEqual(["d", "a", "c", "b"]);
+    expect(ids(orderRequests(list, "oldest"))).toEqual(["b", "c", "a", "d"]);
+  });
+
+  it("ordena por equipamento em ordem alfabética, com o mais novo primeiro dentro do mesmo equipamento", () => {
+    expect(ids(orderRequests(list, "equipment"))).toEqual(["b", "d", "c", "a"]);
+  });
+
+  it("ordena por situação: abertos, em andamento, resolvidos", () => {
+    expect(ids(orderRequests(list, "status"))).toEqual(["c", "a", "b", "d"]);
+  });
+
+  it("não altera a lista original", () => {
+    const copy = [...list];
+    orderRequests(list, "newest");
+    expect(list).toEqual(copy);
   });
 });
 
