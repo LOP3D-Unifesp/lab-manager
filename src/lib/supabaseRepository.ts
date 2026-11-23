@@ -1,7 +1,7 @@
 import { supabase } from "./supabaseClient";
 import type { FeedbackKind, FeedbackReport, FeedbackStatus } from "./feedback";
 import type { MaintenanceRequest, MaintenanceRequestStatus, MaintenanceUrgency } from "./maintenanceRequests";
-import type { PurchaseRequest, PurchaseStatus } from "./purchases";
+import type { PurchaseRequest, PurchaseStatus, PurchaseUpdate } from "./purchases";
 import type {
   CatalogMaterial,
   MaterialCategory,
@@ -1512,6 +1512,21 @@ export async function setPurchaseStatus(params: { requestId: string; status: Pur
     p_actual_amount: params.actualAmount ?? undefined,
   });
   throwIfError(error);
+}
+
+// Pedidos da própria pessoa que o coordenador já decidiu, dos últimos 14 dias (para avisar quem pediu).
+export async function listMyPurchaseUpdates(profileId: string) {
+  const since = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await client()
+    .from("purchase_requests")
+    .select("id, item, status, rejected_reason, updated_at")
+    .eq("requested_by", profileId)
+    .in("status", ["approved", "rejected", "purchased", "delivered"])
+    .gte("updated_at", since)
+    .order("updated_at", { ascending: false })
+    .limit(10);
+  throwIfError(error);
+  return (data ?? []) as unknown as PurchaseUpdate[];
 }
 
 export async function countRequestedPurchases() {

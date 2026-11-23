@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { PurchaseFormModal } from "../components/compras/PurchaseFormModal";
 import { PurchaseStepModal } from "../components/compras/PurchaseStepModal";
-import { PURCHASES_CHANGED_EVENT } from "../components/layout/AttentionProvider";
+import { PURCHASES_CHANGED_EVENT, useAttention } from "../components/layout/AttentionProvider";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
@@ -38,6 +38,8 @@ export function Compras() {
   const timezone = labSettings?.timezone || getTimezonePadrao();
   const isCoordinator = profile?.role === "coordinator";
   const profileId = profile?.id ?? null;
+  const attention = useAttention();
+  const markSeen = attention.markPurchaseUpdatesSeen;
   const [purchases, setPurchases] = useState<PurchaseRequest[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [carregado, setCarregado] = useState(false);
@@ -63,6 +65,11 @@ export function Compras() {
   useEffect(() => {
     void carregar();
   }, []);
+
+  // Quem pediu já está vendo as decisões nesta página: o selo de novidades não precisa ficar aceso.
+  useEffect(() => {
+    if (!isCoordinator && attention.purchases > 0) markSeen();
+  }, [attention.purchases, isCoordinator, markSeen]);
 
   const projetosAbertos = useMemo(() => projects.filter((project) => isProjectOpen(project.status)), [projects]);
   const visiveis = useMemo(() => sortPurchases(filterPurchases(purchases, filters, profileId)), [purchases, filters, profileId]);
