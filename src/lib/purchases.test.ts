@@ -1,19 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { normalizeTypedDot } from "../components/ui/MoneyInput";
 
 import {
   countUnseenPurchaseUpdates,
   describePurchaseUpdate,
   calculateTotal,
   filterPurchases,
-  formatUnitAmount,
+  formatMoneyField,
+  getUnitAmountForEdit,
   GENERAL_STOCK_LABEL,
   getPurchaseActions,
   getPurchaseUndo,
   getUnitAmount,
   isNotifiablePurchaseStatus,
   isValidPurchaseUrl,
-  maskMoneyInput,
+  maskCentsInput,
   parseMaskedMoney,
   parseMoney,
   sortPurchases,
@@ -153,54 +153,52 @@ describe("avisos para quem pediu", () => {
   });
 });
 
-describe("máscara do valor", () => {
-  it("coloca o ponto de milhar e mantém a vírgula decimal", () => {
-    expect(maskMoneyInput("1234")).toBe("1.234");
-    expect(maskMoneyInput("1234567,8")).toBe("1.234.567,8");
-    expect(maskMoneyInput("1.234,5")).toBe("1.234,5");
-    expect(maskMoneyInput("50")).toBe("50");
+describe("máscara de centavos", () => {
+  // Simula digitar um dígito de cada vez no fim do campo.
+  const typeDigits = (digits: string) => digits.split("").reduce((value, char) => maskCentsInput(value + char), "");
+
+  it("cada dígito entra pela direita, com os centavos sempre à vista", () => {
+    expect(typeDigits("1")).toBe("0,01");
+    expect(typeDigits("15")).toBe("0,15");
+    expect(typeDigits("150")).toBe("1,50");
+    expect(typeDigits("15059")).toBe("150,59");
+    expect(typeDigits("123456789")).toBe("1.234.567,89");
   });
 
-  it("limita as casas decimais e descarta o que não é número", () => {
-    expect(maskMoneyInput("1234,567")).toBe("1.234,56");
-    expect(maskMoneyInput("1234,567", 4)).toBe("1.234,567");
-    expect(maskMoneyInput("R$ 12a,3,4")).toBe("12,34");
-    expect(maskMoneyInput("abc")).toBe("");
+  it("apagar remove o último dígito e esvaziar deixa o campo vazio", () => {
+    expect(maskCentsInput("150,5")).toBe("15,05");
+    expect(maskCentsInput("0,0")).toBe("");
+    expect(maskCentsInput("")).toBe("");
   });
 
-  it("trata zeros à esquerda e a vírgula sozinha", () => {
-    expect(maskMoneyInput("007")).toBe("7");
-    expect(maskMoneyInput("0,5")).toBe("0,5");
-    expect(maskMoneyInput(",")).toBe("0,");
-    expect(maskMoneyInput("")).toBe("");
+  it("digitar com o texto selecionado recomeça do zero (5 vira 0,05)", () => {
+    expect(maskCentsInput("5")).toBe("0,05");
   });
 
-  it("lê o texto mascarado: ponto é milhar e vírgula é decimal", () => {
-    expect(parseMaskedMoney("1.234")).toBe(1234);
-    expect(parseMaskedMoney("1.234,56")).toBe(1234.56);
-    expect(parseMaskedMoney("12,")).toBe(12);
-    expect(parseMaskedMoney("75,295", 4)).toBe(75.295);
-    expect(parseMaskedMoney("75,295")).toBeNull();
-    expect(parseMaskedMoney("")).toBeNull();
-  });
-});
-
-describe("ponto digitado ou colado no campo de valor", () => {
-  it("o ponto digitado vira vírgula decimal", () => {
-    expect(normalizeTypedDot("1.234.567", "1.234.567.")).toBe("1.234.567,");
-    expect(normalizeTypedDot("12", "12.")).toBe("12,");
-    expect(normalizeTypedDot("1.234", "1.2.34")).toBe("1.2,34");
+  it("ignora letras, pontos e vírgulas digitados", () => {
+    expect(maskCentsInput("1a5.0")).toBe("1,50");
+    expect(maskCentsInput("abc")).toBe("");
+    expect(maskCentsInput("0")).toBe("");
   });
 
-  it("apagar um dígito não vira decimal por engano", () => {
-    expect(normalizeTypedDot("1.234", "1.23")).toBe("1.23");
+  it("colar um valor completo é respeitado", () => {
+    expect(maskCentsInput("1.234,56", true)).toBe("1.234,56");
+    expect(maskCentsInput("1234.56", true)).toBe("1.234,56");
+    expect(maskCentsInput("R$ 99,9", true)).toBe("99,90");
+    expect(maskCentsInput("1234", true)).toBe("1.234,00");
+    expect(maskCentsInput("1.234", true)).toBe("1.234,00");
   });
 
-  it("valor colado com ponto e 1 ou 2 dígitos no fim é decimal; com 3 dígitos é milhar", () => {
-    expect(normalizeTypedDot("", "1234.56")).toBe("1234,56");
-    expect(normalizeTypedDot("", "R$ 99.9")).toBe("R$ 99,9");
-    expect(normalizeTypedDot("", "1.234")).toBe("1.234");
-    expect(normalizeTypedDot("", "1.234,56")).toBe("1.234,56");
+  it("formata um valor numérico para o campo", () => {
+    expect(formatMoneyField(1234.5)).toBe("1.234,50");
+    expect(formatMoneyField(0.07)).toBe("0,07");
+    expect(formatMoneyField(150.59)).toBe("150,59");
+    expect(formatMoneyField(301.18)).toBe("301,18");
+  });
+
+  it("o texto da máscara é lido de volta com o mesmo valor", () => {
+    expect(parseMaskedMoney(typeDigits("15059"))).toBe(150.59);
+    expect(parseMaskedMoney(typeDigits("123456789"))).toBe(1234567.89);
   });
 });
 
@@ -213,9 +211,9 @@ describe("valor unitário e total", () => {
   });
 
   it("recupera o valor unitário de um pedido antigo ao editar", () => {
-    expect(formatUnitAmount(150.6, 2)).toBe("75,30");
-    expect(formatUnitAmount(150.59, 2)).toBe("75,295");
-    expect(formatUnitAmount(100, 1)).toBe("100,00");
+    expect(getUnitAmountForEdit(150.6, 2)).toBe(75.3);
+    expect(getUnitAmountForEdit(100, 1)).toBe(100);
+    expect(getUnitAmountForEdit(301.18, 2)).toBe(150.59);
   });
 
   it("mostra o valor unitário só quando fecha certinho com a quantidade", () => {
