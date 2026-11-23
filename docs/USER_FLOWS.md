@@ -540,7 +540,7 @@ A reserva própria é cancelada, permanece no histórico e deixa de bloquear o h
 ### Fluxo 14b - Reportar problema e tratar chamado de manutenção
 
 **Passos:**  
-1. Qualquer pessoa abre **Reportar problema** no card do equipamento, descreve o problema e escolhe a urgência. Se já houver chamados abertos, o diálogo avisa.
+1. Qualquer pessoa abre **Reportar problema** no card do equipamento, descreve o problema, escolhe a urgência e, se quiser, tira ou anexa até 3 fotos. Em chamado **urgente**, o equipamento é bloqueado para novas reservas assim que o chamado é enviado. Se já houver chamados abertos, o diálogo avisa.
 2. O chamado entra na aba **Chamados** como *Aberto* e aparece como pendência (menu e campainha) para coordenadores e responsáveis pela manutenção.
 3. Um responsável usa **Assumir** (o chamado vira *Em andamento*) e, se preciso, **Colocar em manutenção** o equipamento.
 4. Ao terminar, usa **Resolver** (com nota opcional) ou **Liberar equipamento**, que também resolve os chamados em andamento.

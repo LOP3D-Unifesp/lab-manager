@@ -343,14 +343,14 @@ isOneToOne: false
                   ]
                 },"maintenance_requests": {
                   Row: {
-                    "assigned_to": string | null,"created_at": string,"description": string,"equipment_id": string,"id": string,"requested_by": string | null,"resolution_notes": string | null,"resolved_at": string | null,"status": Database["public"]['Enums']["maintenance_request_status"],"updated_at": string,"urgency": Database["public"]['Enums']["maintenance_urgency"]
+                    "assigned_to": string | null,"created_at": string,"description": string,"equipment_id": string,"id": string,"photo_paths": (string)[],"requested_by": string | null,"resolution_notes": string | null,"resolved_at": string | null,"status": Database["public"]['Enums']["maintenance_request_status"],"updated_at": string,"urgency": Database["public"]['Enums']["maintenance_urgency"]
                   }
                   ComputedFields: never
                   Insert: {
-                    "assigned_to"?: string | null,"created_at"?: string,"description": string,"equipment_id": string,"id"?: string,"requested_by"?: string | null,"resolution_notes"?: string | null,"resolved_at"?: string | null,"status"?: Database["public"]['Enums']["maintenance_request_status"],"updated_at"?: string,"urgency"?: Database["public"]['Enums']["maintenance_urgency"]
+                    "assigned_to"?: string | null,"created_at"?: string,"description": string,"equipment_id": string,"id"?: string,"photo_paths"?: (string)[],"requested_by"?: string | null,"resolution_notes"?: string | null,"resolved_at"?: string | null,"status"?: Database["public"]['Enums']["maintenance_request_status"],"updated_at"?: string,"urgency"?: Database["public"]['Enums']["maintenance_urgency"]
                   }
                   Update: {
-                    "assigned_to"?: string | null,"created_at"?: string,"description"?: string,"equipment_id"?: string,"id"?: string,"requested_by"?: string | null,"resolution_notes"?: string | null,"resolved_at"?: string | null,"status"?: Database["public"]['Enums']["maintenance_request_status"],"updated_at"?: string,"urgency"?: Database["public"]['Enums']["maintenance_urgency"]
+                    "assigned_to"?: string | null,"created_at"?: string,"description"?: string,"equipment_id"?: string,"id"?: string,"photo_paths"?: (string)[],"requested_by"?: string | null,"resolution_notes"?: string | null,"resolved_at"?: string | null,"status"?: Database["public"]['Enums']["maintenance_request_status"],"updated_at"?: string,"urgency"?: Database["public"]['Enums']["maintenance_urgency"]
                   }
                   Relationships: [
                     {
@@ -1011,6 +1011,7 @@ isOneToOne: false
 "description": string,
 "equipment_id": string,
 "id": string,
+"photo_paths": (string)[],
 "requested_by": string | null,
 "resolution_notes": string | null,
 "resolved_at": string | null,

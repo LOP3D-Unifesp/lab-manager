@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(239);
+select plan(246);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -1390,7 +1390,7 @@ select is(
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
 select lives_ok(
-  $$ insert into public.maintenance_requests (equipment_id, description, urgency) values ('20000000-0000-0000-0000-000000000003', 'pgtap bico entupido', 'urgent') $$,
+  $$ insert into public.maintenance_requests (equipment_id, description, urgency) values ('20000000-0000-0000-0000-000000000003', 'pgtap bico entupido', 'normal') $$,
   'any active user reports a problem with an equipment'
 );
 select throws_ok(
@@ -1472,6 +1472,36 @@ select throws_ok(
   $$ select public.set_maintenance_request_status((select id from public.maintenance_requests where description = 'pgtap terceiro problema'), 'in_progress', null, '00000000-0000-0000-0000-000000000102') $$,
   'P0001', 'invalid_assignee',
   'a request can only be assigned to a maintainer or coordinator'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
+
+-- Urgent requests block the equipment; photos are limited to three.
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
+select lives_ok(
+  $$ insert into public.maintenance_requests (equipment_id, description, urgency) values ('20000000-0000-0000-0000-000000000003', 'pgtap urgente', 'urgent') $$,
+  'a researcher opens an urgent request'
+);
+select is((select status::text from public.equipment where id = '20000000-0000-0000-0000-000000000003'), 'maintenance', 'an urgent request puts the equipment in maintenance');
+select is(
+  (select count(*) from public.equipment_maintenance where equipment_id = '20000000-0000-0000-0000-000000000003' and ended_at is null and reason like 'Chamado urgente: pgtap urgente%'),
+  1::bigint,
+  'the maintenance episode records the urgent request as the reason'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
+select lives_ok($$ select public.end_equipment_maintenance('20000000-0000-0000-0000-000000000003', 'pgtap liberado') $$, 'a coordinator releases the equipment');
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
+select lives_ok(
+  $$ insert into public.maintenance_requests (equipment_id, description, urgency) values ('20000000-0000-0000-0000-000000000003', 'pgtap normal sem bloqueio', 'normal') $$,
+  'a normal request is opened'
+);
+select is((select status::text from public.equipment where id = '20000000-0000-0000-0000-000000000003'), 'active', 'a normal request does not block the equipment');
+select throws_ok(
+  $$ insert into public.maintenance_requests (equipment_id, description, photo_paths) values ('20000000-0000-0000-0000-000000000003', 'pgtap quatro fotos', array['a','b','c','d']) $$,
+  '23514', null,
+  'a request accepts at most three photos'
 );
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
