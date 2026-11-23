@@ -190,23 +190,19 @@ No mobile, priorizar acesso rápido a:
 - Equipamentos;
 - Reservas.
 
-As demais seções (Pesquisadores, Habilidades, Minhas reservas, Meu perfil e, para coordenadores, Usuários, Administração e Histórico de reservas) ficam no menu recolhível ou na área da conta.
+As demais seções (Projetos, Minhas reservas, Inventário, Habilidades e, para coordenadores, Usuários, Histórico de reservas e Configurações) ficam no menu recolhível ou na área da conta.
 
 ### Desktop
 
-No desktop, usar sidebar fixa com:
+No desktop, usar sidebar fixa, agrupada por finalidade, com um título discreto em cada grupo:
 
 - Dashboard
-- Pesquisadores
-- Habilidades
-- Agenda do Laboratório
-- Equipamentos
-- Reservas
-- Minhas reservas
-- Meu perfil
-- Usuários (coordenador)
-- Administração (coordenador)
-- Histórico de reservas (coordenador)
+- **Trabalho:** Agenda do Laboratório, Reservas, Minhas reservas (pesquisador), Projetos
+- **Recursos:** Equipamentos, Inventário
+- **Pessoas:** Pesquisadores, Habilidades
+- **Gestão** (coordenador): Usuários, Histórico de reservas, Configurações
+
+O Meu perfil fica no menu da conta, no rodapé da barra. A ordem e os grupos vêm de `src/lib/navigation.ts` (`desktopSection`, `desktopOrder` e `navigationSectionLabels`); o grupo só aparece quando a pessoa vê pelo menos um item dele.
 
 O menu da conta (`AuthUserMenu`, `MobileAccountMenu`) concentra perfil e saída. Um selo de ambiente (`EnvironmentBadge`) indica quando o app está em modo local ou remoto, e o sino de notificações (`NotificationBell`) mostra reservas pendentes ao coordenador.
 

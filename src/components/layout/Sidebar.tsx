@@ -1,7 +1,7 @@
 import { Link, NavLink } from "react-router-dom";
 
 import { useAuth } from "../../lib/auth";
-import { navigationItems, type NavigationItem } from "../../lib/navigation";
+import { navigationItems, navigationSectionLabels, type NavigationItem } from "../../lib/navigation";
 import { AuthUserMenu } from "./AuthUserMenu";
 import { EnvironmentBadge } from "./EnvironmentBadge";
 import { NotificationBell } from "./NotificationBell";
@@ -21,22 +21,16 @@ function getVisibleDesktopItems(role?: string) {
 
 function getNavItemClass(isActive: boolean) {
   return [
-    "group relative flex min-h-11 items-center gap-3 rounded-lg px-3.5 py-2.5 text-[16px] font-semibold transition",
+    "group relative flex min-h-10 items-center gap-3 rounded-lg px-3.5 py-2 text-[16px] font-semibold transition",
     isActive
       ? "bg-primary-soft text-primary-dark"
       : "text-text hover:bg-background hover:text-primary",
   ].join(" ");
 }
 
-function SidebarNavItem({
-  item,
-  showDivider,
-}: {
-  item: NavigationItem;
-  showDivider: boolean;
-}) {
+function SidebarNavItem({ item }: { item: NavigationItem }) {
   return (
-    <div className={showDivider ? "mt-3 border-t border-border pt-3" : ""}>
+    <div>
       <NavLink
         to={item.path}
         end={item.path === "/" || item.path === "/administracao"}
@@ -97,16 +91,20 @@ export function Sidebar() {
         >
           {visibleNavigationItems.map((item, index) => {
             const previousItem = visibleNavigationItems[index - 1];
-            const showDivider =
-              item.desktopSection === "management" &&
-              previousItem?.desktopSection !== "management";
+            const sectionLabel =
+              item.desktopSection !== previousItem?.desktopSection
+                ? navigationSectionLabels[item.desktopSection]
+                : null;
 
             return (
-              <SidebarNavItem
-                key={item.path}
-                item={item}
-                showDivider={showDivider}
-              />
+              <div key={item.path}>
+                {sectionLabel ? (
+                  <p className="mt-4 px-3.5 pb-1 text-xs font-bold uppercase tracking-wide text-muted">
+                    {sectionLabel}
+                  </p>
+                ) : null}
+                <SidebarNavItem item={item} />
+              </div>
             );
           })}
         </nav>

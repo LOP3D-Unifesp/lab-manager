@@ -202,7 +202,7 @@ export function Administracao() {
 
   return (
     <div>
-      <PageHeader title="Administração" description="Configure a identidade e o funcionamento do laboratório." />
+      <PageHeader title="Configurações" description="Configure a identidade e o funcionamento do laboratório." />
       {message ? <p className="mb-4 rounded-lg border border-success bg-success-soft p-3 font-semibold text-success-dark">{message}</p> : null}
       {error ? <p className="mb-4 rounded-lg border border-danger bg-danger-soft p-3 font-semibold text-danger">{error}</p> : null}
 
