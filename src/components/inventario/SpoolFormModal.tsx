@@ -126,10 +126,19 @@ export function SpoolFormModal({ materials, onClose, onMaterialCreated, onSaved,
       wide
     >
       <form className="grid gap-4" onSubmit={salvar}>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="grid gap-2 text-base font-semibold text-text">
-            Material
-            <select className={inputClassName} required value={materialId} onChange={(e) => setMaterialId(e.target.value)}>
+        <div className="grid items-start gap-4 sm:grid-cols-2">
+          <div className="grid gap-2">
+            <div className="flex items-baseline justify-between gap-2 text-base font-semibold text-text">
+              <label htmlFor="rolo-material">Material</label>
+              <button
+                type="button"
+                className="text-sm font-semibold text-primary underline"
+                onClick={() => setNovoMaterial((current) => (current ? null : { name: "", category: "filament" }))}
+              >
+                + Novo material
+              </button>
+            </div>
+            <select id="rolo-material" className={inputClassName} required value={materialId} onChange={(e) => setMaterialId(e.target.value)}>
               <option value="" disabled>
                 Selecione
               </option>
@@ -139,14 +148,7 @@ export function SpoolFormModal({ materials, onClose, onMaterialCreated, onSaved,
                 </option>
               ))}
             </select>
-            <button
-              type="button"
-              className="w-fit text-sm font-semibold text-primary underline"
-              onClick={() => setNovoMaterial((current) => (current ? null : { name: "", category: "filament" }))}
-            >
-              + Novo material
-            </button>
-          </label>
+          </div>
 
           <div className="grid gap-2 text-base font-semibold text-text">
             Cor
@@ -201,7 +203,7 @@ export function SpoolFormModal({ materials, onClose, onMaterialCreated, onSaved,
           </div>
         ) : null}
 
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className={["grid items-start gap-4", spool ? "sm:grid-cols-3" : "sm:grid-cols-2"].join(" ")}>
           <label className="grid gap-2 text-base font-semibold text-text">
             Fabricante
             <input className={inputClassName} value={manufacturer} onChange={(e) => setManufacturer(e.target.value)} />
@@ -215,12 +217,10 @@ export function SpoolFormModal({ materials, onClose, onMaterialCreated, onSaved,
               Peso atual ({unit})
               <input className={inputClassName} inputMode="decimal" required value={current} onChange={(e) => setCurrent(e.target.value)} />
             </label>
-          ) : (
-            <div />
-          )}
+          ) : null}
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid items-start gap-4 sm:grid-cols-2">
           <label className="grid gap-2 text-base font-semibold text-text">
             De quem é
             <select className={inputClassName} value={projectId} onChange={(e) => setProjectId(e.target.value)}>

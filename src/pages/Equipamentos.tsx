@@ -56,7 +56,7 @@ function getErrorMessage(error: unknown) {
   const text = error instanceof Error ? error.message : "";
   if (text.includes("equipment_name_key")) return "Já existe um equipamento com esse nome.";
   if (text.includes("equipment_types_name_key")) return "Já existe um tipo com esse nome.";
-  return text || "Nao foi possivel salvar.";
+  return text || "Não foi possível salvar.";
 }
 
 export function Equipamentos() {
@@ -289,7 +289,7 @@ export function Equipamentos() {
                     <div>
                       <h3 className="text-2xl font-bold text-text">{item.name}</h3>
                       <p className="mt-2 text-lg text-muted">
-                        {[item.type?.name, item.model].filter(Boolean).join(" · ") || "Modelo nao informado"}
+                        {[item.type?.name, item.model].filter(Boolean).join(" · ") || "Modelo não informado"}
                       </p>
                     </div>
                     <StatusBadge
@@ -300,7 +300,7 @@ export function Equipamentos() {
                   <dl className="mt-4 grid gap-2 text-base leading-6 text-muted">
                     <div>
                       <dt className="font-semibold text-text">Local</dt>
-                      <dd>{item.location ?? "Nao informado"}</dd>
+                      <dd>{item.location ?? "Não informado"}</dd>
                     </div>
                     {item.asset_tag ? (
                       <div>
@@ -310,11 +310,11 @@ export function Equipamentos() {
                     ) : null}
                     {equipmentUsesMaterial(item) ? (
                       <div>
-                        <dt className="font-semibold text-text">Materiais compativeis</dt>
+                        <dt className="font-semibold text-text">Materiais compatíveis</dt>
                         <dd>
                           {compatibilities.length > 0
                             ? compatibilities.map((material) => material.name).join(", ")
-                            : "Nenhum material compativel"}
+                            : "Nenhum material compatível"}
                         </dd>
                       </div>
                     ) : null}
@@ -351,12 +351,12 @@ export function Equipamentos() {
       {modalAberto && form ? (
         <Modal
           title={emEdicao ? "Editar equipamento" : "Cadastrar equipamento"}
-          description="Dados gravados no Supabase."
+          description="Informe o tipo, o modelo e o local. Para impressoras, marque os materiais que ela aceita."
           onClose={fecharModal}
           wide
         >
           <form className="grid gap-4" onSubmit={salvarEquipamento}>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid items-start gap-4 sm:grid-cols-2">
               <label className="grid gap-2 text-base font-semibold text-text">
                 Nome
                 <input
@@ -366,9 +366,19 @@ export function Equipamentos() {
                   onChange={(event) => atualizarForm({ name: event.target.value })}
                 />
               </label>
-              <label className="grid gap-2 text-base font-semibold text-text">
-                Tipo
+              <div className="grid gap-2">
+                <div className="flex items-baseline justify-between gap-2 text-base font-semibold text-text">
+                  <label htmlFor="equipamento-tipo">Tipo</label>
+                  <button
+                    type="button"
+                    className="text-sm font-semibold text-primary underline"
+                    onClick={() => setNovoTipo((current) => (current ? null : { name: "", uses_material: false }))}
+                  >
+                    + Novo tipo
+                  </button>
+                </div>
                 <select
+                  id="equipamento-tipo"
                   className={inputClassName}
                   required
                   value={form.type_id}
@@ -383,14 +393,7 @@ export function Equipamentos() {
                     </option>
                   ))}
                 </select>
-                <button
-                  type="button"
-                  className="w-fit text-sm font-semibold text-primary underline"
-                  onClick={() => setNovoTipo((current) => (current ? null : { name: "", uses_material: false }))}
-                >
-                  + Novo tipo
-                </button>
-              </label>
+              </div>
             </div>
 
             {novoTipo ? (
@@ -418,7 +421,7 @@ export function Equipamentos() {
               </div>
             ) : null}
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid items-start gap-4 sm:grid-cols-2">
               <label className="grid gap-2 text-base font-semibold text-text">
                 Modelo
                 <input className={inputClassName} value={form.model} onChange={(event) => atualizarForm({ model: event.target.value })} />
@@ -433,7 +436,7 @@ export function Equipamentos() {
               </label>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid items-start gap-4 sm:grid-cols-2">
               <label className="grid gap-2 text-base font-semibold text-text">
                 Local
                 <input className={inputClassName} value={form.location} onChange={(event) => atualizarForm({ location: event.target.value })} />
@@ -455,7 +458,7 @@ export function Equipamentos() {
             </div>
 
             <label className="grid gap-2 text-base font-semibold text-text">
-              Observacoes
+              Observações
               <textarea
                 className={`${inputClassName} min-h-24 py-3`}
                 value={form.notes}
@@ -465,7 +468,7 @@ export function Equipamentos() {
 
             {tipoDoForm?.uses_material ? (
               <fieldset className="grid gap-3 rounded-lg border border-border bg-background p-4">
-                <legend className="px-1 text-base font-semibold text-text">Materiais compativeis</legend>
+                <legend className="px-1 text-base font-semibold text-text">Materiais compatíveis</legend>
                 {materials.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {materials.map((material) => {
