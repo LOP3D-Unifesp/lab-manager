@@ -14,9 +14,21 @@ import {
   Users,
 } from "lucide-react";
 
+export type NavigationSection = "main" | "work" | "resources" | "people" | "admin" | "account";
+
+// Títulos das seções do menu lateral (a seção principal e a da conta não têm título).
+export const navigationSectionLabels: Record<NavigationSection, string | null> = {
+  main: null,
+  work: "Trabalho",
+  resources: "Recursos",
+  people: "Pessoas",
+  admin: "Gestão",
+  account: null,
+};
+
 export type NavigationItem = {
   desktopLabel: string;
-  desktopSection: "main" | "knowledge" | "management" | "account";
+  desktopSection: NavigationSection;
   desktopOrder: number;
   desktopRole?: "coordinator" | "researcher";
   mobileLabel: string;
@@ -53,8 +65,8 @@ export const navigationItems: NavigationItem[] = [
   },
   {
     desktopLabel: "Pesquisadores",
-    desktopSection: "main",
-    desktopOrder: 4,
+    desktopSection: "people",
+    desktopOrder: 8,
     mobileLabel: "Pessoas",
     path: "/pesquisadores",
     icon: Users,
@@ -63,8 +75,8 @@ export const navigationItems: NavigationItem[] = [
   },
   {
     desktopLabel: "Projetos",
-    desktopSection: "main",
-    desktopOrder: 4.5,
+    desktopSection: "work",
+    desktopOrder: 5,
     mobileLabel: "Projetos",
     path: "/projetos",
     icon: FolderKanban,
@@ -73,17 +85,17 @@ export const navigationItems: NavigationItem[] = [
   },
   {
     desktopLabel: "Habilidades",
-    desktopSection: "knowledge",
-    desktopOrder: 5,
+    desktopSection: "people",
+    desktopOrder: 9,
     mobileLabel: "Habilidades",
     path: "/habilidades",
     icon: Sparkles,
     mobilePlacement: "secondary",
-    mobileOrder: 2,
+    mobileOrder: 5,
   },
   {
     desktopLabel: "Agenda do Laboratório",
-    desktopSection: "main",
+    desktopSection: "work",
     desktopOrder: 2,
     mobileLabel: "Agenda",
     path: "/agenda",
@@ -93,7 +105,7 @@ export const navigationItems: NavigationItem[] = [
   },
   {
     desktopLabel: "Equipamentos",
-    desktopSection: "management",
+    desktopSection: "resources",
     desktopOrder: 6,
     mobileLabel: "Equipamentos",
     path: "/equipamentos",
@@ -103,7 +115,7 @@ export const navigationItems: NavigationItem[] = [
   },
   {
     desktopLabel: "Reservas",
-    desktopSection: "main",
+    desktopSection: "work",
     desktopOrder: 3,
     mobileLabel: "Reservar",
     path: "/reservas",
@@ -113,14 +125,14 @@ export const navigationItems: NavigationItem[] = [
   },
   {
     desktopLabel: "Minhas reservas",
-    desktopSection: "main",
-    desktopOrder: 5,
+    desktopSection: "work",
+    desktopOrder: 4,
     desktopRole: "researcher",
     mobileLabel: "Minhas reservas",
     path: "/reservas/minhas",
     icon: CalendarCheck,
     mobilePlacement: "secondary",
-    mobileOrder: 5,
+    mobileOrder: 2,
     mobileRole: "researcher",
   },
   {
@@ -135,48 +147,48 @@ export const navigationItems: NavigationItem[] = [
   },
   {
     desktopLabel: "Inventário",
-    desktopSection: "management",
-    desktopOrder: 6.5,
+    desktopSection: "resources",
+    desktopOrder: 7,
     mobileLabel: "Inventário",
     path: "/inventario",
     icon: Boxes,
     mobilePlacement: "secondary",
-    mobileOrder: 3.5,
+    mobileOrder: 4,
   },
   {
     desktopLabel: "Usuários",
-    desktopSection: "management",
-    desktopOrder: 7,
+    desktopSection: "admin",
+    desktopOrder: 10,
     desktopRole: "coordinator",
     mobileLabel: "Usuários",
     path: "/usuarios",
     icon: Users,
     mobilePlacement: "secondary",
-    mobileOrder: 4,
+    mobileOrder: 6,
     mobileRole: "coordinator",
   },
   {
-    desktopLabel: "Administração",
-    desktopSection: "management",
-    desktopOrder: 8,
+    desktopLabel: "Configurações",
+    desktopSection: "admin",
+    desktopOrder: 12,
     desktopRole: "coordinator",
-    mobileLabel: "Administração",
+    mobileLabel: "Configurações",
     path: "/administracao",
     icon: Settings,
     mobilePlacement: "secondary",
-    mobileOrder: 5,
+    mobileOrder: 8,
     mobileRole: "coordinator",
   },
   {
     desktopLabel: "Histórico de reservas",
-    desktopSection: "management",
-    desktopOrder: 9,
+    desktopSection: "admin",
+    desktopOrder: 11,
     desktopRole: "coordinator",
     mobileLabel: "Histórico",
     path: "/reservas/historico",
     icon: History,
     mobilePlacement: "secondary",
-    mobileOrder: 6,
+    mobileOrder: 7,
     mobileRole: "coordinator",
   },
 ];
