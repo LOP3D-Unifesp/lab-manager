@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(297);
+select plan(303);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -1680,6 +1680,24 @@ select throws_ok(
 );
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
+
+-- Purchase urgency (the coordinator is still the active role here).
+select lives_ok(
+  $$ insert into public.purchase_requests (funding_category, project_id, item, estimated_amount, urgency) values ('custeio', '00000000-0000-0000-0000-0000000000c2', 'pgtap compra urgente', 10, 'urgent') $$,
+  'a purchase can be marked as urgent'
+);
+select is((select urgency::text from public.purchase_requests where item = 'pgtap compra urgente'), 'urgent', 'the urgency is stored');
+select is((select urgency::text from public.purchase_requests where item = 'pgtap bico'), 'normal', 'the urgency defaults to normal');
+select throws_ok(
+  $$ insert into public.purchase_requests (funding_category, project_id, item, estimated_amount, urgency) values ('custeio', '00000000-0000-0000-0000-0000000000c2', 'pgtap urgencia invalida', 10, 'critica') $$,
+  '22P02', null,
+  'an unknown urgency is rejected'
+);
+select lives_ok(
+  $$ select public.update_purchase_request((select id from public.purchase_requests where item = 'pgtap bico'), 'pgtap bico', null, 1, 1, null, 'capital', 'low') $$,
+  'the urgency can be changed while the request is waiting'
+);
+select is((select urgency::text from public.purchase_requests where item = 'pgtap bico'), 'low', 'the new urgency is kept');
 
 select * from finish();
 rollback;

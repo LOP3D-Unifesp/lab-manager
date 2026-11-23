@@ -19,6 +19,8 @@ import {
   getPurchaseErrorMessage,
   getPurchaseStatusLabel,
   getPurchaseStatusVariant,
+  getPurchaseUrgencyLabel,
+  getPurchaseUrgencyVariant,
   isValidPurchaseUrl,
   purchaseCategoryOptions,
   purchaseStatusOptions,
@@ -204,7 +206,12 @@ export function Compras() {
                         {purchase.project_name} · {purchase.requested_by_name ?? "Alguém"} · {formatMaintenanceDateTime(purchase.created_at, timezone)}
                       </p>
                     </div>
-                    <StatusBadge label={getPurchaseStatusLabel(purchase.status)} variant={getPurchaseStatusVariant(purchase.status)} />
+                    <div className="flex flex-wrap gap-2">
+                      {purchase.urgency !== "normal" && (purchase.status === "requested" || purchase.status === "approved" || purchase.status === "purchased") ? (
+                        <StatusBadge label={getPurchaseUrgencyLabel(purchase.urgency)} variant={getPurchaseUrgencyVariant(purchase.urgency)} />
+                      ) : null}
+                      <StatusBadge label={getPurchaseStatusLabel(purchase.status)} variant={getPurchaseStatusVariant(purchase.status)} />
+                    </div>
                   </div>
 
                   <p className="text-base text-text">

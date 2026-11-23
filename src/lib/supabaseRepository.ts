@@ -1,7 +1,7 @@
 import { supabase } from "./supabaseClient";
 import type { FeedbackKind, FeedbackReport, FeedbackStatus } from "./feedback";
 import type { MaintenanceRequest, MaintenanceRequestStatus, MaintenanceUrgency } from "./maintenanceRequests";
-import type { PurchaseRequest, PurchaseStatus, PurchaseUpdate } from "./purchases";
+import type { PurchaseRequest, PurchaseStatus, PurchaseUpdate, PurchaseUrgency } from "./purchases";
 import type {
   CatalogMaterial,
   MaterialCategory,
@@ -1455,7 +1455,7 @@ export async function listPurchaseRequests() {
   const { data, error } = await client()
     .from("purchase_requests")
     .select(
-      "id, project_id, requested_by, item, url, quantity, estimated_amount, funding_category, notes, status, decided_at, rejected_reason, actual_amount, purchased_at, delivered_at, created_at, project:projects!purchase_requests_project_id_fkey(name), requester:profiles!purchase_requests_requested_by_fkey(full_name), decider:profiles!purchase_requests_decided_by_fkey(full_name)",
+      "id, project_id, requested_by, item, url, quantity, estimated_amount, urgency, funding_category, notes, status, decided_at, rejected_reason, actual_amount, purchased_at, delivered_at, created_at, project:projects!purchase_requests_project_id_fkey(name), requester:profiles!purchase_requests_requested_by_fkey(full_name), decider:profiles!purchase_requests_decided_by_fkey(full_name)",
     )
     .order("created_at", { ascending: false });
   throwIfError(error);
@@ -1476,6 +1476,7 @@ export type PurchaseInput = {
   estimatedAmount: number;
   notes: string | null;
   fundingCategory: FundingCategory;
+  urgency: PurchaseUrgency;
 };
 
 export async function createPurchaseRequest(input: PurchaseInput & { projectId: string }) {
@@ -1486,6 +1487,7 @@ export async function createPurchaseRequest(input: PurchaseInput & { projectId: 
     quantity: input.quantity,
     estimated_amount: input.estimatedAmount,
     funding_category: input.fundingCategory,
+    urgency: input.urgency,
     notes: input.notes?.trim() || null,
   });
   throwIfError(error);
@@ -1500,6 +1502,7 @@ export async function updatePurchaseRequest(requestId: string, input: PurchaseIn
     p_estimated_amount: input.estimatedAmount,
     p_notes: input.notes ?? undefined,
     p_funding_category: input.fundingCategory,
+    p_urgency: input.urgency,
   });
   throwIfError(error);
 }
@@ -1529,8 +1532,10 @@ export async function listMyPurchaseUpdates(profileId: string) {
   return (data ?? []) as unknown as PurchaseUpdate[];
 }
 
+// Pedidos aguardando decisão e quantos deles são urgentes.
 export async function countRequestedPurchases() {
-  const { count, error } = await client().from("purchase_requests").select("id", { count: "exact", head: true }).eq("status", "requested");
+  const { data, error } = await client().from("purchase_requests").select("urgency").eq("status", "requested").limit(500);
   throwIfError(error);
-  return count ?? 0;
+  const rows = (data ?? []) as Array<{ urgency: PurchaseUrgency }>;
+  return { open: rows.length, urgent: rows.filter((row) => row.urgency === "urgent").length };
 }

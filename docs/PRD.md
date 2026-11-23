@@ -149,12 +149,13 @@ Funcionalidades:
 ### 5.8 Compras
 
 Funcionalidades:
-- página **Compras** (grupo Recursos) com o botão **Novo pedido**: projeto, **rubrica** (capital, custeio, passagens, diárias, reserva técnica ou outros, a mesma lista dos fomentos do projeto), item, link (opcional, só http/https), quantidade, valor estimado total e observações; o pedido só pode ser feito em projeto em aberto de que a pessoa participa (o coordenador, em qualquer projeto em aberto);
+- página **Compras** (grupo Recursos) com o botão **Novo pedido**: projeto, **rubrica** (capital, custeio, passagens, diárias, reserva técnica ou outros, a mesma lista dos fomentos do projeto), item, link (opcional, só http/https), quantidade, valor estimado total, **urgência** (baixa, normal ou urgente) e observações; o pedido só pode ser feito em projeto em aberto de que a pessoa participa (o coordenador, em qualquer projeto em aberto);
 - fluxo **Solicitado → Aprovado → Comprado → Entregue**, ou **Recusado** (com motivo) e **Cancelado**; o coordenador aprova, recusa, marca como comprado (informando o valor pago) e como entregue; quem pediu edita e cancela enquanto ninguém decidiu; o coordenador também **desfaz** cada etapa (desfazer entrega, desfazer compra, voltar para solicitado, reabrir pedido recusado ou cancelado) para corrigir enganos, com confirmação;
 - cada pedido é visível para quem pediu, para os membros do projeto e para o coordenador;
+- a lista mostra primeiro os pedidos que esperam decisão e, dentro de cada etapa, os urgentes antes dos demais; pedidos urgentes ou de baixa urgência ganham uma etiqueta enquanto estão em andamento;
 - filtros por situação (padrão: em andamento), projeto, rubrica e "só os meus pedidos"; **Resumo por projeto** com o previsto (ainda não comprado) e o pago (comprado e entregue);
 - o link do item abre em outra aba, sem repassar a origem da página;
-- o coordenador vê o contador de pedidos aguardando aprovação no item Compras do menu e em **Pendências** na campainha, e recebe aviso no computador quando chega um pedido novo;
+- o coordenador vê o contador de pedidos aguardando aprovação no item Compras do menu e em **Pendências** na campainha (com quantos são urgentes), e recebe aviso no computador quando chega um pedido novo ("Pedido de compra urgente" quando for o caso);
 - quem pediu é avisado das decisões sobre os próprios pedidos (aprovado, recusado com o motivo, comprado, entregue): selo no item Compras do menu, seção **Seus pedidos de compra** na campainha (a novidade fica marcada como "novo" enquanto o painel está aberto) e aviso no computador, em tempo real; o selo some ao abrir a campainha ou a página Compras.
 
 ## 6. Status de reserva
