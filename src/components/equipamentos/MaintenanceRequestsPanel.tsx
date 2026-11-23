@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import type { Equipment } from "../../lib/domain";
 import {
@@ -15,7 +15,7 @@ import {
   type RequestFilters,
 } from "../../lib/maintenanceRequests";
 import { formatMaintenanceDateTime } from "../../lib/maintenance";
-import { setMaintenanceRequestStatus } from "../../lib/supabaseRepository";
+import { getMaintenancePhotoUrls, setMaintenanceRequestStatus } from "../../lib/supabaseRepository";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { Modal } from "../ui/Modal";
@@ -39,6 +39,19 @@ export function MaintenanceRequestsPanel({ canMaintainNow, equipment, onChanged,
   const [notes, setNotes] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [erro, setErro] = useState("");
+  const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
+
+  const allPhotoPaths = useMemo(() => requests.flatMap((request) => request.photo_paths).sort().join("|"), [requests]);
+  useEffect(() => {
+    let ativo = true;
+    const paths = allPhotoPaths ? allPhotoPaths.split("|") : [];
+    getMaintenancePhotoUrls(paths)
+      .then((urls) => ativo && setPhotoUrls(urls))
+      .catch(() => undefined);
+    return () => {
+      ativo = false;
+    };
+  }, [allPhotoPaths]);
 
   const visible = useMemo(
     () => sortRequests(filterRequests(requests, filters, profileId)),
@@ -136,6 +149,19 @@ export function MaintenanceRequestsPanel({ canMaintainNow, equipment, onChanged,
                     </div>
                   </div>
                   <p className="whitespace-pre-wrap break-words text-base text-text">{request.description}</p>
+                  {request.photo_paths.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {request.photo_paths.map((path, index) =>
+                        photoUrls[path] ? (
+                          <a key={path} href={photoUrls[path]} target="_blank" rel="noopener noreferrer" aria-label={`Abrir foto ${index + 1}`}>
+                            <img src={photoUrls[path]} alt={`Foto ${index + 1} do chamado`} className="h-20 w-20 rounded-lg border border-border object-cover" />
+                          </a>
+                        ) : (
+                          <div key={path} className="h-20 w-20 rounded-lg border border-border bg-background" />
+                        ),
+                      )}
+                    </div>
+                  ) : null}
                   {request.assigned_to_name ? (
                     <p className="text-sm text-muted">Responsável: {request.assigned_to_name}</p>
                   ) : null}

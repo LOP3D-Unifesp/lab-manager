@@ -137,6 +137,8 @@ Funcionalidades:
 - o coordenador marca em **Usuários** quem é **responsável pela manutenção**; essas pessoas e o coordenador tratam os chamados e podem colocar equipamentos em manutenção e liberá-los;
 - qualquer pessoa usa **Reportar problema** no card do equipamento (descrição e urgência baixa, normal ou urgente) e vê se já existe chamado aberto;
 - a aba **Chamados** em Equipamentos lista a fila (urgentes e mais antigos primeiro), com filtros por situação, equipamento e "só os meus"; responsáveis assumem, devolvem à fila, resolvem (com nota do que foi feito), reabrem ou cancelam; quem abriu só cancela enquanto o chamado está aberto;
+- o chamado aceita até 3 fotos (tirar na hora, no celular, ou anexar), que ficam visíveis na fila;
+- chamado **urgente** bloqueia o equipamento na hora (novas reservas deixam de ser aceitas, as futuras não são canceladas) e só um responsável libera;
 - liberar o equipamento da manutenção resolve os chamados que estavam em andamento;
 - chamados abertos aparecem como contador no item Equipamentos do menu e como **Pendências** na campainha, para coordenadores e responsáveis.
 

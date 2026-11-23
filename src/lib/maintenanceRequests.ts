@@ -51,6 +51,7 @@ export type MaintenanceRequest = {
   assigned_to_name: string | null;
   resolution_notes: string | null;
   resolved_at: string | null;
+  photo_paths: string[];
   created_at: string;
 };
 

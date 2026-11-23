@@ -1353,7 +1353,7 @@ export async function listMaintenanceRequests() {
   const { data, error } = await client()
     .from("maintenance_requests")
     .select(
-      "id, equipment_id, description, urgency, status, requested_by, assigned_to, resolution_notes, resolved_at, created_at, equipment:equipment!maintenance_requests_equipment_id_fkey(name), requester:profiles!maintenance_requests_requested_by_fkey(full_name), assignee:profiles!maintenance_requests_assigned_to_fkey(full_name)",
+      "id, equipment_id, description, urgency, status, requested_by, assigned_to, resolution_notes, resolved_at, photo_paths, created_at, equipment:equipment!maintenance_requests_equipment_id_fkey(name), requester:profiles!maintenance_requests_requested_by_fkey(full_name), assignee:profiles!maintenance_requests_assigned_to_fkey(full_name)",
     )
     .order("created_at", { ascending: false });
   throwIfError(error);
@@ -1365,11 +1365,45 @@ export async function listMaintenanceRequests() {
   })) as MaintenanceRequest[];
 }
 
-export async function createMaintenanceRequest(params: { equipmentId: string; description: string; urgency: MaintenanceUrgency }) {
+export async function uploadMaintenancePhotos(blobs: Blob[]) {
+  const { data: userData, error: userError } = await client().auth.getUser();
+  throwIfError(userError);
+  const userId = userData.user?.id;
+  if (!userId) throw new Error("Usuario nao autenticado.");
+
+  const paths: string[] = [];
+  for (const blob of blobs) {
+    const path = `${userId}/${crypto.randomUUID()}.jpg`;
+    const { error } = await client().storage.from("maintenance-photos").upload(path, blob, { contentType: "image/jpeg" });
+    throwIfError(error);
+    paths.push(path);
+  }
+  return paths;
+}
+
+// Enderecos temporarios (1 hora) para exibir as fotos do bucket privado.
+export async function getMaintenancePhotoUrls(paths: string[]) {
+  const urls: Record<string, string> = {};
+  if (paths.length === 0) return urls;
+  const { data, error } = await client().storage.from("maintenance-photos").createSignedUrls(paths, 3600);
+  throwIfError(error);
+  for (const item of data ?? []) {
+    if (item.path && item.signedUrl) urls[item.path] = item.signedUrl;
+  }
+  return urls;
+}
+
+export async function createMaintenanceRequest(params: {
+  equipmentId: string;
+  description: string;
+  urgency: MaintenanceUrgency;
+  photoPaths?: string[];
+}) {
   const { error } = await client().from("maintenance_requests").insert({
     equipment_id: params.equipmentId,
     description: params.description.trim(),
     urgency: params.urgency,
+    photo_paths: params.photoPaths ?? [],
   });
   throwIfError(error);
 }

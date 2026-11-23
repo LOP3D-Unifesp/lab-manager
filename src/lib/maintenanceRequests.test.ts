@@ -27,6 +27,7 @@ function request(overrides: Partial<MaintenanceRequest>): MaintenanceRequest {
     assigned_to_name: null,
     resolution_notes: null,
     resolved_at: null,
+    photo_paths: [],
     created_at: "2026-06-10T10:00:00Z",
     ...overrides,
   };
