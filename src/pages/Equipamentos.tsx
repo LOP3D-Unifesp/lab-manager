@@ -370,43 +370,56 @@ export function Equipamentos() {
                   <p className="mt-2 break-words text-lg text-muted">
                     {[item.type?.name, item.model].filter(Boolean).join(" · ") || "Modelo não informado"}
                   </p>
-                  {item.status === "stopped" ? (
-                    <div className="mt-3 grid gap-1 rounded-lg border border-danger bg-danger-soft p-3 text-sm text-text">
-                      <p className="flex items-center gap-2 font-semibold">
-                        <Wrench className="h-4 w-4" aria-hidden="true" />
-                        Parado por chamado urgente
-                      </p>
-                      <p>Não aceita novas reservas. A manutenção começa quando um responsável usar “Iniciar manutenção” em Chamados.</p>
-                    </div>
-                  ) : null}
-                  {item.status === "maintenance" ? (() => {
-                    const aberto = getOpenEpisode(episodes, item.id);
-                    return (
-                      <div className="mt-3 grid gap-1 rounded-lg border border-warning-dark bg-warning-soft p-3 text-sm text-text">
-                        <p className="flex items-center gap-2 font-semibold">
-                          <Wrench className="h-4 w-4" aria-hidden="true" />
-                          Em manutenção
-                          {aberto ? ` desde ${formatMaintenanceDateTime(aberto.started_at, timezone)} (${formatMaintenanceDuration(aberto.started_at, null, new Date())})` : ""}
-                        </p>
-                        {aberto ? <p>{aberto.reason}</p> : null}
-                        {aberto?.expected_return_on ? <p className="text-muted">Previsão de volta: {formatMaintenanceDate(aberto.expected_return_on)}</p> : null}
-                      </div>
-                    );
-                  })() : null}
                   {(() => {
                     const ativos = sortRequests(requests.filter((request) => request.equipment_id === item.id && isRequestActive(request.status)));
-                    if (ativos.length === 0) return null;
+                    const aberto = item.status === "maintenance" ? getOpenEpisode(episodes, item.id) : null;
+                    // Se o motivo da manutenção é o próprio chamado (texto automático), a lista abaixo já o mostra.
+                    const motivoJaListado = aberto !== null && aberto.reason.startsWith("Chamado") && ativos.length > 0;
+                    // As duas situações usam a mesma caixa: título numa linha e um detalhe curto.
+                    const caixa =
+                      item.status === "stopped"
+                        ? {
+                            classes: "border-danger bg-danger-soft",
+                            titulo: "Parado",
+                            detalhe: "Sem reservas até iniciar a manutenção.",
+                          }
+                        : item.status === "maintenance"
+                          ? {
+                              classes: "border-warning-dark bg-warning-soft",
+                              titulo: aberto ? `Em manutenção desde ${formatMaintenanceDateTime(aberto.started_at, timezone)}` : "Em manutenção",
+                              detalhe: [
+                                aberto ? `há ${formatMaintenanceDuration(aberto.started_at, null, new Date())}` : null,
+                                aberto && !motivoJaListado ? aberto.reason : null,
+                                aberto?.expected_return_on ? `volta prevista ${formatMaintenanceDate(aberto.expected_return_on)}` : null,
+                              ]
+                                .filter(Boolean)
+                                .join(" · "),
+                            }
+                          : null;
                     return (
-                      <ul className="mt-3 grid gap-1.5 text-sm text-muted">
-                        {ativos.slice(0, 2).map((request) => (
-                          <li key={request.id} className="break-words">
-                            <span className="font-semibold text-text">{request.requested_by_name ?? "Alguém"}</span> abriu um chamado
-                            {request.urgency === "urgent" ? " urgente" : ""} em {formatMaintenanceDateTime(request.created_at, timezone)}:{" "}
-                            “{request.description.length > 90 ? `${request.description.slice(0, 87)}...` : request.description}”
-                          </li>
-                        ))}
-                        {ativos.length > 2 ? <li>+ {ativos.length - 2} outros na aba Chamados</li> : null}
-                      </ul>
+                      <>
+                        {caixa ? (
+                          <div className={`mt-3 grid gap-0.5 rounded-lg border p-3 text-sm text-text ${caixa.classes}`}>
+                            <p className="flex items-center gap-2 font-semibold">
+                              <Wrench className="h-4 w-4 shrink-0" aria-hidden="true" />
+                              {caixa.titulo}
+                            </p>
+                            {caixa.detalhe ? <p className="break-words">{caixa.detalhe}</p> : null}
+                          </div>
+                        ) : null}
+                        {ativos.length > 0 ? (
+                          <ul className="mt-3 grid gap-1.5 text-sm text-muted">
+                            {ativos.slice(0, 2).map((request) => (
+                              <li key={request.id} className="break-words">
+                                <span className="font-semibold text-text">{request.requested_by_name ?? "Alguém"}</span> abriu um chamado
+                                {request.urgency === "urgent" ? " urgente" : ""} em {formatMaintenanceDateTime(request.created_at, timezone)}:{" "}
+                                “{request.description.length > 90 ? `${request.description.slice(0, 87)}...` : request.description}”
+                              </li>
+                            ))}
+                            {ativos.length > 2 ? <li>+ {ativos.length - 2} outros na aba Chamados</li> : null}
+                          </ul>
+                        ) : null}
+                      </>
                     );
                   })()}
                   <dl className="mt-4 grid gap-2 text-base leading-6 text-muted">
