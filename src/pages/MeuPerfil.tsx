@@ -464,7 +464,7 @@ export function MeuPerfil() {
               </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid items-start gap-4 md:grid-cols-2">
               <label className="grid gap-2 text-base font-semibold text-text md:col-span-2">
                 Nome completo
                 <input
@@ -606,7 +606,7 @@ export function MeuPerfil() {
           <Card className="min-w-0 p-4 sm:p-5">
             <h2 className="text-2xl font-bold text-text">Documentos</h2>
             <div className="mt-4 grid gap-4">
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid items-start gap-4 md:grid-cols-2">
                 <label className="grid gap-2 text-base font-semibold text-text">
                   CPF
                   <input

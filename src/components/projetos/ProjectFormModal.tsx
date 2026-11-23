@@ -83,7 +83,7 @@ export function ProjectFormModal({ onClose, onSaved, project }: ProjectFormModal
             onChange={(e) => setDescription(e.target.value)}
           />
         </label>
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid items-start gap-4 sm:grid-cols-3">
           <label className="grid gap-2 text-base font-semibold text-text">
             Situação
             <select className={inputClassName} value={status} onChange={(e) => setStatus(e.target.value as ProjectStatus)}>
