@@ -84,9 +84,9 @@ export function SpoolFormModal({ materials, onClose, onMaterialCreated, onSaved,
 
     if (!materialId) return setErro("Escolha o material.");
     if (!colorName.trim()) return setErro("Informe o nome da cor.");
-    if (initialAmount === null || initialAmount <= 0) return setErro(`Informe o peso inicial em ${unit}.`);
-    if (currentAmount === null) return setErro(`Informe o peso atual em ${unit}.`);
-    if (currentAmount > initialAmount) return setErro("O peso atual não pode passar do peso inicial.");
+    if (initialAmount === null || initialAmount <= 0) return setErro(`Informe a quantidade inicial em ${unit}.`);
+    if (currentAmount === null) return setErro(`Informe a quantidade atual em ${unit}.`);
+    if (currentAmount > initialAmount) return setErro("A quantidade atual não pode passar da quantidade inicial.");
     if (diameter.trim() && (diameterValue === null || diameterValue <= 0)) return setErro("Informe um diâmetro válido.");
 
     const input = {
@@ -120,8 +120,8 @@ export function SpoolFormModal({ materials, onClose, onMaterialCreated, onSaved,
 
   return (
     <Modal
-      title={spool ? "Editar rolo" : "Cadastrar rolo"}
-      description="Cada rolo é uma unidade física: tem cor, peso e dono (um projeto ou o estoque geral)."
+      title={spool ? "Editar item" : "Cadastrar item"}
+      description="Cada item é uma unidade física do estoque (um rolo de filamento, um frasco de resina...): tem cor, quantidade e dono, que é um projeto ou o estoque geral."
       onClose={onClose}
       wide
     >
@@ -209,12 +209,12 @@ export function SpoolFormModal({ materials, onClose, onMaterialCreated, onSaved,
             <input className={inputClassName} value={manufacturer} onChange={(e) => setManufacturer(e.target.value)} />
           </label>
           <label className="grid gap-2 text-base font-semibold text-text">
-            Peso inicial ({unit})
+            Quantidade inicial ({unit})
             <input className={inputClassName} inputMode="decimal" required value={initial} onChange={(e) => setInitial(e.target.value)} />
           </label>
           {spool ? (
             <label className="grid gap-2 text-base font-semibold text-text">
-              Peso atual ({unit})
+              Quantidade atual ({unit})
               <input className={inputClassName} inputMode="decimal" required value={current} onChange={(e) => setCurrent(e.target.value)} />
             </label>
           ) : null}
@@ -257,10 +257,12 @@ export function SpoolFormModal({ materials, onClose, onMaterialCreated, onSaved,
               Lote
               <input className={inputClassName} value={lot} onChange={(e) => setLot(e.target.value)} />
             </label>
-            <label className="grid gap-2 text-base font-semibold text-text">
-              Diâmetro (mm)
-              <input className={inputClassName} inputMode="decimal" placeholder="1,75" value={diameter} onChange={(e) => setDiameter(e.target.value)} />
-            </label>
+            {!material || material.category === "filament" ? (
+              <label className="grid gap-2 text-base font-semibold text-text">
+                Diâmetro (mm)
+                <input className={inputClassName} inputMode="decimal" placeholder="1,75" value={diameter} onChange={(e) => setDiameter(e.target.value)} />
+              </label>
+            ) : null}
             <label className="grid gap-2 text-base font-semibold text-text">
               Aberto em
               <input className={inputClassName} type="date" value={openedOn} onChange={(e) => setOpenedOn(e.target.value)} />
@@ -285,7 +287,7 @@ export function SpoolFormModal({ materials, onClose, onMaterialCreated, onSaved,
             Cancelar
           </Button>
           <Button type="submit" disabled={salvando}>
-            {salvando ? "Salvando..." : "Salvar rolo"}
+            {salvando ? "Salvando..." : "Salvar item"}
           </Button>
         </div>
       </form>

@@ -112,15 +112,15 @@ Funcionalidades:
 ### 5.5 Módulo de inventário
 
 Funcionalidades:
-- página Inventário com as abas **Rolos** e **Materiais**;
-- cada rolo tem material, cor, fabricante, peso inicial e atual, local e dono: um projeto ou o estoque geral
-  do laboratório; filtros por material, dono, situação e "pouco restante" (até 20%);
-- o coordenador cadastra rolos, ajusta o peso depois de pesar e marca rolos vazios;
+- página Inventário com as abas **Estoque** e **Materiais**;
+- cada item de estoque (um rolo de filamento, um frasco de resina...) tem material, cor, fabricante, quantidade
+  inicial e atual, local e dono: um projeto ou o estoque geral do laboratório; filtros por material, dono, situação e "pouco restante" (até 20%);
+- o coordenador cadastra itens, ajusta a quantidade depois de medir e marca itens vazios;
 - o catálogo de materiais é editável (categoria, unidade em g ou ml, arquivar);
-- na reserva de uma impressora, o campo opcional **Rolo** lista só os rolos do material escolhido que são do
+- na reserva de uma impressora, o campo opcional **Item do estoque** lista só os itens do material escolhido que são do
   projeto da reserva ou do estoque geral;
-- ao concluir uma impressão com rolo, o app pergunta quantos gramas foram usados e abate do rolo;
-- a aba **Insumos** do projeto mostra os rolos do projeto e o total consumido por material.
+- ao concluir uma impressão com item de estoque, o app pergunta quanto foi usado e abate do item;
+- a aba **Insumos** do projeto mostra os itens do projeto e o total consumido por material.
 
 ## 6. Status de reserva
 

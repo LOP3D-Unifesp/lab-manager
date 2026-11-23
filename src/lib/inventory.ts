@@ -153,12 +153,12 @@ export function parseAmount(value: string) {
 export function getInventoryErrorMessage(error: unknown) {
   const text = error instanceof Error ? error.message : String(error ?? "");
   if (text.includes("materials_name_key")) return "Já existe um material com esse nome.";
-  if (text.includes("material_spools_current_amount_check")) return "O peso atual não pode passar do peso inicial.";
-  if (text.includes("material_spools_initial_amount_check")) return "Informe um peso inicial maior que zero.";
+  if (text.includes("material_spools_current_amount_check")) return "A quantidade atual não pode passar da quantidade inicial.";
+  if (text.includes("material_spools_initial_amount_check")) return "Informe uma quantidade inicial maior que zero.";
   if (text.includes("material_spools_color_hex_check")) return "Escolha uma cor válida.";
-  if (text.includes("spool_not_available")) return "Esse rolo não está disponível para este projeto e material.";
+  if (text.includes("spool_not_available")) return "Esse item do estoque não está disponível para este projeto e material.";
   if (text.includes("usage_not_allowed")) return "O consumo só pode ser registrado depois que a impressão começou.";
-  if (text.includes("booking_without_spool")) return "Esta reserva não tem rolo.";
+  if (text.includes("booking_without_spool")) return "Esta reserva não tem item de estoque.";
   if (text.includes("invalid_amount")) return "Informe uma quantidade válida.";
   if (text.includes("row-level security") || text.includes("permission denied")) return "Você não tem permissão para fazer essa alteração.";
   return text || "Não foi possível concluir a operação.";

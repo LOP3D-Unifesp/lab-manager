@@ -1002,7 +1002,7 @@ Finalidade: o laboratorio tem mais que impressoras, e todo equipamento pode ser 
 
 Finalidade: saber que rolos existem, quanto resta de cada um e de quem sao. Os MVP anteriores tratavam
 `materials` so como catalogo tecnico; agora ele continua sendo o catalogo (o que e: PLA, PETG, resina) e
-cada unidade fisica e um rolo.
+cada unidade fisica (um rolo de filamento, um frasco de resina) e um item de estoque, guardado em `material_spools`.
 
 - `materials`: ganha `category` (`material_category`: `filament`, `resin`, `powder`, `other`) e `unit`
   (`g` ou `ml`). O coordenador edita e arquiva materiais.

@@ -59,7 +59,7 @@ export function MaterialFormModal({ material, onClose, onSaved }: MaterialFormMo
   return (
     <Modal
       title={material ? "Editar material" : "Novo material"}
-      description="O material diz o que é (PLA, PETG, resina). Os rolos físicos são cadastrados na aba Rolos."
+      description="O material diz o que é (PLA, PETG, resina). Os itens de estoque (rolos, frascos...) são cadastrados na aba Estoque."
       onClose={onClose}
     >
       <form className="grid gap-4" onSubmit={salvar}>

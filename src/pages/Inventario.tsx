@@ -25,7 +25,7 @@ import {
 import type { Project } from "../lib/projects";
 import { listCatalogMaterials, listProjects, listSpools, updateSpool } from "../lib/supabaseRepository";
 
-type Aba = "rolos" | "materiais";
+type Aba = "estoque" | "materiais";
 
 const selectClassName =
   "min-h-11 min-w-0 rounded-lg border border-border bg-surface px-4 text-base outline-none transition focus:border-primary";
@@ -35,7 +35,7 @@ const filtrosIniciais: SpoolFilters = { search: "", materialId: "all", projectId
 export function Inventario() {
   const { profile } = useAuth();
   const isCoordinator = profile?.role === "coordinator";
-  const [aba, setAba] = useState<Aba>("rolos");
+  const [aba, setAba] = useState<Aba>("estoque");
   const [spools, setSpools] = useState<MaterialSpool[] | null>(null);
   const [materials, setMaterials] = useState<CatalogMaterial[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -80,7 +80,7 @@ export function Inventario() {
   }
 
   async function marcarVazio(spool: MaterialSpool) {
-    if (!window.confirm(`Marcar o rolo ${spool.material_name} ${spool.color_name} como vazio?`)) return;
+    if (!window.confirm(`Marcar o item ${spool.material_name} ${spool.color_name} como vazio?`)) return;
     try {
       setErro("");
       await updateSpool(spool.id, { current_amount: 0 });
@@ -95,7 +95,7 @@ export function Inventario() {
     if (!ajuste) return;
     const valor = parseAmount(novoPeso);
     if (valor === null || valor > ajuste.initial_amount) {
-      setErro(`Informe um peso entre 0 e ${formatAmount(ajuste.initial_amount, ajuste.unit)}.`);
+      setErro(`Informe uma quantidade entre 0 e ${formatAmount(ajuste.initial_amount, ajuste.unit)}.`);
       return;
     }
     try {
@@ -115,13 +115,13 @@ export function Inventario() {
     <>
       <PageHeader
         title="Inventário"
-        description="Rolos de filamento e outros insumos, com o peso que resta e de quem é cada um (um projeto ou o estoque geral)."
+        description="Filamentos, resinas e outros insumos, com a quantidade que resta e de quem é cada item (um projeto ou o estoque geral)."
         action={
           isCoordinator ? (
-            aba === "rolos" ? (
+            aba === "estoque" ? (
               <Button variant="success" onClick={() => setRolo({ spool: null })}>
                 <Plus className="mr-2 h-5 w-5" aria-hidden="true" />
-                Cadastrar rolo
+                Cadastrar item
               </Button>
             ) : (
               <Button variant="success" onClick={() => setMaterial({ material: null })}>
@@ -136,7 +136,7 @@ export function Inventario() {
       <div role="tablist" aria-label="Inventário" className="mb-5 inline-flex rounded-lg border border-border bg-surface p-1">
         {(
           [
-            { id: "rolos", label: "Rolos" },
+            { id: "estoque", label: "Estoque" },
             { id: "materiais", label: "Materiais" },
           ] as const
         ).map((item) => (
@@ -159,7 +159,7 @@ export function Inventario() {
         <p className="mb-4 rounded-lg border border-danger bg-danger-soft p-3 text-base font-semibold text-danger">{erro}</p>
       ) : null}
 
-      {aba === "rolos" ? (
+      {aba === "estoque" ? (
         <>
           <div className="mb-4 grid gap-3 md:grid-cols-[minmax(0,1.2fr)_repeat(3,minmax(0,1fr))_auto]">
             <input
@@ -228,7 +228,7 @@ export function Inventario() {
           {filtrando && spools ? (
             <div className="mb-3 flex items-center justify-between gap-3 text-base text-muted">
               <span>
-                {visiveis.length} de {spools.length} rolo(s)
+                {visiveis.length} de {spools.length} item(ns)
               </span>
               <button type="button" className="font-semibold text-primary underline" onClick={() => setFiltros(filtrosIniciais)}>
                 Limpar filtros
@@ -242,8 +242,8 @@ export function Inventario() {
             <Card>
               <div className="flex flex-col items-center gap-2 py-6 text-center">
                 <Boxes className="h-8 w-8 text-muted" aria-hidden="true" />
-                <p className="text-lg font-semibold">{spools.length === 0 ? "Nenhum rolo cadastrado ainda." : "Nenhum rolo com esses filtros."}</p>
-                {spools.length === 0 && isCoordinator ? <p className="text-muted">Comece com “Cadastrar rolo”.</p> : null}
+                <p className="text-lg font-semibold">{spools.length === 0 ? "Nenhum item cadastrado ainda." : "Nenhum item com esses filtros."}</p>
+                {spools.length === 0 && isCoordinator ? <p className="text-muted">Comece com “Cadastrar item”.</p> : null}
               </div>
             </Card>
           ) : null}
@@ -283,7 +283,7 @@ export function Inventario() {
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-sm text-muted">{rolosPorMaterial.get(item.id) ?? 0} rolo(s) disponível(is)</span>
+                    <span className="text-sm text-muted">{rolosPorMaterial.get(item.id) ?? 0} item(ns) disponível(is)</span>
                     <StatusBadge label={item.is_active ? "Ativo" : "Arquivado"} variant={item.is_active ? "success" : "neutral"} />
                     {isCoordinator ? (
                       <button
@@ -331,13 +331,13 @@ export function Inventario() {
 
       {ajuste ? (
         <Modal
-          title="Ajustar peso"
-          description={`${ajuste.material_name} · ${ajuste.color_name}. Pese o rolo e informe quanto resta.`}
+          title="Ajustar quantidade"
+          description={`${ajuste.material_name} · ${ajuste.color_name}. Meça o que resta e informe a quantidade.`}
           onClose={() => setAjuste(null)}
         >
           <form className="grid gap-4" onSubmit={salvarPeso}>
             <label className="grid gap-2 text-base font-semibold text-text">
-              Peso atual ({ajuste.unit})
+              Quantidade atual ({ajuste.unit})
               <input
                 autoFocus
                 className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
@@ -345,14 +345,14 @@ export function Inventario() {
                 value={novoPeso}
                 onChange={(e) => setNovoPeso(e.target.value)}
               />
-              <span className="text-sm font-normal text-muted">Peso inicial: {formatAmount(ajuste.initial_amount, ajuste.unit)}</span>
+              <span className="text-sm font-normal text-muted">Quantidade inicial: {formatAmount(ajuste.initial_amount, ajuste.unit)}</span>
             </label>
             <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <Button variant="secondary" onClick={() => setAjuste(null)}>
                 Cancelar
               </Button>
               <Button type="submit" disabled={salvando}>
-                {salvando ? "Salvando..." : "Salvar peso"}
+                {salvando ? "Salvando..." : "Salvar quantidade"}
               </Button>
             </div>
           </form>

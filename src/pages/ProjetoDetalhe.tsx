@@ -309,9 +309,9 @@ export function ProjetoDetalhe() {
             <p className="text-lg text-muted">Carregando insumos...</p>
           ) : rolos.length === 0 ? (
             <Card>
-              <p className="text-lg font-semibold">Nenhum rolo deste projeto.</p>
+              <p className="text-lg font-semibold">Nenhum item de estoque deste projeto.</p>
               <p className="mt-1 text-muted">
-                Rolos do estoque geral também podem ser usados nas impressões do projeto. Os rolos exclusivos
+                Itens do estoque geral também podem ser usados nas impressões do projeto. Os itens exclusivos
                 aparecem aqui quando o coordenador os cadastra em Inventário.
               </p>
             </Card>
