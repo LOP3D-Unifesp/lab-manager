@@ -19,8 +19,8 @@ O schema cobre:
 
 O Supabase Auth sera a fonte de autenticacao. O PostgreSQL sera a fonte dos dados de dominio da aplicacao.
 
-> **Fonte da verdade:** as migrations em `supabase/migrations/` (26 arquivos, de `20260818` a
-> `20260912`). Este documento descreve o resultado delas. A secao 1.1 resume o que mudou depois da
+> **Fonte da verdade:** as migrations em `supabase/migrations/` (27 arquivos, de `20260818` a
+> `20260913`). Este documento descreve o resultado delas. A secao 1.1 resume o que mudou depois da
 > baseline; onde houver divergencia, vale a migration.
 
 Status do MVP implementado:
@@ -64,6 +64,7 @@ Status do MVP implementado:
 | `20260910_realtime_requests_and_feedback` | `maintenance_requests` e `feedback_reports` na publicacao `supabase_realtime` (avisos em tempo real). |
 | `20260911_purchase_requests` | Pedidos de compra: `purchase_requests`, `purchase_status`, funcoes `update_purchase_request` e `set_purchase_status` (secao 3.19). |
 | `20260912_purchase_funding_category` | Rubrica do pedido de compra (`purchase_requests.funding_category`) e `update_purchase_request` com o argumento opcional `p_funding_category` (secao 3.19). |
+| `20260913_funding_categories_travel` | Rubricas `passagens` e `diarias` em `project_funding_category` (fomentos dos projetos e pedidos de compra). |
 
 Resumo dos objetos que mais mudam o entendimento do schema:
 
@@ -1101,7 +1102,7 @@ compra e confirma a entrega.
 - `purchase_requests`: `project_id` (`ON DELETE RESTRICT`), `requested_by` (`ON DELETE SET NULL`), `item`
   (2 a 200 caracteres), `url` (opcional, so `http`/`https`, ate 2000), `quantity` (1 a 100000),
   `estimated_amount` (total estimado em reais), `funding_category` (rubrica: `capital`, `custeio`,
-  `reserva_tecnica` ou `outros`, nunca `bolsas`; obrigatoria em pedido novo, vazia nos anteriores a
+  `passagens`, `diarias`, `reserva_tecnica` ou `outros`, nunca `bolsas`; obrigatoria em pedido novo, vazia nos anteriores a
   `20260912`), `notes` (ate 1000), `status` (`purchase_status`:
   `requested`, `approved`, `rejected`, `purchased`, `delivered`, `cancelled`), `decided_by`, `decided_at`,
   `rejected_reason`, `actual_amount` (valor pago), `purchased_at`, `delivered_at`, timestamps.
@@ -1270,7 +1271,7 @@ Validacoes cobertas pelos testes de banco do MVP:
 - Idiomas nao sao habilidades tecnicas e nao entram em `skills`.
 - Nao havera upload `.gcode` ou `.3mf` no schema do MVP.
 - Nao havera historico detalhado de manutencao alem dos bloqueios.
-- A baseline inicial (`20260818`) e imutavel; mudancas de schema entram em migrations incrementais (hoje ate `20260912`).
+- A baseline inicial (`20260818`) e imutavel; mudancas de schema entram em migrations incrementais (hoje ate `20260913`).
 
 ## 10. Inventario de insumos
 

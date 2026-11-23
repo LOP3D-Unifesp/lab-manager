@@ -26,12 +26,14 @@ export function isProjectOpen(status: ProjectStatus) {
   return status === "planning" || status === "active" || status === "paused";
 }
 
-export type FundingCategory = "capital" | "custeio" | "bolsas" | "reserva_tecnica" | "outros";
+export type FundingCategory = "capital" | "custeio" | "bolsas" | "passagens" | "diarias" | "reserva_tecnica" | "outros";
 
 export const fundingCategoryOptions: Array<{ value: FundingCategory; label: string; hint: string }> = [
   { value: "capital", label: "Capital", hint: "Equipamentos e material permanente" },
   { value: "custeio", label: "Custeio", hint: "Material de consumo e serviços" },
   { value: "bolsas", label: "Bolsas", hint: "Bolsas de estudo e pesquisa" },
+  { value: "passagens", label: "Passagens", hint: "Passagens aéreas e terrestres" },
+  { value: "diarias", label: "Diárias", hint: "Hospedagem, alimentação e deslocamento" },
   { value: "reserva_tecnica", label: "Reserva técnica", hint: "Reserva técnica e benefício institucional" },
   { value: "outros", label: "Outros", hint: "Demais rubricas" },
 ];

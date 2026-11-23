@@ -149,7 +149,7 @@ Funcionalidades:
 ### 5.8 Compras
 
 Funcionalidades:
-- página **Compras** (grupo Recursos) com o botão **Novo pedido**: projeto, **rubrica** (capital, custeio, reserva técnica ou outros, a mesma lista dos fomentos do projeto), item, link (opcional, só http/https), quantidade, valor estimado total e observações; o pedido só pode ser feito em projeto em aberto de que a pessoa participa (o coordenador, em qualquer projeto em aberto);
+- página **Compras** (grupo Recursos) com o botão **Novo pedido**: projeto, **rubrica** (capital, custeio, passagens, diárias, reserva técnica ou outros, a mesma lista dos fomentos do projeto), item, link (opcional, só http/https), quantidade, valor estimado total e observações; o pedido só pode ser feito em projeto em aberto de que a pessoa participa (o coordenador, em qualquer projeto em aberto);
 - fluxo **Solicitado → Aprovado → Comprado → Entregue**, ou **Recusado** (com motivo) e **Cancelado**; o coordenador aprova, recusa, marca como comprado (informando o valor pago) e como entregue; quem pediu edita e cancela enquanto ninguém decidiu;
 - cada pedido é visível para quem pediu, para os membros do projeto e para o coordenador;
 - filtros por situação (padrão: em andamento), projeto, rubrica e "só os meus pedidos"; **Resumo por projeto** com o previsto (ainda não comprado) e o pago (comprado e entregue);

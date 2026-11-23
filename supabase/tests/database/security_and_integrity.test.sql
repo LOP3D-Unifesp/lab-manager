@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(284);
+select plan(286);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -1641,6 +1641,15 @@ select lives_ok(
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
 select lives_ok($$ select public.set_purchase_status((select id from public.purchase_requests where item = 'pgtap recusar'), 'rejected', 'sem verba') $$, 'the coordinator rejects with a reason');
 select is((select rejected_reason from public.purchase_requests where item = 'pgtap recusar'), 'sem verba', 'the reason is kept');
+
+select lives_ok(
+  $$ insert into public.purchase_requests (funding_category, project_id, item, estimated_amount) values ('passagens', '00000000-0000-0000-0000-0000000000c2', 'pgtap passagem', 800) $$,
+  'tickets are a valid funding category for a purchase'
+);
+select lives_ok(
+  $$ insert into public.purchase_requests (funding_category, project_id, item, estimated_amount) values ('diarias', '00000000-0000-0000-0000-0000000000c2', 'pgtap diaria', 300) $$,
+  'per diems are a valid funding category for a purchase'
+);
 
 select * from finish();
 rollback;
