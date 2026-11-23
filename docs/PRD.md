@@ -131,6 +131,15 @@ Funcionalidades:
   situação (nova, vista, planejada, resolvida, descartada) e nota interna;
 - contador de mensagens novas no item do menu do coordenador.
 
+### 5.7 Chamados de manutenção
+
+Funcionalidades:
+- o coordenador marca em **Usuários** quem é **responsável pela manutenção**; essas pessoas e o coordenador tratam os chamados e podem colocar equipamentos em manutenção e liberá-los;
+- qualquer pessoa usa **Reportar problema** no card do equipamento (descrição e urgência baixa, normal ou urgente) e vê se já existe chamado aberto;
+- a aba **Chamados** em Equipamentos lista a fila (urgentes e mais antigos primeiro), com filtros por situação, equipamento e "só os meus"; responsáveis assumem, devolvem à fila, resolvem (com nota do que foi feito), reabrem ou cancelam; quem abriu só cancela enquanto o chamado está aberto;
+- liberar o equipamento da manutenção resolve os chamados que estavam em andamento;
+- chamados abertos aparecem como contador no item Equipamentos do menu e como **Pendências** na campainha, para coordenadores e responsáveis.
+
 ## 6. Status de reserva
 
 - Pendente

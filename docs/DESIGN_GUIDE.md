@@ -204,7 +204,7 @@ No desktop, usar sidebar fixa, agrupada por finalidade, com um título discreto 
 
 O Meu perfil fica no menu da conta, no rodapé da barra. A ordem e os grupos vêm de `src/lib/navigation.ts` (`desktopSection`, `desktopOrder` e `navigationSectionLabels`); o grupo só aparece quando a pessoa vê pelo menos um item dele.
 
-O menu da conta (`AuthUserMenu`, `MobileAccountMenu`) concentra perfil e saída. Um selo de ambiente (`EnvironmentBadge`) indica quando o app está em modo local ou remoto, e o sino de notificações (`NotificationBell`) mostra reservas pendentes ao coordenador.
+O menu da conta (`AuthUserMenu`, `MobileAccountMenu`) concentra perfil e saída. Um selo de ambiente (`EnvironmentBadge`) indica quando o app está em modo local ou remoto, e o sino de notificações (`NotificationBell`) mostra reservas pendentes ao coordenador e, em **Pendências**, chamados de manutenção abertos (coordenador e responsáveis) e feedback novo (coordenador). Os contadores vêm de `AttentionProvider`, que também alimenta os selos do menu lateral.
 
 A navegação deve indicar claramente a página atual e manter áreas clicáveis confortáveis.
 

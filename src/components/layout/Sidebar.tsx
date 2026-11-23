@@ -1,8 +1,8 @@
 import { Link, NavLink } from "react-router-dom";
 
 import { useAuth } from "../../lib/auth";
-import { useNewFeedbackCount } from "../../lib/useNewFeedbackCount";
 import { navigationItems, navigationSectionLabels, type NavigationItem } from "../../lib/navigation";
+import { useAttention } from "./AttentionProvider";
 import { AuthUserMenu } from "./AuthUserMenu";
 import { EnvironmentBadge } from "./EnvironmentBadge";
 import { NotificationBell } from "./NotificationBell";
@@ -50,7 +50,7 @@ function SidebarNavItem({ badge, item }: { badge?: number; item: NavigationItem 
             <span className="min-w-0 truncate">{item.desktopLabel}</span>
             {badge ? (
               <span
-                aria-label={`${badge} nova(s)`}
+                aria-label={`${badge} pendente(s)`}
                 className="ml-auto inline-flex min-w-6 items-center justify-center rounded-full bg-warning px-2 py-0.5 text-xs font-bold text-text"
               >
                 {badge}
@@ -66,7 +66,9 @@ function SidebarNavItem({ badge, item }: { badge?: number; item: NavigationItem 
 export function Sidebar() {
   const { labSettings, profile } = useAuth();
   const visibleNavigationItems = getVisibleDesktopItems(profile?.role);
-  const newFeedback = useNewFeedbackCount(profile?.role === "coordinator");
+  const attention = useAttention();
+  const badgeFor = (path: string) =>
+    path === "/feedback" ? attention.feedback : path === "/equipamentos" ? attention.maintenanceRequests : undefined;
 
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 border-r border-border bg-surface px-4 py-5 lg:block">
@@ -113,7 +115,7 @@ export function Sidebar() {
                     {sectionLabel}
                   </p>
                 ) : null}
-                <SidebarNavItem item={item} badge={item.path === "/feedback" ? newFeedback : undefined} />
+                <SidebarNavItem item={item} badge={badgeFor(item.path)} />
               </div>
             );
           })}

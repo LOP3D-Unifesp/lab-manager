@@ -537,6 +537,18 @@ A reserva própria é cancelada, permanece no histórico e deixa de bloquear o h
 
 ### 5.5 Administração operacional
 
+### Fluxo 14b - Reportar problema e tratar chamado de manutenção
+
+**Passos:**  
+1. Qualquer pessoa abre **Reportar problema** no card do equipamento, descreve o problema e escolhe a urgência. Se já houver chamados abertos, o diálogo avisa.
+2. O chamado entra na aba **Chamados** como *Aberto* e aparece como pendência (menu e campainha) para coordenadores e responsáveis pela manutenção.
+3. Um responsável usa **Assumir** (o chamado vira *Em andamento*) e, se preciso, **Colocar em manutenção** o equipamento.
+4. Ao terminar, usa **Resolver** (com nota opcional) ou **Liberar equipamento**, que também resolve os chamados em andamento.
+
+**Regras de negócio:**
+- Quem abriu só cancela o próprio chamado enquanto está *Aberto*; chamado cancelado não volta.
+- Responsáveis também podem devolver à fila e reabrir chamados resolvidos.
+
 ### Fluxo 14 - Coordenador bloqueia impressora para manutenção
 
 **Objetivo:**  
@@ -561,7 +573,7 @@ Coordenador.
 O equipamento fica fora de novas reservas enquanto estiver em manutenção, e cada parada fica registrada com início, fim, motivo e quem fez.
 
 **Regras de negócio:**
-- Apenas coordenadores colocam equipamentos em manutenção e os liberam.
+- Coordenadores e responsáveis pela manutenção (marcados em Usuários) colocam equipamentos em manutenção e os liberam.
 - Não há data de fim: a manutenção dura até a liberação. A previsão de volta é informativa.
 - Cada equipamento tem no máximo uma manutenção em aberto.
 - O histórico (início, fim, duração, motivo, quem iniciou e quem liberou) é guardado e consultável em **Histórico** no card, com contagem de paradas e duração média.
