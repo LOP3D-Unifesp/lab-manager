@@ -74,7 +74,7 @@ export function getMaintenanceErrorMessage(error: unknown) {
   if (text.includes("maintenance_already_open")) return "Este equipamento já está em manutenção.";
   if (text.includes("not_in_maintenance")) return "Este equipamento não está em manutenção.";
   if (text.includes("reason_required")) return "Informe o motivo da manutenção.";
-  if (text.includes("coordinator_required")) return "Apenas coordenadores podem fazer essa alteração.";
+  if (text.includes("maintainer_required") || text.includes("coordinator_required")) return "Apenas coordenadores e responsáveis pela manutenção podem fazer essa alteração.";
   if (text.includes("equipment_not_found")) return "Equipamento não encontrado.";
   return text || "Não foi possível concluir a operação.";
 }

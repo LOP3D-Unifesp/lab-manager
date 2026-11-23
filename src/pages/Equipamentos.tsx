@@ -1,8 +1,11 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { History, Pencil, Plus, Wrench } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { History, MessageSquareWarning, Pencil, Plus, Wrench } from "lucide-react";
 
 import { EndMaintenanceModal } from "../components/equipamentos/EndMaintenanceModal";
 import { MaintenanceHistoryModal } from "../components/equipamentos/MaintenanceHistoryModal";
+import { MaintenanceRequestsPanel } from "../components/equipamentos/MaintenanceRequestsPanel";
+import { ReportProblemModal } from "../components/equipamentos/ReportProblemModal";
 import { StartMaintenanceModal } from "../components/equipamentos/StartMaintenanceModal";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
@@ -17,7 +20,9 @@ import {
   type MaintenanceEpisode,
 } from "../lib/maintenance";
 import { useAuth } from "../lib/auth";
+import { countOpenRequests, isRequestActive, type MaintenanceRequest } from "../lib/maintenanceRequests";
 import {
+  canMaintain,
   equipmentUsesMaterial,
   getTimezonePadrao,
   getEquipmentStatusLabel,
@@ -34,6 +39,7 @@ import {
   listEquipmentMaterials,
   listEquipmentTypes,
   listMaintenanceEpisodes,
+  listMaintenanceRequests,
   listMaterials,
   setEquipmentMaterials,
   updateEquipment,
@@ -75,6 +81,11 @@ export function Equipamentos() {
   const { labSettings, profile } = useAuth();
   const timezone = labSettings?.timezone || getTimezonePadrao();
   const isCoordinator = profile?.role === "coordinator";
+  const podeManter = canMaintain(profile);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const vista = searchParams.get("vista") === "chamados" ? "chamados" : "equipamentos";
+  const [requests, setRequests] = useState<MaintenanceRequest[]>([]);
+  const [reportarEm, setReportarEm] = useState<Equipment | null>(null);
   const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
   const [types, setTypes] = useState<EquipmentType[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
@@ -92,18 +103,21 @@ export function Equipamentos() {
   const [salvando, setSalvando] = useState(false);
 
   async function carregarDados() {
-    const [equipmentData, typesData, materialsData, equipmentMaterialsData, episodesData] = await Promise.all([
+    const [equipmentData, typesData, materialsData, equipmentMaterialsData, episodesData, requestsData] = await Promise.all([
       listEquipment(),
       listEquipmentTypes(),
       listMaterials(),
       listEquipmentMaterials(),
       listMaintenanceEpisodes(),
+      listMaintenanceRequests(),
     ]);
     setEquipmentList(equipmentData);
     setTypes(typesData);
     setMaterials(materialsData);
     setEquipmentMaterialsState(equipmentMaterialsData);
     setEpisodes(episodesData);
+    setRequests(requestsData);
+    window.dispatchEvent(new Event("maintenance-requests-changed"));
   }
 
   async function recarregar() {
@@ -141,6 +155,7 @@ export function Equipamentos() {
     [equipmentList],
   );
 
+  const chamadosAtivos = requests.filter((request) => isRequestActive(request.status)).length;
   const visiveis = equipmentList.filter((item) => filtroTipo === "all" || item.type_id === filtroTipo);
   const tipoDoForm = types.find((type) => type.id === form?.type_id);
 
@@ -284,7 +299,36 @@ export function Equipamentos() {
         }
       />
 
-      {equipmentList.length > 0 ? (
+      <div role="tablist" aria-label="Seção" className="mb-4 flex gap-2 border-b border-border">
+        {([["equipamentos", "Equipamentos"], ["chamados", "Chamados"]] as const).map(([id, label]) => (
+          <button
+            key={id}
+            role="tab"
+            aria-selected={vista === id}
+            className={[
+              "-mb-px border-b-2 px-4 py-2 text-base font-semibold transition",
+              vista === id ? "border-primary text-primary-dark" : "border-transparent text-muted hover:text-primary",
+            ].join(" ")}
+            onClick={() => setSearchParams(id === "chamados" ? { vista: "chamados" } : {}, { replace: true })}
+          >
+            {label}
+            {id === "chamados" && chamadosAtivos > 0 ? (
+              <span className="ml-2 rounded-full bg-warning-soft px-2 py-0.5 text-sm text-text">{chamadosAtivos}</span>
+            ) : null}
+          </button>
+        ))}
+      </div>
+
+      {vista === "chamados" ? (
+        <MaintenanceRequestsPanel
+          requests={requests}
+          equipment={equipmentList}
+          profileId={profile?.id ?? null}
+          canMaintainNow={podeManter}
+          timezone={timezone}
+          onChanged={recarregar}
+        />
+      ) : equipmentList.length > 0 ? (
         <>
           <div role="tablist" aria-label="Tipo de equipamento" className="mb-4 flex flex-wrap gap-2">
             {[{ id: "all", name: "Todos", total: equipmentList.length }, ...types.filter((type) => contagemPorTipo[type.id]).map((type) => ({ id: type.id, name: type.name, total: contagemPorTipo[type.id] }))].map(
@@ -371,7 +415,24 @@ export function Equipamentos() {
                         Histórico
                       </button>
                     ) : null}
-                    {isCoordinator ? (
+                    {countOpenRequests(requests, item.id) > 0 ? (
+                      <button
+                        type="button"
+                        className="inline-flex min-h-9 items-center gap-1 rounded-md bg-warning-soft px-2 text-sm font-semibold text-text transition hover:underline"
+                        onClick={() => setSearchParams({ vista: "chamados" }, { replace: true })}
+                      >
+                        {countOpenRequests(requests, item.id)} {countOpenRequests(requests, item.id) === 1 ? "chamado aberto" : "chamados abertos"}
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      className="inline-flex min-h-9 items-center gap-1 rounded-md px-2 text-sm font-semibold text-muted transition hover:text-primary"
+                      onClick={() => setReportarEm(item)}
+                    >
+                      <MessageSquareWarning className="h-4 w-4" aria-hidden="true" />
+                      Reportar problema
+                    </button>
+                    {podeManter ? (
                       item.status === "maintenance" ? (
                         <Button className="min-h-9 px-3 py-2 text-sm" variant="success" onClick={() => setLiberarEm(item)}>
                           Liberar equipamento
@@ -432,6 +493,19 @@ export function Equipamentos() {
           onDone={async () => {
             setLiberarEm(null);
             await recarregar();
+          }}
+        />
+      ) : null}
+
+      {reportarEm ? (
+        <ReportProblemModal
+          equipment={reportarEm}
+          openCount={countOpenRequests(requests, reportarEm.id)}
+          onClose={() => setReportarEm(null)}
+          onDone={async () => {
+            setReportarEm(null);
+            await recarregar();
+            setSearchParams({ vista: "chamados" }, { replace: true });
           }}
         />
       ) : null}

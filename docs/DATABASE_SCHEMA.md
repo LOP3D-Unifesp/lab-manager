@@ -19,8 +19,8 @@ O schema cobre:
 
 O Supabase Auth sera a fonte de autenticacao. O PostgreSQL sera a fonte dos dados de dominio da aplicacao.
 
-> **Fonte da verdade:** as migrations em `supabase/migrations/` (20 arquivos, de `20260818` a
-> `20260906`). Este documento descreve o resultado delas. A secao 1.1 resume o que mudou depois da
+> **Fonte da verdade:** as migrations em `supabase/migrations/` (21 arquivos, de `20260818` a
+> `20260907`). Este documento descreve o resultado delas. A secao 1.1 resume o que mudou depois da
 > baseline; onde houver divergencia, vale a migration.
 
 Status do MVP implementado:
@@ -58,6 +58,7 @@ Status do MVP implementado:
 | `20260904_inventory` | `materials.category` e `materials.unit`; nova `material_spools` (rolos com cor, peso e dono); `equipment_bookings.spool_id` e `consumed_amount`; `create_booking` e `update_booking` ganham `p_spool_id`; RPC `record_booking_usage` (secao 3.15). |
 | `20260905_equipment_maintenance` | Manutencao como estado do equipamento, com historico: `equipment_maintenance` e as RPCs `start_equipment_maintenance` e `end_equipment_maintenance` (secao 3.16). |
 | `20260906_feedback_reports` | Caixa de sugestoes e erros: `feedback_reports` (secao 3.17). |
+| `20260907_maintenance_requests` | Chamados de manutencao e responsaveis pela manutencao: `maintenance_requests`, `profiles.is_maintainer` (secao 3.18). |
 
 Resumo dos objetos que mais mudam o entendimento do schema:
 
@@ -1034,11 +1035,11 @@ equipamento entra em manutencao agora e continua assim ate ser liberado; cada pa
   `resolution_notes`. Um indice unico parcial garante **no maximo um episodio aberto por equipamento**.
   Leitura para qualquer usuario ativo; escrita so pelas RPCs.
 - `start_equipment_maintenance(p_equipment_id, p_reason, p_notes, p_expected_return_on,
-  p_cancel_bookings)`: so coordenador. Cria o episodio, muda `equipment.status` para `maintenance` e,
+  p_cancel_bookings)`: coordenador ou responsavel pela manutencao (`private.can_maintain()`). Cria o episodio, muda `equipment.status` para `maintenance` e,
   com `p_cancel_bookings`, cancela as reservas `pending` e `approved` que ainda nao comecaram (as em
-  andamento ficam). Erros: `coordinator_required`, `reason_required`, `maintenance_already_open`,
+  andamento ficam). Erros: `maintainer_required`, `reason_required`, `maintenance_already_open`,
   `equipment_not_found`.
-- `end_equipment_maintenance(p_equipment_id, p_notes)`: so coordenador. Fecha o episodio e volta o
+- `end_equipment_maintenance(p_equipment_id, p_notes)`: coordenador ou responsavel pela manutencao. Fecha o episodio, resolve os chamados `in_progress` do equipamento e volta o
   equipamento para `active`. Um equipamento posto em `maintenance` a mao, sem episodio, tambem e
   liberado. Erro: `not_in_maintenance`.
 - Novas reservas continuam bloqueadas porque as funcoes de reserva so aceitam equipamento `active`.
@@ -1055,6 +1056,26 @@ Finalidade: qualquer pessoa do laboratorio envia uma sugestao ou um erro; a coor
   `coordinator_note` (nota interna), `created_by` (`ON DELETE SET NULL`), timestamps.
 - Acesso (RLS): usuario ativo insere em seu proprio nome, sempre como `new` e sem nota; cada pessoa le o
   que enviou; coordenador le e atualiza tudo (situacao e nota). Ninguem exclui.
+
+### 3.18 Chamados de manutencao
+
+Finalidade: qualquer pessoa avisa que um equipamento tem problema; os responsaveis pela manutencao
+assumem e resolvem.
+
+- `profiles.is_maintainer` (boolean, padrao `false`): marca quem faz manutencao. So o coordenador altera
+  (RLS de `profiles`). `private.can_maintain()` e verdadeira para perfil ativo que seja coordenador ou
+  responsavel pela manutencao.
+- `maintenance_requests`: `equipment_id` (`ON DELETE RESTRICT`), `requested_by` (`ON DELETE SET NULL`),
+  `description` (3 a 2000 caracteres), `urgency` (`maintenance_urgency`: `low`, `normal`, `urgent`),
+  `status` (`maintenance_request_status`: `open`, `in_progress`, `resolved`, `cancelled`), `assigned_to`,
+  `resolution_notes`, `resolved_at`, timestamps.
+- Acesso (RLS): usuario ativo le todos (evita chamado duplicado) e insere em seu nome, sempre `open` e sem
+  responsavel. Nao ha `update` direto: mudancas de situacao so pela RPC.
+- `set_maintenance_request_status(p_request_id, p_status, p_resolution_notes, p_assigned_to)`: coordenador
+  ou responsavel faz qualquer transicao (assumir atribui a quem chamou, ou a `p_assigned_to` se for
+  responsavel; devolver limpa o responsavel; resolver grava nota e `resolved_at`); quem abriu so cancela
+  enquanto `open`. `cancelled` e definitivo. Erros: `maintainer_required`, `request_not_found`,
+  `invalid_request_transition`, `invalid_assignee`.
 
 ## 4. Relacionamentos principais
 
@@ -1207,7 +1228,7 @@ Validacoes cobertas pelos testes de banco do MVP:
 - Idiomas nao sao habilidades tecnicas e nao entram em `skills`.
 - Nao havera upload `.gcode` ou `.3mf` no schema do MVP.
 - Nao havera historico detalhado de manutencao alem dos bloqueios.
-- A baseline inicial (`20260818`) e imutavel; mudancas de schema entram em migrations incrementais (hoje ate `20260906`).
+- A baseline inicial (`20260818`) e imutavel; mudancas de schema entram em migrations incrementais (hoje ate `20260907`).
 
 ## 10. Inventario de insumos
 

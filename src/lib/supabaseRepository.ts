@@ -1,5 +1,6 @@
 import { supabase } from "./supabaseClient";
 import type { FeedbackKind, FeedbackReport, FeedbackStatus } from "./feedback";
+import type { MaintenanceRequest, MaintenanceRequestStatus, MaintenanceUrgency } from "./maintenanceRequests";
 import type {
   CatalogMaterial,
   MaterialCategory,
@@ -83,6 +84,7 @@ export const publicProfileSelect = [
   "bio",
   "is_active",
   "requires_booking_approval",
+  "is_maintainer",
   "avatar_url",
   "created_at",
   "updated_at",
@@ -412,6 +414,18 @@ export async function updateRequiresBookingApproval(profileId: string, value: bo
   const { data, error } = await client()
     .from("profiles")
     .update({ requires_booking_approval: value })
+    .eq("id", profileId)
+    .select(publicProfileSelect)
+    .single();
+
+  throwIfError(error);
+  return mapPublicProfile(data as unknown as Omit<PublicProfile, "first_name" | "last_name">);
+}
+
+export async function updateIsMaintainer(profileId: string, value: boolean) {
+  const { data, error } = await client()
+    .from("profiles")
+    .update({ is_maintainer: value })
     .eq("id", profileId)
     .select(publicProfileSelect)
     .single();
@@ -765,7 +779,7 @@ export async function listBookings() {
       approved_by_profile:profiles!equipment_bookings_approved_by_fkey(full_name),
       rejected_by_profile:profiles!equipment_bookings_rejected_by_fkey(full_name),
       cancelled_by_profile:profiles!equipment_bookings_cancelled_by_fkey(full_name),
-      profile:profiles!equipment_bookings_profile_id_fkey(id, full_name, email, role, academic_affiliation, funding_grants:profile_funding_grants(agency, agency_other, grant_name, weekly_hours, monthly_value), weekly_workload_hours, lattes_url, nationality_country_code, phone, bio, is_active, requires_booking_approval, avatar_url, created_at, updated_at)
+      profile:profiles!equipment_bookings_profile_id_fkey(id, full_name, email, role, academic_affiliation, funding_grants:profile_funding_grants(agency, agency_other, grant_name, weekly_hours, monthly_value), weekly_workload_hours, lattes_url, nationality_country_code, phone, bio, is_active, requires_booking_approval, is_maintainer, avatar_url, created_at, updated_at)
     `)
     .order("starts_at");
   throwIfError(error);
@@ -1321,6 +1335,65 @@ export async function countNewFeedback() {
     .from("feedback_reports")
     .select("id", { count: "exact", head: true })
     .eq("status", "new");
+  throwIfError(error);
+  return count ?? 0;
+}
+
+// ---------------------------------------------------------------------------
+// Chamados de manutenção
+// ---------------------------------------------------------------------------
+
+type MaintenanceRequestRow = Omit<MaintenanceRequest, "equipment_name" | "requested_by_name" | "assigned_to_name"> & {
+  equipment: { name: string } | null;
+  requester: { full_name: string } | null;
+  assignee: { full_name: string } | null;
+};
+
+export async function listMaintenanceRequests() {
+  const { data, error } = await client()
+    .from("maintenance_requests")
+    .select(
+      "id, equipment_id, description, urgency, status, requested_by, assigned_to, resolution_notes, resolved_at, created_at, equipment:equipment!maintenance_requests_equipment_id_fkey(name), requester:profiles!maintenance_requests_requested_by_fkey(full_name), assignee:profiles!maintenance_requests_assigned_to_fkey(full_name)",
+    )
+    .order("created_at", { ascending: false });
+  throwIfError(error);
+  return ((data ?? []) as unknown as MaintenanceRequestRow[]).map(({ assignee, equipment, requester, ...row }) => ({
+    ...row,
+    equipment_name: equipment?.name ?? "Equipamento removido",
+    requested_by_name: requester?.full_name ?? null,
+    assigned_to_name: assignee?.full_name ?? null,
+  })) as MaintenanceRequest[];
+}
+
+export async function createMaintenanceRequest(params: { equipmentId: string; description: string; urgency: MaintenanceUrgency }) {
+  const { error } = await client().from("maintenance_requests").insert({
+    equipment_id: params.equipmentId,
+    description: params.description.trim(),
+    urgency: params.urgency,
+  });
+  throwIfError(error);
+}
+
+export async function setMaintenanceRequestStatus(params: {
+  requestId: string;
+  status: MaintenanceRequestStatus;
+  resolutionNotes?: string | null;
+  assignedTo?: string | null;
+}) {
+  const { error } = await client().rpc("set_maintenance_request_status", {
+    p_request_id: params.requestId,
+    p_status: params.status,
+    p_resolution_notes: params.resolutionNotes ?? undefined,
+    p_assigned_to: params.assignedTo ?? undefined,
+  });
+  throwIfError(error);
+}
+
+export async function countOpenMaintenanceRequests() {
+  const { count, error } = await client()
+    .from("maintenance_requests")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "open");
   throwIfError(error);
   return count ?? 0;
 }

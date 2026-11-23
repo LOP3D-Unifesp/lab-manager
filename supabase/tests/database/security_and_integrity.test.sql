@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(218);
+select plan(239);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -1189,7 +1189,7 @@ select throws_ok(
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
 select throws_ok(
   $$ select public.start_equipment_maintenance('20000000-0000-0000-0000-000000000003', 'Troca do bico') $$,
-  'P0001', 'coordinator_required',
+  'P0001', 'maintainer_required',
   'a researcher cannot put equipment in maintenance'
 );
 
@@ -1242,7 +1242,7 @@ select throws_ok(
 );
 select throws_ok(
   $$ select public.end_equipment_maintenance('20000000-0000-0000-0000-000000000003') $$,
-  'P0001', 'coordinator_required',
+  'P0001', 'maintainer_required',
   'a researcher cannot release the equipment'
 );
 
@@ -1361,6 +1361,117 @@ select throws_ok(
   $$ insert into public.feedback_reports (kind, message) values ('bug', 'pgtap de inativo') $$,
   '42501', null,
   'an inactive profile cannot send feedback'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
+
+-- Maintenance requests and maintainers.
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
+select lives_ok(
+  $$ update public.profiles set is_maintainer = true where id = '00000000-0000-0000-0000-000000000102' $$,
+  'a researcher update of the maintainer flag is silently ignored'
+);
+select is(
+  (select is_maintainer from public.profiles where id = '00000000-0000-0000-0000-000000000102'),
+  false,
+  'a researcher cannot make themselves a maintainer'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
+select lives_ok(
+  $$ update public.profiles set is_maintainer = true where id = '00000000-0000-0000-0000-000000000103' $$,
+  'a coordinator marks a maintainer'
+);
+select is(
+  (select is_maintainer from public.profiles where id = '00000000-0000-0000-0000-000000000103'),
+  true,
+  'the maintainer flag is kept'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
+select lives_ok(
+  $$ insert into public.maintenance_requests (equipment_id, description, urgency) values ('20000000-0000-0000-0000-000000000003', 'pgtap bico entupido', 'urgent') $$,
+  'any active user reports a problem with an equipment'
+);
+select throws_ok(
+  $$ insert into public.maintenance_requests (equipment_id, description, requested_by) values ('20000000-0000-0000-0000-000000000003', 'pgtap em nome de outro', '00000000-0000-0000-0000-000000000101') $$,
+  '42501', null,
+  'a request cannot be opened in someone else name'
+);
+select throws_ok(
+  $$ insert into public.maintenance_requests (equipment_id, description, status) values ('20000000-0000-0000-0000-000000000003', 'pgtap ja resolvido', 'resolved') $$,
+  '42501', null,
+  'a request always starts open'
+);
+select throws_ok(
+  $$ select public.set_maintenance_request_status((select id from public.maintenance_requests where description = 'pgtap bico entupido'), 'in_progress') $$,
+  'P0001', 'maintainer_required',
+  'a researcher cannot take a request'
+);
+select is(
+  (select count(*) from public.maintenance_requests where description like 'pgtap%'),
+  1::bigint,
+  'any active user reads the requests'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000103","email":"other@example.com","role":"authenticated"}', true);
+select lives_ok(
+  $$ select public.set_maintenance_request_status((select id from public.maintenance_requests where description = 'pgtap bico entupido'), 'in_progress') $$,
+  'a maintainer takes the request'
+);
+select is(
+  (select status::text || ':' || (assigned_to = '00000000-0000-0000-0000-000000000103')::text from public.maintenance_requests where description = 'pgtap bico entupido'),
+  'in_progress:true',
+  'the request is in progress and assigned to the maintainer'
+);
+select lives_ok(
+  $$ select public.start_equipment_maintenance('20000000-0000-0000-0000-000000000003', 'Limpeza do bico') $$,
+  'a maintainer puts the equipment in maintenance'
+);
+select is((select status::text from public.equipment where id = '20000000-0000-0000-0000-000000000003'), 'maintenance', 'the equipment is in maintenance');
+select lives_ok(
+  $$ select public.end_equipment_maintenance('20000000-0000-0000-0000-000000000003', 'Bico limpo') $$,
+  'a maintainer releases the equipment'
+);
+select is(
+  (select status::text from public.maintenance_requests where description = 'pgtap bico entupido'),
+  'resolved',
+  'releasing the equipment resolves the request being worked on'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
+select lives_ok(
+  $$ insert into public.maintenance_requests (equipment_id, description) values ('20000000-0000-0000-0000-000000000003', 'pgtap segundo problema') $$,
+  'a second request is opened'
+);
+select lives_ok(
+  $$ select public.set_maintenance_request_status((select id from public.maintenance_requests where description = 'pgtap segundo problema'), 'cancelled') $$,
+  'the person who opened a request cancels it while it is open'
+);
+select is(
+  (select status::text from public.maintenance_requests where description = 'pgtap segundo problema'),
+  'cancelled',
+  'the request is cancelled'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000103","email":"other@example.com","role":"authenticated"}', true);
+select throws_ok(
+  $$ select public.set_maintenance_request_status((select id from public.maintenance_requests where description = 'pgtap segundo problema'), 'open') $$,
+  'P0001', 'invalid_request_transition',
+  'a cancelled request cannot be reopened'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
+select lives_ok(
+  $$ insert into public.maintenance_requests (equipment_id, description) values ('20000000-0000-0000-0000-000000000003', 'pgtap terceiro problema') $$,
+  'a third request is opened'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000103","email":"other@example.com","role":"authenticated"}', true);
+select throws_ok(
+  $$ select public.set_maintenance_request_status((select id from public.maintenance_requests where description = 'pgtap terceiro problema'), 'in_progress', null, '00000000-0000-0000-0000-000000000102') $$,
+  'P0001', 'invalid_assignee',
+  'a request can only be assigned to a maintainer or coordinator'
 );
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);

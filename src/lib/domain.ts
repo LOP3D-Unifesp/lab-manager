@@ -195,6 +195,7 @@ export type PublicProfile = {
   bio: string | null;
   is_active: boolean;
   requires_booking_approval: boolean;
+  is_maintainer: boolean;
   avatar_url: string | null;
   created_at: string;
   updated_at: string;
@@ -475,6 +476,11 @@ export function splitName(fullName: string) {
     firstName,
     lastName: lastParts.join(" "),
   };
+}
+
+// Coordenador ou responsável pela manutenção: quem pode tratar chamados e pôr equipamento em manutenção.
+export function canMaintain(profile: { role: ProfileRole; is_maintainer?: boolean } | null | undefined) {
+  return profile?.role === "coordinator" || profile?.is_maintainer === true;
 }
 
 export function mapPublicProfile(

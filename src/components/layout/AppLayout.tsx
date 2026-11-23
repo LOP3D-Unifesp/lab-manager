@@ -9,6 +9,7 @@ import { NotificationBell } from "./NotificationBell";
 import { BookingsAlertProvider } from "../../lib/pendingBookingsAlert";
 import { useAuth } from "../../lib/auth";
 import { FeedbackProvider } from "../feedback/FeedbackProvider";
+import { AttentionProvider } from "./AttentionProvider";
 
 type AppLayoutProps = {
   children: ReactNode;
@@ -21,6 +22,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   return (
     <BookingsAlertProvider>
     <FeedbackProvider>
+    <AttentionProvider>
     <div className="min-h-screen bg-background text-text">
       <Sidebar />
 
@@ -54,6 +56,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         <MobileNavigation />
       </div>
     </div>
+    </AttentionProvider>
     </FeedbackProvider>
     </BookingsAlertProvider>
   );

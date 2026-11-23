@@ -1,4 +1,4 @@
-import { Bell, CalendarCheck, CheckCircle2, XCircle } from "lucide-react";
+import { Bell, CalendarCheck, CheckCircle2, MessageSquare, Wrench, XCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -11,6 +11,7 @@ import {
 import { useAuth } from "../../lib/auth";
 import { useBookingsAlert } from "../../lib/pendingBookingsAlert";
 import { StatusBadge, type StatusVariant } from "../ui/StatusBadge";
+import { useAttention } from "./AttentionProvider";
 
 const statusVariants: Record<BookingStatus, StatusVariant> = {
   pending: "warning",
@@ -36,7 +37,13 @@ export function NotificationBell({ align = "right" }: NotificationBellProps) {
   const { profile, labSettings } = useAuth();
   const timezone = labSettings?.timezone || getTimezonePadrao();
   const isCoordinator = profile?.role === "coordinator";
-  const { notifications, count, error, markSeen } = useBookingsAlert();
+  const { notifications, count: bookingCount, error, markSeen } = useBookingsAlert();
+  const attention = useAttention();
+  const count = bookingCount + attention.total;
+  const pendencias = [
+    { key: "chamados", total: attention.maintenanceRequests, to: "/equipamentos?vista=chamados", icon: Wrench, label: (n: number) => (n === 1 ? "1 chamado de manutenção aberto" : `${n} chamados de manutenção abertos`) },
+    { key: "feedback", total: attention.feedback, to: "/feedback", icon: MessageSquare, label: (n: number) => (n === 1 ? "1 feedback novo" : `${n} feedbacks novos`) },
+  ].filter((item) => item.total > 0);
 
   const title = isCoordinator
     ? "Reservas aguardando aprovação"
@@ -135,6 +142,23 @@ export function NotificationBell({ align = "right" }: NotificationBellProps) {
             align === "left" ? "left-0" : "right-0",
           ].join(" ")}
         >
+          {pendencias.length > 0 ? (
+            <div className="border-b border-border p-1.5">
+              <p className="px-3 pb-1 pt-1.5 text-xs font-bold uppercase tracking-wide text-muted">Pendências</p>
+              {pendencias.map((item) => (
+                <Link
+                  key={item.key}
+                  to={item.to}
+                  onClick={() => setIsOpen(false)}
+                  className="flex min-h-11 items-center gap-2 rounded-md px-3 text-sm font-semibold text-text transition hover:bg-primary-soft"
+                >
+                  <item.icon className="h-4 w-4 shrink-0 text-muted" aria-hidden="true" />
+                  {item.label(item.total)}
+                </Link>
+              ))}
+            </div>
+          ) : null}
+
           <div className="border-b border-border p-3">
             <p className="text-base font-bold leading-tight text-text">{title}</p>
           </div>

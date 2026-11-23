@@ -341,6 +341,38 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"maintenance_requests": {
+                  Row: {
+                    "assigned_to": string | null,"created_at": string,"description": string,"equipment_id": string,"id": string,"requested_by": string | null,"resolution_notes": string | null,"resolved_at": string | null,"status": Database["public"]['Enums']["maintenance_request_status"],"updated_at": string,"urgency": Database["public"]['Enums']["maintenance_urgency"]
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "assigned_to"?: string | null,"created_at"?: string,"description": string,"equipment_id": string,"id"?: string,"requested_by"?: string | null,"resolution_notes"?: string | null,"resolved_at"?: string | null,"status"?: Database["public"]['Enums']["maintenance_request_status"],"updated_at"?: string,"urgency"?: Database["public"]['Enums']["maintenance_urgency"]
+                  }
+                  Update: {
+                    "assigned_to"?: string | null,"created_at"?: string,"description"?: string,"equipment_id"?: string,"id"?: string,"requested_by"?: string | null,"resolution_notes"?: string | null,"resolved_at"?: string | null,"status"?: Database["public"]['Enums']["maintenance_request_status"],"updated_at"?: string,"urgency"?: Database["public"]['Enums']["maintenance_urgency"]
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "maintenance_requests_assigned_to_fkey"
+      columns: ["assigned_to"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "maintenance_requests_equipment_id_fkey"
+      columns: ["equipment_id"]
+isOneToOne: false
+      referencedRelation: "equipment"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "maintenance_requests_requested_by_fkey"
+      columns: ["requested_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"material_spools": {
                   Row: {
                     "color_hex": string | null,"color_name": string,"created_at": string,"created_by": string | null,"current_amount": number,"diameter_mm": number | null,"id": string,"initial_amount": number,"last_dried_on": string | null,"lot_number": string | null,"manufacturer": string | null,"material_id": string,"notes": string | null,"opened_on": string | null,"project_id": string | null,"status": Database["public"]['Enums']["spool_status"],"storage_location": string | null,"updated_at": string
@@ -455,14 +487,14 @@ isOneToOne: false
                   ]
                 },"profiles": {
                   Row: {
-                    "academic_affiliation": Database["public"]['Enums']["academic_affiliation"] | null,"avatar_url": string | null,"bio": string | null,"created_at": string,"email": string,"full_name": string,"id": string,"is_active": boolean,"lattes_url": string | null,"nationality_country_code": string | null,"phone": string | null,"requires_booking_approval": boolean,"role": Database["public"]['Enums']["user_role"],"updated_at": string,"weekly_workload_hours": number | null
+                    "academic_affiliation": Database["public"]['Enums']["academic_affiliation"] | null,"avatar_url": string | null,"bio": string | null,"created_at": string,"email": string,"full_name": string,"id": string,"is_active": boolean,"is_maintainer": boolean,"lattes_url": string | null,"nationality_country_code": string | null,"phone": string | null,"requires_booking_approval": boolean,"role": Database["public"]['Enums']["user_role"],"updated_at": string,"weekly_workload_hours": number | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "academic_affiliation"?: Database["public"]['Enums']["academic_affiliation"] | null,"avatar_url"?: string | null,"bio"?: string | null,"created_at"?: string,"email": string,"full_name": string,"id": string,"is_active"?: boolean,"lattes_url"?: string | null,"nationality_country_code"?: string | null,"phone"?: string | null,"requires_booking_approval"?: boolean,"role"?: Database["public"]['Enums']["user_role"],"updated_at"?: string,"weekly_workload_hours"?: number | null
+                    "academic_affiliation"?: Database["public"]['Enums']["academic_affiliation"] | null,"avatar_url"?: string | null,"bio"?: string | null,"created_at"?: string,"email": string,"full_name": string,"id": string,"is_active"?: boolean,"is_maintainer"?: boolean,"lattes_url"?: string | null,"nationality_country_code"?: string | null,"phone"?: string | null,"requires_booking_approval"?: boolean,"role"?: Database["public"]['Enums']["user_role"],"updated_at"?: string,"weekly_workload_hours"?: number | null
                   }
                   Update: {
-                    "academic_affiliation"?: Database["public"]['Enums']["academic_affiliation"] | null,"avatar_url"?: string | null,"bio"?: string | null,"created_at"?: string,"email"?: string,"full_name"?: string,"id"?: string,"is_active"?: boolean,"lattes_url"?: string | null,"nationality_country_code"?: string | null,"phone"?: string | null,"requires_booking_approval"?: boolean,"role"?: Database["public"]['Enums']["user_role"],"updated_at"?: string,"weekly_workload_hours"?: number | null
+                    "academic_affiliation"?: Database["public"]['Enums']["academic_affiliation"] | null,"avatar_url"?: string | null,"bio"?: string | null,"created_at"?: string,"email"?: string,"full_name"?: string,"id"?: string,"is_active"?: boolean,"is_maintainer"?: boolean,"lattes_url"?: string | null,"nationality_country_code"?: string | null,"phone"?: string | null,"requires_booking_approval"?: boolean,"role"?: Database["public"]['Enums']["user_role"],"updated_at"?: string,"weekly_workload_hours"?: number | null
                   }
                   Relationships: [
                     
@@ -761,6 +793,7 @@ isOneToOne: false
 "full_name": string,
 "id": string,
 "is_active": boolean,
+"is_maintainer": boolean,
 "lattes_url": string | null,
 "nationality_country_code": string | null,
 "phone": string | null,
@@ -971,6 +1004,26 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"set_maintenance_request_status":
+{ Args: { "p_assigned_to"?: string,"p_request_id": string,"p_resolution_notes"?: string,"p_status": Database["public"]['Enums']["maintenance_request_status"] }; Returns: {
+              "assigned_to": string | null,
+"created_at": string,
+"description": string,
+"equipment_id": string,
+"id": string,
+"requested_by": string | null,
+"resolution_notes": string | null,
+"resolved_at": string | null,
+"status": Database["public"]['Enums']["maintenance_request_status"],
+"updated_at": string,
+"urgency": Database["public"]['Enums']["maintenance_urgency"]
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "maintenance_requests"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
 "set_my_avatar_url":
 { Args: { "p_avatar_url": string }; Returns: {
               "academic_affiliation": Database["public"]['Enums']["academic_affiliation"] | null,
@@ -981,6 +1034,7 @@ isOneToOne: false
 "full_name": string,
 "id": string,
 "is_active": boolean,
+"is_maintainer": boolean,
 "lattes_url": string | null,
 "nationality_country_code": string | null,
 "phone": string | null,
@@ -1135,6 +1189,7 @@ isOneToOne: false
 "full_name": string,
 "id": string,
 "is_active": boolean,
+"is_maintainer": boolean,
 "lattes_url": string | null,
 "nationality_country_code": string | null,
 "phone": string | null,
@@ -1151,7 +1206,7 @@ isOneToOne: false
       } }
           }
           Enums: {
-            "academic_affiliation": "ic"|"extension"|"intern"|"tcc"|"masters"|"phd"|"postdoc"|"visitor"|"technician"|"faculty"|"other","booking_status": "pending"|"approved"|"in_progress"|"completed"|"cancelled"|"failed"|"rejected","equipment_status": "active"|"maintenance"|"unavailable"|"disabled","feedback_kind": "suggestion"|"bug"|"other","feedback_status": "new"|"seen"|"planned"|"done"|"dismissed","funding_agency": "cnpq"|"fapesp"|"capes"|"sus"|"fap"|"other","invitation_status": "pending"|"accepted"|"expired"|"revoked","material_category": "filament"|"resin"|"powder"|"other","project_funding_category": "capital"|"custeio"|"bolsas"|"reserva_tecnica"|"outros","project_status": "planning"|"active"|"paused"|"completed"|"archived","spool_status": "sealed"|"in_use"|"empty"|"discarded","task_status": "todo"|"in_progress"|"review"|"done","user_role": "coordinator"|"researcher"
+            "academic_affiliation": "ic"|"extension"|"intern"|"tcc"|"masters"|"phd"|"postdoc"|"visitor"|"technician"|"faculty"|"other","booking_status": "pending"|"approved"|"in_progress"|"completed"|"cancelled"|"failed"|"rejected","equipment_status": "active"|"maintenance"|"unavailable"|"disabled","feedback_kind": "suggestion"|"bug"|"other","feedback_status": "new"|"seen"|"planned"|"done"|"dismissed","funding_agency": "cnpq"|"fapesp"|"capes"|"sus"|"fap"|"other","invitation_status": "pending"|"accepted"|"expired"|"revoked","maintenance_request_status": "open"|"in_progress"|"resolved"|"cancelled","maintenance_urgency": "low"|"normal"|"urgent","material_category": "filament"|"resin"|"powder"|"other","project_funding_category": "capital"|"custeio"|"bolsas"|"reserva_tecnica"|"outros","project_status": "planning"|"active"|"paused"|"completed"|"archived","spool_status": "sealed"|"in_use"|"empty"|"discarded","task_status": "todo"|"in_progress"|"review"|"done","user_role": "coordinator"|"researcher"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -1271,7 +1326,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "academic_affiliation": ["ic", "extension", "intern", "tcc", "masters", "phd", "postdoc", "visitor", "technician", "faculty", "other"],"booking_status": ["pending", "approved", "in_progress", "completed", "cancelled", "failed", "rejected"],"equipment_status": ["active", "maintenance", "unavailable", "disabled"],"feedback_kind": ["suggestion", "bug", "other"],"feedback_status": ["new", "seen", "planned", "done", "dismissed"],"funding_agency": ["cnpq", "fapesp", "capes", "sus", "fap", "other"],"invitation_status": ["pending", "accepted", "expired", "revoked"],"material_category": ["filament", "resin", "powder", "other"],"project_funding_category": ["capital", "custeio", "bolsas", "reserva_tecnica", "outros"],"project_status": ["planning", "active", "paused", "completed", "archived"],"spool_status": ["sealed", "in_use", "empty", "discarded"],"task_status": ["todo", "in_progress", "review", "done"],"user_role": ["coordinator", "researcher"]
+            "academic_affiliation": ["ic", "extension", "intern", "tcc", "masters", "phd", "postdoc", "visitor", "technician", "faculty", "other"],"booking_status": ["pending", "approved", "in_progress", "completed", "cancelled", "failed", "rejected"],"equipment_status": ["active", "maintenance", "unavailable", "disabled"],"feedback_kind": ["suggestion", "bug", "other"],"feedback_status": ["new", "seen", "planned", "done", "dismissed"],"funding_agency": ["cnpq", "fapesp", "capes", "sus", "fap", "other"],"invitation_status": ["pending", "accepted", "expired", "revoked"],"maintenance_request_status": ["open", "in_progress", "resolved", "cancelled"],"maintenance_urgency": ["low", "normal", "urgent"],"material_category": ["filament", "resin", "powder", "other"],"project_funding_category": ["capital", "custeio", "bolsas", "reserva_tecnica", "outros"],"project_status": ["planning", "active", "paused", "completed", "archived"],"spool_status": ["sealed", "in_use", "empty", "discarded"],"task_status": ["todo", "in_progress", "review", "done"],"user_role": ["coordinator", "researcher"]
           }
         }
 } as const
