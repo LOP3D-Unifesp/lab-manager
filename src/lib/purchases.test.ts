@@ -22,6 +22,7 @@ function purchase(overrides: Partial<PurchaseRequest>): PurchaseRequest {
     url: null,
     quantity: 1,
     estimated_amount: 100,
+    funding_category: "custeio",
     notes: null,
     status: "requested",
     decided_by_name: null,
@@ -45,7 +46,7 @@ describe("lista de pedidos", () => {
     purchase({ id: "f", status: "cancelled", created_at: "2026-06-08T10:00:00Z" }),
   ];
   const ids = (items: PurchaseRequest[]) => items.map((item) => item.id);
-  const all = { status: "all" as const, projectId: "all", mine: false };
+  const all = { status: "all" as const, projectId: "all", category: "all" as const, mine: false };
 
   it("ordena quem espera decisão primeiro (mais antigo antes) e os encerrados por último", () => {
     expect(ids(sortPurchases(list))).toEqual(["c", "b", "d", "a", "e", "f"]);
@@ -56,6 +57,8 @@ describe("lista de pedidos", () => {
     expect(ids(filterPurchases(list, { ...all, projectId: "beta" }, "ana"))).toEqual(["c"]);
     expect(ids(filterPurchases(list, { ...all, mine: true, status: "open" }, "bia"))).toEqual(["c"]);
     expect(ids(filterPurchases(list, { ...all, status: "rejected" }, "ana"))).toEqual(["e"]);
+    expect(ids(filterPurchases(list, { ...all, category: "capital" }, "ana"))).toEqual([]);
+    expect(ids(filterPurchases(list, { ...all, category: "custeio", status: "open" }, "ana"))).toEqual(["b", "c", "d"]);
   });
 });
 
@@ -111,9 +114,11 @@ describe("valores e links", () => {
   });
 
   it("valida o formulário de pedido", () => {
-    const ok = { projectId: "alfa", item: "Bico 0.4", url: "https://loja.com", quantity: "2", amount: "129,90", notes: "" };
+    const ok = { projectId: "alfa", category: "custeio", item: "Bico 0.4", url: "https://loja.com", quantity: "2", amount: "129,90", notes: "" };
     expect(validatePurchaseForm(ok)).toBeNull();
     expect(validatePurchaseForm({ ...ok, projectId: "" })).toMatch(/projeto/i);
+    expect(validatePurchaseForm({ ...ok, category: "" })).toMatch(/rubrica/i);
+    expect(validatePurchaseForm({ ...ok, category: "bolsas" })).toMatch(/rubrica/i);
     expect(validatePurchaseForm({ ...ok, item: "a" })).toMatch(/item/i);
     expect(validatePurchaseForm({ ...ok, url: "ftp://x" })).toMatch(/link/i);
     expect(validatePurchaseForm({ ...ok, quantity: "0" })).toMatch(/quantidade/i);

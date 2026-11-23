@@ -1455,7 +1455,7 @@ export async function listPurchaseRequests() {
   const { data, error } = await client()
     .from("purchase_requests")
     .select(
-      "id, project_id, requested_by, item, url, quantity, estimated_amount, notes, status, decided_at, rejected_reason, actual_amount, purchased_at, delivered_at, created_at, project:projects!purchase_requests_project_id_fkey(name), requester:profiles!purchase_requests_requested_by_fkey(full_name), decider:profiles!purchase_requests_decided_by_fkey(full_name)",
+      "id, project_id, requested_by, item, url, quantity, estimated_amount, funding_category, notes, status, decided_at, rejected_reason, actual_amount, purchased_at, delivered_at, created_at, project:projects!purchase_requests_project_id_fkey(name), requester:profiles!purchase_requests_requested_by_fkey(full_name), decider:profiles!purchase_requests_decided_by_fkey(full_name)",
     )
     .order("created_at", { ascending: false });
   throwIfError(error);
@@ -1469,7 +1469,14 @@ export async function listPurchaseRequests() {
   })) as PurchaseRequest[];
 }
 
-export type PurchaseInput = { item: string; url: string | null; quantity: number; estimatedAmount: number; notes: string | null };
+export type PurchaseInput = {
+  item: string;
+  url: string | null;
+  quantity: number;
+  estimatedAmount: number;
+  notes: string | null;
+  fundingCategory: FundingCategory;
+};
 
 export async function createPurchaseRequest(input: PurchaseInput & { projectId: string }) {
   const { error } = await client().from("purchase_requests").insert({
@@ -1478,6 +1485,7 @@ export async function createPurchaseRequest(input: PurchaseInput & { projectId: 
     url: input.url?.trim() || null,
     quantity: input.quantity,
     estimated_amount: input.estimatedAmount,
+    funding_category: input.fundingCategory,
     notes: input.notes?.trim() || null,
   });
   throwIfError(error);
@@ -1491,6 +1499,7 @@ export async function updatePurchaseRequest(requestId: string, input: PurchaseIn
     p_quantity: input.quantity,
     p_estimated_amount: input.estimatedAmount,
     p_notes: input.notes ?? undefined,
+    p_funding_category: input.fundingCategory,
   });
   throwIfError(error);
 }

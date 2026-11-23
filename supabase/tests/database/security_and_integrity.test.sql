@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(281);
+select plan(286);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -1539,26 +1539,36 @@ select lives_ok(
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
 select lives_ok(
-  $$ insert into public.purchase_requests (project_id, item, url, quantity, estimated_amount) values ('00000000-0000-0000-0000-0000000000c2', 'pgtap bico', 'https://exemplo.com/bico', 2, 120.50) $$,
+  $$ insert into public.purchase_requests (funding_category, project_id, item, url, quantity, estimated_amount) values ('custeio', '00000000-0000-0000-0000-0000000000c2', 'pgtap bico', 'https://exemplo.com/bico', 2, 120.50) $$,
   'a project member requests a purchase'
 );
 select throws_ok(
-  $$ insert into public.purchase_requests (project_id, item, estimated_amount, requested_by) values ('00000000-0000-0000-0000-0000000000c2', 'pgtap em nome de outro', 10, '00000000-0000-0000-0000-000000000101') $$,
+  $$ insert into public.purchase_requests (funding_category, project_id, item, estimated_amount, requested_by) values ('custeio', '00000000-0000-0000-0000-0000000000c2', 'pgtap em nome de outro', 10, '00000000-0000-0000-0000-000000000101') $$,
   '42501', null,
   'a purchase cannot be requested in someone else name'
 );
 select throws_ok(
-  $$ insert into public.purchase_requests (project_id, item, estimated_amount, status) values ('00000000-0000-0000-0000-0000000000c2', 'pgtap ja aprovado', 10, 'approved') $$,
+  $$ insert into public.purchase_requests (funding_category, project_id, item, estimated_amount, status) values ('custeio', '00000000-0000-0000-0000-0000000000c2', 'pgtap ja aprovado', 10, 'approved') $$,
   '42501', null,
   'a purchase request always starts as requested'
 );
 select throws_ok(
-  $$ insert into public.purchase_requests (project_id, item, url, estimated_amount) values ('00000000-0000-0000-0000-0000000000c2', 'pgtap link ruim', 'javascript:alert(1)', 10) $$,
+  $$ insert into public.purchase_requests (funding_category, project_id, item, url, estimated_amount) values ('custeio', '00000000-0000-0000-0000-0000000000c2', 'pgtap link ruim', 'javascript:alert(1)', 10) $$,
   '23514', null,
   'only http and https links are accepted'
 );
 select throws_ok(
-  $$ insert into public.purchase_requests (project_id, item, estimated_amount) values ('00000000-0000-0000-0000-0000000000c2', 'pgtap valor negativo', -5) $$,
+  $$ insert into public.purchase_requests (project_id, item, estimated_amount) values ('00000000-0000-0000-0000-0000000000c2', 'pgtap sem rubrica', 10) $$,
+  '42501', null,
+  'a purchase request needs a funding category'
+);
+select throws_ok(
+  $$ insert into public.purchase_requests (funding_category, project_id, item, estimated_amount) values ('bolsas', '00000000-0000-0000-0000-0000000000c2', 'pgtap bolsa', 10) $$,
+  '23514', null,
+  'scholarships are not a purchase funding category'
+);
+select throws_ok(
+  $$ insert into public.purchase_requests (funding_category, project_id, item, estimated_amount) values ('custeio', '00000000-0000-0000-0000-0000000000c2', 'pgtap valor negativo', -5) $$,
   '23514', null,
   'the estimated amount cannot be negative'
 );
@@ -1566,7 +1576,7 @@ select is((select count(*) from public.purchase_requests where item like 'pgtap%
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000103","email":"other@example.com","role":"authenticated"}', true);
 select throws_ok(
-  $$ insert into public.purchase_requests (project_id, item, estimated_amount) values ('00000000-0000-0000-0000-0000000000c2', 'pgtap de fora', 10) $$,
+  $$ insert into public.purchase_requests (funding_category, project_id, item, estimated_amount) values ('custeio', '00000000-0000-0000-0000-0000000000c2', 'pgtap de fora', 10) $$,
   '42501', null,
   'someone outside the project cannot request a purchase for it'
 );
@@ -1579,9 +1589,10 @@ select throws_ok(
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
 select lives_ok(
-  $$ select public.update_purchase_request((select id from public.purchase_requests where item = 'pgtap bico'), 'pgtap bico', 'https://exemplo.com/bico', 3, 150, 'urgente') $$,
+  $$ select public.update_purchase_request((select id from public.purchase_requests where item = 'pgtap bico'), 'pgtap bico', 'https://exemplo.com/bico', 3, 150, 'urgente', 'capital') $$,
   'the author edits the request while it is waiting'
 );
+select is((select funding_category::text from public.purchase_requests where item = 'pgtap bico'), 'capital', 'the author changes the funding category');
 select throws_ok(
   $$ select public.set_purchase_status((select id from public.purchase_requests where item = 'pgtap bico'), 'approved') $$,
   'P0001', 'coordinator_required',
@@ -1617,19 +1628,28 @@ select throws_ok(
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
 select lives_ok(
-  $$ insert into public.purchase_requests (project_id, item, estimated_amount) values ('00000000-0000-0000-0000-0000000000c2', 'pgtap cancelar', 20) $$,
+  $$ insert into public.purchase_requests (funding_category, project_id, item, estimated_amount) values ('custeio', '00000000-0000-0000-0000-0000000000c2', 'pgtap cancelar', 20) $$,
   'a second request is opened'
 );
 select lives_ok($$ select public.set_purchase_status((select id from public.purchase_requests where item = 'pgtap cancelar'), 'cancelled') $$, 'the author cancels while it is waiting');
 select is((select status::text from public.purchase_requests where item = 'pgtap cancelar'), 'cancelled', 'the request is cancelled');
 select lives_ok(
-  $$ insert into public.purchase_requests (project_id, item, estimated_amount) values ('00000000-0000-0000-0000-0000000000c2', 'pgtap recusar', 30) $$,
+  $$ insert into public.purchase_requests (funding_category, project_id, item, estimated_amount) values ('custeio', '00000000-0000-0000-0000-0000000000c2', 'pgtap recusar', 30) $$,
   'a third request is opened'
 );
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
 select lives_ok($$ select public.set_purchase_status((select id from public.purchase_requests where item = 'pgtap recusar'), 'rejected', 'sem verba') $$, 'the coordinator rejects with a reason');
 select is((select rejected_reason from public.purchase_requests where item = 'pgtap recusar'), 'sem verba', 'the reason is kept');
+
+select lives_ok(
+  $$ insert into public.purchase_requests (funding_category, project_id, item, estimated_amount) values ('passagens', '00000000-0000-0000-0000-0000000000c2', 'pgtap passagem', 800) $$,
+  'tickets are a valid funding category for a purchase'
+);
+select lives_ok(
+  $$ insert into public.purchase_requests (funding_category, project_id, item, estimated_amount) values ('diarias', '00000000-0000-0000-0000-0000000000c2', 'pgtap diaria', 300) $$,
+  'per diems are a valid funding category for a purchase'
+);
 
 select * from finish();
 rollback;

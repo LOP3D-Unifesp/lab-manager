@@ -2,7 +2,8 @@ import { FormEvent, useState } from "react";
 
 import { createPurchaseRequest, updatePurchaseRequest } from "../../lib/supabaseRepository";
 import type { Project } from "../../lib/projects";
-import { getPurchaseErrorMessage, parseMoney, validatePurchaseForm, type PurchaseRequest } from "../../lib/purchases";
+import { getPurchaseErrorMessage, parseMoney, purchaseCategoryOptions, validatePurchaseForm, type PurchaseRequest } from "../../lib/purchases";
+import type { FundingCategory } from "../../lib/projects";
 import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
 
@@ -23,6 +24,7 @@ function formatAmountForInput(value: number) {
 
 export function PurchaseFormModal({ defaultProjectId, onClose, onDone, projects, purchase }: PurchaseFormModalProps) {
   const [projectId, setProjectId] = useState(purchase?.project_id ?? defaultProjectId);
+  const [category, setCategory] = useState<string>(purchase?.funding_category ?? "");
   const [item, setItem] = useState(purchase?.item ?? "");
   const [url, setUrl] = useState(purchase?.url ?? "");
   const [quantity, setQuantity] = useState(String(purchase?.quantity ?? 1));
@@ -33,7 +35,7 @@ export function PurchaseFormModal({ defaultProjectId, onClose, onDone, projects,
 
   async function salvar(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const invalid = validatePurchaseForm({ projectId, item, url, quantity, amount, notes });
+    const invalid = validatePurchaseForm({ projectId, category, item, url, quantity, amount, notes });
     if (invalid) {
       setErro(invalid);
       return;
@@ -44,6 +46,7 @@ export function PurchaseFormModal({ defaultProjectId, onClose, onDone, projects,
       quantity: Number(quantity),
       estimatedAmount: parseMoney(amount) as number,
       notes: notes.trim() || null,
+      fundingCategory: category as FundingCategory,
     };
     try {
       setSalvando(true);
@@ -85,6 +88,19 @@ export function PurchaseFormModal({ defaultProjectId, onClose, onDone, projects,
           {projects.length === 0 ? (
             <span className="text-sm font-normal text-danger">Você não participa de nenhum projeto em aberto.</span>
           ) : null}
+        </label>
+        <label className="grid gap-2 text-base font-semibold text-text">
+          Rubrica
+          <select className={inputClassName} value={category} onChange={(event) => setCategory(event.target.value)}>
+            <option value="" disabled>
+              Selecione
+            </option>
+            {purchaseCategoryOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label} — {option.hint}
+              </option>
+            ))}
+          </select>
         </label>
         <label className="grid gap-2 text-base font-semibold text-text">
           Item
