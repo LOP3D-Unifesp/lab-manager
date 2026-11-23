@@ -1,6 +1,7 @@
 import { Link, NavLink } from "react-router-dom";
 
 import { useAuth } from "../../lib/auth";
+import { useNewFeedbackCount } from "../../lib/useNewFeedbackCount";
 import { navigationItems, navigationSectionLabels, type NavigationItem } from "../../lib/navigation";
 import { AuthUserMenu } from "./AuthUserMenu";
 import { EnvironmentBadge } from "./EnvironmentBadge";
@@ -28,7 +29,7 @@ function getNavItemClass(isActive: boolean) {
   ].join(" ");
 }
 
-function SidebarNavItem({ item }: { item: NavigationItem }) {
+function SidebarNavItem({ badge, item }: { badge?: number; item: NavigationItem }) {
   return (
     <div>
       <NavLink
@@ -47,6 +48,14 @@ function SidebarNavItem({ item }: { item: NavigationItem }) {
             />
             <item.icon aria-hidden="true" className="h-5 w-5 shrink-0" />
             <span className="min-w-0 truncate">{item.desktopLabel}</span>
+            {badge ? (
+              <span
+                aria-label={`${badge} nova(s)`}
+                className="ml-auto inline-flex min-w-6 items-center justify-center rounded-full bg-warning px-2 py-0.5 text-xs font-bold text-text"
+              >
+                {badge}
+              </span>
+            ) : null}
           </>
         )}
       </NavLink>
@@ -57,6 +66,7 @@ function SidebarNavItem({ item }: { item: NavigationItem }) {
 export function Sidebar() {
   const { labSettings, profile } = useAuth();
   const visibleNavigationItems = getVisibleDesktopItems(profile?.role);
+  const newFeedback = useNewFeedbackCount(profile?.role === "coordinator");
 
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 border-r border-border bg-surface px-4 py-5 lg:block">
@@ -103,7 +113,7 @@ export function Sidebar() {
                     {sectionLabel}
                   </p>
                 ) : null}
-                <SidebarNavItem item={item} />
+                <SidebarNavItem item={item} badge={item.path === "/feedback" ? newFeedback : undefined} />
               </div>
             );
           })}

@@ -200,7 +200,7 @@ No desktop, usar sidebar fixa, agrupada por finalidade, com um título discreto 
 - **Trabalho:** Agenda do Laboratório, Reservas, Minhas reservas (pesquisador), Projetos
 - **Recursos:** Equipamentos, Inventário
 - **Pessoas:** Pesquisadores, Habilidades
-- **Gestão** (coordenador): Usuários, Histórico de reservas, Configurações
+- **Gestão** (coordenador): Usuários, Histórico de reservas, Feedback, Configurações
 
 O Meu perfil fica no menu da conta, no rodapé da barra. A ordem e os grupos vêm de `src/lib/navigation.ts` (`desktopSection`, `desktopOrder` e `navigationSectionLabels`); o grupo só aparece quando a pessoa vê pelo menos um item dele.
 

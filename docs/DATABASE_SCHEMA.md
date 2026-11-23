@@ -19,8 +19,8 @@ O schema cobre:
 
 O Supabase Auth sera a fonte de autenticacao. O PostgreSQL sera a fonte dos dados de dominio da aplicacao.
 
-> **Fonte da verdade:** as migrations em `supabase/migrations/` (19 arquivos, de `20260818` a
-> `20260905`). Este documento descreve o resultado delas. A secao 1.1 resume o que mudou depois da
+> **Fonte da verdade:** as migrations em `supabase/migrations/` (20 arquivos, de `20260818` a
+> `20260906`). Este documento descreve o resultado delas. A secao 1.1 resume o que mudou depois da
 > baseline; onde houver divergencia, vale a migration.
 
 Status do MVP implementado:
@@ -57,6 +57,7 @@ Status do MVP implementado:
 | `20260903_equipment` | Impressoras viram equipamentos: `printers` -> `equipment`, `printer_materials` -> `equipment_materials`, `printer_bookings` -> `equipment_bookings` (e `printer_id` -> `equipment_id`); nova `equipment_types`; material da reserva opcional; RPCs `create_booking`, `update_booking`, `cancel_booking`, `reject_booking`, `set_booking_status` e `replace_equipment_materials` (secao 3.14). |
 | `20260904_inventory` | `materials.category` e `materials.unit`; nova `material_spools` (rolos com cor, peso e dono); `equipment_bookings.spool_id` e `consumed_amount`; `create_booking` e `update_booking` ganham `p_spool_id`; RPC `record_booking_usage` (secao 3.15). |
 | `20260905_equipment_maintenance` | Manutencao como estado do equipamento, com historico: `equipment_maintenance` e as RPCs `start_equipment_maintenance` e `end_equipment_maintenance` (secao 3.16). |
+| `20260906_feedback_reports` | Caixa de sugestoes e erros: `feedback_reports` (secao 3.17). |
 
 Resumo dos objetos que mais mudam o entendimento do schema:
 
@@ -1044,6 +1045,17 @@ equipamento entra em manutencao agora e continua assim ate ser liberado; cada pa
 - A tabela `maintenance_blocks` (bloqueio com data, secao 3.12) continua existindo e sendo respeitada
   pelas reservas, mas o app deixou de cria-la.
 
+### 3.17 Feedback (sugestoes e erros)
+
+Finalidade: qualquer pessoa do laboratorio envia uma sugestao ou um erro; a coordenacao le e trata.
+
+- `feedback_reports`: `kind` (`feedback_kind`: `suggestion`, `bug`, `other`), `message` (3 a 4000
+  caracteres), `page_path` e `user_agent` (a pagina e o navegador de quem enviou, capturados pelo app, ate
+  500 caracteres), `status` (`feedback_status`: `new`, `seen`, `planned`, `done`, `dismissed`),
+  `coordinator_note` (nota interna), `created_by` (`ON DELETE SET NULL`), timestamps.
+- Acesso (RLS): usuario ativo insere em seu proprio nome, sempre como `new` e sem nota; cada pessoa le o
+  que enviou; coordenador le e atualiza tudo (situacao e nota). Ninguem exclui.
+
 ## 4. Relacionamentos principais
 
 - `profiles.id` e igual a `auth.users.id`.
@@ -1195,7 +1207,7 @@ Validacoes cobertas pelos testes de banco do MVP:
 - Idiomas nao sao habilidades tecnicas e nao entram em `skills`.
 - Nao havera upload `.gcode` ou `.3mf` no schema do MVP.
 - Nao havera historico detalhado de manutencao alem dos bloqueios.
-- A baseline inicial (`20260818`) e imutavel; mudancas de schema entram em migrations incrementais (hoje ate `20260905`).
+- A baseline inicial (`20260818`) e imutavel; mudancas de schema entram em migrations incrementais (hoje ate `20260906`).
 
 ## 10. Inventario de insumos
 

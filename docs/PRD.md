@@ -122,6 +122,15 @@ Funcionalidades:
 - ao concluir uma impressão com item de estoque, o app pergunta quanto foi usado e abate do item;
 - a aba **Insumos** do projeto mostra os itens do projeto e o total consumido por material.
 
+### 5.6 Caixa de sugestões e erros
+
+Funcionalidades:
+- botão **Feedback** em todas as telas (canto da tela no desktop; "Enviar feedback" no menu da conta no
+  celular), com tipo (erro, sugestão ou outro) e mensagem; a página em que a pessoa está é enviada junto;
+- página **Feedback** (coordenador, grupo Gestão) com busca e filtros por tipo e situação, mudança de
+  situação (nova, vista, planejada, resolvida, descartada) e nota interna;
+- contador de mensagens novas no item do menu do coordenador.
+
 ## 6. Status de reserva
 
 - Pendente

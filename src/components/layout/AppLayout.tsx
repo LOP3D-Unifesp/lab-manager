@@ -8,6 +8,7 @@ import { EnvironmentBadge } from "./EnvironmentBadge";
 import { NotificationBell } from "./NotificationBell";
 import { BookingsAlertProvider } from "../../lib/pendingBookingsAlert";
 import { useAuth } from "../../lib/auth";
+import { FeedbackProvider } from "../feedback/FeedbackProvider";
 
 type AppLayoutProps = {
   children: ReactNode;
@@ -19,6 +20,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   return (
     <BookingsAlertProvider>
+    <FeedbackProvider>
     <div className="min-h-screen bg-background text-text">
       <Sidebar />
 
@@ -52,6 +54,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         <MobileNavigation />
       </div>
     </div>
+    </FeedbackProvider>
     </BookingsAlertProvider>
   );
 }
