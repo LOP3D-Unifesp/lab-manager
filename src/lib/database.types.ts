@@ -1266,7 +1266,7 @@ isOneToOne: false
         isSetofReturn: false
       } },
 "update_purchase_request":
-{ Args: { "p_estimated_amount": number,"p_funding_category"?: Database["public"]['Enums']["project_funding_category"],"p_item": string,"p_notes"?: string,"p_quantity": number,"p_request_id": string,"p_urgency"?: Database["public"]['Enums']["purchase_urgency"],"p_url": string }; Returns: {
+{ Args: { "p_estimated_amount": number,"p_funding_category"?: Database["public"]['Enums']["project_funding_category"],"p_item": string,"p_notes"?: string,"p_project_id"?: string,"p_quantity": number,"p_request_id": string,"p_set_project"?: boolean,"p_urgency"?: Database["public"]['Enums']["purchase_urgency"],"p_url": string }; Returns: {
               "actual_amount": number | null,
 "created_at": string,
 "decided_at": string | null,

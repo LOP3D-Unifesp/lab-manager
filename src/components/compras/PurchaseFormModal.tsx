@@ -63,7 +63,13 @@ export function PurchaseFormModal({ defaultProjectId, onClose, onDone, projects,
     try {
       setSalvando(true);
       setErro("");
-      if (purchase) await updatePurchaseRequest(purchase.id, input);
+      if (purchase) {
+        const original = purchase.project_id ?? GENERAL_STOCK_VALUE;
+        await updatePurchaseRequest(purchase.id, {
+          ...input,
+          ...(projectId !== original ? { projectId: projectId === GENERAL_STOCK_VALUE ? null : projectId } : {}),
+        });
+      }
       else await createPurchaseRequest({ ...input, projectId: projectId === GENERAL_STOCK_VALUE ? null : projectId });
       await onDone();
     } catch (error) {
@@ -84,7 +90,6 @@ export function PurchaseFormModal({ defaultProjectId, onClose, onDone, projects,
           Para quem é a compra
           <select
             className={inputClassName}
-            disabled={Boolean(purchase)}
             value={projectId}
             onChange={(event) => setProjectId(event.target.value)}
           >
@@ -92,6 +97,9 @@ export function PurchaseFormModal({ defaultProjectId, onClose, onDone, projects,
               Selecione
             </option>
             <option value={GENERAL_STOCK_VALUE}>{GENERAL_STOCK_LABEL}</option>
+            {purchase?.project_id && !projects.some((project) => project.id === purchase.project_id) ? (
+              <option value={purchase.project_id}>{purchase.project_name}</option>
+            ) : null}
             {projects.map((project) => (
               <option key={project.id} value={project.id}>
                 {project.name}

@@ -261,6 +261,7 @@ export function getPurchaseErrorMessage(error: unknown) {
   if (text.includes("invalid_purchase_transition")) return "Esse pedido não pode mudar para essa situação.";
   if (text.includes("purchase_not_editable")) return "O pedido já foi decidido e não pode mais ser editado.";
   if (text.includes("purchase_not_found")) return "Pedido não encontrado.";
+  if (text.includes("project_not_available")) return "Você não pode usar esse projeto: ele precisa estar em aberto e você ser membro.";
   if (text.includes("purchase_forbidden")) return "Só quem pediu (ou o coordenador) pode editar este pedido.";
   if (text.includes("purchase_requests_url_check")) return "O link precisa começar com http:// ou https://.";
   if (text.includes("row-level security")) return "Você não pode pedir compras para esse projeto (ele precisa estar em aberto e você ser membro).";

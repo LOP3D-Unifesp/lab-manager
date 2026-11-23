@@ -1477,6 +1477,8 @@ export type PurchaseInput = {
   notes: string | null;
   fundingCategory: FundingCategory;
   urgency: PurchaseUrgency;
+  /** Só na edição: novo destino do pedido (projeto, ou nulo para o estoque geral); indefinido mantém o atual. */
+  projectId?: string | null;
 };
 
 export async function createPurchaseRequest(input: PurchaseInput & { projectId: string | null }) {
@@ -1503,6 +1505,8 @@ export async function updatePurchaseRequest(requestId: string, input: PurchaseIn
     p_notes: input.notes ?? undefined,
     p_funding_category: input.fundingCategory,
     p_urgency: input.urgency,
+    p_set_project: input.projectId !== undefined,
+    p_project_id: input.projectId ?? undefined,
   });
   throwIfError(error);
 }
