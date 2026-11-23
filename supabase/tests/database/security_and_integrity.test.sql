@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(316);
+select plan(322);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -1750,6 +1750,22 @@ select throws_ok(
   $$ insert into public.purchase_requests (funding_category, project_id, item, estimated_amount, maintenance_request_id) values ('custeio', null, 'pgtap chamado inexistente', 90, '00000000-0000-0000-0000-00000000ffff') $$,
   '23503', null,
   'a purchase request cannot point to a maintenance request that does not exist'
+);
+
+-- Maintenance expense flag.
+select is(
+  (select for_maintenance from public.purchase_requests where item = 'pgtap peca do chamado'),
+  true,
+  'a purchase made from a maintenance request is a maintenance expense'
+);
+select is((select for_maintenance from public.purchase_requests where item = 'pgtap bico'), false, 'a regular purchase is not a maintenance expense by default');
+select lives_ok($$ select public.update_purchase_request(p_request_id := (select id from public.purchase_requests where item = 'pgtap bico'), p_item := 'pgtap bico', p_url := null, p_quantity := 1, p_estimated_amount := 1, p_for_maintenance := true) $$, 'a purchase can be marked as a maintenance expense while it waits');
+select is((select for_maintenance from public.purchase_requests where item = 'pgtap bico'), true, 'the maintenance mark is kept');
+select lives_ok($$ select public.update_purchase_request(p_request_id := (select id from public.purchase_requests where item = 'pgtap peca do chamado'), p_item := 'pgtap peca do chamado', p_url := null, p_quantity := 1, p_estimated_amount := 1, p_for_maintenance := false) $$, 'unmarking a purchase linked to a maintenance request is accepted');
+select is(
+  (select for_maintenance from public.purchase_requests where item = 'pgtap peca do chamado'),
+  true,
+  'but a purchase linked to a maintenance request stays a maintenance expense'
 );
 
 select * from finish();

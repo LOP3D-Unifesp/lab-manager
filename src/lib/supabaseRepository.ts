@@ -1456,7 +1456,7 @@ export async function listPurchaseRequests() {
   const { data, error } = await client()
     .from("purchase_requests")
     .select(
-      "id, project_id, requested_by, item, url, quantity, estimated_amount, urgency, funding_category, maintenance_request_id, notes, status, decided_at, rejected_reason, actual_amount, purchased_at, delivered_at, created_at, project:projects!purchase_requests_project_id_fkey(name), requester:profiles!purchase_requests_requested_by_fkey(full_name), decider:profiles!purchase_requests_decided_by_fkey(full_name), maintenance:maintenance_requests!purchase_requests_maintenance_request_id_fkey(equipment:equipment!maintenance_requests_equipment_id_fkey(name))",
+      "id, project_id, requested_by, item, url, quantity, estimated_amount, urgency, funding_category, maintenance_request_id, for_maintenance, notes, status, decided_at, rejected_reason, actual_amount, purchased_at, delivered_at, created_at, project:projects!purchase_requests_project_id_fkey(name), requester:profiles!purchase_requests_requested_by_fkey(full_name), decider:profiles!purchase_requests_decided_by_fkey(full_name), maintenance:maintenance_requests!purchase_requests_maintenance_request_id_fkey(equipment:equipment!maintenance_requests_equipment_id_fkey(name))",
     )
     .order("created_at", { ascending: false });
   throwIfError(error);
@@ -1479,6 +1479,7 @@ export type PurchaseInput = {
   notes: string | null;
   fundingCategory: FundingCategory;
   urgency: PurchaseUrgency;
+  forMaintenance: boolean;
   /** Só na edição: novo destino do pedido (projeto, ou nulo para o estoque geral); indefinido mantém o atual. */
   projectId?: string | null;
 };
@@ -1492,6 +1493,7 @@ export async function createPurchaseRequest(input: PurchaseInput & { projectId: 
     estimated_amount: input.estimatedAmount,
     funding_category: input.fundingCategory,
     urgency: input.urgency,
+    for_maintenance: input.forMaintenance,
     maintenance_request_id: input.maintenanceRequestId ?? null,
     notes: input.notes?.trim() || null,
   });
@@ -1508,6 +1510,7 @@ export async function updatePurchaseRequest(requestId: string, input: PurchaseIn
     p_notes: input.notes ?? undefined,
     p_funding_category: input.fundingCategory,
     p_urgency: input.urgency,
+    p_for_maintenance: input.forMaintenance,
     p_set_project: input.projectId !== undefined,
     p_project_id: input.projectId ?? undefined,
   });

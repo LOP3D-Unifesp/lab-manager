@@ -72,6 +72,8 @@ export type PurchaseRequest = {
   /** Chamado de manutenção que originou o pedido (uma peça de que a máquina precisa), se houver. */
   maintenance_request_id: string | null;
   maintenance_equipment_name: string | null;
+  /** Gasto de manutenção (peças, reparos), independente da rubrica. */
+  for_maintenance: boolean;
   decided_at: string | null;
   rejected_reason: string | null;
   actual_amount: number | null;
@@ -104,6 +106,7 @@ export type PurchaseFilters = {
   status: "open" | "all" | PurchaseStatus;
   projectId: string; // "all", "general" (estoque geral) ou id do projeto
   category: "all" | FundingCategory;
+  kind: "all" | "maintenance" | "other";
   mine: boolean;
 };
 
@@ -115,6 +118,8 @@ export function filterPurchases(purchases: PurchaseRequest[], filters: PurchaseF
       if (purchase.project_id !== null) return false;
     } else if (filters.projectId !== "all" && purchase.project_id !== filters.projectId) return false;
     if (filters.category !== "all" && purchase.funding_category !== filters.category) return false;
+    if (filters.kind === "maintenance" && !purchase.for_maintenance) return false;
+    if (filters.kind === "other" && purchase.for_maintenance) return false;
     if (filters.mine && purchase.requested_by !== profileId) return false;
     return true;
   });
@@ -235,6 +240,39 @@ export function countUnseenPurchaseUpdates(updates: PurchaseUpdate[], seenAt: st
   if (!seenAt) return 0;
   const seen = new Date(seenAt).getTime();
   return updates.filter((update) => new Date(update.updated_at).getTime() > seen).length;
+}
+
+export type MaintenanceSpending = {
+  estimated: number;
+  paid: number;
+  count: number;
+  byEquipment: Array<{ name: string; estimated: number; paid: number; count: number }>;
+};
+
+// Quanto se gasta com manutenção: o previsto (pedidos ainda não comprados) e o pago (comprados e entregues),
+// no total e por equipamento (quando o pedido veio de um chamado). Recusados e cancelados ficam de fora.
+export function summarizeMaintenanceSpending(purchases: PurchaseRequest[]): MaintenanceSpending {
+  const total: MaintenanceSpending = { estimated: 0, paid: 0, count: 0, byEquipment: [] };
+  const groups = new Map<string, MaintenanceSpending["byEquipment"][number]>();
+  for (const purchase of purchases) {
+    if (!purchase.for_maintenance || purchase.status === "rejected" || purchase.status === "cancelled") continue;
+    const paid = purchase.status === "purchased" || purchase.status === "delivered";
+    const value = paid ? (purchase.actual_amount ?? purchase.estimated_amount) : purchase.estimated_amount;
+    const name = purchase.maintenance_equipment_name ?? "Sem equipamento definido";
+    const group = groups.get(name) ?? { name, estimated: 0, paid: 0, count: 0 };
+    if (paid) {
+      total.paid += value;
+      group.paid += value;
+    } else {
+      total.estimated += value;
+      group.estimated += value;
+    }
+    total.count += 1;
+    group.count += 1;
+    groups.set(name, group);
+  }
+  total.byEquipment = [...groups.values()].sort((a, b) => b.paid + b.estimated - (a.paid + a.estimated) || a.name.localeCompare(b.name, "pt-BR"));
+  return total;
 }
 
 export function isValidPurchaseUrl(value: string) {

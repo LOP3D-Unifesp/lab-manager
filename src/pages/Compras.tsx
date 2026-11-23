@@ -28,6 +28,7 @@ import {
   purchaseStatusOptions,
   sortPurchases,
   summarizeByProject,
+  summarizeMaintenanceSpending,
   type PurchaseFilters,
   type PurchaseRequest,
   type PurchaseStatus,
@@ -47,7 +48,7 @@ export function Compras() {
   const [purchases, setPurchases] = useState<PurchaseRequest[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [carregado, setCarregado] = useState(false);
-  const [filters, setFilters] = useState<PurchaseFilters>({ status: "open", projectId: "all", category: "all", mine: false });
+  const [filters, setFilters] = useState<PurchaseFilters>({ status: "open", projectId: "all", category: "all", kind: "all", mine: false });
   const [formulario, setFormulario] = useState<{ purchase: PurchaseRequest | null } | null>(null);
   const [passo, setPasso] = useState<{ mode: "reject" | "purchase"; purchase: PurchaseRequest } | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
@@ -78,6 +79,7 @@ export function Compras() {
   const projetosAbertos = useMemo(() => projects.filter((project) => isProjectOpen(project.status)), [projects]);
   const visiveis = useMemo(() => sortPurchases(filterPurchases(purchases, filters, profileId)), [purchases, filters, profileId]);
   const totais = useMemo(() => summarizeByProject(purchases), [purchases]);
+  const gastosManutencao = useMemo(() => summarizeMaintenanceSpending(purchases), [purchases]);
   const projetosComPedido = useMemo(() => {
     const ids = new Set(purchases.map((purchase) => purchase.project_id));
     return projects.filter((project) => ids.has(project.id));
@@ -128,6 +130,29 @@ export function Compras() {
         </Card>
       ) : null}
 
+      {gastosManutencao.count > 0 ? (
+        <Card className="mb-6">
+          <h3 className="text-xl font-bold text-text">Gastos de manutenção</h3>
+          <p className="mt-1 text-sm text-muted">Pedidos marcados como manutenção (peças e reparos), de qualquer rubrica. Recusados e cancelados ficam de fora.</p>
+          <p className="mt-3 text-base text-text">
+            Previsto <strong>{formatCurrencyBRL(gastosManutencao.estimated)}</strong> · Pago <strong>{formatCurrencyBRL(gastosManutencao.paid)}</strong> ·{" "}
+            {gastosManutencao.count} {gastosManutencao.count === 1 ? "pedido" : "pedidos"}
+          </p>
+          {gastosManutencao.byEquipment.length > 1 || gastosManutencao.byEquipment[0]?.name !== "Sem equipamento definido" ? (
+            <ul className="mt-3 grid gap-2">
+              {gastosManutencao.byEquipment.map((group) => (
+                <li key={group.name} className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1 rounded-lg border border-border bg-background px-3 py-2">
+                  <span className="min-w-0 break-words font-semibold text-text">{group.name}</span>
+                  <span className="text-sm text-muted">
+                    Previsto <strong className="text-text">{formatCurrencyBRL(group.estimated)}</strong> · Pago <strong className="text-text">{formatCurrencyBRL(group.paid)}</strong>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </Card>
+      ) : null}
+
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <select
           aria-label="Situação"
@@ -169,6 +194,16 @@ export function Compras() {
               {option.label}
             </option>
           ))}
+        </select>
+        <select
+          aria-label="Tipo de compra"
+          className={selectClassName}
+          value={filters.kind}
+          onChange={(event) => setFilters({ ...filters, kind: event.target.value as PurchaseFilters["kind"] })}
+        >
+          <option value="all">Todos os tipos</option>
+          <option value="maintenance">Manutenção</option>
+          <option value="other">Outras compras</option>
         </select>
         <label className="inline-flex min-h-11 items-center gap-2 text-base font-semibold text-text">
           <input
@@ -224,6 +259,9 @@ export function Compras() {
                     <span className="mr-2 rounded-full border border-border bg-background px-2 py-0.5 text-sm font-semibold text-muted">
                       {getPurchaseCategoryLabel(purchase.funding_category)}
                     </span>
+                    {purchase.for_maintenance ? (
+                      <span className="mr-2 rounded-full border border-warning-dark bg-warning-soft px-2 py-0.5 text-sm font-semibold text-text">Manutenção</span>
+                    ) : null}
                     Estimado <strong>{formatCurrencyBRL(purchase.estimated_amount)}</strong>
                     {getUnitAmount(purchase.estimated_amount, purchase.quantity) !== null ? (
                       <span className="text-muted"> ({purchase.quantity} × {formatCurrencyBRL(getUnitAmount(purchase.estimated_amount, purchase.quantity) as number)})</span>
