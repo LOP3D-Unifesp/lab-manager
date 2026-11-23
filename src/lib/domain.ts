@@ -753,7 +753,7 @@ export function getMensagemErroReserva(error: unknown) {
     ["maintenance_conflict", "O equipamento está em manutenção nesse intervalo."],
     ["incompatible_material", "O material selecionado não é compatível com o equipamento."],
     ["material_required", "Escolha o material da impressão."],
-    ["spool_not_available", "Esse rolo não está disponível para este projeto e material. Escolha outro ou deixe sem rolo."],
+    ["spool_not_available", "Esse item do estoque não está disponível para este projeto e material. Escolha outro ou deixe sem item."],
     ["equipment_unavailable", "O equipamento selecionado não está ativo."],
     ["equipment_not_found", "Equipamento não encontrado."],
     ["invalid_start_time", "Escolha um horário futuro para a reserva."],

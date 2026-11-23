@@ -50,7 +50,7 @@ export function SpoolCard({ onAdjust, onEdit, onMarkEmpty, spool }: SpoolCardPro
         </div>
         <div
           role="progressbar"
-          aria-label="Peso restante"
+          aria-label="Quantidade restante"
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={percent}
@@ -76,7 +76,7 @@ export function SpoolCard({ onAdjust, onEdit, onMarkEmpty, spool }: SpoolCardPro
                 onClick={() => onAdjust(spool)}
               >
                 <Scale className="h-4 w-4" aria-hidden="true" />
-                Ajustar peso
+                Ajustar quantidade
               </button>
             ) : null}
             {onMarkEmpty && !finished ? (
@@ -92,8 +92,8 @@ export function SpoolCard({ onAdjust, onEdit, onMarkEmpty, spool }: SpoolCardPro
           {onEdit ? (
             <button
               type="button"
-              title="Editar rolo"
-              aria-label={`Editar rolo ${spool.material_name} ${spool.color_name}`}
+              title="Editar item"
+              aria-label={`Editar item ${spool.material_name} ${spool.color_name}`}
               className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted transition hover:bg-primary-soft hover:text-primary"
               onClick={() => onEdit(spool)}
             >

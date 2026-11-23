@@ -106,7 +106,7 @@ describe("lista e escolha de rolos", () => {
 describe("mensagens de erro", () => {
   it("traduz erros conhecidos", () => {
     expect(getInventoryErrorMessage(new Error("spool_not_available"))).toContain("não está disponível");
-    expect(getInventoryErrorMessage(new Error('violates check constraint "material_spools_current_amount_check"'))).toContain("peso inicial");
+    expect(getInventoryErrorMessage(new Error('violates check constraint "material_spools_current_amount_check"'))).toContain("quantidade inicial");
     expect(getInventoryErrorMessage(new Error("algo diferente"))).toBe("algo diferente");
   });
 });

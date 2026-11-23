@@ -1224,13 +1224,13 @@ export function Reservas() {
 
                 {novaReserva.material_id && novaReserva.project_id ? (
                   <label className="grid gap-2 text-base font-semibold text-text">
-                    Rolo (opcional)
+                    Item do estoque (opcional)
                     <select
                       className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
                       value={novaReserva.spool_id}
                       onChange={(event) => setNovaReserva((reserva) => ({ ...reserva, spool_id: event.target.value }))}
                     >
-                      <option value="">Sem rolo definido</option>
+                      <option value="">Sem item definido</option>
                       {rolosDisponiveis.map((rolo) => (
                         <option key={rolo.id} value={rolo.id}>
                           {getSpoolLabel(rolo)}
@@ -1240,8 +1240,8 @@ export function Reservas() {
                     </select>
                     <span className="text-sm font-normal text-muted">
                       {rolosDisponiveis.length > 0
-                        ? "Só aparecem rolos deste material, do projeto escolhido ou do estoque geral."
-                        : "Nenhum rolo deste material disponível para o projeto; a reserva segue sem rolo."}
+                        ? "Só aparecem itens deste material, do projeto escolhido ou do estoque geral."
+                        : "Nenhum item deste material disponível para o projeto; a reserva segue sem item."}
                     </span>
                   </label>
                 ) : null}
@@ -1696,7 +1696,7 @@ export function Reservas() {
       {usoPendente ? (
         <Modal
           title={usoPendente.status === "completed" ? "Concluir impressão" : "Registrar falha"}
-          description={`${usoPendente.reserva.project_name}. Quanto foi usado do rolo? Isso é abatido do inventário.`}
+          description={`${usoPendente.reserva.project_name}. Quanto foi usado? Isso é abatido do estoque.`}
           onClose={() => setUsoPendente(null)}
         >
           <div className="grid gap-4">
@@ -1713,7 +1713,7 @@ export function Reservas() {
                 const rolo = spools.find((item) => item.id === usoPendente.reserva.spool_id);
                 return rolo ? (
                   <span className="text-sm font-normal text-muted">
-                    Rolo: {getSpoolLabel(rolo)}. Restam {formatAmount(rolo.current_amount, rolo.unit)}.
+                    Item: {getSpoolLabel(rolo)}. Restam {formatAmount(rolo.current_amount, rolo.unit)}.
                   </span>
                 ) : null;
               })()}
@@ -1726,7 +1726,7 @@ export function Reservas() {
                 Concluir sem informar
               </Button>
               <Button disabled={salvando} onClick={() => confirmarUso(true)}>
-                {salvando ? "Salvando..." : "Concluir e abater do rolo"}
+                {salvando ? "Salvando..." : "Concluir e abater do estoque"}
               </Button>
             </div>
           </div>
