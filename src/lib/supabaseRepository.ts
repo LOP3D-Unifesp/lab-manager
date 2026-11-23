@@ -617,7 +617,7 @@ export async function listBookings() {
   const { data, error } = await client()
     .from("printer_bookings")
     .select(`
-      id, printer_id, profile_id, material_id, project_name, starts_at, ends_at,
+      id, printer_id, profile_id, material_id, project_id, project_name, starts_at, ends_at,
       estimated_duration_minutes, status, notes, cancelled_at, cancelled_by,
       rejected_reason, rejected_at, rejected_by, approved_at, approved_by,
       printer:printers!printer_bookings_printer_id_fkey(id, name, model, location, status, notes, created_at, updated_at),
@@ -758,7 +758,7 @@ export async function listMaintenanceBlocks() {
 export async function createBooking(params: {
   printerId: string;
   materialId: string;
-  projectName: string;
+  projectId: string;
   startsAt: string;
   durationMinutes: number;
   notes?: string | null;
@@ -766,7 +766,7 @@ export async function createBooking(params: {
   const { data, error } = await client().rpc("create_printer_booking", {
     p_printer_id: params.printerId,
     p_material_id: params.materialId,
-    p_project_name: params.projectName,
+    p_project_id: params.projectId,
     p_starts_at: params.startsAt,
     p_estimated_duration_minutes: params.durationMinutes,
     p_notes: params.notes ?? undefined,
@@ -780,7 +780,7 @@ export async function updateBooking(
   params: {
     printerId: string;
     materialId: string;
-    projectName: string;
+    projectId: string;
     startsAt: string;
     durationMinutes: number;
     notes?: string | null;
@@ -790,7 +790,7 @@ export async function updateBooking(
     p_booking_id: bookingId,
     p_printer_id: params.printerId,
     p_material_id: params.materialId,
-    p_project_name: params.projectName,
+    p_project_id: params.projectId,
     p_starts_at: params.startsAt,
     p_estimated_duration_minutes: params.durationMinutes,
     p_notes: params.notes ?? undefined,

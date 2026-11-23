@@ -317,6 +317,7 @@ export type PrinterBooking = {
   printer_id: string;
   profile_id: string;
   material_id: string;
+  project_id: string | null;
   project_name: string;
   starts_at: string;
   ends_at: string;
@@ -744,7 +745,8 @@ export function getMensagemErroReserva(error: unknown) {
     ["active_profile_required", "É necessário um perfil ativo para realizar essa operação."],
     ["booking_forbidden", "Você não tem permissão para gerenciar essa reserva."],
     ["coordinator_required", "Apenas o coordenador pode realizar essa operação."],
-    ["project_name_required", "Informe o nome da impressão."],
+    ["project_required", "Escolha o projeto da impressão."],
+    ["project_not_available", "Esse projeto não está disponível para novas impressões. Escolha outro."],
     ["invalid_duration", "A duração deve ser entre 0,5h e 24h em passos de 0,5h."],
     ["invalid_interval", "Informe um intervalo válido (início antes do fim)."],
     ["reason_required", "Informe o motivo da manutenção."],

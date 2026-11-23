@@ -49,6 +49,7 @@ function booking(status: PrinterBooking["status"], overrides: Partial<PrinterBoo
     printer_id: "printer",
     profile_id: "profile",
     material_id: "material",
+    project_id: null,
     project_name: "Projeto",
     starts_at: "2030-01-01T10:00:00Z",
     ends_at: "2030-01-01T11:00:00Z",

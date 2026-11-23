@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(155);
+select plan(159);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -43,6 +43,32 @@ insert into public.profile_private_data (profile_id, cpf) values
   ('00000000-0000-0000-0000-000000000102', '22222222222'),
   ('00000000-0000-0000-0000-000000000103', '33333333333'),
   ('00000000-0000-0000-0000-000000000104', '44444444444');
+
+-- Booking fixtures: every booking belongs to a project. Each project is named after the booking that
+-- uses it, so project_name (a snapshot of the project name) still identifies the booking.
+insert into public.projects (id, name, created_by) select v.id::uuid, v.name, '00000000-0000-0000-0000-000000000101' from (values
+  ('00000000-0000-0000-0000-0000000000e1', 'First booking'),
+  ('00000000-0000-0000-0000-0000000000e2', 'Conflicting booking'),
+  ('00000000-0000-0000-0000-0000000000e3', 'Wrong material'),
+  ('00000000-0000-0000-0000-0000000000e4', 'Unavailable printer'),
+  ('00000000-0000-0000-0000-0000000000e5', 'Maintenance conflict'),
+  ('00000000-0000-0000-0000-0000000000e6', 'Other booking'),
+  ('00000000-0000-0000-0000-0000000000e7', 'First booking updated'),
+  ('00000000-0000-0000-0000-0000000000e8', 'Forbidden update'),
+  ('00000000-0000-0000-0000-0000000000e9', 'Late edit'),
+  ('00000000-0000-0000-0000-000000000100', 'Junior booking'),
+  ('00000000-0000-0000-0000-000000000101', 'Rejected booking'),
+  ('00000000-0000-0000-0000-000000000102', 'Slot freed booking'),
+  ('00000000-0000-0000-0000-000000000103', 'Coordinator booking'),
+  ('00000000-0000-0000-0000-0000000000ee', 'Projeto sem membros'),
+  ('00000000-0000-0000-0000-0000000000ef', 'Projeto concluido')
+) as v(id, name);
+update public.projects set status = 'completed' where id = '00000000-0000-0000-0000-0000000000ef';
+insert into public.project_members (project_id, profile_id)
+select p.id, m.profile_id
+from public.projects p
+cross join (values ('00000000-0000-0000-0000-000000000102'::uuid), ('00000000-0000-0000-0000-000000000103'::uuid)) as m(profile_id)
+where p.id <> '00000000-0000-0000-0000-0000000000ee';
 
 insert into public.invitations (email, role, invited_by, auth_user_id, expires_at, last_sent_at, created_at) values
   ('invited@example.com', 'coordinator', '00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000106', now() + interval '1 day', now(), now()),
@@ -376,7 +402,7 @@ select lives_ok(
   $$ select public.create_printer_booking(
     '20000000-0000-0000-0000-000000000001',
     '30000000-0000-0000-0000-000000000001',
-    'First booking', now() + interval '30 minutes', 60, null
+    '00000000-0000-0000-0000-0000000000e1', now() + interval '30 minutes', 60, null
   ) $$,
   'first booking succeeds'
 );
@@ -399,7 +425,7 @@ select throws_ok(
   $$ select public.create_printer_booking(
     '20000000-0000-0000-0000-000000000001',
     '30000000-0000-0000-0000-000000000001',
-    'Conflicting booking', now() + interval '45 minutes', 60, null
+    '00000000-0000-0000-0000-0000000000e2', now() + interval '45 minutes', 60, null
   ) $$,
   'P0001', 'booking_conflict',
   'overlapping booking is rejected'
@@ -413,7 +439,7 @@ select throws_ok(
   $$ select public.create_printer_booking(
     '20000000-0000-0000-0000-000000000001',
     '30000000-0000-0000-0000-000000000002',
-    'Wrong material', now() + interval '2 days', 60, null
+    '00000000-0000-0000-0000-0000000000e3', now() + interval '2 days', 60, null
   ) $$,
   'P0001', 'incompatible_material',
   'incompatible material is rejected'
@@ -422,10 +448,42 @@ select throws_ok(
   $$ select public.create_printer_booking(
     '20000000-0000-0000-0000-000000000002',
     '30000000-0000-0000-0000-000000000001',
-    'Unavailable printer', now() + interval '2 days', 60, null
+    '00000000-0000-0000-0000-0000000000e4', now() + interval '2 days', 60, null
   ) $$,
   'P0001', 'printer_unavailable',
   'unavailable printer is rejected'
+);
+select throws_ok(
+  $$ select public.create_printer_booking(
+    '20000000-0000-0000-0000-000000000001',
+    '30000000-0000-0000-0000-000000000001',
+    null::uuid, now() + interval '2 days', 60, null
+  ) $$,
+  'P0001', 'project_required',
+  'a booking requires a project'
+);
+select throws_ok(
+  $$ select public.create_printer_booking(
+    '20000000-0000-0000-0000-000000000001',
+    '30000000-0000-0000-0000-000000000001',
+    '00000000-0000-0000-0000-0000000000ee', now() + interval '2 days', 60, null
+  ) $$,
+  'P0001', 'project_not_available',
+  'a researcher cannot book on a project they are not a member of'
+);
+select throws_ok(
+  $$ select public.create_printer_booking(
+    '20000000-0000-0000-0000-000000000001',
+    '30000000-0000-0000-0000-000000000001',
+    '00000000-0000-0000-0000-0000000000ef', now() + interval '2 days', 60, null
+  ) $$,
+  'P0001', 'project_not_available',
+  'a completed project does not accept new bookings'
+);
+select is(
+  (select project_id from public.printer_bookings where project_name = 'First booking'),
+  '00000000-0000-0000-0000-0000000000e1'::uuid,
+  'a booking stores the project it belongs to'
 );
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
@@ -443,7 +501,7 @@ select throws_ok(
   $$ select public.create_printer_booking(
     '20000000-0000-0000-0000-000000000001',
     '30000000-0000-0000-0000-000000000001',
-    'Maintenance conflict', now() + interval '3 days 30 minutes', 60, null
+    '00000000-0000-0000-0000-0000000000e5', now() + interval '3 days 30 minutes', 60, null
   ) $$,
   'P0001', 'maintenance_conflict',
   'booking over maintenance is rejected'
@@ -454,7 +512,7 @@ select lives_ok(
   $$ select public.create_printer_booking(
     '20000000-0000-0000-0000-000000000001',
     '30000000-0000-0000-0000-000000000001',
-    'Other booking', now() + interval '4 days', 60, null
+    '00000000-0000-0000-0000-0000000000e6', now() + interval '4 days', 60, null
   ) $$,
   'another researcher creates their booking'
 );
@@ -473,7 +531,7 @@ select lives_ok(
     (select id from public.printer_bookings where project_name = 'First booking'),
     '20000000-0000-0000-0000-000000000001',
     '30000000-0000-0000-0000-000000000001',
-    'First booking updated', now() + interval '30 minutes', 90, 'Updated notes'
+    '00000000-0000-0000-0000-0000000000e7', now() + interval '30 minutes', 90, 'Updated notes'
   ) $$,
   'researcher edits their active booking through RPC'
 );
@@ -489,7 +547,7 @@ select throws_ok(
     (select id from public.printer_bookings where project_name = 'First booking updated'),
     '20000000-0000-0000-0000-000000000001',
     '30000000-0000-0000-0000-000000000001',
-    'Forbidden update', now() + interval '5 days', 60, null
+    '00000000-0000-0000-0000-0000000000e8', now() + interval '5 days', 60, null
   ) $$,
   'P0001', 'booking_forbidden',
   'researcher cannot edit another profile booking'
@@ -530,7 +588,7 @@ select throws_ok(
     (select id from public.printer_bookings where project_name = 'First booking updated'),
     '20000000-0000-0000-0000-000000000001',
     '30000000-0000-0000-0000-000000000001',
-    'Late edit', now() + interval '7 days', 60, null
+    '00000000-0000-0000-0000-0000000000e9', now() + interval '7 days', 60, null
   ) $$,
   'P0001', 'booking_not_editable',
   'in-progress booking data is immutable'
@@ -561,6 +619,9 @@ insert into auth.users (
   ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000110', 'authenticated', 'authenticated', 'junior@example.com', crypt('password', gen_salt('bf')), now(), '{}', '{}', now(), now(), '', '', '', '');
 insert into public.profiles (id, full_name, email, role, is_active, requires_booking_approval) values
   ('00000000-0000-0000-0000-000000000110', 'Junior Researcher', 'junior@example.com', 'researcher', true, true);
+insert into public.project_members (project_id, profile_id)
+select id, '00000000-0000-0000-0000-000000000110' from public.projects
+where name in ('Junior booking', 'Rejected booking', 'Slot freed booking');
 set local role authenticated;
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000110","email":"junior@example.com","role":"authenticated"}', true);
@@ -568,7 +629,7 @@ select lives_ok(
   $$ select public.create_printer_booking(
     '20000000-0000-0000-0000-000000000001',
     '30000000-0000-0000-0000-000000000001',
-    'Junior booking', now() + interval '10 days', 60, null
+    '00000000-0000-0000-0000-000000000100', now() + interval '10 days', 60, null
   ) $$,
   'researcher flagged for approval can still create a booking'
 );
@@ -616,7 +677,7 @@ select lives_ok(
   $$ select public.create_printer_booking(
     '20000000-0000-0000-0000-000000000001',
     '30000000-0000-0000-0000-000000000001',
-    'Rejected booking', now() + interval '12 days', 60, null
+    '00000000-0000-0000-0000-000000000101', now() + interval '12 days', 60, null
   ) $$,
   'researcher flagged for approval creates a second pending booking'
 );
@@ -655,7 +716,7 @@ select lives_ok(
   $$ select public.create_printer_booking(
     '20000000-0000-0000-0000-000000000001',
     '30000000-0000-0000-0000-000000000001',
-    'Slot freed booking', now() + interval '12 days', 60, null
+    '00000000-0000-0000-0000-000000000102', now() + interval '12 days', 60, null
   ) $$,
   'rejected booking no longer blocks its time slot'
 );
@@ -697,7 +758,7 @@ select lives_ok(
   $$ select public.create_printer_booking(
     '20000000-0000-0000-0000-000000000001',
     '30000000-0000-0000-0000-000000000001',
-    'Coordinator booking', now() + interval '11 days', 60, null
+    '00000000-0000-0000-0000-000000000103', now() + interval '11 days', 60, null
   ) $$,
   'coordinator creates a booking even when flagged for approval'
 );
@@ -801,6 +862,11 @@ select throws_ok(
 );
 
 -- Projects, members and funding.
+-- Drop the memberships created for the booking fixtures so the visibility counts below only see this project.
+reset role;
+delete from public.project_members;
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
 select lives_ok(
   $$ insert into public.projects (id, name) values ('00000000-0000-0000-0000-0000000000c1', 'Projeto Alfa') $$,
   'coordinator creates a project'
