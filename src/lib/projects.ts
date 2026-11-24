@@ -181,6 +181,25 @@ export function getTaskStatusLabel(status: TaskStatus) {
   return taskStatusOptions.find((option) => option.value === status)?.label ?? status;
 }
 
+export type TaskPriority = "low" | "normal" | "urgent";
+
+// Mesmos níveis e rótulos dos pedidos de compra (Baixa, Normal, Urgente).
+export const taskPriorityOptions: Array<{ value: TaskPriority; label: string }> = [
+  { value: "urgent", get label() { return t("opt.purchaseUrgencyOptions.urgent"); } },
+  { value: "normal", get label() { return t("opt.purchaseUrgencyOptions.normal"); } },
+  { value: "low", get label() { return t("opt.purchaseUrgencyOptions.low"); } },
+];
+
+export function getTaskPriorityLabel(priority: TaskPriority) {
+  return taskPriorityOptions.find((option) => option.value === priority)?.label ?? priority;
+}
+
+export function getTaskPriorityVariant(priority: TaskPriority): StatusVariant {
+  if (priority === "urgent") return "danger";
+  if (priority === "low") return "neutral";
+  return "info";
+}
+
 export type ProjectTask = {
   id: string;
   project_id: string;
@@ -188,6 +207,7 @@ export type ProjectTask = {
   title: string;
   description: string | null;
   status: TaskStatus;
+  priority: TaskPriority;
   position: number;
   due_on: string | null;
   created_by: string;
@@ -242,6 +262,7 @@ export function getProjectColor(projectId: string) {
 export type TaskFilters = {
   projectId: string; // "all" ou id do projeto
   assignee: string; // "all", "me" ou id da pessoa
+  priority: "all" | TaskPriority;
   overdueOnly: boolean;
 };
 
@@ -249,6 +270,7 @@ export type TaskFilters = {
 export function filterTasks(tasks: ProjectTask[], filters: TaskFilters, meId: string | null, today: string) {
   return tasks.filter((task) => {
     if (filters.projectId !== "all" && task.project_id !== filters.projectId) return false;
+    if (filters.priority !== "all" && task.priority !== filters.priority) return false;
     if (filters.assignee !== "all") {
       const wanted = filters.assignee === "me" ? meId : filters.assignee;
       if (!wanted || !task.assignees.some((assignee) => assignee.profile_id === wanted)) return false;

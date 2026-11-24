@@ -4,6 +4,7 @@ import { CalendarDays } from "lucide-react";
 
 import {
   getProjectColor,
+  getTaskPriorityLabel,
   getTaskStatusLabel,
   groupTasksByStatus,
   isTaskOverdue,
@@ -94,6 +95,18 @@ export function KanbanBoard({ onMove, onOpen, showProject = false, tasks }: Kanb
                 >
                   {task.title}
                 </button>
+                {task.priority !== "normal" ? (
+                  <span
+                    className={[
+                      "w-fit rounded-full border px-2 py-0.5 text-xs font-bold",
+                      task.priority === "urgent"
+                        ? "border-danger bg-danger-soft text-danger-dark"
+                        : "border-border bg-background text-muted",
+                    ].join(" ")}
+                  >
+                    {getTaskPriorityLabel(task.priority)}
+                  </span>
+                ) : null}
                 {showProject && task.project_name ? (
                   <span
                     className="w-fit max-w-full truncate rounded-full border px-2 py-0.5 text-xs font-semibold"

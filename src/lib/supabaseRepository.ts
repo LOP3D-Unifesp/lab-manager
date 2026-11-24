@@ -17,6 +17,7 @@ import type {
   ProjectFunding,
   ProjectStatus,
   ProjectTask,
+  TaskPriority,
   TaskStatus,
 } from "./projects";
 import {
@@ -1268,6 +1269,7 @@ const taskSelect = [
   "title",
   "description",
   "status",
+  "priority",
   "position",
   "due_on",
   "created_by",
@@ -1322,6 +1324,7 @@ export type TaskInput = {
   title: string;
   description: string | null;
   status: TaskStatus;
+  priority: TaskPriority;
   due_on: string | null;
 };
 

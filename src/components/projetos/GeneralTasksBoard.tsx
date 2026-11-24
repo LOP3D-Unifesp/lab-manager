@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 import {
   filterTasks,
   getTaskAssigneeOptions,
+  taskPriorityOptions,
   isProjectOpen,
   sortProjects,
   type Project,
@@ -38,7 +39,7 @@ type GeneralTasksBoardProps = {
 export function GeneralTasksBoard({ isCoordinator, profileId, projects }: GeneralTasksBoardProps) {
   const loader = useCallback(() => listVisibleTasks(), []);
   const { erro, mover, recarregar, tarefas } = useTaskBoard(loader);
-  const [filtros, setFiltros] = useState<TaskFilters>({ projectId: "all", assignee: "all", overdueOnly: false });
+  const [filtros, setFiltros] = useState<TaskFilters>({ projectId: "all", assignee: "all", priority: "all", overdueOnly: false });
   const [modal, setModal] = useState<{ task: ProjectTask | null } | null>(null);
 
   const projetosOrdenados = useMemo(() => sortProjects(projects), [projects]);
@@ -53,7 +54,7 @@ export function GeneralTasksBoard({ isCoordinator, profileId, projects }: Genera
   return (
     <div className="grid gap-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:flex-1">
+        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] lg:flex-1">
           <select
             aria-label={t("tasks.filterProject")}
             className={selectClassName}
@@ -82,6 +83,19 @@ export function GeneralTasksBoard({ isCoordinator, profileId, projects }: Genera
                   {pessoa.full_name}
                 </option>
               ))}
+          </select>
+          <select
+            aria-label={t("tasks.filterPriority")}
+            className={selectClassName}
+            value={filtros.priority}
+            onChange={(event) => setFiltros((current) => ({ ...current, priority: event.target.value as TaskFilters["priority"] }))}
+          >
+            <option value="all">{t("tasks.allPriorities")}</option>
+            {taskPriorityOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
           </select>
           <label
             className={[
@@ -133,7 +147,7 @@ export function GeneralTasksBoard({ isCoordinator, profileId, projects }: Genera
               <button
                 type="button"
                 className="font-semibold text-primary underline"
-                onClick={() => setFiltros({ projectId: "all", assignee: "all", overdueOnly: false })}
+                onClick={() => setFiltros({ projectId: "all", assignee: "all", priority: "all", overdueOnly: false })}
               >
                 {t("tasks.clearFilters")}
               </button>
