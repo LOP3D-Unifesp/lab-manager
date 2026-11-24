@@ -1,3 +1,4 @@
+import { useT } from "../i18n";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { FolderKanban, Plus } from "lucide-react";
@@ -30,6 +31,7 @@ const selectClassName =
   "min-h-11 rounded-lg border border-border bg-surface px-4 text-base outline-none transition focus:border-primary";
 
 export function Projetos() {
+  const t = useT();
   const { profile } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -60,27 +62,27 @@ export function Projetos() {
   return (
     <>
       <PageHeader
-        title="Projetos"
+        title={t("projects.title")}
         description={
           isCoordinator
-            ? "Cadastre projetos, inclua pesquisadores e registre o fomento."
-            : "Projetos do laboratório em que você participa."
+            ? t("projects.subtitleCoordinator")
+            : t("projects.subtitleResearcher")
         }
         action={
           isCoordinator && vista === "lista" ? (
             <Button onClick={() => setModalAberto(true)}>
               <Plus className="mr-2 h-5 w-5" aria-hidden="true" />
-              Novo projeto
+              {t("projects.new")}
             </Button>
           ) : undefined
         }
       />
 
-      <div role="tablist" aria-label="Vista" className="mb-5 inline-flex rounded-lg border border-border bg-surface p-1">
+      <div role="tablist" aria-label={t("projects.view")} className="mb-5 inline-flex rounded-lg border border-border bg-surface p-1">
         {(
           [
-            { id: "lista", label: "Projetos" },
-            { id: "quadro", label: "Quadro de tarefas" },
+            { id: "lista", label: t("projects.tabList") },
+            { id: "quadro", label: t("projects.tabBoard") },
           ] as const
         ).map((item) => (
           <button
@@ -103,7 +105,7 @@ export function Projetos() {
           erro ? (
             <p className="rounded-lg border border-danger bg-danger-soft p-3 text-base font-semibold text-danger">{erro}</p>
           ) : (
-            <p className="text-lg text-muted">Carregando projetos...</p>
+            <p className="text-lg text-muted">{t("projects.loading")}</p>
           )
         ) : (
           <GeneralTasksBoard isCoordinator={Boolean(isCoordinator)} profileId={profile?.id ?? ""} projects={projects} />
@@ -113,17 +115,17 @@ export function Projetos() {
           <div className="mb-5 grid gap-3 sm:grid-cols-[1fr_200px_200px]">
             <input
               className={selectClassName}
-              placeholder="Buscar por nome"
+              placeholder={t("projects.searchByName")}
               value={busca}
               onChange={(event) => setBusca(event.target.value)}
             />
             <select
-              aria-label="Situação"
+              aria-label={t("projects.filterStatus")}
               className={selectClassName}
               value={status}
               onChange={(event) => setStatus(event.target.value as ProjectStatus | "all")}
             >
-              <option value="all">Todas as situações</option>
+              <option value="all">{t("projects.allStatuses")}</option>
               {projectStatusOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
@@ -131,14 +133,14 @@ export function Projetos() {
               ))}
             </select>
             <select
-              aria-label="Fomento"
+              aria-label={t("projects.filterFunding")}
               className={selectClassName}
               value={funding}
               onChange={(event) => setFunding(event.target.value as ProjectFundingFilter)}
             >
-              <option value="all">Com e sem fomento</option>
-              <option value="funded">Com fomento</option>
-              <option value="unfunded">Sem fomento</option>
+              <option value="all">{t("projects.fundingAll")}</option>
+              <option value="funded">{t("projects.fundingYes")}</option>
+              <option value="unfunded">{t("projects.fundingNo")}</option>
             </select>
           </div>
 
@@ -146,17 +148,17 @@ export function Projetos() {
             <p className="mb-4 rounded-lg border border-danger bg-danger-soft p-3 text-base font-semibold text-danger">{erro}</p>
           ) : null}
 
-          {projects === null && !erro ? <p className="text-lg text-muted">Carregando projetos...</p> : null}
+          {projects === null && !erro ? <p className="text-lg text-muted">{t("projects.loading")}</p> : null}
 
           {projects !== null && visiveis.length === 0 ? (
             <Card>
               <div className="flex flex-col items-center gap-2 py-6 text-center">
                 <FolderKanban className="h-8 w-8 text-muted" aria-hidden="true" />
                 <p className="text-lg font-semibold">
-                  {projects.length === 0 ? "Nenhum projeto por aqui ainda." : "Nenhum projeto com esses filtros."}
+                  {projects.length === 0 ? t("projects.none") : t("projects.noneFiltered")}
                 </p>
                 {projects.length === 0 && !isCoordinator ? (
-                  <p className="text-muted">Peça a um coordenador para incluir você em um projeto.</p>
+                  <p className="text-muted">{t("projects.askCoordinator")}</p>
                 ) : null}
               </div>
             </Card>
@@ -181,7 +183,7 @@ export function Projetos() {
                         {agencias.length > 0 ? (
                           agencias.map((acronym) => <StatusBadge key={acronym} label={acronym} variant="info" />)
                         ) : (
-                          <StatusBadge label="Sem fomento" />
+                          <StatusBadge label={t("projects.fundingNo")} />
                         )}
                         {total > 0 ? <span className="text-sm font-semibold text-text">{formatCurrencyBRL(total)}</span> : null}
                       </div>
@@ -197,7 +199,7 @@ export function Projetos() {
                           ))}
                         </div>
                         <span className="text-sm text-muted">
-                          {project.members.length === 1 ? "1 pessoa" : `${project.members.length} pessoas`}
+                          {t("projects.peopleCount", { count: project.members.length })}
                         </span>
                       </div>
                     </div>

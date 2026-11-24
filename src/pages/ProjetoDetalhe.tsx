@@ -1,3 +1,4 @@
+import { useT } from "../i18n";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, Pencil, Plus } from "lucide-react";
@@ -47,14 +48,15 @@ import {
 type Aba = "geral" | "kanban" | "insumos" | "membros" | "fomento";
 
 const abas: Array<{ id: Aba; label: string }> = [
-  { id: "geral", label: "Visão geral" },
-  { id: "kanban", label: "Kanban" },
-  { id: "insumos", label: "Insumos" },
-  { id: "membros", label: "Membros" },
-  { id: "fomento", label: "Fomento" },
+  { id: "geral", label: "projects.tabOverview" },
+  { id: "kanban", label: "projects.tabKanban" },
+  { id: "insumos", label: "projects.tabSupplies" },
+  { id: "membros", label: "projects.tabMembers" },
+  { id: "fomento", label: "projects.tabFunding" },
 ];
 
 export function ProjetoDetalhe() {
+  const t = useT();
   const { id = "" } = useParams();
   const { profile } = useAuth();
   const isCoordinator = profile?.role === "coordinator";
@@ -152,7 +154,7 @@ export function ProjetoDetalhe() {
       setAviso("");
       await replaceProjectMembers(id, membrosForm);
       await carregar();
-      setAviso("Membros atualizados.");
+      setAviso(t("projects.membersUpdated"));
     } catch (error) {
       setErro(getProjectErrorMessage(error));
     } finally {
@@ -172,7 +174,7 @@ export function ProjetoDetalhe() {
       setAviso("");
       await replaceProjectFunding(id, input);
       await carregar();
-      setAviso("Fomento atualizado.");
+      setAviso(t("projects.fundingUpdated"));
     } catch (error) {
       setErro(getProjectErrorMessage(error));
     } finally {
@@ -181,16 +183,16 @@ export function ProjetoDetalhe() {
   }
 
   if (project === undefined) {
-    return <p className="text-lg text-muted">Carregando projeto...</p>;
+    return <p className="text-lg text-muted">{t("projects.loadingOne")}</p>;
   }
 
   if (project === null) {
     return (
       <Card>
-        <p className="text-lg font-semibold">Projeto não encontrado.</p>
-        <p className="mt-1 text-muted">Ele não existe ou você não participa dele.</p>
+        <p className="text-lg font-semibold">{t("projects.notFound")}</p>
+        <p className="mt-1 text-muted">{t("projects.notFoundHint")}</p>
         <Link className="mt-3 inline-block font-semibold text-primary underline" to="/projetos">
-          Voltar para projetos
+          {t("projects.backToProjects")}
         </Link>
       </Card>
     );
@@ -202,16 +204,16 @@ export function ProjetoDetalhe() {
     <>
       <Link className="mb-3 inline-flex items-center gap-2 font-semibold text-primary" to="/projetos">
         <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-        Projetos
+        {t("projects.title")}
       </Link>
       <PageHeader
         title={project.name}
-        description={project.description ?? "Sem descrição."}
+        description={project.description ?? t("projects.noDescription")}
         action={
           isCoordinator ? (
             <Button variant="secondary" onClick={() => setEditando(true)}>
               <Pencil className="mr-2 h-5 w-5" aria-hidden="true" />
-              Editar projeto
+              {t("projects.edit")}
             </Button>
           ) : undefined
         }
@@ -233,7 +235,7 @@ export function ProjetoDetalhe() {
               setAviso("");
             }}
           >
-            {item.label}
+            {t(item.label as Parameters<typeof t>[0])}
           </button>
         ))}
       </div>
@@ -249,24 +251,24 @@ export function ProjetoDetalhe() {
         <Card>
           <dl className="grid gap-4 sm:grid-cols-2">
             <div>
-              <dt className="text-sm font-semibold text-muted">Situação</dt>
+              <dt className="text-sm font-semibold text-muted">{t("projects.status")}</dt>
               <dd className="mt-1">
                 <StatusBadge label={getProjectStatusLabel(project.status)} variant={getProjectStatusVariant(project.status)} />
               </dd>
             </div>
             <div>
-              <dt className="text-sm font-semibold text-muted">Período</dt>
-              <dd className="mt-1 font-bold">{periodo ?? "Não informado"}</dd>
+              <dt className="text-sm font-semibold text-muted">{t("projects.period")}</dt>
+              <dd className="mt-1 font-bold">{periodo ?? t("common.notInformed")}</dd>
             </div>
             <div>
-              <dt className="text-sm font-semibold text-muted">Membros</dt>
+              <dt className="text-sm font-semibold text-muted">{t("projects.members")}</dt>
               <dd className="mt-1 font-bold">{project.members.length}</dd>
             </div>
             <div>
-              <dt className="text-sm font-semibold text-muted">Fomento</dt>
+              <dt className="text-sm font-semibold text-muted">{t("projects.funding")}</dt>
               <dd className="mt-1 font-bold">
                 {project.funding.length === 0
-                  ? "Sem fomento"
+                  ? t("projects.fundingNo")
                   : `${project.funding.map((entry) => entry.agency_acronym).join(", ")} — ${formatCurrencyBRL(getProjectFundingTotal(project))}`}
               </dd>
             </div>
@@ -279,7 +281,7 @@ export function ProjetoDetalhe() {
           <div className="flex justify-end">
             <Button onClick={() => setTarefaAberta({ task: null, status: "todo" })}>
               <Plus className="mr-2 h-5 w-5" aria-hidden="true" />
-              Nova tarefa
+              {t("projects.newTask")}
             </Button>
           </div>
           <KanbanBoard
@@ -294,7 +296,7 @@ export function ProjetoDetalhe() {
         <div className="grid gap-4">
           {consumo.length > 0 ? (
             <Card>
-              <h3 className="text-xl font-bold text-text">Consumido nas impressões</h3>
+              <h3 className="text-xl font-bold text-text">{t("projects.consumed")}</h3>
               <ul className="mt-3 grid gap-1 text-base">
                 {consumo.map((item) => (
                   <li key={`${item.name}-${item.unit}`} className="flex justify-between gap-3">
@@ -306,13 +308,12 @@ export function ProjetoDetalhe() {
             </Card>
           ) : null}
           {rolos === null ? (
-            <p className="text-lg text-muted">Carregando insumos...</p>
+            <p className="text-lg text-muted">{t("projects.loadingSupplies")}</p>
           ) : rolos.length === 0 ? (
             <Card>
-              <p className="text-lg font-semibold">Nenhum item de estoque deste projeto.</p>
+              <p className="text-lg font-semibold">{t("projects.noStock")}</p>
               <p className="mt-1 text-muted">
-                Itens do estoque geral também podem ser usados nas impressões do projeto. Os itens exclusivos
-                aparecem aqui quando o coordenador os cadastra em Inventário.
+                {t("projects.noStockHint")}
               </p>
             </Card>
           ) : (
@@ -332,12 +333,12 @@ export function ProjetoDetalhe() {
               <MembersEditor profiles={profiles} value={membrosForm} onChange={setMembrosForm} disabled={salvando} />
               <div className="flex justify-end">
                 <Button disabled={salvando} onClick={salvarMembros}>
-                  {salvando ? "Salvando..." : "Salvar membros"}
+                  {salvando ? t("common.saving") : t("projects.saveMembers")}
                 </Button>
               </div>
             </div>
           ) : project.members.length === 0 ? (
-            <p className="text-muted">Nenhum membro cadastrado.</p>
+            <p className="text-muted">{t("projects.noMembers")}</p>
           ) : (
             <ul className="grid gap-3 sm:grid-cols-2">
               {project.members.map((member) => (
@@ -366,12 +367,12 @@ export function ProjetoDetalhe() {
               />
               <div className="flex justify-end">
                 <Button disabled={salvando} onClick={salvarFomento}>
-                  {salvando ? "Salvando..." : "Salvar fomento"}
+                  {salvando ? t("common.saving") : t("projects.saveFunding")}
                 </Button>
               </div>
             </div>
           ) : project.funding.length === 0 ? (
-            <p className="text-muted">Projeto sem fomento.</p>
+            <p className="text-muted">{t("projects.noFunding")}</p>
           ) : (
             <div className="grid gap-4">
               {project.funding.map((entry, index) => (
@@ -384,9 +385,9 @@ export function ProjetoDetalhe() {
                     <p className="font-bold">{formatCurrencyBRL(getFundingTotal(entry))}</p>
                   </div>
                   <p className="mt-1 text-sm text-muted">
-                    {[entry.process_number ? `Processo ${entry.process_number}` : null, formatProjectPeriod(entry.starts_on, entry.ends_on)]
+                    {[entry.process_number ? t("projects.processNumber", { number: entry.process_number }) : null, formatProjectPeriod(entry.starts_on, entry.ends_on)]
                       .filter(Boolean)
-                      .join(" · ") || "Sem processo ou vigência informados"}
+                      .join(" · ") || t("projects.noProcess")}
                   </p>
                   {entry.items.length > 0 ? (
                     <ul className="mt-3 grid gap-1 text-base">

@@ -1,3 +1,4 @@
+import { t } from "../../i18n";
 import { FormEvent, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -82,11 +83,11 @@ export function TaskModal({
     event.preventDefault();
     const trimmed = title.trim();
     if (!projectId) {
-      setErro("Escolha o projeto da tarefa.");
+      setErro(t("taskModal.errProject"));
       return;
     }
     if (!trimmed) {
-      setErro("Informe o título da tarefa.");
+      setErro(t("taskModal.errTitle"));
       return;
     }
 
@@ -112,7 +113,7 @@ export function TaskModal({
   }
 
   async function excluir() {
-    if (!task || !window.confirm("Excluir esta tarefa? Essa ação não pode ser desfeita.")) return;
+    if (!task || !window.confirm(t("taskModal.deleteConfirm"))) return;
     try {
       setSalvando(true);
       await deleteProjectTask(task.id);
@@ -126,20 +127,20 @@ export function TaskModal({
   const semProjetos = !lockedProjectId && projects.length === 0;
 
   return (
-    <Modal title={task ? "Editar tarefa" : "Nova tarefa"} onClose={onClose}>
+    <Modal title={task ? t("taskModal.edit") : t("taskModal.new")} onClose={onClose}>
       <form className="grid gap-4" onSubmit={salvar}>
         {lockedProjectId ? (
           showProjectLink && task ? (
             <p className="text-base text-muted">
-              Projeto:{" "}
+              {t("taskModal.projectLabel")}{" "}
               <Link className="font-semibold text-primary underline" to={`/projetos/${lockedProjectId}`} onClick={onClose}>
-                {task.project_name ?? project?.name ?? "Abrir projeto"}
+                {task.project_name ?? project?.name ?? t("taskModal.openProject")}
               </Link>
             </p>
           ) : null
         ) : (
           <label className="grid gap-2 text-base font-semibold text-text">
-            Projeto
+            {t("taskModal.project")}
             <select
               className={inputClassName}
               required
@@ -148,7 +149,7 @@ export function TaskModal({
               onChange={(e) => escolherProjeto(e.target.value)}
             >
               <option value="" disabled>
-                {semProjetos ? "Você não participa de nenhum projeto em aberto" : "Selecione"}
+                {semProjetos ? t("taskModal.noOpenProject") : t("taskModal.select")}
               </option>
               {projects.map((item) => (
                 <option key={item.id} value={item.id}>
@@ -160,11 +161,11 @@ export function TaskModal({
         )}
 
         <label className="grid gap-2 text-base font-semibold text-text">
-          Título
+          {t("taskModal.title")}
           <input className={inputClassName} required value={title} onChange={(e) => setTitle(e.target.value)} />
         </label>
         <label className="grid gap-2 text-base font-semibold text-text">
-          Descrição
+          {t("taskModal.description")}
           <textarea
             className={`${inputClassName} min-h-24 py-3`}
             value={description}
@@ -173,7 +174,7 @@ export function TaskModal({
         </label>
         <div className="grid items-start gap-4 sm:grid-cols-2">
           <label className="grid gap-2 text-base font-semibold text-text">
-            Coluna
+            {t("taskModal.column")}
             <select className={inputClassName} value={status} onChange={(e) => setStatus(e.target.value as TaskStatus)}>
               {taskStatusOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -183,17 +184,17 @@ export function TaskModal({
             </select>
           </label>
           <label className="grid gap-2 text-base font-semibold text-text">
-            Prazo
+            {t("taskModal.due")}
             <input className={inputClassName} type="date" value={dueOn} onChange={(e) => setDueOn(e.target.value)} />
           </label>
         </div>
 
         <fieldset className="grid gap-2">
-          <legend className="mb-1 text-base font-semibold text-text">Responsáveis</legend>
+          <legend className="mb-1 text-base font-semibold text-text">{t("taskModal.assignees")}</legend>
           {!projectId ? (
-            <p className="text-base text-muted">Escolha o projeto para ver os membros.</p>
+            <p className="text-base text-muted">{t("taskModal.pickProject")}</p>
           ) : members.length === 0 ? (
-            <p className="text-base text-muted">Inclua membros no projeto para atribuir tarefas.</p>
+            <p className="text-base text-muted">{t("taskModal.addMembers")}</p>
           ) : (
             <div className="grid gap-2 sm:grid-cols-2">
               {members.map((member) => {
@@ -231,16 +232,16 @@ export function TaskModal({
           <div>
             {task && canDelete ? (
               <Button variant="danger" disabled={salvando} onClick={excluir}>
-                Excluir tarefa
+                {t("taskModal.delete")}
               </Button>
             ) : null}
           </div>
           <div className="flex flex-col-reverse gap-3 sm:flex-row">
             <Button variant="secondary" onClick={onClose}>
-              Cancelar
+              {t("common.cancel")}
             </Button>
             <Button type="submit" disabled={salvando || semProjetos}>
-              {salvando ? "Salvando..." : "Salvar tarefa"}
+              {salvando ? t("common.saving") : t("taskModal.save")}
             </Button>
           </div>
         </div>

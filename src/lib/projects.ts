@@ -109,7 +109,8 @@ export function parseAmountInput(value: string) {
 export function formatProjectDate(value: string | null) {
   if (!value) return null;
   const [year, month, day] = value.split("-");
-  return year && month && day ? `${day}/${month}/${year}` : value;
+  if (!(year && month && day)) return value;
+  return new Intl.DateTimeFormat(getLocale(), { timeZone: "UTC" }).format(new Date(`${year}-${month}-${day}T00:00:00Z`));
 }
 
 export function formatProjectPeriod(startsOn: string | null, endsOn: string | null) {
@@ -145,22 +146,22 @@ export function sortProjects(projects: Project[]) {
     archived: 4,
   };
   return [...projects].sort(
-    (a, b) => order[a.status] - order[b.status] || a.name.localeCompare(b.name, "pt-BR"),
+    (a, b) => order[a.status] - order[b.status] || a.name.localeCompare(b.name, getLocale()),
   );
 }
 
 export function getProjectErrorMessage(error: unknown) {
   const text = error instanceof Error ? error.message : String(error ?? "");
-  if (text.includes("projects_name_key")) return "Já existe um projeto com esse nome.";
-  if (text.includes("funding_agencies_acronym_key")) return "Já existe uma agência com essa sigla.";
-  if (text.includes("coordinator_required")) return "Apenas coordenadores podem fazer essa alteração.";
-  if (text.includes("project_not_found")) return "Projeto não encontrado.";
-  if (text.includes("invalid_project_members")) return "A lista de membros contém uma pessoa inativa ou inexistente.";
-  if (text.includes("invalid_funding")) return "Revise os dados de fomento (agência, datas e valores).";
+  if (text.includes("projects_name_key")) return t("projectError.projects_name_key");
+  if (text.includes("funding_agencies_acronym_key")) return t("projectError.funding_agencies_acronym_key");
+  if (text.includes("coordinator_required")) return t("projectError.coordinator_required");
+  if (text.includes("project_not_found")) return t("projectError.project_not_found");
+  if (text.includes("invalid_project_members")) return t("projectError.invalid_project_members");
+  if (text.includes("invalid_funding")) return t("projectError.invalid_funding");
   if (text.includes("projects_dates_check") || text.includes("project_funding_dates_check")) {
-    return "A data final não pode ser anterior à inicial.";
+    return t("projectError.dates");
   }
-  return text || "Não foi possível concluir a operação.";
+  return text || t("projectError.fallback");
 }
 
 // ---------------------------------------------------------------------------
@@ -197,7 +198,7 @@ export function groupTasksByStatus(tasks: ProjectTask[]) {
   const groups: Record<TaskStatus, ProjectTask[]> = { todo: [], in_progress: [], review: [], done: [] };
   for (const task of tasks) groups[task.status].push(task);
   for (const status of Object.keys(groups) as TaskStatus[]) {
-    groups[status].sort((a, b) => a.position - b.position || a.title.localeCompare(b.title, "pt-BR"));
+    groups[status].sort((a, b) => a.position - b.position || a.title.localeCompare(b.title, getLocale()));
   }
   return groups;
 }
@@ -214,11 +215,11 @@ export function isTaskOverdue(task: Pick<ProjectTask, "due_on" | "status">, toda
 
 export function getTaskErrorMessage(error: unknown) {
   const text = error instanceof Error ? error.message : String(error ?? "");
-  if (text.includes("assignee_must_be_project_member")) return "Só membros do projeto podem ser responsáveis pela tarefa.";
-  if (text.includes("project_access_required")) return "Você não participa deste projeto.";
-  if (text.includes("task_not_found")) return "Tarefa não encontrada.";
-  if (text.includes("project_tasks_title_check")) return "Informe o título da tarefa.";
-  if (text.includes("row-level security")) return "Você não tem permissão para fazer essa alteração.";
+  if (text.includes("assignee_must_be_project_member")) return t("taskError.assignee_must_be_project_member");
+  if (text.includes("project_access_required")) return t("taskError.project_access_required");
+  if (text.includes("task_not_found")) return t("taskError.task_not_found");
+  if (text.includes("project_tasks_title_check")) return t("taskError.title_check");
+  if (text.includes("row-level security")) return t("taskError.rls");
   return getProjectErrorMessage(error);
 }
 
@@ -262,5 +263,5 @@ export function getTaskAssigneeOptions(tasks: ProjectTask[]) {
   for (const task of tasks) for (const assignee of task.assignees) byId.set(assignee.profile_id, assignee.full_name);
   return [...byId.entries()]
     .map(([profile_id, full_name]) => ({ profile_id, full_name }))
-    .sort((a, b) => a.full_name.localeCompare(b.full_name, "pt-BR"));
+    .sort((a, b) => a.full_name.localeCompare(b.full_name, getLocale()));
 }

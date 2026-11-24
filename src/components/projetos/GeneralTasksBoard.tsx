@@ -1,3 +1,4 @@
+import { t } from "../../i18n";
 import { useCallback, useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 
@@ -54,12 +55,12 @@ export function GeneralTasksBoard({ isCoordinator, profileId, projects }: Genera
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:flex-1">
           <select
-            aria-label="Projeto"
+            aria-label={t("tasks.filterProject")}
             className={selectClassName}
             value={filtros.projectId}
             onChange={(event) => setFiltros((current) => ({ ...current, projectId: event.target.value }))}
           >
-            <option value="all">Todos os projetos</option>
+            <option value="all">{t("tasks.allProjects")}</option>
             {projetosOrdenados.map((projeto) => (
               <option key={projeto.id} value={projeto.id}>
                 {projeto.name}
@@ -67,13 +68,13 @@ export function GeneralTasksBoard({ isCoordinator, profileId, projects }: Genera
             ))}
           </select>
           <select
-            aria-label="Responsável"
+            aria-label={t("tasks.filterAssignee")}
             className={selectClassName}
             value={filtros.assignee}
             onChange={(event) => setFiltros((current) => ({ ...current, assignee: event.target.value }))}
           >
-            <option value="all">Todos os responsáveis</option>
-            <option value="me">Só minhas</option>
+            <option value="all">{t("tasks.allAssignees")}</option>
+            <option value="me">{t("tasks.onlyMine")}</option>
             {responsaveis
               .filter((pessoa) => pessoa.profile_id !== profileId)
               .map((pessoa) => (
@@ -94,13 +95,13 @@ export function GeneralTasksBoard({ isCoordinator, profileId, projects }: Genera
               type="checkbox"
               onChange={(event) => setFiltros((current) => ({ ...current, overdueOnly: event.target.checked }))}
             />
-            Só atrasadas
+            {t("tasks.onlyLate")}
           </label>
         </div>
         {projetosAbertos.length > 0 ? (
           <Button onClick={() => setModal({ task: null })}>
             <Plus className="mr-2 h-5 w-5" aria-hidden="true" />
-            Nova tarefa
+            {t("projects.newTask")}
           </Button>
         ) : null}
       </div>
@@ -109,15 +110,15 @@ export function GeneralTasksBoard({ isCoordinator, profileId, projects }: Genera
         <p className="rounded-lg border border-danger bg-danger-soft p-3 text-base font-semibold text-danger">{erro}</p>
       ) : null}
 
-      {tarefas === null && !erro ? <p className="text-lg text-muted">Carregando tarefas...</p> : null}
+      {tarefas === null && !erro ? <p className="text-lg text-muted">{t("tasks.loading")}</p> : null}
 
       {tarefas !== null && tarefas.length === 0 ? (
         <Card>
-          <p className="text-lg font-semibold">Nenhuma tarefa ainda.</p>
+          <p className="text-lg font-semibold">{t("tasks.none")}</p>
           <p className="mt-1 text-muted">
             {projetosAbertos.length > 0
-              ? "Crie a primeira com “Nova tarefa”."
-              : "As tarefas dos seus projetos aparecem aqui."}
+              ? t("tasks.noneCoordinator")
+              : t("tasks.noneResearcher")}
           </p>
         </Card>
       ) : null}
@@ -134,7 +135,7 @@ export function GeneralTasksBoard({ isCoordinator, profileId, projects }: Genera
                 className="font-semibold text-primary underline"
                 onClick={() => setFiltros({ projectId: "all", assignee: "all", overdueOnly: false })}
               >
-                Limpar filtros
+                {t("tasks.clearFilters")}
               </button>
             </div>
           ) : null}
