@@ -35,6 +35,8 @@ export const equipamentos = {
   "equipment.startMaintenance": { pt: "Colocar em manutenção", en: "Put under maintenance", es: "Poner en mantenimiento" },
   "equipment.none": { pt: "Nenhum equipamento cadastrado ainda.", en: "No equipment registered yet.", es: "Aún no hay equipos registrados." },
   "equipment.formHint": { pt: "Informe o tipo, o modelo e o local. Para impressoras, marque os materiais que ela aceita.", en: "Enter the type, model and location. For printers, tick the materials it accepts.", es: "Indica el tipo, el modelo y la ubicación. Para impresoras, marca los materiales que acepta." },
+  "translations.en": { pt: "Nome em inglês (opcional)", en: "Name in English (optional)", es: "Nombre en inglés (opcional)" },
+  "translations.es": { pt: "Nome em espanhol (opcional)", en: "Name in Spanish (optional)", es: "Nombre en español (opcional)" },
   "equipment.name": { pt: "Nome", en: "Name", es: "Nombre" },
   "equipment.type": { pt: "Tipo", en: "Type", es: "Tipo" },
   "equipment.newType": { pt: "+ Novo tipo", en: "+ New type", es: "+ Nuevo tipo" },

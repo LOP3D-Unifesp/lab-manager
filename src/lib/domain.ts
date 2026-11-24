@@ -272,6 +272,8 @@ export type InstallationState = {
 export type Skill = {
   id: string;
   name: string;
+  name_en?: string | null;
+  name_es?: string | null;
   description: string | null;
   is_active: boolean;
 };
@@ -302,6 +304,8 @@ export type Material = {
 export type EquipmentType = {
   id: string;
   name: string;
+  name_en?: string | null;
+  name_es?: string | null;
   uses_material: boolean;
   is_active: boolean;
 };

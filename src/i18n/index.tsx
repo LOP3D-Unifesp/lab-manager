@@ -106,6 +106,12 @@ export function useT() {
   return useI18n().t;
 }
 
+/** Nome de um item de catálogo (tipo de equipamento, habilidade) no idioma ativo; cai para o nome original. */
+export function localizedName(item: { name: string; name_en?: string | null; name_es?: string | null }, locale: Locale = activeLocale) {
+  const translated = locale === "en" ? item.name_en : locale === "es" ? item.name_es : null;
+  return translated?.trim() ? translated : item.name;
+}
+
 /** Formatadores que seguem o idioma ativo. */
 export function formatDateTime(value: Date | string | number, options: Intl.DateTimeFormatOptions, locale: Locale = activeLocale) {
   return new Intl.DateTimeFormat(locale, options).format(new Date(value));

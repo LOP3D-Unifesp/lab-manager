@@ -1,4 +1,4 @@
-import { useT } from "../../i18n";
+import { localizedName, useT } from "../../i18n";
 import { ShoppingCart } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
@@ -231,7 +231,7 @@ export function MaintenanceRequestsPanel({ canMaintainNow, equipment, onChanged,
             .filter((type) => equipment.some((item) => item.type_id === type.id))
             .map((type) => (
               <option key={type.id} value={type.id}>
-                {type.name}
+                {localizedName(type)}
               </option>
             ))}
         </select>

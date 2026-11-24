@@ -45,7 +45,7 @@ import {
   updateEquipment,
 } from "../lib/supabaseRepository";
 import { inputClassName } from "../components/ui/formStyles";
-import { getLocale, t as translate, useT } from "../i18n";
+import { getLocale, localizedName, t as translate, useT } from "../i18n";
 
 type EquipmentForm = {
   name: string;
@@ -98,7 +98,7 @@ export function Equipamentos() {
   const [modalAberto, setModalAberto] = useState(false);
   const [emEdicao, setEmEdicao] = useState<Equipment | null>(null);
   const [form, setForm] = useState<EquipmentForm | null>(null);
-  const [novoTipo, setNovoTipo] = useState<{ name: string; uses_material: boolean } | null>(null);
+  const [novoTipo, setNovoTipo] = useState<{ name: string; name_en: string; name_es: string; uses_material: boolean } | null>(null);
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
 
@@ -232,7 +232,7 @@ export function Equipamentos() {
     }
     try {
       setSalvando(true);
-      const type = await createEquipmentType({ name, uses_material: novoTipo.uses_material });
+      const type = await createEquipmentType({ name, name_en: novoTipo.name_en.trim() || null, name_es: novoTipo.name_es.trim() || null, uses_material: novoTipo.uses_material });
       setTypes((current) => [...current, type].sort((a, b) => a.name.localeCompare(b.name, getLocale())));
       atualizarForm({ type_id: type.id });
       setNovoTipo(null);
@@ -332,7 +332,7 @@ export function Equipamentos() {
       ) : equipmentList.length > 0 ? (
         <>
           <div role="tablist" aria-label={t("equipment.typeFilter")} className="mb-4 flex flex-wrap gap-2">
-            {[{ id: "all", name: t("equipment.all"), total: equipmentList.length }, ...types.filter((type) => contagemPorTipo[type.id]).map((type) => ({ id: type.id, name: type.name, total: contagemPorTipo[type.id] }))].map(
+            {[{ id: "all", name: t("equipment.all"), total: equipmentList.length }, ...types.filter((type) => contagemPorTipo[type.id]).map((type) => ({ id: type.id, name: localizedName(type), total: contagemPorTipo[type.id] }))].map(
               (item) => (
                 <button
                   key={item.id}
@@ -368,7 +368,7 @@ export function Equipamentos() {
                   </div>
                   {/* Tipo e modelo numa linha própria, com a largura toda do card (o selo não a divide). */}
                   <p className="mt-2 break-words text-lg text-muted">
-                    {[item.type?.name, item.model].filter(Boolean).join(" · ") || t("equipment.modelNotInformed")}
+                    {[item.type ? localizedName(item.type) : null, item.model].filter(Boolean).join(" · ") || t("equipment.modelNotInformed")}
                   </p>
                   {(() => {
                     const ativos = sortRequests(requests.filter((request) => request.equipment_id === item.id && isRequestActive(request.status)));
@@ -588,7 +588,7 @@ export function Equipamentos() {
                   <button
                     type="button"
                     className="text-sm font-semibold text-primary underline"
-                    onClick={() => setNovoTipo((current) => (current ? null : { name: "", uses_material: false }))}
+                    onClick={() => setNovoTipo((current) => (current ? null : { name: "", name_en: "", name_es: "", uses_material: false }))}
                   >
                     {t("equipment.newType")}
                   </button>
@@ -605,7 +605,7 @@ export function Equipamentos() {
                   </option>
                   {types.map((type) => (
                     <option key={type.id} value={type.id}>
-                      {type.name}
+                      {localizedName(type)}
                     </option>
                   ))}
                 </select>
@@ -613,13 +613,29 @@ export function Equipamentos() {
             </div>
 
             {novoTipo ? (
-              <div className="grid gap-3 rounded-lg border border-border bg-background p-4 sm:grid-cols-[1fr_auto_auto] sm:items-end">
+              <div className="grid gap-3 rounded-lg border border-border bg-background p-4 sm:grid-cols-2 sm:items-end">
                 <label className="grid gap-2 text-sm font-semibold text-text">
                   {t("equipment.typeName")}
                   <input
                     className={inputClassName}
                     value={novoTipo.name}
                     onChange={(event) => setNovoTipo({ ...novoTipo, name: event.target.value })}
+                  />
+                </label>
+                <label className="grid gap-2 text-sm font-semibold text-text">
+                  {t("translations.en")}
+                  <input
+                    className={inputClassName}
+                    value={novoTipo.name_en}
+                    onChange={(event) => setNovoTipo({ ...novoTipo, name_en: event.target.value })}
+                  />
+                </label>
+                <label className="grid gap-2 text-sm font-semibold text-text">
+                  {t("translations.es")}
+                  <input
+                    className={inputClassName}
+                    value={novoTipo.name_es}
+                    onChange={(event) => setNovoTipo({ ...novoTipo, name_es: event.target.value })}
                   />
                 </label>
                 <label className="flex min-h-11 items-center gap-2 text-sm font-semibold text-text">

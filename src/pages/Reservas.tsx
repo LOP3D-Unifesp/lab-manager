@@ -6,7 +6,7 @@ import { BookingLifecycleActions } from "../components/reservas/BookingLifecycle
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { Alert } from "../components/ui/Alert";
-import { getLocale, useT } from "../i18n";
+import { getLocale, localizedName, useT } from "../i18n";
 import { Field } from "../components/ui/Field";
 import { Input } from "../components/ui/Input";
 import { Modal } from "../components/ui/Modal";
@@ -1309,7 +1309,7 @@ export function Reservas() {
 
                           <div className="flex flex-wrap gap-2">
                             <StatusBadge label={t("bookings.available")} variant="success" />
-                            {equipment.type ? <StatusBadge label={equipment.type.name} variant="neutral" /> : null}
+                            {equipment.type ? <StatusBadge label={localizedName(equipment.type)} variant="neutral" /> : null}
                             {usaMaterialAqui ? (
                               <StatusBadge
                                 label={

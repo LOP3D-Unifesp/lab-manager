@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { navigationItems } from "../lib/navigation";
 import { dictionaries } from "./catalog";
 import { navLabelKey } from "./navLabels";
-import { translate } from "./index";
+import { localizedName, translate } from "./index";
 
 const placeholders = (text: string) => [...text.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
 
@@ -32,6 +32,13 @@ describe("catálogo de traduções", () => {
       expect(dictionaries["pt-BR"][navLabelKey(item, "desktop")], item.path).toBe(item.desktopLabel);
       expect(dictionaries["pt-BR"][navLabelKey(item, "mobile")], item.path).toBe(item.mobileLabel);
     }
+  });
+
+  it("usa o nome traduzido do catálogo e cai para o original", () => {
+    const type = { name: "Impressora 3D", name_en: "3D printer", name_es: " " };
+    expect(localizedName(type, "pt-BR")).toBe("Impressora 3D");
+    expect(localizedName(type, "en")).toBe("3D printer");
+    expect(localizedName(type, "es")).toBe("Impressora 3D");
   });
 
   it("interpola variáveis", () => {

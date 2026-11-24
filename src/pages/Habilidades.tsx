@@ -1,4 +1,4 @@
-import { getLocale, t } from "../i18n";
+import { getLocale, localizedName, t } from "../i18n";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Mail, Pencil, Phone, Plus, UserCheck, Users, X } from "lucide-react";
 
@@ -41,7 +41,7 @@ export function Habilidades() {
   const [detalheAberto, setDetalheAberto] = useState(false);
   const [gerenciamentoAberto, setGerenciamentoAberto] = useState(false);
   const [skillEmEdicao, setSkillEmEdicao] = useState<Skill | null>(null);
-  const [skillForm, setSkillForm] = useState({ name: "", description: "", isActive: true });
+  const [skillForm, setSkillForm] = useState({ name: "", name_en: "", name_es: "", description: "", isActive: true });
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState("");
   const [salvando, setSalvando] = useState(false);
@@ -75,7 +75,7 @@ export function Habilidades() {
 
   function abrirCadastro() {
     setSkillEmEdicao(null);
-    setSkillForm({ name: "", description: "", isActive: true });
+    setSkillForm({ name: "", name_en: "", name_es: "", description: "", isActive: true });
     setErro("");
     setGerenciamentoAberto(true);
   }
@@ -84,6 +84,8 @@ export function Habilidades() {
     setSkillEmEdicao(skill);
     setSkillForm({
       name: skill.name,
+      name_en: skill.name_en ?? "",
+      name_es: skill.name_es ?? "",
       description: skill.description ?? "",
       isActive: skill.is_active,
     });
@@ -111,12 +113,16 @@ export function Habilidades() {
       if (skillEmEdicao) {
         await updateSkill(skillEmEdicao.id, {
           name,
+          name_en: skillForm.name_en.trim() || null,
+          name_es: skillForm.name_es.trim() || null,
           description: skillForm.description.trim() || null,
           isActive: skillForm.isActive,
         });
       } else {
         await createSkill({
           name,
+          name_en: skillForm.name_en.trim() || null,
+          name_es: skillForm.name_es.trim() || null,
           description: skillForm.description.trim() || null,
         });
       }
@@ -224,7 +230,7 @@ export function Habilidades() {
                 onClick={() => abrirDetalhe(skill)}
               >
                 <div className="flex items-start justify-between gap-4">
-                  <h3 className="text-2xl font-bold text-text">{skill.name}</h3>
+                  <h3 className="text-2xl font-bold text-text">{localizedName(skill)}</h3>
                   <StatusBadge
                     label={skill.is_active ? t("skills.peopleCount", { count: quantidade }) : t("skills.inactive")}
                     variant={!skill.is_active ? "neutral" : quantidade > 0 ? "info" : "neutral"}
@@ -305,6 +311,22 @@ export function Habilidades() {
                 />
               </label>
               <label className="grid gap-2 font-semibold text-text">
+                {t("translations.en")}
+                <input
+                  className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal"
+                  value={skillForm.name_en}
+                  onChange={(event) => setSkillForm((current) => ({ ...current, name_en: event.target.value }))}
+                />
+              </label>
+              <label className="grid gap-2 font-semibold text-text">
+                {t("translations.es")}
+                <input
+                  className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal"
+                  value={skillForm.name_es}
+                  onChange={(event) => setSkillForm((current) => ({ ...current, name_es: event.target.value }))}
+                />
+              </label>
+              <label className="grid gap-2 font-semibold text-text">
                 {t("skills.description")}
                 <textarea
                   className="min-h-24 rounded-lg border border-border bg-background px-4 py-3 font-normal"
@@ -335,7 +357,7 @@ export function Habilidades() {
       ) : null}
 
       {detalheAberto && skillSelecionada ? (
-        <Modal sheet wide title={skillSelecionada.name} description={t("skills.detailHint")} onClose={() => setDetalheAberto(false)}>
+        <Modal sheet wide title={localizedName(skillSelecionada)} description={t("skills.detailHint")} onClose={() => setDetalheAberto(false)}>
 
             <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <StatusBadge
