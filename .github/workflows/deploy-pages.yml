@@ -30,8 +30,7 @@ jobs:
           VITE_APP_ENV: remote
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
-          # Chave pública (não é segredo); a privada fica só nos segredos do Supabase.
-          VITE_VAPID_PUBLIC_KEY: ${{ vars.VITE_VAPID_PUBLIC_KEY || 'BHY3NItofLUGxAGe3q1R-WnqM3PQhB_jR2OiMDyqZwRKRXifFOl3v4Ezns_QVcpyIw3li9rathMb6y-loYTtmV8' }}
+          VITE_VAPID_PUBLIC_KEY: ${{ vars.VITE_VAPID_PUBLIC_KEY }}
           VITE_BASE_PATH: /lab-manager/
       - run: cp dist/index.html dist/404.html
       - uses: actions/upload-pages-artifact@v3
