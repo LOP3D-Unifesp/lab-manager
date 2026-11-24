@@ -110,7 +110,7 @@ export function Dashboard() {
           setErro(
             error instanceof Error
               ? error.message
-              : "Nao foi possivel carregar o dashboard.",
+              : "Não foi possível carregar o dashboard.",
           );
         }
       });
@@ -245,7 +245,7 @@ export function Dashboard() {
                             ? getEquipmentStatusLabel(impressora.status)
                             : emAndamento
                               ? "Imprimindo"
-                              : "Disponivel"
+                              : "Disponível"
                         }
                         variant={
                           impressora.status !== "active"
@@ -263,7 +263,7 @@ export function Dashboard() {
                             key={reserva.id}
                             className="text-sm font-semibold text-muted"
                           >
-                            {formatarHorario(reserva.starts_at)} ate{" "}
+                            {formatarHorario(reserva.starts_at)} até{" "}
                             {formatarHorario(reserva.ends_at)} -{" "}
                             {reserva.project_name} ({reserva.material?.name ?? "material removido"})
                           </p>
@@ -287,7 +287,7 @@ export function Dashboard() {
             <div className="mt-3 rounded-lg border border-primary bg-primary-soft px-3 py-2">
               <p className="text-sm font-bold text-primary-dark">
                 {meusSlotsHoje.length > 0
-                  ? `Voce esta nesta lista: ${meusSlotsHoje
+                  ? `Você está nesta lista: ${meusSlotsHoje
                       .map(
                         (slot) =>
                           `${periodos.find((periodo) => periodo.id === slot.periodo)
@@ -299,7 +299,7 @@ export function Dashboard() {
                       )
                       .filter(Boolean)
                       .join(", ")}`
-                  : "Voce nao esta na lista de hoje."}
+                  : "Você não está na lista de hoje."}
               </p>
             </div>
           ) : null}
@@ -331,7 +331,7 @@ export function Dashboard() {
                       </p>
                       {meuSlot ? (
                         <span className="rounded-full border border-primary bg-primary-soft px-2 py-0.5 text-xs font-bold text-primary-dark">
-                          Voce
+                          Você
                         </span>
                       ) : null}
                     </div>

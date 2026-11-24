@@ -205,7 +205,7 @@ export function MeuPerfil() {
       })
       .catch(() => {
         if (ativo) {
-          setErrorMessage("Nao foi possivel carregar sua agenda.");
+          setErrorMessage("Não foi possível carregar sua agenda.");
         }
       });
 
@@ -287,7 +287,7 @@ export function MeuPerfil() {
       await uploadMyAvatar(file);
       await refreshProfile();
     } catch (error) {
-      setAvatarError(error instanceof Error ? error.message : "Nao foi possivel enviar a foto.");
+      setAvatarError(error instanceof Error ? error.message : "Não foi possível enviar a foto.");
     } finally {
       setAvatarUploading(false);
     }
@@ -411,7 +411,7 @@ export function MeuPerfil() {
       await refreshProfile();
       setSuccessMessage("Perfil atualizado.");
     } catch {
-      setErrorMessage("Nao foi possivel atualizar seu perfil agora.");
+      setErrorMessage("Não foi possível atualizar seu perfil agora.");
     } finally {
       setSubmitting(false);
     }
@@ -437,7 +437,7 @@ export function MeuPerfil() {
               </div>
               <div className="min-w-0">
                 <h2 className="text-2xl font-bold text-text">
-                  Dados do usuario
+                  Dados do usuário
                 </h2>
                 <p className="mt-1 text-base text-muted">
                   O email e o papel sao controlados pela administracao.
@@ -513,7 +513,7 @@ export function MeuPerfil() {
                   }
                   value={academicAffiliation}
                 >
-                  <option value="">Nao informado</option>
+                  <option value="">Não informado</option>
                   {academicAffiliationOptions.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
@@ -762,7 +762,7 @@ export function MeuPerfil() {
                   })()
                 ) : (
                   <p className="mt-1 text-base text-muted">
-                    {horasAgendadas > 0 ? `${horasAgendadas}h agendadas.` : "Nenhum horario cadastrado."}
+                    {horasAgendadas > 0 ? `${horasAgendadas}h agendadas.` : "Nenhum horário cadastrado."}
                   </p>
                 )}
                 {Object.keys(agenda).length > 0 ? (
@@ -975,7 +975,7 @@ export function MeuPerfil() {
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="inline-block h-3 w-3 rounded-sm bg-background border border-border" />
-                Nao disponivel
+                Não disponível
               </span>
           </div>
         </Card>

@@ -290,7 +290,7 @@ export function AgendaLaboratorio() {
         };
       });
     } catch (error) {
-      setErro(error instanceof Error ? error.message : "Nao foi possivel excluir.");
+      setErro(error instanceof Error ? error.message : "Não foi possível excluir.");
     } finally {
       setSalvando(false);
     }
@@ -360,7 +360,7 @@ export function AgendaLaboratorio() {
           </div>
           <div className="flex items-center gap-2">
             <Users aria-hidden="true" className="h-4 w-4 text-warning-dark" />
-            <span>Horarios cheios</span>
+            <span>Horários cheios</span>
             <strong className="ml-auto text-base text-text">
               {slotsCheios} de {totalSlots}
             </strong>
@@ -377,7 +377,7 @@ export function AgendaLaboratorio() {
             }}
           >
             <div className="border-r border-border px-4 py-3 text-sm font-bold uppercase text-muted">
-              Horario
+              Horário
             </div>
             {diasVisiveis.map((dia) => {
               const ehHoje = dia.weekday === hoje;
@@ -625,8 +625,8 @@ export function AgendaLaboratorio() {
                           {isCoordinator || entry.profileId === profile?.id ? (
                           <button
                             type="button"
-                            title="Excluir horario"
-                            aria-label={`Excluir horario de ${entry.pesquisador}`}
+                            title="Excluir horário"
+                            aria-label={`Excluir horário de ${entry.pesquisador}`}
                             className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition hover:bg-danger-soft hover:text-danger-dark disabled:opacity-50"
                             disabled={salvando}
                             onClick={() => excluirHorario(entry.id)}
@@ -667,8 +667,8 @@ export function AgendaLaboratorio() {
                             {isCoordinator || entry.profileId === profile?.id ? (
                             <button
                               type="button"
-                              title="Excluir horario"
-                              aria-label={`Excluir horario de ${entry.pesquisador}`}
+                              title="Excluir horário"
+                              aria-label={`Excluir horário de ${entry.pesquisador}`}
                               className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted transition hover:bg-danger-soft hover:text-danger-dark disabled:opacity-50"
                               disabled={salvando}
                               onClick={() => excluirHorario(entry.id)}
@@ -706,8 +706,8 @@ export function AgendaLaboratorio() {
                             {isCoordinator || entry.profileId === profile?.id ? (
                             <button
                               type="button"
-                              title="Excluir horario"
-                              aria-label={`Excluir horario de ${entry.pesquisador}`}
+                              title="Excluir horário"
+                              aria-label={`Excluir horário de ${entry.pesquisador}`}
                               className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted transition hover:bg-danger-soft hover:text-danger-dark disabled:opacity-50"
                               disabled={salvando}
                               onClick={() => excluirHorario(entry.id)}

@@ -50,7 +50,7 @@ import {
 
 function client() {
   if (!supabase) {
-    throw new Error("Supabase nao esta configurado.");
+    throw new Error("Supabase não está configurado.");
   }
 
   return supabase;
@@ -293,7 +293,7 @@ export async function uploadMyAvatar(file: File) {
 
   const userId = userData.user?.id;
   if (!userId) {
-    throw new Error("Usuario nao autenticado.");
+    throw new Error("Usuário não autenticado.");
   }
 
   const extension = file.name.split(".").pop()?.toLowerCase() || "png";
@@ -1371,7 +1371,7 @@ export async function uploadMaintenancePhotos(blobs: Blob[]) {
   const { data: userData, error: userError } = await client().auth.getUser();
   throwIfError(userError);
   const userId = userData.user?.id;
-  if (!userId) throw new Error("Usuario nao autenticado.");
+  if (!userId) throw new Error("Usuário não autenticado.");
 
   const paths: string[] = [];
   for (const blob of blobs) {

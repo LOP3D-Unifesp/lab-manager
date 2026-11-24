@@ -100,7 +100,7 @@ export function ProfileRequired() {
     }
 
     if (password !== passwordConfirmation) {
-      setAccountError("As senhas nao coincidem.");
+      setAccountError("As senhas não coincidem.");
       return;
     }
 
@@ -110,7 +110,7 @@ export function ProfileRequired() {
       await setMyPassword(password);
       setStep("profile");
     } catch (error) {
-      setAccountError(extractErrorMessage(error, "Nao foi possivel definir a senha."));
+      setAccountError(extractErrorMessage(error, "Não foi possível definir a senha."));
     } finally {
       setAccountSubmitting(false);
     }
@@ -122,7 +122,7 @@ export function ProfileRequired() {
     setSubmitting(true);
 
     if (!user?.email || !user.id) {
-      setErrorMessage("Nao foi possivel ler o usuario autenticado.");
+      setErrorMessage("Não foi possível ler o usuário autenticado.");
       setSubmitting(false);
       return;
     }
@@ -172,7 +172,7 @@ export function ProfileRequired() {
       await refreshInstallation();
       navigate("/", { replace: true });
     } catch (error) {
-      setErrorMessage(extractErrorMessage(error, "Nao foi possivel criar o perfil."));
+      setErrorMessage(extractErrorMessage(error, "Não foi possível criar o perfil."));
     } finally {
       setSubmitting(false);
     }

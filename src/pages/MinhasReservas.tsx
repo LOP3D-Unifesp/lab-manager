@@ -177,7 +177,7 @@ export function MinhasReservas() {
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] table-collapse">
+            <table className="w-full min-w-[720px] border-collapse">
               <thead className="bg-background text-left">
                 <tr className="border-b border-border">
                   <th className="px-4 py-3 text-sm font-semibold text-muted">Data</th>

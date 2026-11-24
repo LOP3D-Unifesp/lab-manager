@@ -170,7 +170,7 @@ export function Habilidades() {
       const profileSkillsData = await listProfileSkills();
       setProfileSkills(profileSkillsData);
     } catch (error) {
-      setErro(error instanceof Error ? error.message : "Nao foi possivel salvar.");
+      setErro(error instanceof Error ? error.message : "Não foi possível salvar.");
     }
   }
 
@@ -237,7 +237,7 @@ export function Habilidades() {
                   <div className="flex items-center gap-2 text-sm font-semibold text-muted">
                     <Users className="h-4 w-4" aria-hidden="true" />
                     <span>
-                      {registrada ? "Voce participa" : "Nao registrado"}
+                      {registrada ? "Você participa" : "Não registrado"}
                     </span>
                   </div>
                   <div className="flex gap-2">
@@ -412,7 +412,7 @@ export function Habilidades() {
                         {profile.full_name}
                       </p>
                       <p className="mt-1 text-sm font-semibold text-muted">
-                        {profile.academic_affiliation ?? "Vinculo nao informado"}
+                        {profile.academic_affiliation ?? "Vínculo não informado"}
                       </p>
                     </div>
                     <div className="grid gap-2 text-sm font-semibold text-muted">

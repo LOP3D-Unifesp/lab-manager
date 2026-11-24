@@ -69,7 +69,7 @@ export function Login() {
           {!authConfigured ? (
             <p className="rounded-lg border border-danger bg-danger-soft p-3 text-base font-semibold text-danger">
               {supabaseConfigurationError ??
-                "Supabase nao esta configurado. Execute npm run setup:local."}
+                "Supabase não está configurado. Execute npm run setup:local."}
             </p>
           ) : null}
 

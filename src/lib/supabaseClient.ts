@@ -20,7 +20,7 @@ export const appEnvironment = (import.meta.env.VITE_APP_ENV ??
   defaultEnvironment) as AppEnvironment;
 export const supabaseConfigurationError =
   validateSupabaseEnvironment(appEnvironment, supabaseUrl) ??
-  (!supabaseAnonKey ? "VITE_SUPABASE_ANON_KEY nao foi configurada." : null);
+  (!supabaseAnonKey ? "VITE_SUPABASE_ANON_KEY não foi configurada." : null);
 
 export const supabase =
   !supabaseConfigurationError && supabaseUrl && supabaseAnonKey

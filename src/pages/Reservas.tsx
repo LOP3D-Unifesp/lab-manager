@@ -430,12 +430,12 @@ export function Reservas() {
 
   function getNomeResponsavel(profileId?: string) {
     if (!profileId) {
-      return "Sem usuario";
+      return "Sem usuário";
     }
 
     return (
       profiles.find((profile) => profile.id === profileId)?.full_name ??
-      "Usuario removido"
+      "Usuário removido"
     );
   }
 
@@ -507,7 +507,7 @@ export function Reservas() {
       }
 
       if (!impressoraAceitaMaterial(equipment.id, novaReserva.material_id)) {
-        setErro("Este equipamento nao suporta o material selecionado.");
+        setErro("Este equipamento não suporta o material selecionado.");
         return;
       }
     }
@@ -518,7 +518,7 @@ export function Reservas() {
     }
 
     if (getReservaConflitante(equipment.id)) {
-      setErro("O equipamento selecionado nao esta livre nesse horario.");
+      setErro("O equipamento selecionado não está livre nesse horário.");
       return;
     }
 
@@ -555,7 +555,7 @@ export function Reservas() {
       !duracaoMinutos
     ) {
       setErro(
-        "Preencha projeto, equipamento, data, horario e duracao entre 0,5h e 24h em passos de 0,5h (e o material, para impressoras).",
+        "Preencha projeto, equipamento, data, horário e duração entre 0,5h e 24h em passos de 0,5h (e o material, para impressoras).",
       );
       return;
     }
@@ -824,7 +824,7 @@ export function Reservas() {
                       {reserva.project_name}
                     </p>
                     <p className="mt-1 text-sm font-semibold text-muted">
-                      {formatarHorario(reserva.starts_at, timezone)} ate{" "}
+                      {formatarHorario(reserva.starts_at, timezone)} até{" "}
                       {formatarHorario(reserva.ends_at, timezone)} -{" "}
                       {reserva.equipment?.name ?? "Equipamento removido"}
                       {reserva.material_id ? ` - ${reserva.material?.name ?? "Material removido"}` : ""}
@@ -875,7 +875,7 @@ export function Reservas() {
                       {equipment.name}
                     </h3>
                     <p className="mt-1 text-base font-semibold text-muted">
-                      {equipment.model ?? "Modelo nao informado"}
+                      {equipment.model ?? "Modelo não informado"}
                     </p>
                     <p className="mt-1 line-clamp-2 text-xs font-semibold leading-5 text-muted">
                       Materiais:{" "}
@@ -1252,7 +1252,7 @@ export function Reservas() {
                   ].join(" ")}
                 >
                   Janela solicitada:{" "}
-                  {formatarDataHora(inicioSelecionado.toISOString(), timezone)} ate{" "}
+                  {formatarDataHora(inicioSelecionado.toISOString(), timezone)} até{" "}
                   {formatarDataHora(fimSelecionado.toISOString(), timezone)}
                   {horarioSelecionadoJaPassou()
                     ? " - horario ja passou"
@@ -1316,7 +1316,7 @@ export function Reservas() {
                                 {equipment.name}
                               </p>
                               <p className="mt-1 text-sm font-semibold text-muted">
-                                {equipment.model ?? "Modelo nao informado"}
+                                {equipment.model ?? "Modelo não informado"}
                               </p>
                             </div>
                             <input
@@ -1330,7 +1330,7 @@ export function Reservas() {
                           </div>
 
                           <div className="flex flex-wrap gap-2">
-                            <StatusBadge label="Disponivel" variant="success" />
+                            <StatusBadge label="Disponível" variant="success" />
                             {equipment.type ? <StatusBadge label={equipment.type.name} variant="neutral" /> : null}
                             {usaMaterialAqui ? (
                               <StatusBadge

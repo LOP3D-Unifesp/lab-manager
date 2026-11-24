@@ -35,7 +35,7 @@ function getVinculoLabel(value: string | null) {
     other: "Outro",
   };
 
-  return value ? labels[value] ?? value : "Nao informado";
+  return value ? labels[value] ?? value : "Não informado";
 }
 
 function getStatusPresenca(

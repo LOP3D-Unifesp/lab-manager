@@ -148,7 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refreshInstallation,
       signIn: async (email: string, password: string) => {
         if (!supabase) {
-          throw new Error("Supabase nao esta configurado.");
+          throw new Error("Supabase não está configurado.");
         }
 
         const { error } = await supabase.auth.signInWithPassword({
