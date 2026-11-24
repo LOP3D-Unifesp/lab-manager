@@ -6,11 +6,8 @@ import { useAuth } from "../../lib/auth";
 import { navigationItems, navigationSectionLabels, type NavigationItem } from "../../lib/navigation";
 import { useAttention } from "./AttentionProvider";
 import { LabLogo } from "../ui/LabLogo";
-import { LanguageSelect } from "../ui/LanguageSelect";
-import { ThemeToggle } from "../ui/ThemeToggle";
 import { AuthUserMenu } from "./AuthUserMenu";
 import { EnvironmentBadge } from "./EnvironmentBadge";
-import { NotificationBell } from "./NotificationBell";
 
 function canShowDesktopItem(item: NavigationItem, role?: string) {
   return (
@@ -111,7 +108,6 @@ export function Sidebar() {
                 Lab Manager
               </h1>
             </Link>
-            <NotificationBell align="left" />
           </div>
           <p className="mt-2 text-sm font-semibold leading-5 text-muted">
             {labSettings?.name ?? t("sidebar.fallbackSubtitle")}
@@ -143,10 +139,6 @@ export function Sidebar() {
         </nav>
 
         <div className="mt-5 border-t border-border pt-3">
-          <div className="mb-3 flex gap-2">
-            <ThemeToggle compact />
-            <LanguageSelect className="min-w-0 flex-1" />
-          </div>
           <AuthUserMenu />
         </div>
       </div>
