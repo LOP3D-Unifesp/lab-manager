@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import { FormEvent, useEffect, useState } from "react";
 import { Building2, Clock3, Pencil, Plus, Power, Utensils, X } from "lucide-react";
 
@@ -13,10 +14,10 @@ import { listLabSchedulePeriods, saveLabSchedulePeriod, updateLabBreaks, updateL
 type MealBreakId = "lunch" | "dinner";
 
 const weekdays = [
-  { value: 1, label: "Segunda" }, { value: 2, label: "Terça" },
-  { value: 3, label: "Quarta" }, { value: 4, label: "Quinta" },
-  { value: 5, label: "Sexta" }, { value: 6, label: "Sábado" },
-  { value: 0, label: "Domingo" },
+  { value: 1, get label() { return t("weekday.1"); } }, { value: 2, get label() { return t("weekday.2"); } },
+  { value: 3, get label() { return t("weekday.3"); } }, { value: 4, get label() { return t("weekday.4"); } },
+  { value: 5, get label() { return t("weekday.5"); } }, { value: 6, get label() { return t("weekday.6"); } },
+  { value: 0, get label() { return t("weekday.0"); } },
 ];
 
 export function Administracao() {
@@ -41,7 +42,7 @@ export function Administracao() {
 
   async function reloadPeriods() { setPeriods(await listLabSchedulePeriods(true)); }
 
-  useEffect(() => { reloadPeriods().catch(() => setScheduleError("Não foi possível carregar os turnos.")); }, []);
+  useEffect(() => { reloadPeriods().catch(() => setScheduleError(t("admin.errLoadShifts"))); }, []);
   useEffect(() => {
     if (!labSettings) return;
     setLabName(labSettings.name ?? ""); setLabAcronym(labSettings.acronym ?? "");
@@ -54,30 +55,30 @@ export function Administracao() {
     try {
       await updateLabSettings({ name: labName, acronym: labAcronym, timezone: labTimezone,
         privacyContactEmail, workspaceCapacity: capacity, operatingWeekdays });
-      await refreshInstallation(); setMessage("Configurações do laboratório atualizadas.");
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Não foi possível salvar."); }
+      await refreshInstallation(); setMessage(t("admin.settingsSaved"));
+    } catch (reason) { setError(reason instanceof Error ? reason.message : t("admin.errSave")); }
     finally { setSaving(false); }
   }
 
   function scheduleErrorMessage(reason: unknown, fallback: string) {
     const value = reason instanceof Error ? reason.message : "";
     if (value.includes("schedule_period_overlap") || value.includes("unique_interval")) {
-      return "Este horário se sobrepõe a outro turno. Ajuste o início ou o fim.";
+      return t("admin.errOverlap");
     }
     if (value.includes("schedule_period_break_overlap")) {
-      return "Este turno se sobrepõe ao intervalo de almoço ou jantar.";
+      return t("admin.errBreakOverlap");
     }
     if (value.includes("meal_break_overlap")) {
-      return "Este intervalo se sobrepõe a um turno ativo. Ajuste primeiro o turno ou o intervalo.";
+      return t("admin.errMealOverlap");
     }
     if (value.includes("invalid_meal_breaks")) {
-      return "Confira os horários: o início deve ser anterior ao fim e almoço e jantar não podem se sobrepor.";
+      return t("admin.errMealBreaks");
     }
     if (value.includes("active_schedule_period_required")) {
-      return "Mantenha pelo menos um turno ativo na agenda.";
+      return t("admin.errNeedActive");
     }
     if (value.includes("invalid_schedule_period")) {
-      return "Informe um horário de início anterior ao horário de fim.";
+      return t("admin.errInvalidPeriod");
     }
     return fallback;
   }
@@ -115,10 +116,10 @@ export function Administracao() {
       await saveLabSchedulePeriod({ id: existing?.id, startsAt: draftStart,
         endsAt: draftEnd, isActive: existing?.is_active ?? true });
       await reloadPeriods(); setEditingPeriodId(null);
-      setScheduleMessage(existing ? "Turno atualizado." : "Turno adicionado.");
+      setScheduleMessage(existing ? t("admin.shiftUpdated") : t("admin.shiftAdded"));
     } catch (reason) {
       setScheduleError(scheduleErrorMessage(reason, existing
-        ? "Não foi possível atualizar o turno." : "Não foi possível adicionar o turno."));
+        ? t("admin.errUpdateShift") : t("admin.errAddShift")));
     } finally { setSavingPeriod(false); }
   }
 
@@ -128,9 +129,9 @@ export function Administracao() {
       await saveLabSchedulePeriod({ id: period.id, startsAt: period.starts_at.slice(0, 5),
         endsAt: period.ends_at.slice(0, 5), isActive: !period.is_active });
       await reloadPeriods();
-      setScheduleMessage(period.is_active ? "Turno desativado." : "Turno ativado.");
+      setScheduleMessage(period.is_active ? t("admin.shiftDeactivated") : t("admin.shiftActivated"));
     } catch (reason) {
-      setScheduleError(scheduleErrorMessage(reason, "Não foi possível alterar o estado do turno."));
+      setScheduleError(scheduleErrorMessage(reason, t("admin.errToggleShift")));
     } finally { setSavingPeriod(false); }
   }
 
@@ -145,25 +146,25 @@ export function Administracao() {
         dinnerEndsAt: editingBreakId === "dinner" ? draftEnd : labSettings.dinner_ends_at,
       });
       await refreshInstallation(); setEditingBreakId(null);
-      setScheduleMessage(`Intervalo de ${editingBreakId === "lunch" ? "almoço" : "jantar"} atualizado.`);
+      setScheduleMessage(t(editingBreakId === "lunch" ? "admin.lunchUpdated" : "admin.dinnerUpdated"));
     } catch (reason) {
-      setScheduleError(scheduleErrorMessage(reason, "Não foi possível atualizar o intervalo."));
+      setScheduleError(scheduleErrorMessage(reason, t("admin.errUpdateBreak")));
     } finally { setSavingPeriod(false); }
   }
 
   function renderPeriodEditor(period?: LabSchedulePeriod) {
     const title = period
-      ? `Editar ${formatSchedulePeriod(period.starts_at, period.ends_at)}`
-      : "Novo turno";
+      ? t("admin.editRange", { range: formatSchedulePeriod(period.starts_at, period.ends_at) })
+      : t("admin.newShift");
     return (
       <div className="rounded-lg border border-primary bg-primary-soft/30 p-4">
         <p className="mb-3 text-base font-bold text-text">{title}</p>
         <div className="grid items-end gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
-          <label className="grid gap-1 text-sm font-semibold">Início<input className="min-h-11 rounded-lg border border-border bg-surface px-3" type="time" value={draftStart} onChange={(event) => setDraftStart(event.target.value)} /></label>
-          <label className="grid gap-1 text-sm font-semibold">Fim<input className="min-h-11 rounded-lg border border-border bg-surface px-3" type="time" value={draftEnd} onChange={(event) => setDraftEnd(event.target.value)} /></label>
+          <label className="grid gap-1 text-sm font-semibold">{t("admin.start")}<input className="min-h-11 rounded-lg border border-border bg-surface px-3" type="time" value={draftStart} onChange={(event) => setDraftStart(event.target.value)} /></label>
+          <label className="grid gap-1 text-sm font-semibold">{t("admin.end")}<input className="min-h-11 rounded-lg border border-border bg-surface px-3" type="time" value={draftEnd} onChange={(event) => setDraftEnd(event.target.value)} /></label>
           <div className="grid grid-cols-2 gap-2 md:min-w-[232px]">
-            <Button className="w-full px-3 text-base" disabled={savingPeriod} onClick={cancelPeriodEdit} variant="secondary"><X className="mr-2 h-4 w-4" />Cancelar</Button>
-            <Button className="w-full px-3 text-base" disabled={savingPeriod} onClick={persistPeriod}>{savingPeriod ? "Salvando..." : "Salvar"}</Button>
+            <Button className="w-full px-3 text-base" disabled={savingPeriod} onClick={cancelPeriodEdit} variant="secondary"><X className="mr-2 h-4 w-4" />{t("common.cancel")}</Button>
+            <Button className="w-full px-3 text-base" disabled={savingPeriod} onClick={persistPeriod}>{savingPeriod ? t("common.saving") : t("admin.save")}</Button>
           </div>
         </div>
       </div>
@@ -171,16 +172,16 @@ export function Administracao() {
   }
 
   function renderBreakEditor(breakId: MealBreakId) {
-    const label = breakId === "lunch" ? "Almoço" : "Jantar";
+    const label = t(breakId === "lunch" ? "admin.lunch" : "admin.dinner");
     return (
       <div className="rounded-lg border border-warning bg-warning-soft/40 p-4">
-        <p className="mb-3 text-base font-bold text-text">Editar intervalo de {label.toLowerCase()}</p>
+        <p className="mb-3 text-base font-bold text-text">{t("admin.editBreak", { name: label.toLowerCase() })}</p>
         <div className="grid items-end gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
-          <label className="grid gap-1 text-sm font-semibold">Início<input className="min-h-11 rounded-lg border border-border bg-surface px-3" type="time" value={draftStart} onChange={(event) => setDraftStart(event.target.value)} /></label>
-          <label className="grid gap-1 text-sm font-semibold">Fim<input className="min-h-11 rounded-lg border border-border bg-surface px-3" type="time" value={draftEnd} onChange={(event) => setDraftEnd(event.target.value)} /></label>
+          <label className="grid gap-1 text-sm font-semibold">{t("admin.start")}<input className="min-h-11 rounded-lg border border-border bg-surface px-3" type="time" value={draftStart} onChange={(event) => setDraftStart(event.target.value)} /></label>
+          <label className="grid gap-1 text-sm font-semibold">{t("admin.end")}<input className="min-h-11 rounded-lg border border-border bg-surface px-3" type="time" value={draftEnd} onChange={(event) => setDraftEnd(event.target.value)} /></label>
           <div className="grid grid-cols-2 gap-2 md:min-w-[232px]">
-            <Button className="w-full px-3 text-base" disabled={savingPeriod} onClick={cancelPeriodEdit} variant="secondary"><X className="mr-2 h-4 w-4" />Cancelar</Button>
-            <Button className="w-full px-3 text-base" disabled={savingPeriod} onClick={persistBreak}>{savingPeriod ? "Salvando..." : "Salvar"}</Button>
+            <Button className="w-full px-3 text-base" disabled={savingPeriod} onClick={cancelPeriodEdit} variant="secondary"><X className="mr-2 h-4 w-4" />{t("common.cancel")}</Button>
+            <Button className="w-full px-3 text-base" disabled={savingPeriod} onClick={persistBreak}>{savingPeriod ? t("common.saving") : t("admin.save")}</Button>
           </div>
         </div>
       </div>
@@ -193,8 +194,8 @@ export function Administracao() {
   > = periods.map((period) => ({ kind: "period", startsAt: period.starts_at, period }));
   if (labSettings) {
     timelineItems.push(
-      { kind: "break", breakId: "lunch", label: "Almoço", startsAt: labSettings.lunch_starts_at, endsAt: labSettings.lunch_ends_at },
-      { kind: "break", breakId: "dinner", label: "Jantar", startsAt: labSettings.dinner_starts_at, endsAt: labSettings.dinner_ends_at },
+      { kind: "break", breakId: "lunch", label: t("admin.lunch"), startsAt: labSettings.lunch_starts_at, endsAt: labSettings.lunch_ends_at },
+      { kind: "break", breakId: "dinner", label: t("admin.dinner"), startsAt: labSettings.dinner_starts_at, endsAt: labSettings.dinner_ends_at },
     );
   }
   timelineItems.sort((left, right) => left.startsAt.localeCompare(right.startsAt));
@@ -202,27 +203,27 @@ export function Administracao() {
 
   return (
     <div>
-      <PageHeader title="Configurações" description="Configure a identidade e o funcionamento do laboratório." />
+      <PageHeader title={t("admin.title")} description={t("admin.subtitle")} />
       {message ? <p className="mb-4 rounded-lg border border-success bg-success-soft p-3 font-semibold text-success-dark">{message}</p> : null}
       {error ? <p className="mb-4 rounded-lg border border-danger bg-danger-soft p-3 font-semibold text-danger">{error}</p> : null}
 
       <Card className="mb-5">
-        <div className="mb-5 flex items-start gap-3"><div className="rounded-lg bg-primary-soft p-3 text-primary"><Building2 className="h-5 w-5" /></div><div><h2 className="text-2xl font-bold">Laboratório</h2><p className="mt-1 text-muted">Identidade, privacidade, fuso e capacidade presencial.</p></div></div>
+        <div className="mb-5 flex items-start gap-3"><div className="rounded-lg bg-primary-soft p-3 text-primary"><Building2 className="h-5 w-5" /></div><div><h2 className="text-2xl font-bold">{t("admin.labTitle")}</h2><p className="mt-1 text-muted">{t("admin.labHint")}</p></div></div>
         <form className="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-3" onSubmit={saveSettings}>
-          <label className="grid gap-2 font-semibold">Nome<input className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal" required value={labName} onChange={(e) => setLabName(e.target.value)} /></label>
-          <label className="grid gap-2 font-semibold">Sigla<input className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal uppercase" required value={labAcronym} onChange={(e) => setLabAcronym(e.target.value)} /></label>
-          <label className="grid gap-2 font-semibold">Fuso horário<TimezoneSelect id="admin-timezone" value={labTimezone} onChange={setLabTimezone} /></label>
-          <label className="grid gap-2 font-semibold">Contato de privacidade<input className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal" required type="email" value={privacyContactEmail} onChange={(e) => setPrivacyContactEmail(e.target.value)} /></label>
-          <label className="grid gap-2 font-semibold">Espaços de trabalho<input className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal" min={1} required type="number" value={capacity} onChange={(e) => setCapacity(Number(e.target.value))} /><span className="text-sm font-normal text-muted">Máximo de pessoas presenciais por turno.</span></label>
-          <fieldset className="md:col-span-2 xl:col-span-3"><legend className="mb-2 font-semibold">Dias de funcionamento</legend><div className="flex flex-wrap gap-2">{weekdays.map((day) => <label className="flex min-h-11 items-center gap-2 rounded-lg border border-border bg-background px-3" key={day.value}><input checked={operatingWeekdays.includes(day.value)} type="checkbox" onChange={(e) => setOperatingWeekdays((current) => e.target.checked ? [...current, day.value] : current.filter((value) => value !== day.value))} />{day.label}</label>)}</div></fieldset>
-          <div className="md:col-span-2 xl:col-span-3"><Button disabled={saving || operatingWeekdays.length === 0} type="submit">{saving ? "Salvando..." : "Salvar configurações"}</Button></div>
+          <label className="grid gap-2 font-semibold">{t("admin.name")}<input className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal" required value={labName} onChange={(e) => setLabName(e.target.value)} /></label>
+          <label className="grid gap-2 font-semibold">{t("admin.acronym")}<input className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal uppercase" required value={labAcronym} onChange={(e) => setLabAcronym(e.target.value)} /></label>
+          <label className="grid gap-2 font-semibold">{t("admin.timezone")}<TimezoneSelect id="admin-timezone" value={labTimezone} onChange={setLabTimezone} /></label>
+          <label className="grid gap-2 font-semibold">{t("admin.privacyContact")}<input className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal" required type="email" value={privacyContactEmail} onChange={(e) => setPrivacyContactEmail(e.target.value)} /></label>
+          <label className="grid gap-2 font-semibold">{t("admin.capacity")}<input className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal" min={1} required type="number" value={capacity} onChange={(e) => setCapacity(Number(e.target.value))} /><span className="text-sm font-normal text-muted">{t("admin.capacityHint")}</span></label>
+          <fieldset className="md:col-span-2 xl:col-span-3"><legend className="mb-2 font-semibold">{t("admin.operatingDays")}</legend><div className="flex flex-wrap gap-2">{weekdays.map((day) => <label className="flex min-h-11 items-center gap-2 rounded-lg border border-border bg-background px-3" key={day.value}><input checked={operatingWeekdays.includes(day.value)} type="checkbox" onChange={(e) => setOperatingWeekdays((current) => e.target.checked ? [...current, day.value] : current.filter((value) => value !== day.value))} />{day.label}</label>)}</div></fieldset>
+          <div className="md:col-span-2 xl:col-span-3"><Button disabled={saving || operatingWeekdays.length === 0} type="submit">{saving ? t("common.saving") : t("admin.saveSettings")}</Button></div>
         </form>
       </Card>
 
       <Card>
         <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex items-start gap-3"><div className="rounded-lg bg-primary-soft p-3 text-primary"><Clock3 className="h-5 w-5" /></div><div><h2 className="text-2xl font-bold">Turnos de trabalho</h2><p className="mt-1 text-muted">Os mesmos turnos são usados em todos os dias de funcionamento.</p><p className="mt-1 text-sm font-semibold text-muted">Os turnos são organizados automaticamente pelo horário de início.</p></div></div>
-          <Button className="w-full shrink-0 sm:w-auto" disabled={hasOpenEditor || savingPeriod} onClick={beginCreate}><Plus className="mr-2 h-4 w-4" />Adicionar turno</Button>
+          <div className="flex items-start gap-3"><div className="rounded-lg bg-primary-soft p-3 text-primary"><Clock3 className="h-5 w-5" /></div><div><h2 className="text-2xl font-bold">{t("admin.shiftsTitle")}</h2><p className="mt-1 text-muted">{t("admin.shiftsHint")}</p><p className="mt-1 text-sm font-semibold text-muted">{t("admin.shiftsSorted")}</p></div></div>
+          <Button className="w-full shrink-0 sm:w-auto" disabled={hasOpenEditor || savingPeriod} onClick={beginCreate}><Plus className="mr-2 h-4 w-4" />{t("admin.addShift")}</Button>
         </div>
 
         {scheduleMessage ? <p className="mb-4 rounded-lg border border-success bg-success-soft p-3 font-semibold text-success-dark">{scheduleMessage}</p> : null}
@@ -237,9 +238,9 @@ export function Administracao() {
                 <article className="flex flex-col gap-4 rounded-lg border border-warning bg-warning-soft/30 p-4 sm:flex-row sm:items-center sm:justify-between" key={item.breakId}>
                   <div className="flex min-w-0 items-center gap-3">
                     <div className="rounded-lg bg-warning-soft p-2.5 text-warning-dark"><Utensils className="h-5 w-5" /></div>
-                    <div><p className="font-bold text-text">{item.label}</p><p className="text-xl font-bold text-text">{formatSchedulePeriod(item.startsAt, item.endsAt)}</p><div className="mt-1"><StatusBadge label="Intervalo" variant="warning" /></div></div>
+                    <div><p className="font-bold text-text">{item.label}</p><p className="text-xl font-bold text-text">{formatSchedulePeriod(item.startsAt, item.endsAt)}</p><div className="mt-1"><StatusBadge label={t("admin.breakBadge")} variant="warning" /></div></div>
                   </div>
-                  <Button aria-label={`Editar intervalo ${item.label}`} className="w-full px-3 text-base sm:w-28" disabled={hasOpenEditor || savingPeriod} onClick={() => beginBreakEdit(item.breakId)} variant="secondary"><Pencil className="mr-2 h-4 w-4" />Editar</Button>
+                  <Button aria-label={t("admin.editBreakAria", { label: item.label })} className="w-full px-3 text-base sm:w-28" disabled={hasOpenEditor || savingPeriod} onClick={() => beginBreakEdit(item.breakId)} variant="secondary"><Pencil className="mr-2 h-4 w-4" />{t("admin.edit")}</Button>
                 </article>
               );
             }
@@ -249,11 +250,11 @@ export function Administracao() {
               <article className={["flex flex-col gap-4 rounded-lg border border-border bg-background p-4 sm:flex-row sm:items-center sm:justify-between", period.is_active ? "" : "opacity-70"].join(" ")} key={period.id}>
                 <div className="flex min-w-0 items-center gap-3">
                   <div className={["rounded-lg p-2.5", period.is_active ? "bg-primary-soft text-primary" : "bg-border/60 text-muted"].join(" ")}><Clock3 className="h-5 w-5" /></div>
-                  <div><p className={["text-xl font-bold", period.is_active ? "text-text" : "text-muted"].join(" ")}>{formatSchedulePeriod(period.starts_at, period.ends_at)}</p><div className="mt-1"><StatusBadge label={period.is_active ? "Ativo" : "Inativo"} variant={period.is_active ? "success" : "neutral"} /></div></div>
+                  <div><p className={["text-xl font-bold", period.is_active ? "text-text" : "text-muted"].join(" ")}>{formatSchedulePeriod(period.starts_at, period.ends_at)}</p><div className="mt-1"><StatusBadge label={period.is_active ? t("admin.active") : t("admin.inactive")} variant={period.is_active ? "success" : "neutral"} /></div></div>
                 </div>
                 <div className="grid grid-cols-2 gap-2 sm:flex sm:w-auto">
-                  <Button aria-label={`Editar turno ${formatSchedulePeriod(period.starts_at, period.ends_at)}`} className="w-full px-3 text-base sm:w-28" disabled={hasOpenEditor || savingPeriod} onClick={() => beginEdit(period)} variant="secondary"><Pencil className="mr-2 h-4 w-4" />Editar</Button>
-                  <Button aria-label={`${period.is_active ? "Desativar" : "Ativar"} turno ${formatSchedulePeriod(period.starts_at, period.ends_at)}`} className="w-full px-3 text-base sm:w-28" disabled={hasOpenEditor || savingPeriod} onClick={() => togglePeriod(period)} variant={period.is_active ? "ghost" : "primary"}><Power className="mr-2 h-4 w-4" />{period.is_active ? "Desativar" : "Ativar"}</Button>
+                  <Button aria-label={t("admin.editShiftAria", { range: formatSchedulePeriod(period.starts_at, period.ends_at) })} className="w-full px-3 text-base sm:w-28" disabled={hasOpenEditor || savingPeriod} onClick={() => beginEdit(period)} variant="secondary"><Pencil className="mr-2 h-4 w-4" />{t("admin.edit")}</Button>
+                  <Button aria-label={t("admin.toggleShiftAria", { action: period.is_active ? t("admin.deactivate") : t("admin.activate"), range: formatSchedulePeriod(period.starts_at, period.ends_at) })} className="w-full px-3 text-base sm:w-28" disabled={hasOpenEditor || savingPeriod} onClick={() => togglePeriod(period)} variant={period.is_active ? "ghost" : "primary"}><Power className="mr-2 h-4 w-4" />{period.is_active ? t("admin.deactivate") : t("admin.activate")}</Button>
                 </div>
               </article>
             );
