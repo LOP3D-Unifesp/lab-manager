@@ -7,6 +7,7 @@ import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
 import { StatCard } from "../components/ui/StatCard";
 import { StatusBadge } from "../components/ui/StatusBadge";
+import { formatDateTime, useT } from "../i18n";
 import { useCurrentProfile } from "../lib/currentUser";
 import {
   criarDataLocalSegura,
@@ -39,10 +40,7 @@ function formatarHorario(valor?: string) {
     return "";
   }
 
-  return new Intl.DateTimeFormat("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(valor));
+  return formatDateTime(valor, { hour: "2-digit", minute: "2-digit" });
 }
 
 function intervalosSeCruzam(
@@ -76,6 +74,7 @@ function reservaEstaEmAndamento(reserva: EquipmentBooking, agora: Date) {
 }
 
 export function Dashboard() {
+  const t = useT();
   const { periodos } = useLabSchedule();
   const { currentProfile } = useCurrentProfile();
   const [profiles, setProfiles] = useState<PublicProfile[]>([]);
@@ -110,7 +109,7 @@ export function Dashboard() {
           setErro(
             error instanceof Error
               ? error.message
-              : "Não foi possível carregar o dashboard.",
+              : t("dashboard.loadError"),
           );
         }
       });
@@ -161,7 +160,7 @@ export function Dashboard() {
 
   return (
     <div>
-      <PageHeader title="Dashboard" description="" />
+      <PageHeader title={t("dashboard.title")} description="" />
 
       {erro ? (
         <p className="mb-5 rounded-lg border border-danger bg-danger-soft p-3 text-base font-semibold text-danger">
@@ -171,32 +170,33 @@ export function Dashboard() {
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          title="Pesquisadores hoje"
+          title={t("dashboard.researchersToday")}
           value={String(pesquisadoresPresenciaisHoje.length)}
-          description={`${pesquisadoresHomeOfficeHoje.size} pesquisador(es) em home office hoje.`}
+          description={t("dashboard.remoteToday", { count: pesquisadoresHomeOfficeHoje.size })}
           icon={Users}
         />
         <StatCard
-          title="Equipamentos ativos"
+          title={t("dashboard.activeEquipment")}
           value={`${impressorasAtivas.length}/${equipmentList.length}`}
-          description="Equipamentos disponíveis para novas reservas."
+          description={t("dashboard.activeEquipmentHint")}
           icon={Printer}
         />
         <StatCard
-          title="Reservas hoje"
+          title={t("dashboard.bookingsToday")}
           value={String(reservasHoje.length)}
-          description={`${reservasEmAndamento.length} impressão(ões) em andamento agora.`}
+          description={t("dashboard.printsRunning", { count: reservasEmAndamento.length })}
           icon={ClipboardList}
         />
         <StatCard
-          title="Próxima impressão"
+          title={t("dashboard.nextPrint")}
           value={proximasReservas[0] ? formatarHorario(proximasReservas[0].starts_at) : "--"}
           description={
             proximasReservas[0]
-              ? `${proximasReservas[0].project_name} em ${
-                  proximasReservas[0].equipment?.name ?? "equipamento removido"
-                }`
-              : "Nenhuma reserva futura para hoje."
+              ? t("dashboard.nextPrintAt", {
+                  project: proximasReservas[0].project_name,
+                  equipment: proximasReservas[0].equipment?.name ?? t("dashboard.equipmentRemoved"),
+                })
+              : t("dashboard.noFutureBookings")
           }
           icon={Clock}
         />
@@ -211,7 +211,7 @@ export function Dashboard() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <h3 className="text-2xl font-bold text-text">
-                Equipamentos hoje
+                {t("dashboard.equipmentToday")}
               </h3>
             </div>
             <StatusBadge label={dataHoje} variant="neutral" />
@@ -236,7 +236,7 @@ export function Dashboard() {
                           {impressora.name}
                         </p>
                         <p className="mt-1 text-sm font-semibold text-muted">
-                          {reservasDaImpressora.length} reserva(s) hoje
+                          {t("dashboard.bookingsCount", { count: reservasDaImpressora.length })}
                         </p>
                       </div>
                       <StatusBadge
@@ -244,8 +244,8 @@ export function Dashboard() {
                           impressora.status !== "active"
                             ? getEquipmentStatusLabel(impressora.status)
                             : emAndamento
-                              ? "Imprimindo"
-                              : "Disponível"
+                              ? t("dashboard.printing")
+                              : t("dashboard.available")
                         }
                         variant={
                           impressora.status !== "active"
@@ -263,9 +263,12 @@ export function Dashboard() {
                             key={reserva.id}
                             className="text-sm font-semibold text-muted"
                           >
-                            {formatarHorario(reserva.starts_at)} até{" "}
-                            {formatarHorario(reserva.ends_at)} -{" "}
-                            {reserva.project_name} ({reserva.material?.name ?? "material removido"})
+                            {t("dashboard.timeRange", {
+                              from: formatarHorario(reserva.starts_at),
+                              to: formatarHorario(reserva.ends_at),
+                              project: reserva.project_name,
+                              material: reserva.material?.name ?? t("dashboard.materialRemoved"),
+                            })}
                           </p>
                         ))}
                       </div>
@@ -275,31 +278,30 @@ export function Dashboard() {
               })
             ) : (
               <p className="rounded-lg border border-dashed border-border bg-background p-4 text-base text-muted">
-                Nenhum equipamento cadastrado.
+                {t("dashboard.noEquipment")}
               </p>
             )}
           </div>
         </Card>
 
         <Card>
-          <h3 className="text-2xl font-bold text-text">Presenca hoje</h3>
+          <h3 className="text-2xl font-bold text-text">{t("dashboard.presenceToday")}</h3>
           {currentProfile ? (
             <div className="mt-3 rounded-lg border border-primary bg-primary-soft px-3 py-2">
               <p className="text-sm font-bold text-primary-dark">
                 {meusSlotsHoje.length > 0
-                  ? `Você está nesta lista: ${meusSlotsHoje
-                      .map(
-                        (slot) =>
-                          `${periodos.find((periodo) => periodo.id === slot.periodo)
-                            ?.label} ${
-                            slot.work_mode === "remote"
-                              ? "(home office)"
-                              : "(presencial)"
-                          }`,
-                      )
-                      .filter(Boolean)
-                      .join(", ")}`
-                  : "Você não está na lista de hoje."}
+                  ? t("dashboard.youAreOnList", {
+                      list: meusSlotsHoje
+                        .map(
+                          (slot) =>
+                            `${periodos.find((periodo) => periodo.id === slot.periodo)?.label} ${
+                              slot.work_mode === "remote" ? t("dashboard.remoteTag") : t("dashboard.onsiteTag")
+                            }`,
+                        )
+                        .filter(Boolean)
+                        .join(", "),
+                    })
+                  : t("dashboard.youAreNotOnList")}
               </p>
             </div>
           ) : null}
@@ -331,14 +333,14 @@ export function Dashboard() {
                       </p>
                       {meuSlot ? (
                         <span className="rounded-full border border-primary bg-primary-soft px-2 py-0.5 text-xs font-bold text-primary-dark">
-                          Você
+                          {t("dashboard.you")}
                         </span>
                       ) : null}
                     </div>
                     <p className="mt-1 text-sm font-semibold text-muted">
                       {totalHomeOffice > 0
-                        ? `${totalHomeOffice} em home office`
-                        : "Pesquisadores presenciais"}
+                        ? t("dashboard.remoteCount", { count: totalHomeOffice })
+                        : t("dashboard.onsiteResearchers")}
                     </p>
                   </div>
                   <StatusBadge

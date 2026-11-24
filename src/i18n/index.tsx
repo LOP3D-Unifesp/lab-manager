@@ -1,9 +1,13 @@
-import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, Fragment, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 import { dictionaries, type MessageKey } from "./catalog";
 
 export type Locale = "pt-BR" | "en" | "es";
 export type { MessageKey };
+
+type PluralBase<K> = K extends `${infer B}_other` ? B : never;
+/** Chave de mensagem, ou a base de um par `_one`/`_other` (plural por `count`). */
+export type TranslationKey = MessageKey | PluralBase<MessageKey>;
 
 export const LOCALES: { value: Locale; label: string; short: string }[] = [
   { value: "pt-BR", label: "Português (Brasil)", short: "PT" },
@@ -35,12 +39,12 @@ export function getLocale(): Locale {
   return activeLocale;
 }
 
-export function translate(locale: Locale, key: MessageKey, vars?: TranslateVars): string {
-  let template = dictionaries[locale][key] ?? dictionaries["pt-BR"][key] ?? key;
+export function translate(locale: Locale, key: TranslationKey, vars?: TranslateVars): string {
+  const lookup = (l: Locale, k: string) => (dictionaries[l] as Record<string, string>)[k];
+  let template = lookup(locale, key) ?? lookup("pt-BR", key) ?? key;
   if (vars && typeof vars.count === "number") {
     const plural = new Intl.PluralRules(locale).select(vars.count);
-    const pluralKey = `${key}_${plural}` as MessageKey;
-    const alt = dictionaries[locale][pluralKey] ?? dictionaries[locale][`${key}_other` as MessageKey];
+    const alt = lookup(locale, `${key}_${plural}`) ?? lookup(locale, `${key}_other`);
     if (alt) template = alt;
   }
   if (!vars) return template;
@@ -48,14 +52,14 @@ export function translate(locale: Locale, key: MessageKey, vars?: TranslateVars)
 }
 
 /** Tradução usando o idioma ativo; para código fora de componentes. */
-export function t(key: MessageKey, vars?: TranslateVars): string {
+export function t(key: TranslationKey, vars?: TranslateVars): string {
   return translate(activeLocale, key, vars);
 }
 
 type I18nContextValue = {
   locale: Locale;
   setLocale: (locale: Locale) => void;
-  t: (key: MessageKey, vars?: TranslateVars) => string;
+  t: (key: TranslationKey, vars?: TranslateVars) => string;
 };
 
 const I18nContext = createContext<I18nContextValue | null>(null);
@@ -90,6 +94,12 @@ export function useI18n() {
   const context = useContext(I18nContext);
   if (!context) throw new Error("useI18n deve ser usado dentro de LanguageProvider.");
   return context;
+}
+
+/** Remonta a árvore ao trocar de idioma, para que textos gerados fora de hooks (src/lib) também atualizem. */
+export function LocaleBoundary({ children }: { children: ReactNode }) {
+  const { locale } = useI18n();
+  return <Fragment key={locale}>{children}</Fragment>;
 }
 
 export function useT() {
