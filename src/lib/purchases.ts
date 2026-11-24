@@ -243,13 +243,6 @@ export function describePurchaseUpdate(update: Pick<PurchaseUpdate, "item" | "st
   return { title: t("purchases.notifDeliveredTitle"), body: t("purchases.notifDeliveredBody", { item }) };
 }
 
-// Quantas novidades chegaram depois da última vez que a pessoa olhou.
-export function countUnseenPurchaseUpdates(updates: PurchaseUpdate[], seenAt: string | null) {
-  if (!seenAt) return 0;
-  const seen = new Date(seenAt).getTime();
-  return updates.filter((update) => new Date(update.updated_at).getTime() > seen).length;
-}
-
 export type MaintenanceSpending = {
   estimated: number;
   paid: number;

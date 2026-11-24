@@ -16,7 +16,6 @@ import {
   getDiaAbreviado,
   getDuracaoPeriodoEmHoras,
   getFundingAgencyLabel,
-  getEventoNotificacaoReserva,
   getMensagemErroReserva,
   equipmentUsesMaterial,
   getRoleLabel,
@@ -251,53 +250,6 @@ describe("regras de dominio", () => {
     expect(getProximosStatusReserva("in_progress")).toEqual(["completed", "failed"]);
     expect(getProximosStatusReserva("rejected")).toEqual([]);
     expect(getProximosStatusReserva("completed")).toEqual([]);
-  });
-
-  it("identifica o evento notificavel da reserva para o dono", () => {
-    const profileId = "profile";
-    const semEvento = {
-      approved_at: null,
-      rejected_at: null,
-      rejected_reason: null,
-      cancelled_at: null,
-      cancelled_by: null,
-    };
-
-    expect(getEventoNotificacaoReserva(semEvento, profileId)).toBeNull();
-    expect(
-      getEventoNotificacaoReserva(
-        { ...semEvento, cancelled_at: "2030-01-02T10:00:00Z", cancelled_by: profileId },
-        profileId,
-      ),
-    ).toBeNull();
-    expect(
-      getEventoNotificacaoReserva(
-        { ...semEvento, approved_at: "2030-01-02T10:00:00Z" },
-        profileId,
-      ),
-    ).toBe("2030-01-02T10:00:00Z");
-    expect(
-      getEventoNotificacaoReserva(
-        { ...semEvento, rejected_at: "2030-01-03T10:00:00Z" },
-        profileId,
-      ),
-    ).toBe("2030-01-03T10:00:00Z");
-    expect(
-      getEventoNotificacaoReserva(
-        {
-          ...semEvento,
-          approved_at: "2030-01-02T10:00:00Z",
-          rejected_at: "2030-01-03T10:00:00Z",
-        },
-        profileId,
-      ),
-    ).toBe("2030-01-03T10:00:00Z");
-    expect(
-      getEventoNotificacaoReserva(
-        { ...semEvento, cancelled_at: "2030-01-04T10:00:00Z", cancelled_by: "coordinator" },
-        profileId,
-      ),
-    ).toBe("2030-01-04T10:00:00Z");
   });
 });
 

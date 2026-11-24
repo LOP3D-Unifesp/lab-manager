@@ -369,51 +369,6 @@ export type EquipmentBooking = {
   cancelled_by_profile?: { full_name: string } | null;
 };
 
-export type BookingAlertSummary = {
-  id: string;
-  project_name: string;
-  starts_at: string;
-  equipment_name: string;
-  profile_name: string;
-  status: BookingStatus;
-  approved_at: string | null;
-  approved_by_name: string | null;
-  rejected_at: string | null;
-  rejected_by_name: string | null;
-  rejected_reason: string | null;
-  cancelled_at: string | null;
-  cancelled_by: string | null;
-  cancelled_by_name: string | null;
-};
-
-// Instante do evento que torna a reserva notificável para o dono:
-// aprovada, rejeitada ou cancelada por outra pessoa. Retorna null quando
-// nenhum desses eventos ocorreu (ex.: reserva recém-criada ou cancelada
-// pelo próprio dono).
-export function getEventoNotificacaoReserva(
-  reserva: Pick<
-    BookingAlertSummary,
-    "approved_at" | "rejected_at" | "cancelled_at" | "cancelled_by"
-  >,
-  profileId: string,
-) {
-  const eventos = [
-    reserva.approved_at,
-    reserva.rejected_at,
-    reserva.cancelled_by && reserva.cancelled_by !== profileId
-      ? reserva.cancelled_at
-      : null,
-  ].filter((valor): valor is string => Boolean(valor));
-
-  if (eventos.length === 0) {
-    return null;
-  }
-
-  return eventos.reduce((maisRecente, atual) =>
-    atual > maisRecente ? atual : maisRecente,
-  );
-}
-
 export type LabSchedulePeriod = {
   id: string;
   starts_at: string;

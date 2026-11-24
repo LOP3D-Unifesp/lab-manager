@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(343);
+select plan(349);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -1793,6 +1793,48 @@ select lives_ok($$ select public.set_purchase_status((select id from public.purc
 select is((select status::text from public.maintenance_requests where description = 'pgtap terceiro problema'), 'waiting_part', 'a request nobody took also waits for the part');
 select lives_ok($$ select public.set_purchase_status((select id from public.purchase_requests where item = 'pgtap peca do chamado'), 'delivered') $$, 'that part is delivered');
 select is((select status::text from public.maintenance_requests where description = 'pgtap terceiro problema'), 'open', 'the request nobody took goes back to open');
+
+-- Notifications: triggers create one row per recipient, each person reads only their own and can only mark them read.
+set local role postgres;
+select set_config('request.jwt.claims', '', true);
+insert into public.feedback_reports (kind, message, created_by)
+values ('suggestion', 'pgtap notification feedback', '00000000-0000-0000-0000-000000000102');
+select is(
+  (select count(*)::int from public.notifications where type = 'feedback_new' and recipient_id = '00000000-0000-0000-0000-000000000101' and params->>'kind' = 'suggestion'),
+  1,
+  'new feedback notifies the coordinator'
+);
+select is(
+  (select count(*)::int from public.notifications where type = 'feedback_new' and recipient_id = '00000000-0000-0000-0000-000000000102'),
+  0,
+  'new feedback does not notify its author'
+);
+
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000103","email":"other@example.com","role":"authenticated"}', true);
+select is(
+  (select count(*)::int from public.notifications where recipient_id = '00000000-0000-0000-0000-000000000101'),
+  0,
+  'a user cannot read another person''s notifications'
+);
+select throws_ok(
+  $$ insert into public.notifications (recipient_id, type) values ('00000000-0000-0000-0000-000000000103', 'feedback_new') $$,
+  '42501',
+  null,
+  'clients cannot insert notifications'
+);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
+select lives_ok(
+  $$ update public.notifications set read_at = now() where type = 'feedback_new' $$,
+  'a user marks their own notifications as read'
+);
+select throws_ok(
+  $$ update public.notifications set type = 'purchase_new' where recipient_id = '00000000-0000-0000-0000-000000000101' $$,
+  '42501',
+  null,
+  'only read_at can be changed on a notification'
+);
 
 select * from finish();
 rollback;
