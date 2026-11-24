@@ -1,3 +1,4 @@
+import { useT } from "../../i18n";
 import { FormEvent, useState } from "react";
 
 import { formatCurrencyBRL } from "../../lib/projects";
@@ -6,7 +7,6 @@ import { createPurchaseRequest, updatePurchaseRequest } from "../../lib/supabase
 import type { Project } from "../../lib/projects";
 import {
   buildMaintenancePurchaseNote,
-  GENERAL_STOCK_LABEL,
   GENERAL_STOCK_VALUE,
   getPurchaseErrorMessage,
   calculateTotal,
@@ -35,6 +35,7 @@ type PurchaseFormModalProps = {
 };
 
 export function PurchaseFormModal({ defaultProjectId, fromMaintenance, onClose, onDone, projects, purchase }: PurchaseFormModalProps) {
+  const t = useT();
   const [projectId, setProjectId] = useState(purchase ? (purchase.project_id ?? GENERAL_STOCK_VALUE) : defaultProjectId);
   const [category, setCategory] = useState<string>(purchase?.funding_category ?? (fromMaintenance ? "custeio" : ""));
   const [urgency, setUrgency] = useState<PurchaseUrgency>(purchase?.urgency ?? fromMaintenance?.urgency ?? "normal");
@@ -90,22 +91,22 @@ export function PurchaseFormModal({ defaultProjectId, fromMaintenance, onClose, 
 
   return (
     <Modal
-      title={purchase ? "Editar pedido" : fromMaintenance ? `Pedir peça: ${fromMaintenance.equipmentName}` : "Novo pedido de compra"}
-      description={fromMaintenance ? "O pedido fica ligado ao chamado, e a situação da peça aparece nele." : "O coordenador analisa o pedido e acompanha até a entrega."}
+      title={purchase ? t("purchases.formEdit") : fromMaintenance ? t("purchases.formPart", { name: fromMaintenance.equipmentName }) : t("purchases.formNew")}
+      description={fromMaintenance ? t("purchases.formHintLinked") : t("purchases.formHint")}
       onClose={onClose}
     >
       <form className="grid gap-4" onSubmit={salvar}>
         <label className="grid gap-2 text-base font-semibold text-text">
-          Para quem é a compra
+          {t("purchases.forWhom")}
           <select
             className={inputClassName}
             value={projectId}
             onChange={(event) => setProjectId(event.target.value)}
           >
             <option value="" disabled>
-              Selecione
+              {t("purchases.select")}
             </option>
-            <option value={GENERAL_STOCK_VALUE}>{GENERAL_STOCK_LABEL}</option>
+            <option value={GENERAL_STOCK_VALUE}>{t("purchases.generalStockLab")}</option>
             {purchase?.project_id && !projects.some((project) => project.id === purchase.project_id) ? (
               <option value={purchase.project_id}>{purchase.project_name}</option>
             ) : null}
@@ -116,14 +117,14 @@ export function PurchaseFormModal({ defaultProjectId, fromMaintenance, onClose, 
             ))}
           </select>
           {projects.length === 0 && !purchase ? (
-            <span className="text-sm font-normal text-muted">Você não participa de nenhum projeto em aberto; só dá para pedir para o estoque geral.</span>
+            <span className="text-sm font-normal text-muted">{t("purchases.noOpenProject")}</span>
           ) : null}
         </label>
         <label className="grid gap-2 text-base font-semibold text-text">
-          Rubrica
+          {t("purchases.category")}
           <select className={inputClassName} value={category} onChange={(event) => setCategory(event.target.value)}>
             <option value="" disabled>
-              Selecione
+              {t("purchases.select")}
             </option>
             {purchaseCategoryOptions.map((option) => (
               <option key={option.value} value={option.value}>
@@ -133,11 +134,11 @@ export function PurchaseFormModal({ defaultProjectId, fromMaintenance, onClose, 
           </select>
         </label>
         <label className="grid gap-2 text-base font-semibold text-text">
-          Item
+          {t("purchases.item")}
           <input autoFocus className={inputClassName} maxLength={200} value={item} onChange={(event) => setItem(event.target.value)} />
         </label>
         <label className="grid gap-2 text-base font-semibold text-text">
-          Link (opcional)
+          {t("purchases.link")}
           <input
             className={inputClassName}
             inputMode="url"
@@ -148,11 +149,11 @@ export function PurchaseFormModal({ defaultProjectId, fromMaintenance, onClose, 
         </label>
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="grid gap-2 text-base font-semibold text-text">
-            Quantidade
+            {t("purchases.quantity")}
             <input className={inputClassName} inputMode="numeric" maxLength={6} value={quantity} onChange={(event) => setQuantity(event.target.value.replace(/\D/g, ""))} />
           </label>
           <label className="grid gap-2 text-base font-semibold text-text">
-            Valor unitário (R$)
+            {t("purchases.unitValue")}
             <MoneyInput
               className={inputClassName}
               placeholder="0,00"
@@ -163,12 +164,12 @@ export function PurchaseFormModal({ defaultProjectId, fromMaintenance, onClose, 
         </div>
         {previewTotal !== null ? (
           <p className="-mt-2 text-sm text-muted">
-            Total estimado: <strong className="text-text">{formatCurrencyBRL(previewTotal)}</strong>
+            {t("purchases.totalEstimated")} <strong className="text-text">{formatCurrencyBRL(previewTotal)}</strong>
             {Number(quantity) > 1 ? ` (${quantity} × ${formatCurrencyBRL(parseMaskedMoney(amount) as number)})` : ""}
           </p>
         ) : null}
         <label className="grid gap-2 text-base font-semibold text-text">
-          Observações (opcional)
+          {t("purchases.notes")}
           <textarea
             className={`${inputClassName} min-h-20 py-3`}
             maxLength={1000}
@@ -185,14 +186,14 @@ export function PurchaseFormModal({ defaultProjectId, fromMaintenance, onClose, 
             onChange={(event) => setForMaintenance(event.target.checked)}
           />
           <span>
-            Gasto de manutenção
+            {t("purchases.maintenanceSpend")}
             <span className="block text-sm font-normal text-muted">
-              {linkedToRequest ? "Pedido ligado a um chamado de manutenção." : "Peças e reparos. Entra no resumo de gastos de manutenção, à parte da rubrica."}
+              {linkedToRequest ? t("purchases.linkedToTicket") : t("purchases.maintenanceHint")}
             </span>
           </span>
         </label>
         <fieldset className="grid gap-2">
-          <legend className="mb-1 text-base font-semibold text-text">Urgência</legend>
+          <legend className="mb-1 text-base font-semibold text-text">{t("purchases.urgency")}</legend>
           <div className="grid gap-2 sm:grid-cols-3">
             {purchaseUrgencyOptions.map((option) => (
               <label
@@ -222,10 +223,10 @@ export function PurchaseFormModal({ defaultProjectId, fromMaintenance, onClose, 
         ) : null}
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Button variant="secondary" onClick={onClose}>
-            Cancelar
+            {t("common.cancel")}
           </Button>
           <Button type="submit" disabled={salvando}>
-            {salvando ? "Salvando..." : purchase ? "Salvar alterações" : "Enviar pedido"}
+            {salvando ? t("common.saving") : purchase ? t("purchases.saveChanges") : t("purchases.send")}
           </Button>
         </div>
       </form>

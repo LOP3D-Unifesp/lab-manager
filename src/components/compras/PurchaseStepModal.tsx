@@ -1,3 +1,4 @@
+import { useT } from "../../i18n";
 import { FormEvent, useState } from "react";
 
 import { formatCurrencyBRL } from "../../lib/projects";
@@ -17,6 +18,7 @@ type PurchaseStepModalProps = {
 
 // Recusar (com motivo) ou marcar como comprado (com o valor pago).
 export function PurchaseStepModal({ mode, onClose, onDone, purchase }: PurchaseStepModalProps) {
+  const t = useT();
   const [reason, setReason] = useState("");
   const [amount, setAmount] = useState(formatMoneyField(purchase.estimated_amount));
   const [erro, setErro] = useState("");
@@ -28,7 +30,7 @@ export function PurchaseStepModal({ mode, onClose, onDone, purchase }: PurchaseS
     if (mode === "purchase") {
       actualAmount = parseMaskedMoney(amount);
       if (actualAmount === null) {
-        setErro("Informe o valor pago, por exemplo 129,90.");
+        setErro(t("purchases.errPaid"));
         return;
       }
     }
@@ -51,14 +53,14 @@ export function PurchaseStepModal({ mode, onClose, onDone, purchase }: PurchaseS
 
   return (
     <Modal
-      title={mode === "reject" ? "Recusar pedido" : "Marcar como comprado"}
-      description={`${purchase.item} · ${purchase.project_name}`}
+      title={mode === "reject" ? t("purchases.stepReject") : t("purchases.markPurchased")}
+      description={`${purchase.item} · ${purchase.project_id === null ? t("purchases.generalStockLab") : purchase.project_name}`}
       onClose={onClose}
     >
       <form className="grid gap-4" onSubmit={confirmar}>
         {mode === "reject" ? (
           <label className="grid gap-2 text-base font-semibold text-text">
-            Motivo (opcional)
+            {t("purchases.reasonOptional")}
             <textarea
               autoFocus
               className={`${inputClassName} min-h-24 py-3`}
@@ -66,13 +68,13 @@ export function PurchaseStepModal({ mode, onClose, onDone, purchase }: PurchaseS
               value={reason}
               onChange={(event) => setReason(event.target.value)}
             />
-            <span className="text-sm font-normal text-muted">Quem pediu vê o motivo no pedido.</span>
+            <span className="text-sm font-normal text-muted">{t("purchases.reasonHint")}</span>
           </label>
         ) : (
           <label className="grid gap-2 text-base font-semibold text-text">
-            Valor total pago (R$)
+            {t("purchases.totalPaid")}
             <MoneyInput autoFocus className={inputClassName} value={amount} onChange={setAmount} />
-            <span className="text-sm font-normal text-muted">Total estimado no pedido: {formatCurrencyBRL(purchase.estimated_amount)}.</span>
+            <span className="text-sm font-normal text-muted">{t("purchases.estimatedInRequest", { amount: formatCurrencyBRL(purchase.estimated_amount) })}</span>
           </label>
         )}
         {erro ? (
@@ -80,10 +82,10 @@ export function PurchaseStepModal({ mode, onClose, onDone, purchase }: PurchaseS
         ) : null}
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Button variant="secondary" onClick={onClose}>
-            Voltar
+            {t("common.back")}
           </Button>
           <Button type="submit" variant={mode === "reject" ? "danger" : "success"} disabled={salvando}>
-            {salvando ? "Salvando..." : mode === "reject" ? "Recusar pedido" : "Confirmar compra"}
+            {salvando ? t("common.saving") : mode === "reject" ? t("purchases.stepReject") : t("purchases.confirmPurchase")}
           </Button>
         </div>
       </form>

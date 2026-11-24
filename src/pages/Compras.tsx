@@ -1,3 +1,4 @@
+import { useT } from "../i18n";
 import { ExternalLink, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -14,7 +15,9 @@ import { formatMaintenanceDateTime } from "../lib/maintenance";
 import { formatCurrencyBRL, isProjectOpen, type Project } from "../lib/projects";
 import {
   filterPurchases,
+  GENERAL_STOCK_LABEL,
   GENERAL_STOCK_VALUE,
+  NO_EQUIPMENT_NAME,
   getPurchaseActions,
   getPurchaseCategoryLabel,
   getPurchaseErrorMessage,
@@ -39,6 +42,7 @@ const selectClassName =
   "min-h-11 min-w-0 rounded-lg border border-border bg-background px-3 text-base font-normal text-text outline-none transition focus:border-primary";
 
 export function Compras() {
+  const t = useT();
   const { profile, labSettings } = useAuth();
   const timezone = labSettings?.timezone || getTimezonePadrao();
   const isCoordinator = profile?.role === "coordinator";
@@ -102,27 +106,27 @@ export function Compras() {
   return (
     <div>
       <PageHeader
-        title="Compras"
-        description="Pedidos de compra dos projetos: o coordenador aprova, compra e confirma a entrega."
+        title={t("purchases.title")}
+        description={t("purchases.subtitle")}
         action={
           <Button fullWidth variant="success" onClick={() => setFormulario({ purchase: null })}>
             <Plus className="mr-2 h-5 w-5" aria-hidden="true" />
-            Novo pedido
+            {t("purchases.new")}
           </Button>
         }
       />
 
       {totais.length > 0 ? (
         <Card className="mb-6">
-          <h3 className="text-xl font-bold text-text">Resumo por projeto</h3>
-          <p className="mt-1 text-sm text-muted">Previsto são os pedidos ainda não comprados; pago soma os comprados e entregues. Recusados e cancelados ficam de fora.</p>
+          <h3 className="text-xl font-bold text-text">{t("purchases.summaryTitle")}</h3>
+          <p className="mt-1 text-sm text-muted">{t("purchases.summaryHint")}</p>
           <ul className="mt-3 grid gap-2">
             {totais.map((total) => (
               <li key={total.projectId} className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1 rounded-lg border border-border bg-background px-3 py-2">
-                <span className="min-w-0 break-words font-semibold text-text">{total.projectName}</span>
+                <span className="min-w-0 break-words font-semibold text-text">{total.projectName === GENERAL_STOCK_LABEL ? t("purchases.generalStockLab") : total.projectName}</span>
                 <span className="text-sm text-muted">
-                  Previsto <strong className="text-text">{formatCurrencyBRL(total.estimated)}</strong> · Pago{" "}
-                  <strong className="text-text">{formatCurrencyBRL(total.paid)}</strong> · {total.count} {total.count === 1 ? "pedido" : "pedidos"}
+                  {t("purchases.estimated")} <strong className="text-text">{formatCurrencyBRL(total.estimated)}</strong> · {t("purchases.paid")}{" "}
+                  <strong className="text-text">{formatCurrencyBRL(total.paid)}</strong> · {t("purchases.requestCount", { count: total.count })}
                 </span>
               </li>
             ))}
@@ -132,19 +136,19 @@ export function Compras() {
 
       {gastosManutencao.count > 0 ? (
         <Card className="mb-6">
-          <h3 className="text-xl font-bold text-text">Gastos de manutenção</h3>
-          <p className="mt-1 text-sm text-muted">Pedidos marcados como manutenção (peças e reparos), de qualquer rubrica. Recusados e cancelados ficam de fora.</p>
+          <h3 className="text-xl font-bold text-text">{t("purchases.maintenanceSpending")}</h3>
+          <p className="mt-1 text-sm text-muted">{t("purchases.maintenanceSpendingHint")}</p>
           <p className="mt-3 text-base text-text">
-            Previsto <strong>{formatCurrencyBRL(gastosManutencao.estimated)}</strong> · Pago <strong>{formatCurrencyBRL(gastosManutencao.paid)}</strong> ·{" "}
-            {gastosManutencao.count} {gastosManutencao.count === 1 ? "pedido" : "pedidos"}
+            {t("purchases.estimated")} <strong>{formatCurrencyBRL(gastosManutencao.estimated)}</strong> · {t("purchases.paid")} <strong>{formatCurrencyBRL(gastosManutencao.paid)}</strong> ·{" "}
+            {t("purchases.requestCount", { count: gastosManutencao.count })}
           </p>
-          {gastosManutencao.byEquipment.length > 1 || gastosManutencao.byEquipment[0]?.name !== "Sem equipamento definido" ? (
+          {gastosManutencao.byEquipment.length > 1 || gastosManutencao.byEquipment[0]?.name !== NO_EQUIPMENT_NAME ? (
             <ul className="mt-3 grid gap-2">
               {gastosManutencao.byEquipment.map((group) => (
                 <li key={group.name} className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1 rounded-lg border border-border bg-background px-3 py-2">
-                  <span className="min-w-0 break-words font-semibold text-text">{group.name}</span>
+                  <span className="min-w-0 break-words font-semibold text-text">{group.name === NO_EQUIPMENT_NAME ? t("purchases.noEquipment") : group.name}</span>
                   <span className="text-sm text-muted">
-                    Previsto <strong className="text-text">{formatCurrencyBRL(group.estimated)}</strong> · Pago <strong className="text-text">{formatCurrencyBRL(group.paid)}</strong>
+                    {t("purchases.estimated")} <strong className="text-text">{formatCurrencyBRL(group.estimated)}</strong> · {t("purchases.paid")} <strong className="text-text">{formatCurrencyBRL(group.paid)}</strong>
                   </span>
                 </li>
               ))}
@@ -155,13 +159,13 @@ export function Compras() {
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <select
-          aria-label="Situação"
+          aria-label={t("purchases.filterStatus")}
           className={selectClassName}
           value={filters.status}
           onChange={(event) => setFilters({ ...filters, status: event.target.value as PurchaseFilters["status"] })}
         >
-          <option value="open">Em andamento</option>
-          <option value="all">Todos</option>
+          <option value="open">{t("purchases.statusOpen")}</option>
+          <option value="all">{t("purchases.statusAll")}</option>
           {purchaseStatusOptions.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
@@ -169,13 +173,13 @@ export function Compras() {
           ))}
         </select>
         <select
-          aria-label="Projeto"
+          aria-label={t("purchases.filterProject")}
           className={selectClassName}
           value={filters.projectId}
           onChange={(event) => setFilters({ ...filters, projectId: event.target.value })}
         >
-          <option value="all">Todos os projetos</option>
-          <option value={GENERAL_STOCK_VALUE}>Estoque geral</option>
+          <option value="all">{t("purchases.allProjects")}</option>
+          <option value={GENERAL_STOCK_VALUE}>{t("purchases.generalStock")}</option>
           {projetosComPedido.map((project) => (
             <option key={project.id} value={project.id}>
               {project.name}
@@ -183,12 +187,12 @@ export function Compras() {
           ))}
         </select>
         <select
-          aria-label="Rubrica"
+          aria-label={t("purchases.filterCategory")}
           className={selectClassName}
           value={filters.category}
           onChange={(event) => setFilters({ ...filters, category: event.target.value as PurchaseFilters["category"] })}
         >
-          <option value="all">Todas as rubricas</option>
+          <option value="all">{t("purchases.allCategories")}</option>
           {purchaseCategoryOptions.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
@@ -196,14 +200,14 @@ export function Compras() {
           ))}
         </select>
         <select
-          aria-label="Tipo de compra"
+          aria-label={t("purchases.filterKind")}
           className={selectClassName}
           value={filters.kind}
           onChange={(event) => setFilters({ ...filters, kind: event.target.value as PurchaseFilters["kind"] })}
         >
-          <option value="all">Todos os tipos</option>
-          <option value="maintenance">Manutenção</option>
-          <option value="other">Outras compras</option>
+          <option value="all">{t("purchases.allKinds")}</option>
+          <option value="maintenance">{t("purchases.kindMaintenance")}</option>
+          <option value="other">{t("purchases.kindOther")}</option>
         </select>
         <label className="inline-flex min-h-11 items-center gap-2 text-base font-semibold text-text">
           <input
@@ -212,7 +216,7 @@ export function Compras() {
             type="checkbox"
             onChange={(event) => setFilters({ ...filters, mine: event.target.checked })}
           />
-          Só os meus pedidos
+          {t("purchases.onlyMine")}
         </label>
       </div>
 
@@ -223,7 +227,7 @@ export function Compras() {
       {!carregado ? null : visiveis.length === 0 ? (
         <Card>
           <p className="text-lg font-semibold text-muted">
-            {purchases.length === 0 ? "Nenhum pedido de compra ainda." : "Nenhum pedido com esses filtros."}
+            {purchases.length === 0 ? t("purchases.none") : t("purchases.noneFiltered")}
           </p>
         </Card>
       ) : (
@@ -241,10 +245,10 @@ export function Compras() {
                         {purchase.quantity > 1 ? <span className="font-semibold text-muted"> × {purchase.quantity}</span> : null}
                       </h3>
                       <p className="mt-1 text-sm text-muted">
-                        {purchase.project_name} · {purchase.requested_by_name ?? "Alguém"} · {formatMaintenanceDateTime(purchase.created_at, timezone)}
+                        {purchase.project_id === null ? t("purchases.generalStockLab") : purchase.project_name} · {purchase.requested_by_name ?? t("purchases.someone")} · {formatMaintenanceDateTime(purchase.created_at, timezone)}
                       </p>
                       {purchase.maintenance_equipment_name ? (
-                        <p className="mt-1 text-sm font-semibold text-muted">Peça para a manutenção de {purchase.maintenance_equipment_name}</p>
+                        <p className="mt-1 text-sm font-semibold text-muted">{t("purchases.partFor", { name: purchase.maintenance_equipment_name })}</p>
                       ) : null}
                     </div>
                     <div className="flex flex-wrap gap-2">
@@ -260,16 +264,16 @@ export function Compras() {
                       {getPurchaseCategoryLabel(purchase.funding_category)}
                     </span>
                     {purchase.for_maintenance ? (
-                      <span className="mr-2 rounded-full border border-warning-dark bg-warning-soft px-2 py-0.5 text-sm font-semibold text-text">Manutenção</span>
+                      <span className="mr-2 rounded-full border border-warning-dark bg-warning-soft px-2 py-0.5 text-sm font-semibold text-text">{t("purchases.maintenanceTag")}</span>
                     ) : null}
-                    Estimado <strong>{formatCurrencyBRL(purchase.estimated_amount)}</strong>
+                    {t("purchases.estimatedLabel")} <strong>{formatCurrencyBRL(purchase.estimated_amount)}</strong>
                     {getUnitAmount(purchase.estimated_amount, purchase.quantity) !== null ? (
                       <span className="text-muted"> ({purchase.quantity} × {formatCurrencyBRL(getUnitAmount(purchase.estimated_amount, purchase.quantity) as number)})</span>
                     ) : null}
                     {purchase.actual_amount !== null ? (
                       <>
                         {" "}
-                        · Pago <strong>{formatCurrencyBRL(purchase.actual_amount)}</strong>
+                        · {t("purchases.paid")} <strong>{formatCurrencyBRL(purchase.actual_amount)}</strong>
                       </>
                     ) : null}
                   </p>
@@ -283,19 +287,19 @@ export function Compras() {
                         className="inline-flex w-fit max-w-full items-center gap-1 break-all text-sm font-semibold text-primary underline"
                       >
                         <ExternalLink className="h-4 w-4 shrink-0" aria-hidden="true" />
-                        Abrir link do item
+                        {t("purchases.openLink")}
                       </a>
                     ) : null
                   ) : null}
                   {purchase.notes ? <p className="whitespace-pre-wrap break-words text-sm text-muted">{purchase.notes}</p> : null}
                   {purchase.status === "rejected" ? (
                     <p className="rounded-lg border border-danger bg-danger-soft p-3 text-sm text-text">
-                      <span className="font-semibold">Recusado</span>
-                      {purchase.decided_by_name ? ` por ${purchase.decided_by_name}` : ""}
+                      <span className="font-semibold">{t("purchases.statusRejected")}</span>
+                      {purchase.decided_by_name ? t("purchases.byPerson", { name: purchase.decided_by_name }) : ""}
                       {purchase.rejected_reason ? `: ${purchase.rejected_reason}` : "."}
                     </p>
                   ) : purchase.decided_by_name && purchase.status !== "requested" && purchase.status !== "cancelled" ? (
-                    <p className="text-sm text-muted">Aprovado por {purchase.decided_by_name}</p>
+                    <p className="text-sm text-muted">{t("purchases.approvedBy", { name: purchase.decided_by_name })}</p>
                   ) : null}
 
                   {actions.edit || actions.cancel || actions.approve || actions.reject || actions.purchase || actions.deliver || actions.undo ? (
@@ -315,32 +319,32 @@ export function Compras() {
                       ) : null}
                       {actions.edit ? (
                         <Button className="min-h-9 px-3 py-2 text-sm" variant="ghost" disabled={busy} onClick={() => setFormulario({ purchase })}>
-                          Editar
+                          {t("purchases.edit")}
                         </Button>
                       ) : null}
                       {actions.cancel ? (
-                        <Button className="min-h-9 px-3 py-2 text-sm" variant="ghost" disabled={busy} onClick={() => mudar(purchase, "cancelled", "Cancelar este pedido?")}>
-                          Cancelar pedido
+                        <Button className="min-h-9 px-3 py-2 text-sm" variant="ghost" disabled={busy} onClick={() => mudar(purchase, "cancelled", t("purchases.cancelConfirm"))}>
+                          {t("purchases.cancelRequest")}
                         </Button>
                       ) : null}
                       {actions.reject ? (
                         <Button className="min-h-9 px-3 py-2 text-sm" variant="secondary" disabled={busy} onClick={() => setPasso({ mode: "reject", purchase })}>
-                          Recusar
+                          {t("purchases.reject")}
                         </Button>
                       ) : null}
                       {actions.approve ? (
                         <Button className="min-h-9 px-3 py-2 text-sm" variant="success" disabled={busy} onClick={() => mudar(purchase, "approved")}>
-                          Aprovar
+                          {t("purchases.approve")}
                         </Button>
                       ) : null}
                       {actions.purchase ? (
                         <Button className="min-h-9 px-3 py-2 text-sm" variant="success" disabled={busy} onClick={() => setPasso({ mode: "purchase", purchase })}>
-                          Marcar como comprado
+                          {t("purchases.markPurchased")}
                         </Button>
                       ) : null}
                       {actions.deliver ? (
                         <Button className="min-h-9 px-3 py-2 text-sm" variant="success" disabled={busy} onClick={() => mudar(purchase, "delivered")}>
-                          Marcar como entregue
+                          {t("purchases.markDelivered")}
                         </Button>
                       ) : null}
                     </div>

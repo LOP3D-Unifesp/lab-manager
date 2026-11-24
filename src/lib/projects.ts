@@ -1,4 +1,4 @@
-import { t } from "../i18n";
+import { getLocale, t } from "../i18n";
 import type { StatusVariant } from "../components/ui/StatusBadge";
 
 export type ProjectStatus = "planning" | "active" | "paused" | "completed" | "archived";
@@ -94,7 +94,7 @@ export function getProjectFundingTotal(project: Pick<Project, "funding">) {
 }
 
 export function formatCurrencyBRL(value: number) {
-  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
+  return new Intl.NumberFormat(getLocale(), { style: "currency", currency: "BRL" }).format(value);
 }
 
 // Aceita "1234.56" (campo numérico) e "1.234,56" (digitado à mão). Retorna null se inválido.

@@ -1,4 +1,4 @@
-import { t } from "../i18n";
+import { getLocale, t } from "../i18n";
 import type { StatusVariant } from "../components/ui/StatusBadge";
 
 export type MaterialCategory = "filament" | "resin" | "powder" | "other";
@@ -83,7 +83,7 @@ export function isSpoolLow(spool: Pick<MaterialSpool, "status" | "current_amount
 }
 
 export function formatAmount(value: number, unit: MaterialUnit) {
-  const text = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(value);
+  const text = new Intl.NumberFormat(getLocale(), { maximumFractionDigits: 1 }).format(value);
   return `${text} ${unit}`;
 }
 
@@ -153,14 +153,14 @@ export function parseAmount(value: string) {
 
 export function getInventoryErrorMessage(error: unknown) {
   const text = error instanceof Error ? error.message : String(error ?? "");
-  if (text.includes("materials_name_key")) return "Já existe um material com esse nome.";
-  if (text.includes("material_spools_current_amount_check")) return "A quantidade atual não pode passar da quantidade inicial.";
-  if (text.includes("material_spools_initial_amount_check")) return "Informe uma quantidade inicial maior que zero.";
-  if (text.includes("material_spools_color_hex_check")) return "Escolha uma cor válida.";
-  if (text.includes("spool_not_available")) return "Esse item do estoque não está disponível para este projeto e material.";
-  if (text.includes("usage_not_allowed")) return "O consumo só pode ser registrado depois que a impressão começou.";
-  if (text.includes("booking_without_spool")) return "Esta reserva não tem item de estoque.";
-  if (text.includes("invalid_amount")) return "Informe uma quantidade válida.";
-  if (text.includes("row-level security") || text.includes("permission denied")) return "Você não tem permissão para fazer essa alteração.";
-  return text || "Não foi possível concluir a operação.";
+  if (text.includes("materials_name_key")) return t("inventoryError.materials_name_key");
+  if (text.includes("material_spools_current_amount_check")) return t("inventoryError.current_amount_check");
+  if (text.includes("material_spools_initial_amount_check")) return t("inventoryError.initial_amount_check");
+  if (text.includes("material_spools_color_hex_check")) return t("inventoryError.color_hex_check");
+  if (text.includes("spool_not_available")) return t("inventoryError.spool_not_available");
+  if (text.includes("usage_not_allowed")) return t("inventoryError.usage_not_allowed");
+  if (text.includes("booking_without_spool")) return t("inventoryError.booking_without_spool");
+  if (text.includes("invalid_amount")) return t("inventoryError.invalid_amount");
+  if (text.includes("row-level security") || text.includes("permission denied")) return t("inventoryError.permission");
+  return text || t("inventoryError.fallback");
 }

@@ -1,3 +1,4 @@
+import { getLocale, useT } from "../i18n";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { Boxes, Pencil, Plus } from "lucide-react";
 
@@ -33,6 +34,7 @@ const selectClassName =
 const filtrosIniciais: SpoolFilters = { search: "", materialId: "all", projectId: "all", status: "available", lowOnly: false };
 
 export function Inventario() {
+  const t = useT();
   const { profile } = useAuth();
   const isCoordinator = profile?.role === "coordinator";
   const [aba, setAba] = useState<Aba>("estoque");
@@ -95,7 +97,7 @@ export function Inventario() {
     if (!ajuste) return;
     const valor = parseAmount(novoPeso);
     if (valor === null || valor > ajuste.initial_amount) {
-      setErro(`Informe uma quantidade entre 0 e ${formatAmount(ajuste.initial_amount, ajuste.unit)}.`);
+      setErro(t("inventory.errAmountRange", { max: formatAmount(ajuste.initial_amount, ajuste.unit) }));
       return;
     }
     try {
@@ -114,30 +116,30 @@ export function Inventario() {
   return (
     <>
       <PageHeader
-        title="Inventário"
-        description="Filamentos, resinas e outros insumos, com a quantidade que resta e de quem é cada item (um projeto ou o estoque geral)."
+        title={t("inventory.title")}
+        description={t("inventory.subtitle")}
         action={
           isCoordinator ? (
             aba === "estoque" ? (
               <Button variant="success" onClick={() => setRolo({ spool: null })}>
                 <Plus className="mr-2 h-5 w-5" aria-hidden="true" />
-                Cadastrar item
+                {t("inventory.registerItem")}
               </Button>
             ) : (
               <Button variant="success" onClick={() => setMaterial({ material: null })}>
                 <Plus className="mr-2 h-5 w-5" aria-hidden="true" />
-                Novo material
+                {t("inventory.newMaterial")}
               </Button>
             )
           ) : undefined
         }
       />
 
-      <div role="tablist" aria-label="Inventário" className="mb-5 inline-flex rounded-lg border border-border bg-surface p-1">
+      <div role="tablist" aria-label={t("inventory.title")} className="mb-5 inline-flex rounded-lg border border-border bg-surface p-1">
         {(
           [
-            { id: "estoque", label: "Estoque" },
-            { id: "materiais", label: "Materiais" },
+            { id: "estoque", label: t("inventory.tabStock") },
+            { id: "materiais", label: t("inventory.tabMaterials") },
           ] as const
         ).map((item) => (
           <button
@@ -164,17 +166,17 @@ export function Inventario() {
           <div className="mb-4 grid gap-3 md:grid-cols-[minmax(0,1.2fr)_repeat(3,minmax(0,1fr))_auto]">
             <input
               className={selectClassName}
-              placeholder="Buscar cor, fabricante ou lote"
+              placeholder={t("inventory.search")}
               value={filtros.search}
               onChange={(e) => setFiltros((current) => ({ ...current, search: e.target.value }))}
             />
             <select
-              aria-label="Material"
+              aria-label={t("inventory.filterMaterial")}
               className={selectClassName}
               value={filtros.materialId}
               onChange={(e) => setFiltros((current) => ({ ...current, materialId: e.target.value }))}
             >
-              <option value="all">Todos os materiais</option>
+              <option value="all">{t("inventory.allMaterials")}</option>
               {materials.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name}
@@ -182,13 +184,13 @@ export function Inventario() {
               ))}
             </select>
             <select
-              aria-label="Projeto"
+              aria-label={t("inventory.filterOwner")}
               className={selectClassName}
               value={filtros.projectId}
               onChange={(e) => setFiltros((current) => ({ ...current, projectId: e.target.value }))}
             >
-              <option value="all">Todos os donos</option>
-              <option value="general">Estoque geral</option>
+              <option value="all">{t("inventory.allOwners")}</option>
+              <option value="general">{t("inventory.generalStock")}</option>
               {projects.map((project) => (
                 <option key={project.id} value={project.id}>
                   {project.name}
@@ -196,13 +198,13 @@ export function Inventario() {
               ))}
             </select>
             <select
-              aria-label="Situação"
+              aria-label={t("inventory.filterStatus")}
               className={selectClassName}
               value={filtros.status}
               onChange={(e) => setFiltros((current) => ({ ...current, status: e.target.value as SpoolFilters["status"] }))}
             >
-              <option value="available">Disponíveis</option>
-              <option value="all">Todas as situações</option>
+              <option value="available">{t("inventory.available")}</option>
+              <option value="all">{t("inventory.allStatuses")}</option>
               {spoolStatusOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
@@ -221,29 +223,29 @@ export function Inventario() {
                 type="checkbox"
                 onChange={(e) => setFiltros((current) => ({ ...current, lowOnly: e.target.checked }))}
               />
-              Pouco restante
+              {t("inventory.lowOnly")}
             </label>
           </div>
 
           {filtrando && spools ? (
             <div className="mb-3 flex items-center justify-between gap-3 text-base text-muted">
               <span>
-                {visiveis.length} de {spools.length} item(ns)
+                {t("inventory.countOf", { shown: visiveis.length, total: spools.length, count: spools.length })}
               </span>
               <button type="button" className="font-semibold text-primary underline" onClick={() => setFiltros(filtrosIniciais)}>
-                Limpar filtros
+                {t("inventory.clearFilters")}
               </button>
             </div>
           ) : null}
 
-          {spools === null && !erro ? <p className="text-lg text-muted">Carregando inventário...</p> : null}
+          {spools === null && !erro ? <p className="text-lg text-muted">{t("inventory.loading")}</p> : null}
 
           {spools !== null && visiveis.length === 0 ? (
             <Card>
               <div className="flex flex-col items-center gap-2 py-6 text-center">
                 <Boxes className="h-8 w-8 text-muted" aria-hidden="true" />
-                <p className="text-lg font-semibold">{spools.length === 0 ? "Nenhum item cadastrado ainda." : "Nenhum item com esses filtros."}</p>
-                {spools.length === 0 && isCoordinator ? <p className="text-muted">Comece com “Cadastrar item”.</p> : null}
+                <p className="text-lg font-semibold">{spools.length === 0 ? t("inventory.none") : t("inventory.noneFiltered")}</p>
+                {spools.length === 0 && isCoordinator ? <p className="text-muted">{t("inventory.startWith")}</p> : null}
               </div>
             </Card>
           ) : null}
@@ -270,7 +272,7 @@ export function Inventario() {
       ) : (
         <Card>
           {materials.length === 0 ? (
-            <p className="text-lg text-muted">Nenhum material cadastrado ainda.</p>
+            <p className="text-lg text-muted">{t("inventory.noMaterials")}</p>
           ) : (
             <ul className="divide-y divide-border">
               {materials.map((item) => (
@@ -278,18 +280,18 @@ export function Inventario() {
                   <div className="min-w-0">
                     <p className="text-lg font-bold text-text">{item.name}</p>
                     <p className="text-base text-muted">
-                      {getMaterialCategoryLabel(item.category)} · {item.unit === "ml" ? "mililitros" : "gramas"}
+                      {getMaterialCategoryLabel(item.category)} · {item.unit === "ml" ? t("inventory.unitMl") : t("inventory.unitG")}
                       {item.description ? ` · ${item.description}` : ""}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-sm text-muted">{rolosPorMaterial.get(item.id) ?? 0} item(ns) disponível(is)</span>
-                    <StatusBadge label={item.is_active ? "Ativo" : "Arquivado"} variant={item.is_active ? "success" : "neutral"} />
+                    <span className="text-sm text-muted">{t("inventory.availableCount", { count: rolosPorMaterial.get(item.id) ?? 0 })}</span>
+                    <StatusBadge label={item.is_active ? t("inventory.active") : t("inventory.archived")} variant={item.is_active ? "success" : "neutral"} />
                     {isCoordinator ? (
                       <button
                         type="button"
-                        title="Editar material"
-                        aria-label={`Editar ${item.name}`}
+                        title={t("inventory.editMaterial")}
+                        aria-label={t("inventory.editNamed", { name: item.name })}
                         className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted transition hover:bg-primary-soft hover:text-primary"
                         onClick={() => setMaterial({ material: item })}
                       >
@@ -310,7 +312,7 @@ export function Inventario() {
           materials={materiaisAtivos}
           projects={projects}
           onClose={() => setRolo(null)}
-          onMaterialCreated={(created) => setMaterials((current) => [...current, created].sort((a, b) => a.name.localeCompare(b.name, "pt-BR")))}
+          onMaterialCreated={(created) => setMaterials((current) => [...current, created].sort((a, b) => a.name.localeCompare(b.name, getLocale())))}
           onSaved={async () => {
             setRolo(null);
             await recarregar();
@@ -331,13 +333,13 @@ export function Inventario() {
 
       {ajuste ? (
         <Modal
-          title="Ajustar quantidade"
-          description={`${ajuste.material_name} · ${ajuste.color_name}. Meça o que resta e informe a quantidade.`}
+          title={t("inventory.adjustTitle")}
+          description={t("inventory.adjustHint", { material: ajuste.material_name, color: ajuste.color_name })}
           onClose={() => setAjuste(null)}
         >
           <form className="grid gap-4" onSubmit={salvarPeso}>
             <label className="grid gap-2 text-base font-semibold text-text">
-              Quantidade atual ({ajuste.unit})
+              {t("inventory.currentAmount", { unit: ajuste.unit })}
               <input
                 autoFocus
                 className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
@@ -345,14 +347,14 @@ export function Inventario() {
                 value={novoPeso}
                 onChange={(e) => setNovoPeso(e.target.value)}
               />
-              <span className="text-sm font-normal text-muted">Quantidade inicial: {formatAmount(ajuste.initial_amount, ajuste.unit)}</span>
+              <span className="text-sm font-normal text-muted">{t("inventory.initialAmountLine", { amount: formatAmount(ajuste.initial_amount, ajuste.unit) })}</span>
             </label>
             <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <Button variant="secondary" onClick={() => setAjuste(null)}>
-                Cancelar
+                {t("common.cancel")}
               </Button>
               <Button type="submit" disabled={salvando}>
-                {salvando ? "Salvando..." : "Salvar quantidade"}
+                {salvando ? t("common.saving") : t("inventory.saveAmount")}
               </Button>
             </div>
           </form>

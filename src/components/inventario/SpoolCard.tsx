@@ -1,3 +1,4 @@
+import { useT } from "../../i18n";
 import { Pencil, Scale } from "lucide-react";
 
 import {
@@ -20,6 +21,7 @@ type SpoolCardProps = {
 };
 
 export function SpoolCard({ onAdjust, onEdit, onMarkEmpty, spool }: SpoolCardProps) {
+  const t = useT();
   const percent = getSpoolRemainingPercent(spool);
   const low = isSpoolLow(spool);
   const finished = spool.status === "empty" || spool.status === "discarded";
@@ -37,7 +39,7 @@ export function SpoolCard({ onAdjust, onEdit, onMarkEmpty, spool }: SpoolCardPro
             {spool.material_name} · {spool.color_name}
           </h3>
           <p className="truncate text-base text-muted">
-            {[spool.manufacturer, spool.diameter_mm ? `${spool.diameter_mm} mm` : null].filter(Boolean).join(" · ") || "Fabricante não informado"}
+            {[spool.manufacturer, spool.diameter_mm ? `${spool.diameter_mm} mm` : null].filter(Boolean).join(" · ") || t("spool.makerUnknown")}
           </p>
         </div>
         <StatusBadge label={getSpoolStatusLabel(spool.status)} variant={getSpoolStatusVariant(spool.status)} />
@@ -46,11 +48,11 @@ export function SpoolCard({ onAdjust, onEdit, onMarkEmpty, spool }: SpoolCardPro
       <div>
         <div className="flex items-baseline justify-between gap-2 text-base">
           <span className="font-semibold text-text">{formatAmount(spool.current_amount, spool.unit)}</span>
-          <span className="text-sm text-muted">de {formatAmount(spool.initial_amount, spool.unit)}</span>
+          <span className="text-sm text-muted">{t("spool.ofInitial", { amount: formatAmount(spool.initial_amount, spool.unit) })}</span>
         </div>
         <div
           role="progressbar"
-          aria-label="Quantidade restante"
+          aria-label={t("spool.remaining")}
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={percent}
@@ -58,11 +60,11 @@ export function SpoolCard({ onAdjust, onEdit, onMarkEmpty, spool }: SpoolCardPro
         >
           <div className={["h-full rounded-full", low ? "bg-danger" : "bg-primary"].join(" ")} style={{ width: `${percent}%` }} />
         </div>
-        {low ? <p className="mt-1 text-sm font-semibold text-danger">Pouco restante (até {LOW_STOCK_PERCENT}%)</p> : null}
+        {low ? <p className="mt-1 text-sm font-semibold text-danger">{t("spool.low", { percent: LOW_STOCK_PERCENT })}</p> : null}
       </div>
 
       <div className="flex flex-wrap gap-2">
-        {spool.project_name ? <StatusBadge label={spool.project_name} variant="info" /> : <StatusBadge label="Estoque geral" variant="neutral" />}
+        {spool.project_name ? <StatusBadge label={spool.project_name} variant="info" /> : <StatusBadge label={t("inventory.generalStock")} variant="neutral" />}
         {spool.storage_location ? <span className="text-sm text-muted">{spool.storage_location}</span> : null}
       </div>
 
@@ -76,7 +78,7 @@ export function SpoolCard({ onAdjust, onEdit, onMarkEmpty, spool }: SpoolCardPro
                 onClick={() => onAdjust(spool)}
               >
                 <Scale className="h-4 w-4" aria-hidden="true" />
-                Ajustar quantidade
+                {t("spool.adjust")}
               </button>
             ) : null}
             {onMarkEmpty && !finished ? (
@@ -85,15 +87,15 @@ export function SpoolCard({ onAdjust, onEdit, onMarkEmpty, spool }: SpoolCardPro
                 className="inline-flex min-h-9 items-center rounded-md border border-border px-3 text-sm font-semibold text-muted transition hover:border-danger hover:text-danger"
                 onClick={() => onMarkEmpty(spool)}
               >
-                Marcar vazio
+                {t("spool.markEmpty")}
               </button>
             ) : null}
           </div>
           {onEdit ? (
             <button
               type="button"
-              title="Editar item"
-              aria-label={`Editar item ${spool.material_name} ${spool.color_name}`}
+              title={t("spool.edit")}
+              aria-label={t("spool.editNamed", { material: spool.material_name, color: spool.color_name })}
               className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted transition hover:bg-primary-soft hover:text-primary"
               onClick={() => onEdit(spool)}
             >

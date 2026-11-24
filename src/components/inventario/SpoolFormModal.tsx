@@ -1,3 +1,4 @@
+import { getLocale, useT } from "../../i18n";
 import { FormEvent, useMemo, useState } from "react";
 
 import {
@@ -31,6 +32,7 @@ function toNullable(value: string) {
 }
 
 export function SpoolFormModal({ materials, onClose, onMaterialCreated, onSaved, projects, spool }: SpoolFormModalProps) {
+  const t = useT();
   const [materialId, setMaterialId] = useState(spool?.material_id ?? "");
   const [colorName, setColorName] = useState(spool?.color_name ?? "");
   const [colorHex, setColorHex] = useState(spool?.color_hex ?? "#ffffff");
@@ -51,12 +53,12 @@ export function SpoolFormModal({ materials, onClose, onMaterialCreated, onSaved,
 
   const material = materials.find((item) => item.id === materialId);
   const unit = material?.unit ?? "g";
-  const projetosOrdenados = useMemo(() => [...projects].sort((a, b) => a.name.localeCompare(b.name, "pt-BR")), [projects]);
+  const projetosOrdenados = useMemo(() => [...projects].sort((a, b) => a.name.localeCompare(b.name, getLocale())), [projects]);
 
   async function cadastrarMaterial() {
     const name = novoMaterial?.name.trim();
     if (!novoMaterial || !name) {
-      setErro("Informe o nome do material.");
+      setErro(t("spoolForm.errMaterialName"));
       return;
     }
     const defaultUnit = materialCategoryOptions.find((option) => option.value === novoMaterial.category)?.defaultUnit ?? "g";
@@ -80,12 +82,12 @@ export function SpoolFormModal({ materials, onClose, onMaterialCreated, onSaved,
     const currentAmount = spool ? parseAmount(current) : initialAmount;
     const diameterValue = diameter.trim() ? parseAmount(diameter) : null;
 
-    if (!materialId) return setErro("Escolha o material.");
-    if (!colorName.trim()) return setErro("Informe o nome da cor.");
-    if (initialAmount === null || initialAmount <= 0) return setErro(`Informe a quantidade inicial em ${unit}.`);
-    if (currentAmount === null) return setErro(`Informe a quantidade atual em ${unit}.`);
-    if (currentAmount > initialAmount) return setErro("A quantidade atual não pode passar da quantidade inicial.");
-    if (diameter.trim() && (diameterValue === null || diameterValue <= 0)) return setErro("Informe um diâmetro válido.");
+    if (!materialId) return setErro(t("spoolForm.errChooseMaterial"));
+    if (!colorName.trim()) return setErro(t("spoolForm.errColorName"));
+    if (initialAmount === null || initialAmount <= 0) return setErro(t("spoolForm.errInitial", { unit }));
+    if (currentAmount === null) return setErro(t("spoolForm.errCurrent", { unit }));
+    if (currentAmount > initialAmount) return setErro(t("spoolForm.errCurrentOver"));
+    if (diameter.trim() && (diameterValue === null || diameterValue <= 0)) return setErro(t("spoolForm.errDiameter"));
 
     const input = {
       material_id: materialId,
@@ -118,8 +120,8 @@ export function SpoolFormModal({ materials, onClose, onMaterialCreated, onSaved,
 
   return (
     <Modal
-      title={spool ? "Editar item" : "Cadastrar item"}
-      description="Cada item é uma unidade física do estoque (um rolo de filamento, um frasco de resina...): tem cor, quantidade e dono, que é um projeto ou o estoque geral."
+      title={spool ? t("spoolForm.edit") : t("spoolForm.register")}
+      description={t("spoolForm.hint")}
       onClose={onClose}
       wide
     >
@@ -127,18 +129,18 @@ export function SpoolFormModal({ materials, onClose, onMaterialCreated, onSaved,
         <div className="grid items-start gap-4 sm:grid-cols-2">
           <div className="grid gap-2">
             <div className="flex items-baseline justify-between gap-2 text-base font-semibold text-text">
-              <label htmlFor="rolo-material">Material</label>
+              <label htmlFor="rolo-material">{t("spoolForm.material")}</label>
               <button
                 type="button"
                 className="text-sm font-semibold text-primary underline"
                 onClick={() => setNovoMaterial((current) => (current ? null : { name: "", category: "filament" }))}
               >
-                + Novo material
+                {t("spoolForm.newMaterial")}
               </button>
             </div>
             <select id="rolo-material" className={inputClassName} required value={materialId} onChange={(e) => setMaterialId(e.target.value)}>
               <option value="" disabled>
-                Selecione
+                {t("spoolForm.select")}
               </option>
               {materials.map((item) => (
                 <option key={item.id} value={item.id}>
@@ -149,19 +151,19 @@ export function SpoolFormModal({ materials, onClose, onMaterialCreated, onSaved,
           </div>
 
           <div className="grid gap-2 text-base font-semibold text-text">
-            Cor
+            {t("spoolForm.color")}
             <div className="grid grid-cols-[auto_1fr] items-center gap-3">
               <input
-                aria-label="Escolher cor"
+                aria-label={t("spoolForm.pickColor")}
                 className="h-11 w-14 cursor-pointer rounded-lg border border-border bg-background p-1"
                 type="color"
                 value={colorHex}
                 onChange={(e) => setColorHex(e.target.value)}
               />
               <input
-                aria-label="Nome da cor"
+                aria-label={t("spoolForm.colorName")}
                 className={inputClassName}
-                placeholder="Ex.: Branco"
+                placeholder={t("spoolForm.colorPlaceholder")}
                 required
                 value={colorName}
                 onChange={(e) => setColorName(e.target.value)}
@@ -173,16 +175,16 @@ export function SpoolFormModal({ materials, onClose, onMaterialCreated, onSaved,
         {novoMaterial ? (
           <div className="grid gap-3 rounded-lg border border-border bg-background p-4 sm:grid-cols-[1fr_200px_auto] sm:items-end">
             <label className="grid gap-2 text-sm font-semibold text-text">
-              Nome do material
+              {t("spoolForm.materialName")}
               <input
                 className={inputClassName}
-                placeholder="Ex.: PLA"
+                placeholder={t("spoolForm.materialPlaceholder")}
                 value={novoMaterial.name}
                 onChange={(e) => setNovoMaterial({ ...novoMaterial, name: e.target.value })}
               />
             </label>
             <label className="grid gap-2 text-sm font-semibold text-text">
-              Categoria
+              {t("spoolForm.category")}
               <select
                 className={inputClassName}
                 value={novoMaterial.category}
@@ -196,23 +198,23 @@ export function SpoolFormModal({ materials, onClose, onMaterialCreated, onSaved,
               </select>
             </label>
             <Button disabled={salvando} onClick={cadastrarMaterial}>
-              Cadastrar material
+              {t("spoolForm.registerMaterial")}
             </Button>
           </div>
         ) : null}
 
         <div className={["grid items-start gap-4", spool ? "sm:grid-cols-3" : "sm:grid-cols-2"].join(" ")}>
           <label className="grid gap-2 text-base font-semibold text-text">
-            Fabricante
+            {t("spoolForm.manufacturer")}
             <input className={inputClassName} value={manufacturer} onChange={(e) => setManufacturer(e.target.value)} />
           </label>
           <label className="grid gap-2 text-base font-semibold text-text">
-            Quantidade inicial ({unit})
+            {t("spoolForm.initialAmount", { unit })}
             <input className={inputClassName} inputMode="decimal" required value={initial} onChange={(e) => setInitial(e.target.value)} />
           </label>
           {spool ? (
             <label className="grid gap-2 text-base font-semibold text-text">
-              Quantidade atual ({unit})
+              {t("spoolForm.currentAmount", { unit })}
               <input className={inputClassName} inputMode="decimal" required value={current} onChange={(e) => setCurrent(e.target.value)} />
             </label>
           ) : null}
@@ -220,9 +222,9 @@ export function SpoolFormModal({ materials, onClose, onMaterialCreated, onSaved,
 
         <div className="grid items-start gap-4 sm:grid-cols-2">
           <label className="grid gap-2 text-base font-semibold text-text">
-            De quem é
+            {t("spoolForm.owner")}
             <select className={inputClassName} value={projectId} onChange={(e) => setProjectId(e.target.value)}>
-              <option value="">Estoque geral do laboratório</option>
+              <option value="">{t("spoolForm.generalStock")}</option>
               {projetosOrdenados.map((project) => (
                 <option key={project.id} value={project.id}>
                   {project.name}
@@ -232,7 +234,7 @@ export function SpoolFormModal({ materials, onClose, onMaterialCreated, onSaved,
           </label>
           {spool ? (
             <label className="grid gap-2 text-base font-semibold text-text">
-              Situação
+              {t("spoolForm.status")}
               <select className={inputClassName} value={status} onChange={(e) => setStatus(e.target.value as SpoolStatus)}>
                 {spoolStatusOptions.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -245,32 +247,32 @@ export function SpoolFormModal({ materials, onClose, onMaterialCreated, onSaved,
         </div>
 
         <details className="rounded-lg border border-border bg-background p-4">
-          <summary className="cursor-pointer text-base font-semibold text-text">Mais detalhes (local, lote, datas)</summary>
+          <summary className="cursor-pointer text-base font-semibold text-text">{t("spoolForm.moreDetails")}</summary>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <label className="grid gap-2 text-base font-semibold text-text">
-              Local de armazenamento
+              {t("spoolForm.storage")}
               <input className={inputClassName} value={location} onChange={(e) => setLocation(e.target.value)} />
             </label>
             <label className="grid gap-2 text-base font-semibold text-text">
-              Lote
+              {t("spoolForm.lot")}
               <input className={inputClassName} value={lot} onChange={(e) => setLot(e.target.value)} />
             </label>
             {!material || material.category === "filament" ? (
               <label className="grid gap-2 text-base font-semibold text-text">
-                Diâmetro (mm)
+                {t("spoolForm.diameter")}
                 <input className={inputClassName} inputMode="decimal" placeholder="1,75" value={diameter} onChange={(e) => setDiameter(e.target.value)} />
               </label>
             ) : null}
             <label className="grid gap-2 text-base font-semibold text-text">
-              Aberto em
+              {t("spoolForm.openedOn")}
               <input className={inputClassName} type="date" value={openedOn} onChange={(e) => setOpenedOn(e.target.value)} />
             </label>
             <label className="grid gap-2 text-base font-semibold text-text">
-              Última secagem
+              {t("spoolForm.driedOn")}
               <input className={inputClassName} type="date" value={driedOn} onChange={(e) => setDriedOn(e.target.value)} />
             </label>
             <label className="grid gap-2 text-base font-semibold text-text sm:col-span-2">
-              Observações
+              {t("spoolForm.notes")}
               <textarea className={`${inputClassName} min-h-20 py-3`} value={notes} onChange={(e) => setNotes(e.target.value)} />
             </label>
           </div>
@@ -282,10 +284,10 @@ export function SpoolFormModal({ materials, onClose, onMaterialCreated, onSaved,
 
         <div className="mt-2 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Button variant="secondary" onClick={onClose}>
-            Cancelar
+            {t("common.cancel")}
           </Button>
           <Button type="submit" disabled={salvando}>
-            {salvando ? "Salvando..." : "Salvar item"}
+            {salvando ? t("common.saving") : t("spoolForm.save")}
           </Button>
         </div>
       </form>
