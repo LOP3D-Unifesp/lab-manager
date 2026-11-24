@@ -109,6 +109,7 @@ export type PurchaseFilters = {
   status: "open" | "all" | PurchaseStatus;
   projectId: string; // "all", "general" (estoque geral) ou id do projeto
   category: "all" | FundingCategory;
+  urgency: "all" | PurchaseUrgency;
   kind: "all" | "maintenance" | "other";
   mine: boolean;
 };
@@ -121,6 +122,7 @@ export function filterPurchases(purchases: PurchaseRequest[], filters: PurchaseF
       if (purchase.project_id !== null) return false;
     } else if (filters.projectId !== "all" && purchase.project_id !== filters.projectId) return false;
     if (filters.category !== "all" && purchase.funding_category !== filters.category) return false;
+    if (filters.urgency !== "all" && purchase.urgency !== filters.urgency) return false;
     if (filters.kind === "maintenance" && !purchase.for_maintenance) return false;
     if (filters.kind === "other" && purchase.for_maintenance) return false;
     if (filters.mine && purchase.requested_by !== profileId) return false;

@@ -17,6 +17,7 @@ import type {
   ProjectFunding,
   ProjectStatus,
   ProjectTask,
+  TaskPriority,
   TaskStatus,
 } from "./projects";
 import {
@@ -1268,6 +1269,7 @@ const taskSelect = [
   "title",
   "description",
   "status",
+  "priority",
   "position",
   "due_on",
   "created_by",
@@ -1322,6 +1324,7 @@ export type TaskInput = {
   title: string;
   description: string | null;
   status: TaskStatus;
+  priority: TaskPriority;
   due_on: string | null;
 };
 
@@ -1354,12 +1357,13 @@ export async function setTaskAssignees(taskId: string, profileIds: string[]) {
 // Feedback (sugestões e erros)
 // ---------------------------------------------------------------------------
 
-export async function createFeedback(params: { kind: FeedbackKind; message: string; pagePath: string; userAgent: string }) {
+export async function createFeedback(params: { kind: FeedbackKind; message: string; pagePath: string; userAgent: string; photoPaths?: string[] }) {
   const { error } = await client().from("feedback_reports").insert({
     kind: params.kind,
     message: params.message.trim(),
     page_path: params.pagePath,
     user_agent: params.userAgent,
+    photo_paths: params.photoPaths ?? [],
   });
   throwIfError(error);
 }
@@ -1369,7 +1373,7 @@ export async function listFeedback() {
   const { data, error } = await client()
     .from("feedback_reports")
     .select(
-      "id, kind, message, page_path, user_agent, status, coordinator_note, created_at, author:profiles!feedback_reports_created_by_fkey(full_name, email)",
+      "id, kind, message, page_path, photo_paths, user_agent, status, coordinator_note, created_at, author:profiles!feedback_reports_created_by_fkey(full_name, email)",
     )
     .order("created_at", { ascending: false });
   throwIfError(error);
@@ -1423,7 +1427,10 @@ export async function listMaintenanceRequests() {
   })) as MaintenanceRequest[];
 }
 
-export async function uploadMaintenancePhotos(blobs: Blob[]) {
+export type PhotoBucket = "maintenance-photos" | "feedback-photos";
+
+// Sobe as fotos (já redimensionadas) na pasta do autor do bucket e devolve os caminhos.
+export async function uploadPhotos(bucket: PhotoBucket, blobs: Blob[]) {
   const { data: userData, error: userError } = await client().auth.getUser();
   throwIfError(userError);
   const userId = userData.user?.id;
@@ -1432,23 +1439,39 @@ export async function uploadMaintenancePhotos(blobs: Blob[]) {
   const paths: string[] = [];
   for (const blob of blobs) {
     const path = `${userId}/${crypto.randomUUID()}.jpg`;
-    const { error } = await client().storage.from("maintenance-photos").upload(path, blob, { contentType: "image/jpeg" });
+    const { error } = await client().storage.from(bucket).upload(path, blob, { contentType: "image/jpeg" });
     throwIfError(error);
     paths.push(path);
   }
   return paths;
 }
 
-// Enderecos temporarios (1 hora) para exibir as fotos do bucket privado.
-export async function getMaintenancePhotoUrls(paths: string[]) {
+export function uploadMaintenancePhotos(blobs: Blob[]) {
+  return uploadPhotos("maintenance-photos", blobs);
+}
+
+export function uploadFeedbackPhotos(blobs: Blob[]) {
+  return uploadPhotos("feedback-photos", blobs);
+}
+
+// Enderecos temporarios (1 hora) para exibir as fotos de um bucket privado.
+export async function getSignedPhotoUrls(bucket: PhotoBucket, paths: string[]) {
   const urls: Record<string, string> = {};
   if (paths.length === 0) return urls;
-  const { data, error } = await client().storage.from("maintenance-photos").createSignedUrls(paths, 3600);
+  const { data, error } = await client().storage.from(bucket).createSignedUrls(paths, 3600);
   throwIfError(error);
   for (const item of data ?? []) {
     if (item.path && item.signedUrl) urls[item.path] = item.signedUrl;
   }
   return urls;
+}
+
+export function getMaintenancePhotoUrls(paths: string[]) {
+  return getSignedPhotoUrls("maintenance-photos", paths);
+}
+
+export function getFeedbackPhotoUrls(paths: string[]) {
+  return getSignedPhotoUrls("feedback-photos", paths);
 }
 
 export async function createMaintenanceRequest(params: {

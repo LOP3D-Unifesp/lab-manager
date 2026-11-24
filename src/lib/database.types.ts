@@ -205,14 +205,14 @@ isOneToOne: false
                   ]
                 },"feedback_reports": {
                   Row: {
-                    "coordinator_note": string | null,"created_at": string,"created_by": string | null,"id": string,"kind": Database["public"]['Enums']["feedback_kind"],"message": string,"page_path": string | null,"status": Database["public"]['Enums']["feedback_status"],"updated_at": string,"user_agent": string | null
+                    "coordinator_note": string | null,"created_at": string,"created_by": string | null,"id": string,"kind": Database["public"]['Enums']["feedback_kind"],"message": string,"page_path": string | null,"photo_paths": (string)[],"status": Database["public"]['Enums']["feedback_status"],"updated_at": string,"user_agent": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "coordinator_note"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"kind": Database["public"]['Enums']["feedback_kind"],"message": string,"page_path"?: string | null,"status"?: Database["public"]['Enums']["feedback_status"],"updated_at"?: string,"user_agent"?: string | null
+                    "coordinator_note"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"kind": Database["public"]['Enums']["feedback_kind"],"message": string,"page_path"?: string | null,"photo_paths"?: (string)[],"status"?: Database["public"]['Enums']["feedback_status"],"updated_at"?: string,"user_agent"?: string | null
                   }
                   Update: {
-                    "coordinator_note"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"kind"?: Database["public"]['Enums']["feedback_kind"],"message"?: string,"page_path"?: string | null,"status"?: Database["public"]['Enums']["feedback_status"],"updated_at"?: string,"user_agent"?: string | null
+                    "coordinator_note"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"kind"?: Database["public"]['Enums']["feedback_kind"],"message"?: string,"page_path"?: string | null,"photo_paths"?: (string)[],"status"?: Database["public"]['Enums']["feedback_status"],"updated_at"?: string,"user_agent"?: string | null
                   }
                   Relationships: [
                     {
@@ -611,14 +611,14 @@ isOneToOne: false
                   ]
                 },"project_tasks": {
                   Row: {
-                    "created_at": string,"created_by": string,"description": string | null,"due_on": string | null,"id": string,"position": number,"project_id": string,"status": Database["public"]['Enums']["task_status"],"title": string,"updated_at": string
+                    "created_at": string,"created_by": string,"description": string | null,"due_on": string | null,"id": string,"position": number,"priority": Database["public"]['Enums']["task_priority"],"project_id": string,"status": Database["public"]['Enums']["task_status"],"title": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"created_by"?: string,"description"?: string | null,"due_on"?: string | null,"id"?: string,"position"?: number,"project_id": string,"status"?: Database["public"]['Enums']["task_status"],"title": string,"updated_at"?: string
+                    "created_at"?: string,"created_by"?: string,"description"?: string | null,"due_on"?: string | null,"id"?: string,"position"?: number,"priority"?: Database["public"]['Enums']["task_priority"],"project_id": string,"status"?: Database["public"]['Enums']["task_status"],"title": string,"updated_at"?: string
                   }
                   Update: {
-                    "created_at"?: string,"created_by"?: string,"description"?: string | null,"due_on"?: string | null,"id"?: string,"position"?: number,"project_id"?: string,"status"?: Database["public"]['Enums']["task_status"],"title"?: string,"updated_at"?: string
+                    "created_at"?: string,"created_by"?: string,"description"?: string | null,"due_on"?: string | null,"id"?: string,"position"?: number,"priority"?: Database["public"]['Enums']["task_priority"],"project_id"?: string,"status"?: Database["public"]['Enums']["task_status"],"title"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -1335,7 +1335,7 @@ isOneToOne: false
       } }
           }
           Enums: {
-            "academic_affiliation": "ic"|"extension"|"intern"|"tcc"|"masters"|"phd"|"postdoc"|"visitor"|"technician"|"faculty"|"other","booking_status": "pending"|"approved"|"in_progress"|"completed"|"cancelled"|"failed"|"rejected","equipment_status": "active"|"maintenance"|"unavailable"|"disabled"|"stopped","feedback_kind": "suggestion"|"bug"|"other","feedback_status": "new"|"seen"|"planned"|"done"|"dismissed","funding_agency": "cnpq"|"fapesp"|"capes"|"sus"|"fap"|"other","invitation_status": "pending"|"accepted"|"expired"|"revoked","maintenance_request_status": "open"|"in_progress"|"resolved"|"cancelled"|"waiting_part","maintenance_urgency": "low"|"normal"|"urgent","material_category": "filament"|"resin"|"powder"|"other","project_funding_category": "capital"|"custeio"|"bolsas"|"reserva_tecnica"|"outros"|"passagens"|"diarias","project_status": "planning"|"active"|"paused"|"completed"|"archived","purchase_status": "requested"|"approved"|"rejected"|"purchased"|"delivered"|"cancelled","purchase_urgency": "low"|"normal"|"urgent","spool_status": "sealed"|"in_use"|"empty"|"discarded","task_status": "todo"|"in_progress"|"review"|"done","user_role": "coordinator"|"researcher"
+            "academic_affiliation": "ic"|"extension"|"intern"|"tcc"|"masters"|"phd"|"postdoc"|"visitor"|"technician"|"faculty"|"other","booking_status": "pending"|"approved"|"in_progress"|"completed"|"cancelled"|"failed"|"rejected","equipment_status": "active"|"maintenance"|"unavailable"|"disabled"|"stopped","feedback_kind": "suggestion"|"bug"|"other","feedback_status": "new"|"seen"|"planned"|"done"|"dismissed","funding_agency": "cnpq"|"fapesp"|"capes"|"sus"|"fap"|"other","invitation_status": "pending"|"accepted"|"expired"|"revoked","maintenance_request_status": "open"|"in_progress"|"resolved"|"cancelled"|"waiting_part","maintenance_urgency": "low"|"normal"|"urgent","material_category": "filament"|"resin"|"powder"|"other","project_funding_category": "capital"|"custeio"|"bolsas"|"reserva_tecnica"|"outros"|"passagens"|"diarias","project_status": "planning"|"active"|"paused"|"completed"|"archived","purchase_status": "requested"|"approved"|"rejected"|"purchased"|"delivered"|"cancelled","purchase_urgency": "low"|"normal"|"urgent","spool_status": "sealed"|"in_use"|"empty"|"discarded","task_priority": "low"|"normal"|"urgent","task_status": "todo"|"in_progress"|"review"|"done","user_role": "coordinator"|"researcher"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -1455,7 +1455,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "academic_affiliation": ["ic", "extension", "intern", "tcc", "masters", "phd", "postdoc", "visitor", "technician", "faculty", "other"],"booking_status": ["pending", "approved", "in_progress", "completed", "cancelled", "failed", "rejected"],"equipment_status": ["active", "maintenance", "unavailable", "disabled", "stopped"],"feedback_kind": ["suggestion", "bug", "other"],"feedback_status": ["new", "seen", "planned", "done", "dismissed"],"funding_agency": ["cnpq", "fapesp", "capes", "sus", "fap", "other"],"invitation_status": ["pending", "accepted", "expired", "revoked"],"maintenance_request_status": ["open", "in_progress", "resolved", "cancelled", "waiting_part"],"maintenance_urgency": ["low", "normal", "urgent"],"material_category": ["filament", "resin", "powder", "other"],"project_funding_category": ["capital", "custeio", "bolsas", "reserva_tecnica", "outros", "passagens", "diarias"],"project_status": ["planning", "active", "paused", "completed", "archived"],"purchase_status": ["requested", "approved", "rejected", "purchased", "delivered", "cancelled"],"purchase_urgency": ["low", "normal", "urgent"],"spool_status": ["sealed", "in_use", "empty", "discarded"],"task_status": ["todo", "in_progress", "review", "done"],"user_role": ["coordinator", "researcher"]
+            "academic_affiliation": ["ic", "extension", "intern", "tcc", "masters", "phd", "postdoc", "visitor", "technician", "faculty", "other"],"booking_status": ["pending", "approved", "in_progress", "completed", "cancelled", "failed", "rejected"],"equipment_status": ["active", "maintenance", "unavailable", "disabled", "stopped"],"feedback_kind": ["suggestion", "bug", "other"],"feedback_status": ["new", "seen", "planned", "done", "dismissed"],"funding_agency": ["cnpq", "fapesp", "capes", "sus", "fap", "other"],"invitation_status": ["pending", "accepted", "expired", "revoked"],"maintenance_request_status": ["open", "in_progress", "resolved", "cancelled", "waiting_part"],"maintenance_urgency": ["low", "normal", "urgent"],"material_category": ["filament", "resin", "powder", "other"],"project_funding_category": ["capital", "custeio", "bolsas", "reserva_tecnica", "outros", "passagens", "diarias"],"project_status": ["planning", "active", "paused", "completed", "archived"],"purchase_status": ["requested", "approved", "rejected", "purchased", "delivered", "cancelled"],"purchase_urgency": ["low", "normal", "urgent"],"spool_status": ["sealed", "in_use", "empty", "discarded"],"task_priority": ["low", "normal", "urgent"],"task_status": ["todo", "in_progress", "review", "done"],"user_role": ["coordinator", "researcher"]
           }
         }
 } as const

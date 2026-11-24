@@ -45,6 +45,7 @@ export type FeedbackReport = {
   kind: FeedbackKind;
   message: string;
   page_path: string | null;
+  photo_paths: string[];
   user_agent: string | null;
   status: FeedbackStatus;
   coordinator_note: string | null;

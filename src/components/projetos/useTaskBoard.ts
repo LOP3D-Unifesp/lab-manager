@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { getNextTaskPosition, getTaskErrorMessage, type ProjectTask, type TaskStatus } from "../../lib/projects";
+import { getNextTaskPosition, getTaskErrorMessage, type ProjectTask, type TaskPriority, type TaskStatus } from "../../lib/projects";
 import { updateProjectTask } from "../../lib/supabaseRepository";
 
 // Carrega as tarefas de um quadro e cuida de mover cards entre colunas (otimista, com desfazer em erro).
@@ -52,5 +52,21 @@ export function useTaskBoard(loader: () => Promise<ProjectTask[]>) {
     [tarefas],
   );
 
-  return { tarefas, erro, setErro, recarregar, mover };
+  const mudarPrioridade = useCallback(
+    async (task: ProjectTask, priority: TaskPriority) => {
+      if (!tarefas || task.priority === priority) return;
+      const anterior = tarefas;
+      setTarefas(tarefas.map((item) => (item.id === task.id ? { ...item, priority } : item)));
+      try {
+        setErro("");
+        await updateProjectTask(task.id, { priority });
+      } catch (error) {
+        setTarefas(anterior);
+        setErro(getTaskErrorMessage(error));
+      }
+    },
+    [tarefas],
+  );
+
+  return { tarefas, erro, setErro, recarregar, mover, mudarPrioridade };
 }

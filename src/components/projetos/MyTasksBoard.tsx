@@ -15,7 +15,7 @@ import { useTaskBoard } from "./useTaskBoard";
 export function MyTasksBoard({ isCoordinator, profileId }: { isCoordinator: boolean; profileId: string }) {
   const t = useT();
   const loader = useCallback(() => listMyTasks(profileId), [profileId]);
-  const { erro, mover, recarregar, tarefas } = useTaskBoard(loader);
+  const { erro, mover, mudarPrioridade, recarregar, tarefas } = useTaskBoard(loader);
   const [projetos, setProjetos] = useState<Project[]>([]);
   const [modal, setModal] = useState<{ task: ProjectTask | null } | null>(null);
 
@@ -57,7 +57,7 @@ export function MyTasksBoard({ isCoordinator, profileId }: { isCoordinator: bool
           </p>
         ) : (
           <div className="mt-4">
-            <KanbanBoard tasks={tarefas} showProject onMove={mover} onOpen={(task) => setModal({ task })} />
+            <KanbanBoard tasks={tarefas} showProject onMove={mover} onPriorityChange={mudarPrioridade} onOpen={(task) => setModal({ task })} />
           </div>
         )}
       </Card>

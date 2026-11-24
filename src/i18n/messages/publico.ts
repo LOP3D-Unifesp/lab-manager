@@ -17,6 +17,7 @@ export const publico = {
   "feedback.none": { pt: "Nenhuma mensagem ainda.", en: "No messages yet.", es: "Aún no hay mensajes." },
   "feedback.noneFiltered": { pt: "Nada com esses filtros.", en: "Nothing matches these filters.", es: "Nada con estos filtros." },
   "feedback.noneHint": { pt: "As pessoas enviam pelo botão Feedback, no canto da tela ou no menu da conta.", en: "People send it with the Feedback button, in the screen corner or in the account menu.", es: "Las personas lo envían con el botón Comentarios, en la esquina de la pantalla o en el menú de la cuenta." },
+  "feedback.photoAlt": { pt: "Foto {n} do feedback de {name}", en: "Photo {n} of the feedback from {name}", es: "Foto {n} del comentario de {name}" },
   "feedback.sentTitle": { pt: "Mensagem enviada", en: "Message sent", es: "Mensaje enviado" },
   "feedback.thanks": { pt: "Obrigado! Recebemos a sua mensagem.", en: "Thank you! We received your message.", es: "¡Gracias! Recibimos tu mensaje." },
   "feedback.thanksHint": { pt: "A coordenação vai ler e, se precisar, falar com você.", en: "The coordination will read it and, if needed, get in touch.", es: "La coordinación lo leerá y, si es necesario, hablará contigo." },

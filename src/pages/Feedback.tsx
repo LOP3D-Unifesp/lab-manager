@@ -7,6 +7,7 @@ import { FEEDBACK_CHANGED_EVENT } from "../components/feedback/FeedbackProvider"
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
+import { PhotoGallery } from "../components/ui/PhotoGallery";
 import { StatusBadge } from "../components/ui/StatusBadge";
 import {
   feedbackKindOptions,
@@ -22,7 +23,7 @@ import {
   type FeedbackReport,
   type FeedbackStatus,
 } from "../lib/feedback";
-import { listFeedback, updateFeedback } from "../lib/supabaseRepository";
+import { getFeedbackPhotoUrls, listFeedback, updateFeedback } from "../lib/supabaseRepository";
 
 const selectClassName =
   "min-h-11 min-w-0 rounded-lg border border-border bg-surface px-4 text-base outline-none transition focus:border-primary";
@@ -67,6 +68,13 @@ function FeedbackCard({ onSaved, report }: { report: FeedbackReport; onSaved: (m
         </div>
 
         <p className="whitespace-pre-wrap break-words text-base text-text">{report.message}</p>
+
+        <PhotoGallery
+          altFor={(n) => t("feedback.photoAlt", { n, name: report.author_name ?? t("feedback.removedPerson") })}
+          loadUrls={getFeedbackPhotoUrls}
+          paths={report.photo_paths ?? []}
+          zipName={`feedback-${report.author_name ?? "anonimo"}-${report.created_at.slice(0, 10)}`}
+        />
 
         <p className="text-sm text-muted">
           {report.page_path ? (

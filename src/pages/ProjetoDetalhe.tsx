@@ -31,6 +31,7 @@ import {
   type FundingAgencyRecord,
   type Project,
   type ProjectTask,
+  type TaskPriority,
   type TaskStatus,
 } from "../lib/projects";
 import {
@@ -132,6 +133,19 @@ export function ProjetoDetalhe() {
       ativo = false;
     };
   }, [isCoordinator]);
+
+  async function mudarPrioridade(task: ProjectTask, priority: TaskPriority) {
+    if (task.priority === priority) return;
+    const anterior = tarefas;
+    setTarefas((current) => current.map((item) => (item.id === task.id ? { ...item, priority } : item)));
+    try {
+      setErro("");
+      await updateProjectTask(task.id, { priority });
+    } catch (error) {
+      setTarefas(anterior);
+      setErro(getTaskErrorMessage(error));
+    }
+  }
 
   async function moverTarefa(task: ProjectTask, status: TaskStatus) {
     if (task.status === status) return;
@@ -287,6 +301,7 @@ export function ProjetoDetalhe() {
           <KanbanBoard
             tasks={tarefas}
             onMove={moverTarefa}
+            onPriorityChange={mudarPrioridade}
             onOpen={(task) => setTarefaAberta({ task, status: task.status })}
           />
         </div>

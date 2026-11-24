@@ -113,6 +113,7 @@ function task(overrides: Partial<ProjectTask>): ProjectTask {
     title: "Tarefa",
     description: null,
     status: "todo",
+    priority: "normal",
     position: 0,
     due_on: null,
     created_by: "u",
@@ -158,8 +159,19 @@ describe("quadro geral de tarefas", () => {
     task({ id: "3", project_id: "p2", assignees: [bia], due_on: "2026-05-01", status: "done" }),
     task({ id: "4", project_id: "p2", assignees: [] }),
   ];
-  const all = { projectId: "all", assignee: "all", overdueOnly: false };
+  const all = { projectId: "all", assignee: "all", priority: "all" as const, overdueOnly: false };
   const ids = (list: ProjectTask[]) => list.map((t) => t.id);
+
+  it("filtra por prioridade", () => {
+    const withPriority = [
+      task({ id: "u", priority: "urgent" }),
+      task({ id: "n", priority: "normal" }),
+      task({ id: "l", priority: "low" }),
+    ];
+    expect(ids(filterTasks(withPriority, { ...all, priority: "urgent" }, "ana", "2026-05-02"))).toEqual(["u"]);
+    expect(ids(filterTasks(withPriority, { ...all, priority: "low" }, "ana", "2026-05-02"))).toEqual(["l"]);
+    expect(ids(filterTasks(withPriority, all, "ana", "2026-05-02"))).toEqual(["u", "n", "l"]);
+  });
 
   it("filtra por projeto, responsável e atrasadas", () => {
     expect(ids(filterTasks(tasks, all, "ana", "2026-05-02"))).toEqual(["1", "2", "3", "4"]);

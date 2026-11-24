@@ -22,6 +22,8 @@ export const compras = {
   "purchases.allProjects": { pt: "Todos os projetos", en: "All projects", es: "Todos los proyectos" },
   "purchases.filterCategory": { pt: "Rubrica", en: "Budget line", es: "Rubro" },
   "purchases.allCategories": { pt: "Todas as rubricas", en: "All budget lines", es: "Todos los rubros" },
+  "purchases.filterUrgency": { pt: "Prioridade", en: "Priority", es: "Prioridad" },
+  "purchases.allUrgencies": { pt: "Todas as prioridades", en: "All priorities", es: "Todas las prioridades" },
   "purchases.filterKind": { pt: "Tipo de compra", en: "Purchase type", es: "Tipo de compra" },
   "purchases.allKinds": { pt: "Todos os tipos", en: "All types", es: "Todos los tipos" },
   "purchases.kindMaintenance": { pt: "Manutenção", en: "Maintenance", es: "Mantenimiento" },

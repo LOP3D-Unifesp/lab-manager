@@ -5,10 +5,12 @@ import { CalendarDays } from "lucide-react";
 import {
   getProjectColor,
   getTaskStatusLabel,
+  taskPriorityOptions,
   groupTasksByStatus,
   isTaskOverdue,
   taskStatusOptions,
   type ProjectTask,
+  type TaskPriority,
   type TaskStatus,
 } from "../../lib/projects";
 import { Avatar } from "../ui/Avatar";
@@ -28,11 +30,13 @@ function formatDueDate(value: string) {
 type KanbanBoardProps = {
   tasks: ProjectTask[];
   onMove: (task: ProjectTask, status: TaskStatus) => void;
+  /** Quando informado, o cartão ganha um seletor de prioridade. */
+  onPriorityChange?: (task: ProjectTask, priority: TaskPriority) => void;
   onOpen?: (task: ProjectTask) => void;
   showProject?: boolean;
 };
 
-export function KanbanBoard({ onMove, onOpen, showProject = false, tasks }: KanbanBoardProps) {
+export function KanbanBoard({ onMove, onOpen, onPriorityChange, showProject = false, tasks }: KanbanBoardProps) {
   const t = useT();
   const groups = groupTasksByStatus(tasks);
   const today = todayLocal();
@@ -120,9 +124,35 @@ export function KanbanBoard({ onMove, onOpen, showProject = false, tasks }: Kanb
                       />
                     ))}
                   </div>
+                  {onPriorityChange ? (
+                    <select
+                      aria-label={t("tasks.setPriority", { title: task.title })}
+                      className={[
+                        "min-h-9 max-w-[9rem] rounded-md border px-2 text-sm font-semibold",
+                        task.priority === "urgent"
+                          ? "border-danger bg-danger-soft text-danger-dark"
+                          : task.priority === "low"
+                            ? "border-border bg-background text-muted"
+                            : "border-border bg-background text-text",
+                      ].join(" ")}
+                      value={task.priority}
+                      onChange={(event) => onPriorityChange(task, event.target.value as TaskPriority)}
+                    >
+                      {taskPriorityOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  ) : null}
+                </div>
+                {/* No toque não existe arrastar de verdade: celular e tablet trocam a coluna por este seletor
+                    (no computador, a coluna muda arrastando o cartão ou em Editar). */}
+                <label className={onPriorityChange ? "hidden items-center gap-2 text-sm text-muted [@media(pointer:coarse)]:flex" : "flex items-center gap-2 text-sm text-muted"}>
+                  <span className="shrink-0">{t("tasks.moveLabel")}</span>
                   <select
                     aria-label={t("tasks.moveTo", { title: task.title })}
-                    className="min-h-9 max-w-[9rem] rounded-md border border-border bg-background px-2 text-sm"
+                    className="min-h-9 min-w-0 flex-1 rounded-md border border-border bg-background px-2 text-sm"
                     value={task.status}
                     onChange={(event) => onMove(task, event.target.value as TaskStatus)}
                   >
@@ -132,7 +162,7 @@ export function KanbanBoard({ onMove, onOpen, showProject = false, tasks }: Kanb
                       </option>
                     ))}
                   </select>
-                </div>
+                </label>
               </article>
             );
           })}

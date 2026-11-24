@@ -10,10 +10,12 @@ import {
 } from "../../lib/supabaseRepository";
 import {
   getTaskErrorMessage,
+  taskPriorityOptions,
   taskStatusOptions,
   type Project,
   type ProjectMember,
   type ProjectTask,
+  type TaskPriority,
   type TaskStatus,
 } from "../../lib/projects";
 import { Avatar } from "../ui/Avatar";
@@ -59,6 +61,7 @@ export function TaskModal({
   const [description, setDescription] = useState(task?.description ?? "");
   const [status, setStatus] = useState<TaskStatus>(task?.status ?? defaultStatus);
   const [dueOn, setDueOn] = useState(task?.due_on ?? "");
+  const [priority, setPriority] = useState<TaskPriority>(task?.priority ?? "normal");
   const [responsaveis, setResponsaveis] = useState<string[]>(() => {
     if (task) return task.assignees.map((a) => a.profile_id);
     const initialMembers = fixedMembers ?? (projects.length === 1 ? projects[0].members : []);
@@ -94,7 +97,7 @@ export function TaskModal({
     try {
       setSalvando(true);
       setErro("");
-      const base = { title: trimmed, description: description.trim() || null, due_on: dueOn || null };
+      const base = { title: trimmed, description: description.trim() || null, due_on: dueOn || null, priority };
       let taskId: string;
       if (task) {
         // Ao mudar de coluna, o banco coloca a tarefa no fim da nova coluna.
@@ -172,7 +175,7 @@ export function TaskModal({
             onChange={(e) => setDescription(e.target.value)}
           />
         </label>
-        <div className="grid items-start gap-4 sm:grid-cols-2">
+        <div className="grid items-start gap-4 sm:grid-cols-3">
           <label className="grid gap-2 text-base font-semibold text-text">
             {t("taskModal.column")}
             <select className={inputClassName} value={status} onChange={(e) => setStatus(e.target.value as TaskStatus)}>
@@ -186,6 +189,16 @@ export function TaskModal({
           <label className="grid gap-2 text-base font-semibold text-text">
             {t("taskModal.due")}
             <input className={inputClassName} type="date" value={dueOn} onChange={(e) => setDueOn(e.target.value)} />
+          </label>
+          <label className="grid gap-2 text-base font-semibold text-text">
+            {t("taskModal.priority")}
+            <select className={inputClassName} value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)}>
+              {taskPriorityOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           </label>
         </div>
 
