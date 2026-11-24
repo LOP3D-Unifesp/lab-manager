@@ -4,7 +4,7 @@ import type { PublicLabIdentity } from "../../lib/domain";
 import { useTheme } from "../../lib/theme";
 import { getPublicLabIdentity } from "../../lib/supabaseRepository";
 
-type LogoUrls = { logo_light_url?: string | null; logo_dark_url?: string | null };
+type LogoUrls = { logo_light_url?: string | null; logo_dark_url?: string | null; favicon_url?: string | null };
 
 // A identidade pública é pedida uma vez por carregamento da página e reaproveitada entre telas.
 let cachedIdentity: PublicLabIdentity | null | undefined;
@@ -68,7 +68,8 @@ export function LabLogo({ alt, className = "", favicon = false, fallback, logos 
   const url = resolved === "dark" ? (dark ?? light) : (light ?? dark);
   const onPlate = resolved === "dark" && !dark && Boolean(light);
 
-  useFavicon(favicon ? (light ?? dark) : null);
+  // O ícone da aba não troca com o tema: usa o favicon próprio e, sem ele, o logo.
+  useFavicon(favicon ? (logos?.favicon_url ?? light ?? dark) : null);
 
   if (!url) return <>{fallback}</>;
 

@@ -314,7 +314,7 @@ export async function uploadMyAvatar(file: File) {
   return (data as { avatar_url: string | null }).avatar_url;
 }
 
-export type LogoVariant = "light" | "dark";
+export type LogoVariant = "light" | "dark" | "favicon";
 export const LAB_LOGO_MAX_BYTES = 2 * 1024 * 1024;
 const LAB_LOGO_EXTENSIONS: Record<string, string> = {
   "image/png": "png",
@@ -367,7 +367,7 @@ export async function removeLabLogo(variant: LogoVariant) {
 
 // Colunas de `lab_settings` lidas pelo app (usada aqui e em src/lib/auth.tsx, para não divergirem).
 export const LAB_SETTINGS_COLUMNS =
-  "id, name, acronym, timezone, workspace_capacity, operating_weekdays, lunch_starts_at, lunch_ends_at, dinner_starts_at, dinner_ends_at, privacy_contact_email, logo_light_url, logo_dark_url, setup_completed_at, created_by, updated_by, created_at, updated_at";
+  "id, name, acronym, timezone, workspace_capacity, operating_weekdays, lunch_starts_at, lunch_ends_at, dinner_starts_at, dinner_ends_at, privacy_contact_email, logo_light_url, logo_dark_url, favicon_url, setup_completed_at, created_by, updated_by, created_at, updated_at";
 
 export async function getInstallationState(): Promise<InstallationState> {
   const { data, error } = await client()

@@ -40,8 +40,8 @@ export function Administracao() {
   const [scheduleMessage, setScheduleMessage] = useState("");
   const [scheduleError, setScheduleError] = useState("");
   const [logoBusy, setLogoBusy] = useState(false);
-  const [logoPending, setLogoPending] = useState<Record<LogoVariant, File | "remove" | null>>({ light: null, dark: null });
-  const [logoPreview, setLogoPreview] = useState<Record<LogoVariant, string | null>>({ light: null, dark: null });
+  const [logoPending, setLogoPending] = useState<Record<LogoVariant, File | "remove" | null>>({ light: null, dark: null, favicon: null });
+  const [logoPreview, setLogoPreview] = useState<Record<LogoVariant, string | null>>({ light: null, dark: null, favicon: null });
   const [logoMessage, setLogoMessage] = useState("");
   const [logoError, setLogoError] = useState("");
 
@@ -86,16 +86,16 @@ export function Administracao() {
   }
 
   function discardLogoChanges() {
-    undoLogoStage("light"); undoLogoStage("dark");
+    undoLogoStage("light"); undoLogoStage("dark"); undoLogoStage("favicon");
     setLogoError(""); setLogoMessage("");
   }
 
-  const hasLogoChanges = logoPending.light !== null || logoPending.dark !== null;
+  const hasLogoChanges = logoPending.light !== null || logoPending.dark !== null || logoPending.favicon !== null;
 
   async function saveLogos() {
     setLogoBusy(true); setLogoError(""); setLogoMessage("");
     try {
-      for (const variant of ["light", "dark"] as const) {
+      for (const variant of ["light", "dark", "favicon"] as const) {
         const pending = logoPending[variant];
         if (pending === "remove") await removeLabLogo(variant);
         else if (pending) await uploadLabLogo(variant, pending);
@@ -108,13 +108,13 @@ export function Administracao() {
   }
 
   function renderLogoSlot(variant: LogoVariant) {
-    const saved = variant === "light" ? labSettings?.logo_light_url : labSettings?.logo_dark_url;
+    const saved = variant === "light" ? labSettings?.logo_light_url : variant === "dark" ? labSettings?.logo_dark_url : labSettings?.favicon_url;
     const pending = logoPending[variant];
     const url = pending === "remove" ? null : (logoPreview[variant] ?? saved ?? null);
     return (
       <div className="grid gap-3">
-        <p className="font-semibold">{t(variant === "light" ? "logo.light" : "logo.dark")}</p>
-        <div className={["flex h-28 items-center justify-center rounded-lg border p-3", pending !== null ? "border-accent" : "border-border", variant === "light" ? "bg-white" : "bg-[#0b1220]"].join(" ")}>
+        <p className="font-semibold">{t(variant === "light" ? "logo.light" : variant === "dark" ? "logo.dark" : "logo.favicon")}</p>
+        <div className={["flex h-28 items-center justify-center rounded-lg border p-3", pending !== null ? "border-accent" : "border-border", variant === "dark" ? "bg-[#0b1220]" : "bg-white"].join(" ")}>
           {url ? <img alt={t("logo.alt")} className="max-h-full max-w-full object-contain" src={url} /> : <span className="flex items-center gap-2 text-sm text-muted"><ImageIcon className="h-4 w-4" aria-hidden="true" />{t("logo.empty")}</span>}
         </div>
         {pending !== null ? <p className="text-sm font-semibold text-accent-dark">{pending === "remove" ? t("logo.pendingRemoval") : t("logo.pending")}</p> : null}
@@ -125,7 +125,9 @@ export function Administracao() {
           </label>
           {pending !== null ? <Button className="min-h-9 px-3 py-1.5 text-sm" disabled={logoBusy} onClick={() => undoLogoStage(variant)} variant="ghost">{t("logo.undo")}</Button> : saved ? <Button className="min-h-9 px-3 py-1.5 text-sm" disabled={logoBusy} onClick={() => stageLogoRemoval(variant)} variant="ghost">{t("logo.remove")}</Button> : null}
         </div>
+        {variant === "favicon" && url ? <div className="flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-2"><img alt="" className="h-8 w-8 object-contain" src={url} /><img alt="" className="h-4 w-4 object-contain" src={url} /></div> : null}
         {variant === "dark" ? <p className="text-sm text-muted">{t("logo.darkHint")}</p> : null}
+        {variant === "favicon" ? <p className="text-sm text-muted">{t("logo.faviconHint")}</p> : null}
       </div>
     );
   }
@@ -304,9 +306,10 @@ export function Administracao() {
         <div className="mb-5 flex items-start gap-3"><div className="rounded-lg bg-primary-soft p-3 text-primary"><ImageIcon className="h-5 w-5" /></div><div><h2 className="text-2xl font-bold">{t("logo.title")}</h2><p className="mt-1 text-muted">{t("logo.hint")}</p><p className="mt-2 text-sm font-semibold text-muted">{t("logo.sizeHint")}</p></div></div>
         {logoMessage ? <p className="mb-4 rounded-lg border border-success bg-success-soft p-3 font-semibold text-success-dark">{logoMessage}</p> : null}
         {logoError ? <p className="mb-4 rounded-lg border border-danger bg-danger-soft p-3 font-semibold text-danger">{logoError}</p> : null}
-        <div className="grid gap-5 md:grid-cols-2">
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {renderLogoSlot("light")}
           {renderLogoSlot("dark")}
+          {renderLogoSlot("favicon")}
         </div>
         <div className="mt-5 flex flex-wrap gap-3">
           <Button disabled={!hasLogoChanges || logoBusy} onClick={saveLogos}>{logoBusy ? t("common.saving") : t("logo.saveButton")}</Button>
