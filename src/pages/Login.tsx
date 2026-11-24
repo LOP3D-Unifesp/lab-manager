@@ -5,6 +5,7 @@ import { Lock, LogIn } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { LanguageSelect } from "../components/ui/LanguageSelect";
+import { BRAND_COLORS, BrandMark, BrandStripe } from "../components/ui/BrandMark";
 import { ThemeToggle } from "../components/ui/ThemeToggle";
 import { useT } from "../i18n";
 import { useAuth } from "../lib/auth";
@@ -48,15 +49,29 @@ export function Login() {
   }
 
   return (
-    <main className="min-h-screen bg-background px-5 py-8 text-text">
-      <div className="mx-auto flex w-full max-w-md flex-wrap justify-end gap-2">
-        <LanguageSelect />
-        <ThemeToggle />
-      </div>
-      <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-md flex-col justify-center">
-        <div className="mb-6">
-          <p className="text-lg font-semibold text-primary">LO&P3D</p>
-          <h1 className="mt-1 text-[34px] font-bold leading-tight">
+    <main className="min-h-screen bg-background text-text lg:grid lg:grid-cols-[1fr_minmax(28rem,34rem)]">
+      <aside className="relative hidden flex-col justify-center overflow-hidden border-r border-border bg-surface px-16 lg:flex">
+        <BrandStripe className="absolute inset-x-0 top-0 h-2" />
+        <BrandMark className="text-7xl" />
+        <p className="font-display mt-3 text-3xl font-semibold text-muted">Lab Manager</p>
+        <p className="mt-6 max-w-sm text-lg leading-7 text-muted">{t("brand.tagline2")}</p>
+        <div aria-hidden="true" className="mt-12 grid max-w-xs grid-cols-4 gap-3">
+          {BRAND_COLORS.map((color) => (
+            <span key={color} className="h-16 rounded-lg" style={{ backgroundColor: color }} />
+          ))}
+        </div>
+      </aside>
+      <div>
+        <BrandStripe className="mb-6 h-1.5 lg:hidden" />
+      <div className="px-5 pb-8">
+        <div className="mx-auto flex w-full max-w-md flex-wrap justify-end gap-2 lg:pt-8">
+          <LanguageSelect />
+          <ThemeToggle />
+        </div>
+      <section className="mx-auto flex min-h-[calc(100vh-8rem)] w-full max-w-md flex-col justify-center">
+        <div className="mb-6 lg:hidden">
+          <BrandMark className="text-3xl" />
+          <h1 className="mt-1 text-[28px] font-bold leading-tight">
             Lab Manager
           </h1>
         </div>
@@ -125,6 +140,8 @@ export function Login() {
           </form>
         </Card>
       </section>
+      </div>
+      </div>
     </main>
   );
 }

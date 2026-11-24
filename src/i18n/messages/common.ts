@@ -9,6 +9,8 @@ export const common = {
   "theme.lightTitle": { pt: "Modo claro", en: "Light mode", es: "Modo claro" },
   "theme.systemTitle": { pt: "Automático (segue o sistema)", en: "Automatic (follows system)", es: "Automático (sigue el sistema)" },
   "theme.darkTitle": { pt: "Modo escuro", en: "Dark mode", es: "Modo oscuro" },
+  "brand.tagline": { pt: "Gestão do laboratório", en: "Lab management", es: "Gestión del laboratorio" },
+  "brand.tagline2": { pt: "Agenda, equipamentos, estoque e projetos em um só lugar.", en: "Schedule, equipment, stock and projects in one place.", es: "Agenda, equipos, stock y proyectos en un solo lugar." },
   "common.close": { pt: "Fechar", en: "Close", es: "Cerrar" },
   "common.cancel": { pt: "Cancelar", en: "Cancel", es: "Cancelar" },
   "common.back": { pt: "Voltar", en: "Back", es: "Volver" },

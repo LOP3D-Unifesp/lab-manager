@@ -23,9 +23,13 @@ export default {
         danger: "rgb(var(--c-danger) / <alpha-value>)",
         "danger-dark": "rgb(var(--c-danger-dark) / <alpha-value>)",
         "danger-soft": "rgb(var(--c-danger-soft) / <alpha-value>)",
+        accent: "rgb(var(--c-accent) / <alpha-value>)",
+        "accent-dark": "rgb(var(--c-accent-dark) / <alpha-value>)",
+        "accent-soft": "rgb(var(--c-accent-soft) / <alpha-value>)",
       },
       fontFamily: {
-        sans: ["Dosis", "system-ui", "sans-serif"],
+        sans: ["Montserrat Variable", "system-ui", "sans-serif"],
+        display: ["Dosis Variable", "system-ui", "sans-serif"],
       },
       boxShadow: {
         soft: "0 12px 28px rgba(16, 32, 51, 0.08)",

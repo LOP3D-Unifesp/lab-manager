@@ -30,57 +30,48 @@ Pesquisadores devem conseguir pelo celular:
 
 No mobile, as telas devem priorizar tarefas rápidas, cards legíveis, botões grandes e fluxos simples. Em tablet e desktop, a interface pode ganhar mais colunas, tabelas completas, sidebar e maior densidade de informação.
 
-## 3. Fonte
+## 3. Fontes
 
-A fonte principal do sistema deve ser Dosis:
+O sistema usa duas fontes, ambas embutidas no projeto (pacotes `@fontsource-variable/*`, importados em `src/main.tsx`). Nenhuma fonte é buscada em servidor externo, o que funciona offline e não envia o IP de quem usa a terceiros.
 
-```css
-font-family: "Dosis", system-ui, sans-serif;
-```
-
-> **Situação atual:** a fonte está configurada no Tailwind (`tailwind.config.ts`) e em `src/index.css`,
-> mas o `index.html` ainda não a carrega de nenhum servidor de fontes; sem ela instalada no
-> dispositivo, o navegador usa o fallback. Veja [PENDENCIAS.md](PENDENCIAS.md).
-
-Caso a fonte externa ainda não esteja configurada, usar o fallback:
+- **Dosis** para títulos: `h1` a `h4`, números de destaque (`StatCard`) e a marca. É aplicada automaticamente a todo `h1`-`h4` em `src/index.css`; para um texto que não é título, use a classe `font-display`.
+- **Montserrat** para textos: corpo, formulários, tabelas, botões e menus (é a fonte padrão do `body`, `font-sans` no Tailwind).
 
 ```css
-font-family: system-ui, sans-serif;
+/* títulos */ font-family: "Dosis Variable", system-ui, sans-serif;
+/* textos  */ font-family: "Montserrat Variable", system-ui, sans-serif;
 ```
 
-A tipografia deve manter boa legibilidade, com tamanhos generosos e hierarquia clara.
+**Escala.** A Montserrat é mais larga que a Dosis, então o `font-size` raiz é `15px` (`src/index.css`) e todos os tamanhos em `rem` do Tailwind partem dele (`text-base` = 15px, `text-sm` ≈ 13px). Os títulos usam tamanhos fixos em px.
+
+A tipografia deve manter boa legibilidade, com hierarquia clara.
 
 ## 4. Paleta institucional do LO&P3D
 
-Usar a paleta institucional abaixo como base visual do sistema:
+A marca tem quatro cores. Cada uma tem um papel fixo na interface:
 
-- Azul: `#0095d9`
-- Verde: `#00a651`
-- Amarelo: `#ffcb05`
-- Fundo claro: `#f8fafc`
-- Superfície: `#ffffff`
-- Borda: `#dbe3ea`
-- Texto principal: `#102033`
-- Texto secundário: `#5f6b7a`
-- Perigo/erro: `#dc2626`
+| Cor | Hex | Papel |
+| --- | --- | --- |
+| Azul | `#0095d9` | Cor primária: navegação e ação principal |
+| Verde | `#00a651` | Confirmação, disponibilidade, estados positivos |
+| Magenta | `#ec008c` | **Destaque de marca**, com uso moderado: item ativo do menu, filete sob o título da página, marcador de "novo", o "&" do LO&P3D |
+| Amarelo | `#ffcb05` | Alerta ou atenção, sempre com texto escuro |
 
-Tokens CSS sugeridos:
+Cores de apoio: fundo `#f8fafc`, superfície `#ffffff`, borda `#dbe3ea`, texto `#102033`, texto secundário `#5f6b7a` e **vermelho `#dc2626` reservado para erro**, cancelamento, falha e ações destrutivas. O magenta não substitui o vermelho, para não ser confundido com um problema.
 
-```css
-:root {
-  --color-primary: #0095d9;
-  --color-success: #00a651;
-  --color-warning: #ffcb05;
-  --color-background: #f8fafc;
-  --color-surface: #ffffff;
-  --color-border: #dbe3ea;
-  --color-text: #102033;
-  --color-muted: #5f6b7a;
-  --color-danger: #dc2626;
-}
-```
+Os tokens vivem em `src/index.css` como canais RGB (`--c-primary`, `--c-accent`, ...), com valores para o tema claro (`:root`) e o escuro (`.dark`), e são expostos no Tailwind em `tailwind.config.ts` (`primary`, `success`, `warning`, `danger`, `accent`, cada um com `-dark` e `-soft`).
 
-O azul deve ser usado como cor primária de navegação e ação principal. O verde deve representar confirmação, disponibilidade ou estados positivos. O amarelo deve indicar alerta ou atenção, sempre com texto escuro. O vermelho deve ser reservado para erros, cancelamentos, falhas e ações destrutivas.
+**Magenta e contraste.** `#ec008c` sobre branco tem contraste de 4,25:1, abaixo de 4,5:1 para texto pequeno. Por isso:
+
+- `accent` (magenta puro) só em elementos gráficos e textos grandes;
+- `text-accent-dark` (`#be0070`, 6,1:1 sobre branco) para texto pequeno em magenta;
+- `accent-soft` para fundos suaves.
+
+No tema escuro, os tokens do magenta ficam mais claros (`accent` `#ff4db3`, `accent-dark` `#ff8cc8`) para manter o contraste.
+
+### Marca provisória
+
+Ainda não há identidade profissional. Enquanto isso, `src/components/ui/BrandMark.tsx` reúne a marca provisória: `BrandMark` (o acrônimo em Dosis, com o "&" em magenta), `BrandStripe` (faixa com as quatro cores) e `BRAND_COLORS` (cores exatas da marca, iguais nos dois temas). Aparecem no login e nas telas públicas (convite, privacidade, instalação). Quando existir uma identidade definitiva, basta trocar esse arquivo.
 
 ## 5. Contraste e acessibilidade
 
@@ -88,7 +79,7 @@ A interface deve seguir boas práticas compatíveis com WCAG.
 
 Regras obrigatórias:
 
-- evitar textos menores que `16px`;
+- evitar textos de corpo menores que `15px` (a escala base; rótulos auxiliares podem ir até `13px`);
 - usar botões grandes;
 - garantir foco visível;
 - permitir navegação por teclado;

@@ -1,4 +1,5 @@
 import { t } from "../i18n";
+import { BrandMark, BrandStripe } from "../components/ui/BrandMark";
 import { LanguageSelect } from "../components/ui/LanguageSelect";
 import { CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
 import { FormEvent, useState } from "react";
@@ -58,11 +59,14 @@ export function InstallationWizard() {
   }
 
   return (
-    <main className="min-h-screen bg-background px-5 py-8 text-text">
+    <main className="min-h-screen bg-background text-text">
+      <BrandStripe className="mb-8" />
+      <div className="px-5 pb-8">
       <div className="mx-auto mb-4 flex w-full max-w-4xl justify-end"><LanguageSelect /></div>
       <section className="mx-auto w-full max-w-4xl">
         <div className="mb-6">
-          <p className="text-sm font-bold uppercase tracking-wide text-primary">{t("install.kicker")}</p>
+          <BrandMark className="text-2xl" />
+          <p className="mt-1 text-sm font-bold uppercase tracking-wide text-primary">{t("install.kicker")}</p>
           <h1 className="mt-1 text-3xl font-bold">{t("install.title")}</h1>
           <p className="mt-2 text-muted">
             {t("install.step", { step: step + 1 })}
@@ -172,6 +176,7 @@ export function InstallationWizard() {
           </Card>
         </form>
       </section>
+      </div>
     </main>
   );
 }
