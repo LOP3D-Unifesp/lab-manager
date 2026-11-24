@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import { AlertTriangle, LogOut, UserPlus } from "lucide-react";
 import { FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -19,17 +20,17 @@ const academicAffiliationOptions: Array<{
   value: AcademicAffiliation;
   label: string;
 }> = [
-  { value: "ic", label: "Iniciação científica" },
-  { value: "extension", label: "Extensão" },
-  { value: "intern", label: "Estágio" },
-  { value: "tcc", label: "TCC" },
-  { value: "masters", label: "Mestrado" },
-  { value: "phd", label: "Doutorado" },
-  { value: "postdoc", label: "Pós-doutorado" },
-  { value: "visitor", label: "Visitante" },
-  { value: "technician", label: "Técnico" },
-  { value: "faculty", label: "Docente" },
-  { value: "other", label: "Outro" },
+  { value: "ic", get label() { return t("profile.aff.ic"); } },
+  { value: "extension", get label() { return t("profile.aff.extension"); } },
+  { value: "intern", get label() { return t("profile.aff.intern"); } },
+  { value: "tcc", get label() { return t("profile.aff.tcc"); } },
+  { value: "masters", get label() { return t("profile.aff.masters"); } },
+  { value: "phd", get label() { return t("profile.aff.phd"); } },
+  { value: "postdoc", get label() { return t("profile.aff.postdoc"); } },
+  { value: "visitor", get label() { return t("profile.aff.visitor"); } },
+  { value: "technician", get label() { return t("profile.aff.technician"); } },
+  { value: "faculty", get label() { return t("profile.aff.faculty"); } },
+  { value: "other", get label() { return t("profile.aff.other"); } },
 ];
 
 function normalizeOptionalText(value: string) {
@@ -95,12 +96,12 @@ export function ProfileRequired() {
     setAccountError("");
 
     if (password.length < 8) {
-      setAccountError("A senha deve ter pelo menos 8 caracteres.");
+      setAccountError(t("signup.errPasswordShort"));
       return;
     }
 
     if (password !== passwordConfirmation) {
-      setAccountError("As senhas não coincidem.");
+      setAccountError(t("signup.errPasswordMismatch"));
       return;
     }
 
@@ -110,7 +111,7 @@ export function ProfileRequired() {
       await setMyPassword(password);
       setStep("profile");
     } catch (error) {
-      setAccountError(extractErrorMessage(error, "Não foi possível definir a senha."));
+      setAccountError(extractErrorMessage(error, t("signup.errSetPassword")));
     } finally {
       setAccountSubmitting(false);
     }
@@ -122,7 +123,7 @@ export function ProfileRequired() {
     setSubmitting(true);
 
     if (!user?.email || !user.id) {
-      setErrorMessage("Não foi possível ler o usuário autenticado.");
+      setErrorMessage(t("signup.errReadUser"));
       setSubmitting(false);
       return;
     }
@@ -131,7 +132,7 @@ export function ProfileRequired() {
       isScholarshipHolder &&
       fundingGrants.some((grant) => grant.agency === "other" && !grant.agency_other?.trim())
     ) {
-      setErrorMessage("Informe o nome de cada outra agência de fomento adicionada.");
+      setErrorMessage(t("profile.errOtherAgency"));
       setSubmitting(false);
       return;
     }
@@ -140,7 +141,7 @@ export function ProfileRequired() {
       totalWeeklyHours > 0 &&
       (!Number.isInteger(totalWeeklyHours) || totalWeeklyHours < 1 || totalWeeklyHours > 60)
     ) {
-      setErrorMessage("A carga horaria deve estar entre 1 e 60 horas.");
+      setErrorMessage(t("profile.errWorkload"));
       setSubmitting(false);
       return;
     }
@@ -172,7 +173,7 @@ export function ProfileRequired() {
       await refreshInstallation();
       navigate("/", { replace: true });
     } catch (error) {
-      setErrorMessage(extractErrorMessage(error, "Não foi possível criar o perfil."));
+      setErrorMessage(extractErrorMessage(error, t("signup.errCreateProfile")));
     } finally {
       setSubmitting(false);
     }
@@ -188,17 +189,16 @@ export function ProfileRequired() {
                 <AlertTriangle className="h-5 w-5" aria-hidden="true" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold">Crie sua conta</h1>
+                <h1 className="text-2xl font-bold">{t("signup.createAccount")}</h1>
                 <p className="mt-2 text-base leading-6 text-muted">
-                  Sua conta está autenticada como {user?.email ?? "este usuário"}.
-                  Defina uma senha para continuar.
+                  {t("signup.authenticatedAs", { email: user?.email ?? t("signup.thisUser") })}
                 </p>
               </div>
             </div>
 
             <form className="mt-6 grid gap-6" onSubmit={handleAccountSubmit}>
               <label className="grid min-w-0 gap-2 text-base font-semibold">
-                Email
+                {t("profile.email")}
                 <input
                   className="min-h-11 w-full min-w-0 cursor-not-allowed rounded-lg border border-border bg-primary-soft px-4 text-base font-semibold text-text opacity-100 outline-none disabled:opacity-100"
                   disabled
@@ -210,7 +210,7 @@ export function ProfileRequired() {
 
               <div className="grid items-start gap-4 sm:grid-cols-2">
                 <label className="grid min-w-0 gap-2 text-base font-semibold">
-                  Crie uma senha
+                  {t("signup.createPassword")}
                   <PasswordInput
                     autoComplete="new-password"
                     disabled={accountSubmitting}
@@ -222,7 +222,7 @@ export function ProfileRequired() {
                 </label>
 
                 <label className="grid min-w-0 gap-2 text-base font-semibold">
-                  Confirme a senha
+                  {t("signup.confirmPassword")}
                   <PasswordInput
                     autoComplete="new-password"
                     disabled={accountSubmitting}
@@ -242,12 +242,12 @@ export function ProfileRequired() {
 
               <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
                 <Button disabled={accountSubmitting} fullWidth type="submit">
-                  {accountSubmitting ? "Salvando..." : "Continuar"}
+                  {accountSubmitting ? t("common.saving") : t("signup.continue")}
                 </Button>
 
                 <Button disabled={accountSubmitting} variant="secondary" onClick={signOut}>
                   <LogOut className="mr-2 h-5 w-5" aria-hidden="true" />
-                  Sair
+                  {t("common.signOut")}
                 </Button>
               </div>
             </form>
@@ -266,9 +266,9 @@ export function ProfileRequired() {
               <UserPlus className="h-5 w-5" aria-hidden="true" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold">Complete seu perfil</h1>
+              <h1 className="text-2xl font-bold">{t("signup.completeProfile")}</h1>
               <p className="mt-2 text-base leading-6 text-muted">
-                Falta só preencher seus dados para começar a usar o laboratório.
+                {t("signup.completeHint")}
               </p>
             </div>
           </div>
@@ -276,13 +276,13 @@ export function ProfileRequired() {
           <form className="mt-6 grid gap-6" onSubmit={handleProfileSubmit}>
             <div className="grid items-start gap-4 sm:grid-cols-2">
               <label className="grid min-w-0 gap-2 text-base font-semibold">
-                Nome completo
+                {t("profile.fullName")}
                 <input
                   autoComplete="name"
                   className="min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
                   disabled={submitting}
                   onChange={(event) => setFullName(event.target.value)}
-                  placeholder="Seu nome completo"
+                  placeholder={t("signup.fullNamePlaceholder")}
                   required
                   type="text"
                   value={fullName}
@@ -290,14 +290,14 @@ export function ProfileRequired() {
               </label>
 
               <label className="grid min-w-0 gap-2 text-base font-semibold">
-                Vinculação acadêmica
+                {t("signup.academicLink")}
                 <select
                   className="min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
                   disabled={submitting}
                   onChange={(event) => setAcademicAffiliation(event.target.value as AcademicAffiliation | "")}
                   value={academicAffiliation}
                 >
-                  <option value="">Selecione (opcional)</option>
+                  <option value="">{t("signup.selectOptional")}</option>
                   {academicAffiliationOptions.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
@@ -309,7 +309,7 @@ export function ProfileRequired() {
 
             <div className="grid items-start gap-4 sm:grid-cols-2">
               <label className="grid min-w-0 gap-2 text-base font-semibold">
-                Data de nascimento
+                {t("profile.birthDate")}
                 <input
                   className="min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
                   disabled={submitting}
@@ -325,7 +325,7 @@ export function ProfileRequired() {
               disabled={submitting}
               grants={fundingGrants}
               isScholarshipHolder={isScholarshipHolder}
-              label="Horas semanais"
+              label={t("signup.weeklyHours")}
               manualHours={manualWorkload}
               onGrantsChange={setFundingGrants}
               onIsScholarshipHolderChange={setIsScholarshipHolder}
@@ -335,7 +335,7 @@ export function ProfileRequired() {
 
             <div className="grid items-start gap-4 md:grid-cols-3">
               <label className="grid min-w-0 gap-2 text-base font-semibold">
-                Lattes URL
+                {t("signup.lattesUrl")}
                 <input
                   className="min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
                   disabled={submitting}
@@ -352,7 +352,7 @@ export function ProfileRequired() {
                   className="min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
                   disabled={submitting}
                   onChange={(event) => setCpf(event.target.value)}
-                  placeholder="Somente números"
+                  placeholder={t("signup.onlyNumbers")}
                   type="text"
                   value={cpf}
                 />
@@ -372,7 +372,7 @@ export function ProfileRequired() {
 
             <div className="grid items-start gap-4 md:grid-cols-3">
               <label className="grid min-w-0 gap-2 text-base font-semibold">
-                Telefone
+                {t("profile.phone")}
                 <input
                   className="min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
                   disabled={submitting}
@@ -383,7 +383,7 @@ export function ProfileRequired() {
               </label>
 
               <label className="grid min-w-0 gap-2 text-base font-semibold">
-                Nacionalidade (código)
+                {t("signup.nationalityCode")}
                 <input
                   className="min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
                   disabled={submitting}
@@ -396,7 +396,7 @@ export function ProfileRequired() {
               </label>
 
               <label className="grid min-w-0 gap-2 text-base font-semibold">
-                CEP
+                {t("profile.zip")}
                 <input
                   className="min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
                   disabled={submitting}
@@ -409,7 +409,7 @@ export function ProfileRequired() {
 
             <div className="grid items-start gap-4 sm:grid-cols-2">
               <label className="grid min-w-0 gap-2 text-base font-semibold">
-                Rua
+                {t("profile.street")}
                 <input
                   className="min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
                   disabled={submitting}
@@ -420,7 +420,7 @@ export function ProfileRequired() {
               </label>
 
               <label className="grid min-w-0 gap-2 text-base font-semibold">
-                Número
+                {t("profile.number")}
                 <input
                   className="min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
                   disabled={submitting}
@@ -433,7 +433,7 @@ export function ProfileRequired() {
 
             <div className="grid items-start gap-4 md:grid-cols-3">
               <label className="grid min-w-0 gap-2 text-base font-semibold">
-                Complemento
+                {t("profile.complement")}
                 <input
                   className="min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
                   disabled={submitting}
@@ -444,7 +444,7 @@ export function ProfileRequired() {
               </label>
 
               <label className="grid min-w-0 gap-2 text-base font-semibold">
-                Bairro
+                {t("profile.district")}
                 <input
                   className="min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
                   disabled={submitting}
@@ -455,7 +455,7 @@ export function ProfileRequired() {
               </label>
 
               <label className="grid min-w-0 gap-2 text-base font-semibold">
-                Cidade
+                {t("profile.city")}
                 <input
                   className="min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
                   disabled={submitting}
@@ -468,7 +468,7 @@ export function ProfileRequired() {
 
             <div className="grid items-start gap-4 sm:grid-cols-2">
               <label className="grid min-w-0 gap-2 text-base font-semibold">
-                Estado
+                {t("profile.state")}
                 <input
                   className="min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
                   disabled={submitting}
@@ -479,7 +479,7 @@ export function ProfileRequired() {
               </label>
 
               <label className="grid min-w-0 gap-2 text-base font-semibold">
-                País
+                {t("signup.country")}
                 <input
                   className="min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
                   disabled={submitting}
@@ -491,12 +491,12 @@ export function ProfileRequired() {
             </div>
 
             <label className="grid min-w-0 gap-2 text-base font-semibold">
-              Biografia
+              {t("profile.bio")}
               <textarea
                 className="min-h-[8rem] rounded-lg border border-border bg-background px-4 py-3 text-base font-normal outline-none transition focus:border-primary"
                 disabled={submitting}
                 onChange={(event) => setBio(event.target.value)}
-                placeholder="Conte um pouco sobre você."
+                placeholder={t("signup.bioPlaceholder")}
                 value={bio}
               />
             </label>
@@ -510,7 +510,7 @@ export function ProfileRequired() {
             <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
               <Button disabled={submitting} fullWidth type="submit">
                 <UserPlus className="mr-2 h-5 w-5" aria-hidden="true" />
-                {submitting ? "Salvando..." : "Criar perfil"}
+                {submitting ? t("common.saving") : t("signup.createProfile")}
               </Button>
 
               <Button disabled={submitting} variant="secondary" onClick={signOut}>

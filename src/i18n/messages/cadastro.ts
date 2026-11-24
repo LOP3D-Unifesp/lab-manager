@@ -1,0 +1,27 @@
+import type { Entry } from "../catalog";
+
+export const cadastro = {
+  "signup.createAccount": { pt: "Crie sua conta", en: "Create your account", es: "Crea tu cuenta" },
+  "signup.authenticatedAs": { pt: "Sua conta está autenticada como {email}. Defina uma senha para continuar.", en: "Your account is authenticated as {email}. Set a password to continue.", es: "Tu cuenta está autenticada como {email}. Define una contraseña para continuar." },
+  "signup.thisUser": { pt: "este usuário", en: "this user", es: "este usuario" },
+  "signup.createPassword": { pt: "Crie uma senha", en: "Create a password", es: "Crea una contraseña" },
+  "signup.confirmPassword": { pt: "Confirme a senha", en: "Confirm the password", es: "Confirma la contraseña" },
+  "signup.continue": { pt: "Continuar", en: "Continue", es: "Continuar" },
+  "signup.completeProfile": { pt: "Complete seu perfil", en: "Complete your profile", es: "Completa tu perfil" },
+  "signup.completeHint": { pt: "Falta só preencher seus dados para começar a usar o laboratório.", en: "You only need to fill in your details to start using the lab.", es: "Solo falta completar tus datos para empezar a usar el laboratorio." },
+  "signup.fullNamePlaceholder": { pt: "Seu nome completo", en: "Your full name", es: "Tu nombre completo" },
+  "signup.academicLink": { pt: "Vinculação acadêmica", en: "Academic affiliation", es: "Vinculación académica" },
+  "signup.selectOptional": { pt: "Selecione (opcional)", en: "Select (optional)", es: "Selecciona (opcional)" },
+  "signup.weeklyHours": { pt: "Horas semanais", en: "Weekly hours", es: "Horas semanales" },
+  "signup.lattesUrl": { pt: "Lattes URL", en: "Lattes URL", es: "URL de Lattes" },
+  "signup.onlyNumbers": { pt: "Somente números", en: "Numbers only", es: "Solo números" },
+  "signup.nationalityCode": { pt: "Nacionalidade (código)", en: "Nationality (code)", es: "Nacionalidad (código)" },
+  "signup.country": { pt: "País", en: "Country", es: "País" },
+  "signup.bioPlaceholder": { pt: "Conte um pouco sobre você.", en: "Tell us a little about yourself.", es: "Cuéntanos un poco sobre ti." },
+  "signup.createProfile": { pt: "Criar perfil", en: "Create profile", es: "Crear perfil" },
+  "signup.errPasswordShort": { pt: "A senha deve ter pelo menos 8 caracteres.", en: "The password must have at least 8 characters.", es: "La contraseña debe tener al menos 8 caracteres." },
+  "signup.errPasswordMismatch": { pt: "As senhas não coincidem.", en: "The passwords do not match.", es: "Las contraseñas no coinciden." },
+  "signup.errSetPassword": { pt: "Não foi possível definir a senha.", en: "Could not set the password.", es: "No se pudo definir la contraseña." },
+  "signup.errReadUser": { pt: "Não foi possível ler o usuário autenticado.", en: "Could not read the authenticated user.", es: "No se pudo leer el usuario autenticado." },
+  "signup.errCreateProfile": { pt: "Não foi possível criar o perfil.", en: "Could not create the profile.", es: "No se pudo crear el perfil." },
+} satisfies Record<string, Entry>;
