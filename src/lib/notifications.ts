@@ -8,6 +8,7 @@ export type NotificationType =
   | "booking_cancelled"
   | "request_new"
   | "request_resolved"
+  | "request_status"
   | "feedback_new"
   | "purchase_new"
   | "purchase_status";
@@ -33,6 +34,7 @@ const GROUP_BY_TYPE: Record<NotificationType, NotificationGroup> = {
   booking_cancelled: "bookings",
   request_new: "requests",
   request_resolved: "requests",
+  request_status: "requests",
   feedback_new: "feedback",
   purchase_new: "purchases",
   purchase_status: "purchases",
@@ -73,6 +75,15 @@ export function describeNotification(notification: Pick<AppNotification, "type" 
       };
     case "request_resolved":
       return { title: t("notif.requestResolved"), detail: text(params, "equipment"), reason: null };
+    case "request_status": {
+      const status = text(params, "status");
+      const known = ["open", "in_progress", "waiting_part", "resolved", "cancelled"];
+      return {
+        title: status && known.includes(status) ? t(`notif.request.${status}` as Parameters<typeof t>[0]) : t("notif.requestUpdated"),
+        detail: text(params, "equipment"),
+        reason: null,
+      };
+    }
     case "feedback_new":
       return { title: t("notif.feedbackNew"), detail: null, reason: null };
     case "purchase_new":
@@ -87,6 +98,8 @@ export function describeNotification(notification: Pick<AppNotification, "type" 
       if (status && isNotifiablePurchaseStatus(status) && item) {
         return { title: describePurchaseUpdate({ item, status, rejected_reason: null }).title, detail: item, reason: text(params, "reason") };
       }
+      if (status === "cancelled") return { title: t("notif.purchaseCancelled"), detail: item, reason: null };
+      if (status === "requested") return { title: t("notif.purchaseReopened"), detail: item, reason: null };
       return { title: t("notif.purchaseStatus"), detail: item, reason: null };
     }
   }

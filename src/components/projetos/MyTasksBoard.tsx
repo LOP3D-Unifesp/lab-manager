@@ -10,8 +10,9 @@ import { KanbanBoard } from "./KanbanBoard";
 import { TaskModal } from "./TaskModal";
 import { useTaskBoard } from "./useTaskBoard";
 
-// Kanban pessoal: só as tarefas atribuídas à pessoa, de todos os projetos. Fica visível enquanto ela
-// participar de algum projeto, para poder criar a primeira tarefa sem sair do Dashboard.
+// Kanban pessoal: só as tarefas atribuídas à pessoa, de todos os projetos. Fica sempre visível (depois de carregar):
+// quem participa de algum projeto aberto pode criar a primeira tarefa sem sair do Dashboard, e quem ainda não
+// participa de nenhum vê o aviso de que precisa ser adicionada a um projeto.
 export function MyTasksBoard({ isCoordinator, profileId }: { isCoordinator: boolean; profileId: string }) {
   const t = useT();
   const loader = useCallback(() => listMyTasks(profileId), [profileId]);
@@ -31,7 +32,7 @@ export function MyTasksBoard({ isCoordinator, profileId }: { isCoordinator: bool
 
   const projetosAbertos = useMemo(() => projetos.filter((projeto) => isProjectOpen(projeto.status)), [projetos]);
 
-  if (!tarefas || (tarefas.length === 0 && projetosAbertos.length === 0 && !erro)) return null;
+  if (!tarefas) return null;
 
   return (
     <section className="mt-6">
@@ -53,7 +54,7 @@ export function MyTasksBoard({ isCoordinator, profileId }: { isCoordinator: bool
         ) : null}
         {tarefas.length === 0 ? (
           <p className="mt-4 rounded-lg border border-dashed border-border bg-background p-4 text-base text-muted">
-            {t("tasks.mineEmpty")}
+            {projetosAbertos.length === 0 ? t("tasks.mineNoProject") : t("tasks.mineEmpty")}
           </p>
         ) : (
           <div className="mt-4">

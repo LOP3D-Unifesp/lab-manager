@@ -12,6 +12,7 @@ const ICONS: Record<NotificationType, LucideIcon> = {
   booking_cancelled: XCircle,
   request_new: Wrench,
   request_resolved: CheckCircle2,
+  request_status: Wrench,
   feedback_new: MessageSquare,
   purchase_new: ShoppingCart,
   purchase_status: ShoppingCart,

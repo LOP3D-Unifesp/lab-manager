@@ -16,6 +16,14 @@ const TEXTS = {
   purchase_rejected: { pt: "Pedido recusado", en: "Request rejected", es: "Pedido rechazado" },
   purchase_purchased: { pt: "Pedido comprado", en: "Request purchased", es: "Pedido comprado" },
   purchase_delivered: { pt: "Pedido entregue", en: "Request delivered", es: "Pedido entregado" },
+  request_open: { pt: "Chamado reaberto", en: "Maintenance request reopened", es: "Solicitud de mantenimiento reabierta" },
+  request_in_progress: { pt: "Chamado em andamento", en: "Maintenance request in progress", es: "Solicitud de mantenimiento en curso" },
+  request_waiting_part: { pt: "Chamado aguardando peça", en: "Maintenance request waiting for a part", es: "Solicitud de mantenimiento esperando una pieza" },
+  request_cancelled: { pt: "Chamado cancelado", en: "Maintenance request cancelled", es: "Solicitud de mantenimiento cancelada" },
+  request_updated: { pt: "Chamado atualizado", en: "Maintenance request updated", es: "Solicitud de mantenimiento actualizada" },
+  purchase_cancelled: { pt: "Pedido cancelado", en: "Request cancelled", es: "Pedido cancelado" },
+  purchase_reopened: { pt: "Pedido voltou para análise", en: "Request back under review", es: "Pedido de vuelta en análisis" },
+  purchase_updated: { pt: "Pedido de compra atualizado", en: "Purchase request updated", es: "Pedido de compra actualizado" },
   generic: { pt: "Nova notificação", en: "New notification", es: "Nueva notificación" },
 };
 
@@ -27,8 +35,13 @@ function language() {
 function textKey(type, params) {
   if (type === "request_new" && params.urgency === "urgent") return "request_urgent";
   if (type === "purchase_new" && params.urgency === "urgent") return "purchase_urgent";
-  if (type === "purchase_status" && ["approved", "rejected", "purchased", "delivered"].includes(params.status)) {
-    return "purchase_" + params.status;
+  if (type === "purchase_status") {
+    if (["approved", "rejected", "purchased", "delivered", "cancelled"].includes(params.status)) return "purchase_" + params.status;
+    return params.status === "requested" ? "purchase_reopened" : "purchase_updated";
+  }
+  if (type === "request_status") {
+    if (params.status === "resolved") return "request_resolved";
+    return ["open", "in_progress", "waiting_part", "cancelled"].includes(params.status) ? "request_" + params.status : "request_updated";
   }
   return TEXTS[type] ? type : "generic";
 }
