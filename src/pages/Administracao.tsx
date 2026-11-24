@@ -9,7 +9,7 @@ import { StatusBadge } from "../components/ui/StatusBadge";
 import { TimezoneSelect } from "../components/ui/TimezoneSelect";
 import { useAuth } from "../lib/auth";
 import { formatSchedulePeriod, type LabSchedulePeriod } from "../lib/domain";
-import { listLabSchedulePeriods, removeLabLogo, saveLabSchedulePeriod, updateLabBreaks, updateLabSettings, uploadLabLogo, type LogoVariant } from "../lib/supabaseRepository";
+import { listLabSchedulePeriods, removeLabLogo, saveLabSchedulePeriod, updateLabBreaks, updateLabSettings, uploadLabLogo, validateLabLogoFile, type LogoVariant } from "../lib/supabaseRepository";
 
 type MealBreakId = "lunch" | "dinner";
 
@@ -39,7 +39,9 @@ export function Administracao() {
   const [savingPeriod, setSavingPeriod] = useState(false);
   const [scheduleMessage, setScheduleMessage] = useState("");
   const [scheduleError, setScheduleError] = useState("");
-  const [logoBusy, setLogoBusy] = useState<LogoVariant | null>(null);
+  const [logoBusy, setLogoBusy] = useState(false);
+  const [logoPending, setLogoPending] = useState<Record<LogoVariant, File | "remove" | null>>({ light: null, dark: null });
+  const [logoPreview, setLogoPreview] = useState<Record<LogoVariant, string | null>>({ light: null, dark: null });
   const [logoMessage, setLogoMessage] = useState("");
   const [logoError, setLogoError] = useState("");
 
@@ -53,36 +55,75 @@ export function Administracao() {
     setCapacity(labSettings.workspace_capacity); setOperatingWeekdays(labSettings.operating_weekdays);
   }, [labSettings]);
 
-  async function changeLogo(variant: LogoVariant, file: File | undefined) {
-    if (!file) return;
-    setLogoBusy(variant); setLogoError(""); setLogoMessage("");
-    try { await uploadLabLogo(variant, file); await refreshInstallation(); setLogoMessage(t("logo.saved")); }
-    catch (reason) { setLogoError(reason instanceof Error ? reason.message : t("logo.errSave")); }
-    finally { setLogoBusy(null); }
+  function clearLogoPreview(variant: LogoVariant) {
+    setLogoPreview((current) => {
+      if (current[variant]) URL.revokeObjectURL(current[variant] as string);
+      return { ...current, [variant]: null };
+    });
   }
 
-  async function deleteLogo(variant: LogoVariant) {
-    setLogoBusy(variant); setLogoError(""); setLogoMessage("");
-    try { await removeLabLogo(variant); await refreshInstallation(); setLogoMessage(t("logo.removed")); }
-    catch (reason) { setLogoError(reason instanceof Error ? reason.message : t("logo.errSave")); }
-    finally { setLogoBusy(null); }
+  async function stageLogo(variant: LogoVariant, file: File | undefined) {
+    if (!file) return;
+    setLogoError(""); setLogoMessage("");
+    try { await validateLabLogoFile(file); }
+    catch (reason) { setLogoError(reason instanceof Error ? reason.message : t("logo.errSave")); return; }
+    setLogoPreview((current) => {
+      if (current[variant]) URL.revokeObjectURL(current[variant] as string);
+      return { ...current, [variant]: URL.createObjectURL(file) };
+    });
+    setLogoPending((current) => ({ ...current, [variant]: file }));
+  }
+
+  function stageLogoRemoval(variant: LogoVariant) {
+    setLogoError(""); setLogoMessage("");
+    clearLogoPreview(variant);
+    setLogoPending((current) => ({ ...current, [variant]: "remove" }));
+  }
+
+  function undoLogoStage(variant: LogoVariant) {
+    clearLogoPreview(variant);
+    setLogoPending((current) => ({ ...current, [variant]: null }));
+  }
+
+  function discardLogoChanges() {
+    undoLogoStage("light"); undoLogoStage("dark");
+    setLogoError(""); setLogoMessage("");
+  }
+
+  const hasLogoChanges = logoPending.light !== null || logoPending.dark !== null;
+
+  async function saveLogos() {
+    setLogoBusy(true); setLogoError(""); setLogoMessage("");
+    try {
+      for (const variant of ["light", "dark"] as const) {
+        const pending = logoPending[variant];
+        if (pending === "remove") await removeLabLogo(variant);
+        else if (pending) await uploadLabLogo(variant, pending);
+      }
+      await refreshInstallation();
+      discardLogoChanges();
+      setLogoMessage(t("logo.saved"));
+    } catch (reason) { setLogoError(reason instanceof Error ? reason.message : t("logo.errSave")); }
+    finally { setLogoBusy(false); }
   }
 
   function renderLogoSlot(variant: LogoVariant) {
-    const url = variant === "light" ? labSettings?.logo_light_url : labSettings?.logo_dark_url;
-    const busy = logoBusy === variant;
+    const saved = variant === "light" ? labSettings?.logo_light_url : labSettings?.logo_dark_url;
+    const pending = logoPending[variant];
+    const url = pending === "remove" ? null : (logoPreview[variant] ?? saved ?? null);
     return (
       <div className="grid gap-3">
         <p className="font-semibold">{t(variant === "light" ? "logo.light" : "logo.dark")}</p>
-        <div className={["flex h-28 items-center justify-center rounded-lg border border-border p-3", variant === "light" ? "bg-white" : "bg-[#0b1220]"].join(" ")}>
+        <div className={["flex h-28 items-center justify-center rounded-lg border p-3", pending !== null ? "border-accent" : "border-border", variant === "light" ? "bg-white" : "bg-[#0b1220]"].join(" ")}>
           {url ? <img alt={t("logo.alt")} className="max-h-full max-w-full object-contain" src={url} /> : <span className="flex items-center gap-2 text-sm text-muted"><ImageIcon className="h-4 w-4" aria-hidden="true" />{t("logo.empty")}</span>}
         </div>
+        {pending !== null ? <p className="text-sm font-semibold text-accent-dark">{pending === "remove" ? t("logo.pendingRemoval") : t("logo.pending")}</p> : null}
         <div className="flex flex-wrap gap-2">
-          <label className={["inline-flex min-h-9 cursor-pointer items-center rounded-xl border border-primary bg-surface px-3 text-sm font-semibold text-primary transition hover:bg-primary-soft", busy ? "pointer-events-none opacity-60" : ""].join(" ")}>
-            {busy ? t("logo.uploading") : url ? t("logo.replace") : t("logo.upload")}
-            <input accept="image/png,image/jpeg,image/webp,image/svg+xml" className="hidden" disabled={logoBusy !== null} type="file" onChange={(event) => { void changeLogo(variant, event.target.files?.[0]); event.target.value = ""; }} />
+          <label className={["inline-flex min-h-9 cursor-pointer items-center rounded-xl border border-primary bg-surface px-3 text-sm font-semibold text-primary transition hover:bg-primary-soft", logoBusy ? "pointer-events-none opacity-60" : ""].join(" ")}>
+            {url ? t("logo.replace") : t("logo.choose")}
+            <input accept="image/png,image/jpeg,image/webp,image/svg+xml" className="hidden" disabled={logoBusy} type="file" onChange={(event) => { void stageLogo(variant, event.target.files?.[0]); event.target.value = ""; }} />
           </label>
-          {url ? <Button className="min-h-9 px-3 py-1.5 text-sm" disabled={logoBusy !== null} onClick={() => deleteLogo(variant)} variant="ghost">{t("logo.remove")}</Button> : null}
+          {pending !== null ? <Button className="min-h-9 px-3 py-1.5 text-sm" disabled={logoBusy} onClick={() => undoLogoStage(variant)} variant="ghost">{t("logo.undo")}</Button> : saved ? <Button className="min-h-9 px-3 py-1.5 text-sm" disabled={logoBusy} onClick={() => stageLogoRemoval(variant)} variant="ghost">{t("logo.remove")}</Button> : null}
         </div>
         {variant === "dark" ? <p className="text-sm text-muted">{t("logo.darkHint")}</p> : null}
       </div>
@@ -266,6 +307,10 @@ export function Administracao() {
         <div className="grid gap-5 md:grid-cols-2">
           {renderLogoSlot("light")}
           {renderLogoSlot("dark")}
+        </div>
+        <div className="mt-5 flex flex-wrap gap-3">
+          <Button disabled={!hasLogoChanges || logoBusy} onClick={saveLogos}>{logoBusy ? t("common.saving") : t("logo.saveButton")}</Button>
+          {hasLogoChanges ? <Button disabled={logoBusy} onClick={discardLogoChanges} variant="ghost">{t("logo.discard")}</Button> : null}
         </div>
       </Card>
 

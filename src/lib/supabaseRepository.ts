@@ -324,15 +324,19 @@ const LAB_LOGO_EXTENSIONS: Record<string, string> = {
 };
 
 // Sobe o logo de uma versão (clara ou escura) e aponta `lab_settings` para ele. Só coordenadores (RLS + RPC).
-export async function uploadLabLogo(variant: LogoVariant, file: File) {
-  const extension = LAB_LOGO_EXTENSIONS[file.type];
-  if (!extension) throw new Error(t("logo.errType"));
+export async function validateLabLogoFile(file: File) {
+  if (!LAB_LOGO_EXTENSIONS[file.type]) throw new Error(t("logo.errType"));
   if (file.size > LAB_LOGO_MAX_BYTES) throw new Error(t("logo.errSize"));
   if (file.type === "image/svg+xml") {
     // O SVG só é exibido como <img> (que não executa script); esta checagem é uma camada extra, não a proteção.
     const text = await file.text();
     if (/<script|\son[a-z]+\s*=|javascript:/i.test(text)) throw new Error(t("logo.errSvg"));
   }
+}
+
+export async function uploadLabLogo(variant: LogoVariant, file: File) {
+  await validateLabLogoFile(file);
+  const extension = LAB_LOGO_EXTENSIONS[file.type];
 
   const storage = client().storage.from("lab-logo");
   const path = `logo-${variant}.${extension}`;
