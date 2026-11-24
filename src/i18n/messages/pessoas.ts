@@ -29,6 +29,8 @@ export const pessoas = {
   "researcher.openLattes": { pt: "Abrir o Lattes", en: "Open Lattes", es: "Abrir el Lattes" },
   "researcher.about": { pt: "Sobre", en: "About", es: "Acerca de" },
   "researcher.noBio": { pt: "Esta pessoa ainda não escreveu uma bio.", en: "This person has not written a bio yet.", es: "Esta persona aún no ha escrito una bio." },
+  "researcher.projects": { pt: "Projetos", en: "Projects", es: "Proyectos" },
+  "researcher.noProjects": { pt: "Esta pessoa ainda não participa de nenhum projeto.", en: "This person is not in any project yet.", es: "Esta persona aún no participa en ningún proyecto." },
   "researcher.funding": { pt: "Bolsas e carga horária", en: "Grants and workload", es: "Becas y carga horaria" },
   "researcher.hoursPerWeek": { pt: "{hours}h/semana", en: "{hours}h/week", es: "{hours}h/semana" },
   "researcher.grantTotal": { pt: "Total das bolsas: {hours}h/semana", en: "Grants total: {hours}h/week", es: "Total de las becas: {hours}h/semana" },
