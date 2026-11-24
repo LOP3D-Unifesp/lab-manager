@@ -1,6 +1,9 @@
 import type { MaintenanceUrgency } from "./maintenanceRequests";
+import { subscribeToPush, unsubscribeFromPush } from "./push";
 
 const STORAGE_KEY = "avisos-no-computador";
+// Com o push ativo o service worker mostra os avisos (inclusive com a aba aberta em segundo plano); a página não repete.
+const PUSH_KEY = "avisos-push";
 
 export type DesktopAlertState = "unsupported" | "blocked" | "off" | "on";
 
@@ -20,6 +23,28 @@ export function getDesktopAlertState(): DesktopAlertState {
   return "off";
 }
 
+function setPushFlag(active: boolean) {
+  try {
+    window.localStorage.setItem(PUSH_KEY, active ? "on" : "off");
+  } catch {
+    // sem armazenamento local: vale só até recarregar a página
+  }
+}
+
+function isPushActive() {
+  try {
+    return window.localStorage.getItem(PUSH_KEY) === "on";
+  } catch {
+    return false;
+  }
+}
+
+/** Assina (ou reassina para a pessoa logada) o push deste navegador, se os avisos estiverem ligados. */
+export async function syncPushSubscription() {
+  if (getDesktopAlertState() !== "on") return;
+  setPushFlag(await subscribeToPush());
+}
+
 export async function enableDesktopAlerts(): Promise<DesktopAlertState> {
   if (!("Notification" in window)) return "unsupported";
   const permission = Notification.permission === "granted" ? "granted" : await Notification.requestPermission();
@@ -29,6 +54,7 @@ export async function enableDesktopAlerts(): Promise<DesktopAlertState> {
     } catch {
       // sem armazenamento local: vale só até recarregar a página
     }
+    setPushFlag(await subscribeToPush());
   }
   return getDesktopAlertState();
 }
@@ -39,11 +65,19 @@ export function disableDesktopAlerts() {
   } catch {
     // sem armazenamento local: nada a fazer
   }
+  setPushFlag(false);
+  void unsubscribeFromPush();
+}
+
+/** Ao sair, apaga a assinatura deste navegador para os avisos da conta anterior não continuarem chegando. */
+export async function releasePushSubscription() {
+  setPushFlag(false);
+  await unsubscribeFromPush();
 }
 
 // Só vale a pena avisar fora do app: com a aba em foco o selo e o sino já mostram.
 export function shouldShowDesktopAlert() {
-  return getDesktopAlertState() === "on" && (document.hidden || !document.hasFocus());
+  return getDesktopAlertState() === "on" && !isPushActive() && (document.hidden || !document.hasFocus());
 }
 
 export function describeNewRequest(request: { urgency: MaintenanceUrgency; description: string }, equipmentName: string | null) {

@@ -9,6 +9,7 @@ import {
 } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 
+import { releasePushSubscription } from "./desktopAlerts";
 import { supabase } from "./supabaseClient";
 import { LAB_SETTINGS_COLUMNS } from "./supabaseRepository";
 import { mergeMyProfile, type LabSettings, type MyProfile, type PublicProfile } from "./domain";
@@ -165,6 +166,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
 
+        await releasePushSubscription();
         await supabase.auth.signOut();
         setProfile(null);
         setLabSettings(null);

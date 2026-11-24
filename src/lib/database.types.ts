@@ -713,6 +713,26 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"push_subscriptions": {
+                  Row: {
+                    "auth": string,"created_at": string,"endpoint": string,"id": string,"p256dh": string,"profile_id": string,"user_agent": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "auth": string,"created_at"?: string,"endpoint": string,"id"?: string,"p256dh": string,"profile_id": string,"user_agent"?: string | null
+                  }
+                  Update: {
+                    "auth"?: string,"created_at"?: string,"endpoint"?: string,"id"?: string,"p256dh"?: string,"profile_id"?: string,"user_agent"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "push_subscriptions_profile_id_fkey"
+      columns: ["profile_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"skills": {
                   Row: {
                     "created_at": string,"description": string | null,"id": string,"is_active": boolean,"name": string,"name_en": string | null,"name_es": string | null,"updated_at": string
@@ -931,6 +951,9 @@ isOneToOne: false
       } },
 "record_invitation_opened":
 { Args: Record<PropertyKey, never>; Returns: undefined
+                           },
+"register_push_subscription":
+{ Args: { "p_auth": string,"p_endpoint": string,"p_p256dh": string,"p_user_agent"?: string }; Returns: undefined
                            },
 "reject_booking":
 { Args: { "p_booking_id": string,"p_reason"?: string }; Returns: {
