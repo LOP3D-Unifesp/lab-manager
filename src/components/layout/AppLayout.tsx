@@ -27,7 +27,7 @@ export function AppLayout({ children }: AppLayoutProps) {
     <div className="min-h-screen bg-background text-text">
       <Sidebar />
 
-      <div className="flex min-h-screen flex-col lg:pl-72">
+      <div className="flex min-h-screen flex-col lg:pl-80">
         <header className="sticky top-0 z-20 border-b border-border bg-surface/95 px-4 py-2.5 backdrop-blur lg:hidden">
           <div className="flex items-center justify-between gap-3">
             <Link

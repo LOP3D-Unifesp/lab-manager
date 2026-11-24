@@ -61,6 +61,30 @@
   box-sizing: border-box;
 }
 
+/* Barras de rolagem finas e discretas, no tema atual. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--c-muted) / 0.45) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgb(var(--c-muted) / 0.4);
+  border-radius: 9999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--c-muted) / 0.65);
+}
+
 html {
   min-height: 100%;
   background: rgb(var(--c-background));

@@ -84,7 +84,7 @@ export function Sidebar() {
           : undefined;
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 border-r border-border bg-surface px-4 py-5 lg:block">
+    <aside className="fixed inset-y-0 left-0 z-30 hidden w-80 border-r border-border bg-surface px-4 py-5 lg:block">
       <div className="flex h-full min-h-0 flex-col">
         <div className="border-b border-border pb-5">
           <div className="flex items-start justify-between gap-2">
@@ -120,7 +120,7 @@ export function Sidebar() {
 
         <nav
           aria-label={t("nav.main")}
-          className="mt-5 min-h-0 flex-1 space-y-1 overflow-y-auto pr-1"
+          className="-mr-2 mt-5 min-h-0 flex-1 space-y-1 overflow-y-auto pr-2"
         >
           {visibleNavigationItems.map((item, index) => {
             const previousItem = visibleNavigationItems[index - 1];
@@ -143,8 +143,10 @@ export function Sidebar() {
         </nav>
 
         <div className="mt-5 border-t border-border pt-3">
-          <ThemeToggle className="mb-2 w-full" />
-          <LanguageSelect className="mb-3 w-full" />
+          <div className="mb-3 flex gap-2">
+            <ThemeToggle compact />
+            <LanguageSelect className="min-w-0 flex-1" />
+          </div>
           <AuthUserMenu />
         </div>
       </div>

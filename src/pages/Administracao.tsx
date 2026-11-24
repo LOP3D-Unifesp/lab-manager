@@ -112,7 +112,7 @@ export function Administracao() {
     const pending = logoPending[variant];
     const url = pending === "remove" ? null : (logoPreview[variant] ?? saved ?? null);
     return (
-      <div className="grid gap-3">
+      <div className="grid content-start gap-3">
         <p className="font-semibold">{t(variant === "light" ? "logo.light" : variant === "dark" ? "logo.dark" : "logo.favicon")}</p>
         <div className={["flex h-28 items-center justify-center rounded-lg border p-3", pending !== null ? "border-accent" : "border-border", variant === "dark" ? "bg-[#0b1220]" : "bg-white"].join(" ")}>
           {url ? <img alt={t("logo.alt")} className="max-h-full max-w-full object-contain" src={url} /> : <span className="flex items-center gap-2 text-sm text-muted"><ImageIcon className="h-4 w-4" aria-hidden="true" />{t("logo.empty")}</span>}
@@ -306,7 +306,7 @@ export function Administracao() {
         <div className="mb-5 flex items-start gap-3"><div className="rounded-lg bg-primary-soft p-3 text-primary"><ImageIcon className="h-5 w-5" /></div><div><h2 className="text-2xl font-bold">{t("logo.title")}</h2><p className="mt-1 text-muted">{t("logo.hint")}</p><p className="mt-2 text-sm font-semibold text-muted">{t("logo.sizeHint")}</p></div></div>
         {logoMessage ? <p className="mb-4 rounded-lg border border-success bg-success-soft p-3 font-semibold text-success-dark">{logoMessage}</p> : null}
         {logoError ? <p className="mb-4 rounded-lg border border-danger bg-danger-soft p-3 font-semibold text-danger">{logoError}</p> : null}
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid items-start gap-5 md:grid-cols-2 xl:grid-cols-3">
           {renderLogoSlot("light")}
           {renderLogoSlot("dark")}
           {renderLogoSlot("favicon")}
