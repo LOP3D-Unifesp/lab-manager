@@ -103,11 +103,11 @@ export function sortRequests(requests: MaintenanceRequest[]) {
 export type RequestSort = "priority" | "newest" | "oldest" | "equipment" | "status";
 
 export const requestSortOptions: Array<{ value: RequestSort; label: string }> = [
-  { value: "priority", label: "Prioridade (padrão)" },
-  { value: "newest", label: "Mais recentes" },
-  { value: "oldest", label: "Mais antigos" },
-  { value: "equipment", label: "Equipamento (A–Z)" },
-  { value: "status", label: "Situação" },
+  { value: "priority", get label() { return t("requestSort.priority"); } },
+  { value: "newest", get label() { return t("requestSort.newest"); } },
+  { value: "oldest", get label() { return t("requestSort.oldest"); } },
+  { value: "equipment", get label() { return t("requestSort.equipment"); } },
+  { value: "status", get label() { return t("requestSort.status"); } },
 ];
 
 export function isRequestSort(value: unknown): value is RequestSort {
@@ -183,18 +183,18 @@ export function getRequestActions(request: MaintenanceRequest, profileId: string
 
 export function validateRequestDescription(text: string) {
   const length = text.trim().length;
-  if (length < 3) return "Descreva o problema com pelo menos 3 caracteres.";
-  if (length > 2000) return "A descrição pode ter até 2000 caracteres.";
+  if (length < 3) return t("requestError.tooShort");
+  if (length > 2000) return t("requestError.tooLong");
   return null;
 }
 
 export function getRequestErrorMessage(error: unknown) {
   const text = error instanceof Error ? error.message : String(error ?? "");
-  if (text.includes("maintainer_required")) return "Apenas coordenadores e responsáveis pela manutenção podem fazer essa alteração.";
-  if (text.includes("invalid_request_transition")) return "Esse chamado não pode mais mudar de situação.";
-  if (text.includes("invalid_assignee")) return "O responsável precisa ser coordenador ou responsável pela manutenção.";
-  if (text.includes("request_not_found")) return "Chamado não encontrado.";
-  if (text.includes("maintenance_requests_description_check")) return "A descrição precisa ter entre 3 e 2000 caracteres.";
-  if (text.includes("row-level security")) return "Você não tem permissão para fazer essa alteração.";
-  return text || "Não foi possível concluir a operação.";
+  if (text.includes("maintainer_required")) return t("requestError.maintainer_required");
+  if (text.includes("invalid_request_transition")) return t("requestError.invalid_request_transition");
+  if (text.includes("invalid_assignee")) return t("requestError.invalid_assignee");
+  if (text.includes("request_not_found")) return t("requestError.request_not_found");
+  if (text.includes("maintenance_requests_description_check")) return t("requestError.description_check");
+  if (text.includes("row-level security")) return t("requestError.rls");
+  return text || t("requestError.fallback");
 }

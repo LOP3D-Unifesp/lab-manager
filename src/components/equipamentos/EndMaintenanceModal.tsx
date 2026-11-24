@@ -1,3 +1,4 @@
+import { useT } from "../../i18n";
 import { FormEvent, useState } from "react";
 
 import type { Equipment } from "../../lib/domain";
@@ -20,6 +21,7 @@ type EndMaintenanceModalProps = {
 };
 
 export function EndMaintenanceModal({ episode, equipment, onClose, onDone, timezone }: EndMaintenanceModalProps) {
+  const t = useT();
   const [notes, setNotes] = useState("");
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
@@ -40,8 +42,8 @@ export function EndMaintenanceModal({ episode, equipment, onClose, onDone, timez
 
   return (
     <Modal
-      title={`Liberar ${equipment.name}`}
-      description="O equipamento volta a aceitar reservas e o fim da manutenção fica registrado."
+      title={t("end.title", { name: equipment.name })}
+      description={t("end.hint")}
       onClose={onClose}
     >
       <form className="grid gap-4" onSubmit={liberar}>
@@ -49,12 +51,11 @@ export function EndMaintenanceModal({ episode, equipment, onClose, onDone, timez
           <p className="rounded-lg border border-border bg-background p-3 text-base text-text">
             <span className="font-semibold">{episode.reason}</span>
             <br />
-            Em manutenção desde {formatMaintenanceDateTime(episode.started_at, timezone)} (
-            {formatMaintenanceDuration(episode.started_at, null, new Date())}).
+            {t("end.since", { date: formatMaintenanceDateTime(episode.started_at, timezone), duration: formatMaintenanceDuration(episode.started_at, null, new Date()) })}
           </p>
         ) : null}
         <label className="grid gap-2 text-base font-semibold text-text">
-          O que foi feito? (opcional)
+          {t("end.whatWasDone")}
           <textarea
             autoFocus
             className="min-h-24 min-w-0 rounded-lg border border-border bg-background px-4 py-3 text-base font-normal text-text outline-none transition focus:border-primary"
@@ -67,10 +68,10 @@ export function EndMaintenanceModal({ episode, equipment, onClose, onDone, timez
         ) : null}
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Button variant="secondary" onClick={onClose}>
-            Cancelar
+            {t("common.cancel")}
           </Button>
           <Button type="submit" variant="success" disabled={salvando}>
-            {salvando ? "Salvando..." : "Liberar equipamento"}
+            {salvando ? t("common.saving") : t("equipment.release")}
           </Button>
         </div>
       </form>

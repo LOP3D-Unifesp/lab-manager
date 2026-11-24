@@ -1,3 +1,4 @@
+import { useT } from "../../i18n";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import type { Equipment } from "../../lib/domain";
@@ -8,13 +9,14 @@ import { Modal } from "../ui/Modal";
 import { inputClassName } from "../ui/formStyles";
 
 function BookingList({ bookings, timezone }: { bookings: BookingSlot[]; timezone: string }) {
+  const t = useT();
   return (
     <ul className="grid gap-1 text-base text-text">
       {bookings.map((booking) => (
         <li key={booking.id}>
           <span className="font-semibold">{booking.project_name}</span>
-          {booking.person ? ` · ${booking.person}` : ""} · {formatMaintenanceDateTime(booking.starts_at, timezone)} até{" "}
-          {formatMaintenanceDateTime(booking.ends_at, timezone)}
+          {booking.person ? ` · ${booking.person}` : ""} ·{" "}
+          {t("start.bookingLine", { from: formatMaintenanceDateTime(booking.starts_at, timezone), to: formatMaintenanceDateTime(booking.ends_at, timezone) })}
         </li>
       ))}
     </ul>
@@ -30,6 +32,7 @@ type StartMaintenanceModalProps = {
 
 // O equipamento entra em manutenção agora e fica assim até ser liberado; a previsão de volta é só um aviso.
 export function StartMaintenanceModal({ equipment, onClose, onDone, timezone }: StartMaintenanceModalProps) {
+  const t = useT();
   const [reason, setReason] = useState("");
   const [notes, setNotes] = useState("");
   const [expectedReturn, setExpectedReturn] = useState("");
@@ -53,7 +56,7 @@ export function StartMaintenanceModal({ equipment, onClose, onDone, timezone }: 
   async function confirmar(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!reason.trim()) {
-      setErro("Informe o motivo da manutenção.");
+      setErro(t("maintenanceError.reason_required"));
       return;
     }
     try {
@@ -76,51 +79,51 @@ export function StartMaintenanceModal({ equipment, onClose, onDone, timezone }: 
 
   return (
     <Modal
-      title={`Colocar ${equipment.name} em manutenção`}
-      description="O equipamento deixa de aceitar novas reservas agora e volta quando alguém clicar em Liberar. Não é preciso saber quando termina."
+      title={t("start.title", { name: equipment.name })}
+      description={t("start.hint")}
       onClose={onClose}
     >
       <form className="grid gap-4" onSubmit={confirmar}>
         <label className="grid gap-2 text-base font-semibold text-text">
-          Motivo
+          {t("start.reason")}
           <input
             autoFocus
             className={inputClassName}
-            placeholder="Ex.: troca do bico e calibração"
+            placeholder={t("start.reasonPlaceholder")}
             required
             value={reason}
             onChange={(e) => setReason(e.target.value)}
           />
         </label>
         <label className="grid gap-2 text-base font-semibold text-text">
-          Previsão de volta (opcional)
+          {t("start.expectedReturn")}
           <input className={inputClassName} type="date" value={expectedReturn} onChange={(e) => setExpectedReturn(e.target.value)} />
-          <span className="text-sm font-normal text-muted">Só informativa: aparece no card, mas não libera nem bloqueia nada.</span>
+          <span className="text-sm font-normal text-muted">{t("start.expectedReturnHint")}</span>
         </label>
         <label className="grid gap-2 text-base font-semibold text-text">
-          Observações (opcional)
+          {t("start.notes")}
           <textarea className={`${inputClassName} min-h-20 py-3`} value={notes} onChange={(e) => setNotes(e.target.value)} />
         </label>
 
         {cancellable.length > 0 ? (
           <div className="grid gap-3 rounded-lg border border-warning-dark bg-warning-soft p-4">
             <p className="text-base font-semibold text-text">
-              {cancellable.length === 1 ? "Há 1 reserva futura neste equipamento:" : `Há ${cancellable.length} reservas futuras neste equipamento:`}
+              {t("start.futureBookings", { count: cancellable.length })}
             </p>
             <BookingList bookings={cancellable} timezone={timezone} />
             <label className="flex items-start gap-2 text-base font-semibold text-text">
               <input checked={cancelar} className="mt-1 h-4 w-4 accent-primary" type="checkbox" onChange={(e) => setCancelar(e.target.checked)} />
-              Cancelar essas reservas ao colocar em manutenção
+              {t("start.cancelBookings")}
             </label>
             {!cancelar ? (
-              <p className="text-sm text-muted">Sem marcar, elas ficam como estão e você precisa tratá-las depois, uma a uma.</p>
+              <p className="text-sm text-muted">{t("start.keepBookingsHint")}</p>
             ) : null}
           </div>
         ) : null}
 
         {running.length > 0 ? (
           <div className="grid gap-2 rounded-lg border border-border bg-background p-4">
-            <p className="text-base font-semibold text-text">Em andamento agora (não são canceladas automaticamente):</p>
+            <p className="text-base font-semibold text-text">{t("start.running")}</p>
             <BookingList bookings={running} timezone={timezone} />
           </div>
         ) : null}
@@ -131,10 +134,10 @@ export function StartMaintenanceModal({ equipment, onClose, onDone, timezone }: 
 
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Button variant="secondary" onClick={onClose}>
-            Cancelar
+            {t("common.cancel")}
           </Button>
           <Button type="submit" disabled={salvando || bookings === null}>
-            {salvando ? "Salvando..." : "Colocar em manutenção"}
+            {salvando ? t("common.saving") : t("equipment.startMaintenance")}
           </Button>
         </div>
       </form>

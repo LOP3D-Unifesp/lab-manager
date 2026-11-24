@@ -1,3 +1,4 @@
+import { t, useT } from "../../i18n";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "../ui/Button";
@@ -9,14 +10,15 @@ type WebcamCaptureProps = {
 
 function getCameraErrorMessage(error: unknown) {
   const name = error instanceof DOMException ? error.name : "";
-  if (name === "NotAllowedError") return "A câmera foi bloqueada. Libere o acesso nas permissões do navegador ou use Anexar.";
-  if (name === "NotFoundError") return "Nenhuma câmera encontrada neste computador. Use Anexar.";
-  if (name === "NotReadableError") return "A câmera está em uso por outro programa.";
-  return "Não foi possível abrir a câmera. Use Anexar.";
+  if (name === "NotAllowedError") return t("webcam.blocked");
+  if (name === "NotFoundError") return t("webcam.notFound");
+  if (name === "NotReadableError") return t("webcam.inUse");
+  return t("webcam.failed");
 }
 
 // Pré-visualização da webcam do computador, com botão para capturar a imagem.
 export function WebcamCapture({ onCapture, onClose }: WebcamCaptureProps) {
+  const t = useT();
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [ready, setReady] = useState(false);
@@ -90,11 +92,11 @@ export function WebcamCapture({ onCapture, onClose }: WebcamCaptureProps) {
       )}
       <div className="flex flex-wrap justify-end gap-2">
         <Button variant="secondary" className="min-h-11 px-3 py-2 text-sm" onClick={onClose}>
-          {erro ? "Fechar" : "Cancelar"}
+          {erro ? t("common.close") : t("common.cancel")}
         </Button>
         {!erro ? (
           <Button className="min-h-11 px-3 py-2 text-sm" disabled={!ready} onClick={capturar}>
-            Capturar
+            {t("webcam.capture")}
           </Button>
         ) : null}
       </div>

@@ -1,3 +1,4 @@
+import { getLocale, t } from "../i18n";
 export type MaintenanceEpisode = {
   id: string;
   equipment_id: string;
@@ -25,13 +26,9 @@ export function formatMaintenanceDuration(startedAt: string, endedAt: string | n
 }
 
 export function formatDurationMs(ms: number) {
-  if (ms < HOUR_MS) return "menos de 1 hora";
-  if (ms < DAY_MS) {
-    const hours = Math.floor(ms / HOUR_MS);
-    return hours === 1 ? "1 hora" : `${hours} horas`;
-  }
-  const days = Math.floor(ms / DAY_MS);
-  return days === 1 ? "1 dia" : `${days} dias`;
+  if (ms < HOUR_MS) return t("duration.lessThanHour");
+  if (ms < DAY_MS) return t("duration.hours", { count: Math.floor(ms / HOUR_MS) });
+  return t("duration.days", { count: Math.floor(ms / DAY_MS) });
 }
 
 // Resumo do histórico de um equipamento: quantas vezes parou e quanto durou, em média, cada parada concluída.
@@ -71,16 +68,16 @@ export function splitAffectedBookings(bookings: BookingSlot[], now: Date) {
 
 export function getMaintenanceErrorMessage(error: unknown) {
   const text = error instanceof Error ? error.message : String(error ?? "");
-  if (text.includes("maintenance_already_open")) return "Este equipamento já está em manutenção.";
-  if (text.includes("not_in_maintenance")) return "Este equipamento não está em manutenção.";
-  if (text.includes("reason_required")) return "Informe o motivo da manutenção.";
-  if (text.includes("maintainer_required") || text.includes("coordinator_required")) return "Apenas coordenadores e responsáveis pela manutenção podem fazer essa alteração.";
-  if (text.includes("equipment_not_found")) return "Equipamento não encontrado.";
-  return text || "Não foi possível concluir a operação.";
+  if (text.includes("maintenance_already_open")) return t("maintenanceError.maintenance_already_open");
+  if (text.includes("not_in_maintenance")) return t("maintenanceError.not_in_maintenance");
+  if (text.includes("reason_required")) return t("maintenanceError.reason_required");
+  if (text.includes("maintainer_required") || text.includes("coordinator_required")) return t("maintenanceError.maintainer_required");
+  if (text.includes("equipment_not_found")) return t("maintenanceError.equipment_not_found");
+  return text || t("maintenanceError.fallback");
 }
 
 export function formatMaintenanceDateTime(value: string, timezone: string) {
-  return new Intl.DateTimeFormat("pt-BR", {
+  return new Intl.DateTimeFormat(getLocale(), {
     timeZone: timezone,
     day: "2-digit",
     month: "2-digit",
