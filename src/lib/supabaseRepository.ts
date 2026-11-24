@@ -20,6 +20,9 @@ import type {
   ProjectTask,
   TaskPriority,
   TaskStatus,
+  ProjectDirectoryEntry,
+  ProjectJoinRequest,
+  ProjectMember,
 } from "./projects";
 import {
   AvailabilitySlot,
@@ -1599,4 +1602,64 @@ export async function saveNotificationPreference(profileId: string, preference: 
     .from("notification_preferences")
     .insert({ profile_id: profileId, topic: preference.topic, in_app: preference.in_app, push: preference.push });
   throwIfError(insertError);
+}
+
+// ---------------------------------------------------------------------------
+// Pedidos de entrada em projetos
+// ---------------------------------------------------------------------------
+
+type ProjectDirectoryRow = Omit<ProjectDirectoryEntry, "members" | "my_request_status"> & {
+  members: ProjectMember[] | null;
+  my_request_status: string | null;
+};
+
+function mapDirectoryEntry(row: ProjectDirectoryRow): ProjectDirectoryEntry {
+  return {
+    ...row,
+    members: row.members ?? [],
+    my_request_status: row.my_request_status === "pending" ? "pending" : null,
+  };
+}
+
+// Resumo de todos os projetos (qualquer pessoa ativa); o financiamento, as tarefas e as compras ficam de fora.
+export async function listProjectDirectory(): Promise<ProjectDirectoryEntry[]> {
+  const { data, error } = await client().rpc("list_project_directory", {});
+  throwIfError(error);
+  return ((data ?? []) as unknown as ProjectDirectoryRow[]).map(mapDirectoryEntry);
+}
+
+export async function getProjectDirectoryEntry(id: string): Promise<ProjectDirectoryEntry | null> {
+  const { data, error } = await client().rpc("list_project_directory", { p_project_id: id });
+  throwIfError(error);
+  const [row] = (data ?? []) as unknown as ProjectDirectoryRow[];
+  return row ? mapDirectoryEntry(row) : null;
+}
+
+export async function requestProjectJoin(projectId: string, message: string) {
+  const { error } = await client().rpc("request_project_join", { p_project_id: projectId, p_message: message });
+  throwIfError(error);
+}
+
+export async function cancelProjectJoinRequest(requestId: string) {
+  const { error } = await client().rpc("cancel_project_join_request", { p_request_id: requestId });
+  throwIfError(error);
+}
+
+export async function decideProjectJoinRequest(requestId: string, approve: boolean) {
+  const { error } = await client().rpc("decide_project_join_request", { p_request_id: requestId, p_approve: approve });
+  throwIfError(error);
+}
+
+// Pedidos pendentes de um projeto (só membros e coordenadores leem os dos outros).
+export async function listProjectJoinRequests(projectId: string): Promise<ProjectJoinRequest[]> {
+  const { data, error } = await client()
+    .from("project_join_requests")
+    .select("id, project_id, profile_id, message, created_at, requester:profiles!project_join_requests_profile_id_fkey(full_name, avatar_url)")
+    .eq("project_id", projectId)
+    .eq("status", "pending")
+    .order("created_at");
+  throwIfError(error);
+  return ((data ?? []) as unknown as Array<Omit<ProjectJoinRequest, "requester_name" | "requester_avatar_url"> & { requester: { full_name: string; avatar_url: string | null } | null }>).map(
+    ({ requester, ...row }) => ({ ...row, requester_name: requester?.full_name ?? "", requester_avatar_url: requester?.avatar_url ?? null }),
+  );
 }

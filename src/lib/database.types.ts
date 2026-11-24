@@ -585,6 +585,38 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"project_join_requests": {
+                  Row: {
+                    "created_at": string,"decided_at": string | null,"decided_by": string | null,"id": string,"message": string | null,"profile_id": string,"project_id": string,"status": Database["public"]['Enums']["project_join_status"]
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"decided_at"?: string | null,"decided_by"?: string | null,"id"?: string,"message"?: string | null,"profile_id": string,"project_id": string,"status"?: Database["public"]['Enums']["project_join_status"]
+                  }
+                  Update: {
+                    "created_at"?: string,"decided_at"?: string | null,"decided_by"?: string | null,"id"?: string,"message"?: string | null,"profile_id"?: string,"project_id"?: string,"status"?: Database["public"]['Enums']["project_join_status"]
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "project_join_requests_decided_by_fkey"
+      columns: ["decided_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "project_join_requests_profile_id_fkey"
+      columns: ["profile_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "project_join_requests_project_id_fkey"
+      columns: ["project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"project_members": {
                   Row: {
                     "added_by": string | null,"created_at": string,"profile_id": string,"project_id": string
@@ -804,6 +836,9 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"cancel_project_join_request":
+{ Args: { "p_request_id": string }; Returns: undefined
+                           },
 "complete_lab_installation":
 { Args: { "p_acronym": string,"p_name": string,"p_privacy_contact_email": string,"p_timezone": string }; Returns: {
               "acronym": string | null,
@@ -909,6 +944,9 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"decide_project_join_request":
+{ Args: { "p_approve": boolean,"p_request_id": string }; Returns: undefined
+                           },
 "delete_maintenance_block":
 { Args: { "p_block_id": string }; Returns: undefined
                            },
@@ -941,6 +979,11 @@ isOneToOne: false
 "get_purchase_project_names":
 { Args: { "p_project_ids": (string)[] }; Returns: {
               "id": string,"name": string
+            }[]
+                           },
+"list_project_directory":
+{ Args: { "p_project_id"?: string }; Returns: {
+              "description": string,"ends_on": string,"id": string,"is_member": boolean,"members": Json,"my_request_id": string,"my_request_status": Database["public"]['Enums']["project_join_status"],"name": string,"pending_count": number,"starts_on": string,"status": Database["public"]['Enums']["project_status"]
             }[]
                            },
 "record_booking_usage":
@@ -1063,6 +1106,9 @@ isOneToOne: false
                            },
 "replace_project_members":
 { Args: { "p_profile_ids": (string)[],"p_project_id": string }; Returns: undefined
+                           },
+"request_project_join":
+{ Args: { "p_message"?: string,"p_project_id": string }; Returns: string
                            },
 "save_lab_schedule_period":
 { Args: { "p_ends_at": string,"p_id": string,"p_is_active": boolean,"p_sort_order": number,"p_starts_at": string }; Returns: {
@@ -1413,7 +1459,7 @@ isOneToOne: false
       } }
           }
           Enums: {
-            "academic_affiliation": "ic"|"extension"|"intern"|"tcc"|"masters"|"phd"|"postdoc"|"visitor"|"technician"|"faculty"|"other","booking_status": "pending"|"approved"|"in_progress"|"completed"|"cancelled"|"failed"|"rejected","equipment_status": "active"|"maintenance"|"unavailable"|"disabled"|"stopped","feedback_kind": "suggestion"|"bug"|"other","feedback_status": "new"|"seen"|"planned"|"done"|"dismissed","funding_agency": "cnpq"|"fapesp"|"capes"|"sus"|"fap"|"other","invitation_status": "pending"|"accepted"|"expired"|"revoked","maintenance_request_status": "open"|"in_progress"|"resolved"|"cancelled"|"waiting_part","maintenance_urgency": "low"|"normal"|"urgent","material_category": "filament"|"resin"|"powder"|"other","project_funding_category": "capital"|"custeio"|"bolsas"|"reserva_tecnica"|"outros"|"passagens"|"diarias","project_status": "planning"|"active"|"paused"|"completed"|"archived","purchase_status": "requested"|"approved"|"rejected"|"purchased"|"delivered"|"cancelled","purchase_urgency": "low"|"normal"|"urgent","spool_status": "sealed"|"in_use"|"empty"|"discarded","task_priority": "low"|"normal"|"urgent","task_status": "todo"|"in_progress"|"review"|"done","user_role": "coordinator"|"researcher"
+            "academic_affiliation": "ic"|"extension"|"intern"|"tcc"|"masters"|"phd"|"postdoc"|"visitor"|"technician"|"faculty"|"other","booking_status": "pending"|"approved"|"in_progress"|"completed"|"cancelled"|"failed"|"rejected","equipment_status": "active"|"maintenance"|"unavailable"|"disabled"|"stopped","feedback_kind": "suggestion"|"bug"|"other","feedback_status": "new"|"seen"|"planned"|"done"|"dismissed","funding_agency": "cnpq"|"fapesp"|"capes"|"sus"|"fap"|"other","invitation_status": "pending"|"accepted"|"expired"|"revoked","maintenance_request_status": "open"|"in_progress"|"resolved"|"cancelled"|"waiting_part","maintenance_urgency": "low"|"normal"|"urgent","material_category": "filament"|"resin"|"powder"|"other","project_funding_category": "capital"|"custeio"|"bolsas"|"reserva_tecnica"|"outros"|"passagens"|"diarias","project_join_status": "pending"|"approved"|"rejected"|"cancelled","project_status": "planning"|"active"|"paused"|"completed"|"archived","purchase_status": "requested"|"approved"|"rejected"|"purchased"|"delivered"|"cancelled","purchase_urgency": "low"|"normal"|"urgent","spool_status": "sealed"|"in_use"|"empty"|"discarded","task_priority": "low"|"normal"|"urgent","task_status": "todo"|"in_progress"|"review"|"done","user_role": "coordinator"|"researcher"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -1533,7 +1579,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "academic_affiliation": ["ic", "extension", "intern", "tcc", "masters", "phd", "postdoc", "visitor", "technician", "faculty", "other"],"booking_status": ["pending", "approved", "in_progress", "completed", "cancelled", "failed", "rejected"],"equipment_status": ["active", "maintenance", "unavailable", "disabled", "stopped"],"feedback_kind": ["suggestion", "bug", "other"],"feedback_status": ["new", "seen", "planned", "done", "dismissed"],"funding_agency": ["cnpq", "fapesp", "capes", "sus", "fap", "other"],"invitation_status": ["pending", "accepted", "expired", "revoked"],"maintenance_request_status": ["open", "in_progress", "resolved", "cancelled", "waiting_part"],"maintenance_urgency": ["low", "normal", "urgent"],"material_category": ["filament", "resin", "powder", "other"],"project_funding_category": ["capital", "custeio", "bolsas", "reserva_tecnica", "outros", "passagens", "diarias"],"project_status": ["planning", "active", "paused", "completed", "archived"],"purchase_status": ["requested", "approved", "rejected", "purchased", "delivered", "cancelled"],"purchase_urgency": ["low", "normal", "urgent"],"spool_status": ["sealed", "in_use", "empty", "discarded"],"task_priority": ["low", "normal", "urgent"],"task_status": ["todo", "in_progress", "review", "done"],"user_role": ["coordinator", "researcher"]
+            "academic_affiliation": ["ic", "extension", "intern", "tcc", "masters", "phd", "postdoc", "visitor", "technician", "faculty", "other"],"booking_status": ["pending", "approved", "in_progress", "completed", "cancelled", "failed", "rejected"],"equipment_status": ["active", "maintenance", "unavailable", "disabled", "stopped"],"feedback_kind": ["suggestion", "bug", "other"],"feedback_status": ["new", "seen", "planned", "done", "dismissed"],"funding_agency": ["cnpq", "fapesp", "capes", "sus", "fap", "other"],"invitation_status": ["pending", "accepted", "expired", "revoked"],"maintenance_request_status": ["open", "in_progress", "resolved", "cancelled", "waiting_part"],"maintenance_urgency": ["low", "normal", "urgent"],"material_category": ["filament", "resin", "powder", "other"],"project_funding_category": ["capital", "custeio", "bolsas", "reserva_tecnica", "outros", "passagens", "diarias"],"project_join_status": ["pending", "approved", "rejected", "cancelled"],"project_status": ["planning", "active", "paused", "completed", "archived"],"purchase_status": ["requested", "approved", "rejected", "purchased", "delivered", "cancelled"],"purchase_urgency": ["low", "normal", "urgent"],"spool_status": ["sealed", "in_use", "empty", "discarded"],"task_priority": ["low", "normal", "urgent"],"task_status": ["todo", "in_progress", "review", "done"],"user_role": ["coordinator", "researcher"]
           }
         }
 } as const

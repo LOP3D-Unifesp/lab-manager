@@ -11,6 +11,7 @@ const LABELS: Record<NotificationGroup, { title: () => string; hint: () => strin
   requests: { title: () => t("notifPrefs.requests"), hint: () => t("notifPrefs.requestsHint") },
   purchases: { title: () => t("notifPrefs.purchases"), hint: () => t("notifPrefs.purchasesHint") },
   feedback: { title: () => t("notifPrefs.feedback"), hint: () => t("notifPrefs.feedbackHint") },
+  projects: { title: () => t("notifPrefs.projects"), hint: () => t("notifPrefs.projectsHint") },
 };
 
 // Por assunto: aparecer no sino e/ou avisar no computador. Sem escolha salva, tudo fica ligado.

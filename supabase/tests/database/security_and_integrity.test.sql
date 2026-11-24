@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(367);
+select plan(377);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -1955,6 +1955,64 @@ select is(
      and entity_id = (select id from public.purchase_requests where item = 'pgtap pedido avisos')),
   1,
   'any status change on a purchase notifies who requested it'
+);
+
+-- Project join requests: anyone active asks, members and coordinators decide, and the notifications follow.
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000103","email":"other@example.com","role":"authenticated"}', true);
+select lives_ok(
+  $$ select public.request_project_join('00000000-0000-0000-0000-0000000000c2', 'quero ajudar') $$,
+  'a researcher outside the project asks to join it'
+);
+select throws_ok(
+  $$ select public.request_project_join('00000000-0000-0000-0000-0000000000c2') $$,
+  'P0001', 'request_already_pending',
+  'a second pending request for the same project is refused'
+);
+select is(
+  (select my_request_status::text from public.list_project_directory('00000000-0000-0000-0000-0000000000c2')),
+  'pending',
+  'the directory shows the person their pending request'
+);
+select throws_ok(
+  $$ select public.decide_project_join_request((select id from public.project_join_requests where message = 'quero ajudar'), true) $$,
+  'P0001', 'not_allowed',
+  'someone outside the project cannot decide its join requests'
+);
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
+select throws_ok(
+  $$ select public.request_project_join('00000000-0000-0000-0000-0000000000c2') $$,
+  'P0001', 'already_member',
+  'a member cannot ask to join their own project'
+);
+select lives_ok(
+  $$ select public.decide_project_join_request((select id from public.project_join_requests where message = 'quero ajudar'), true) $$,
+  'a project member approves the request'
+);
+set local role postgres;
+select set_config('request.jwt.claims', '', true);
+select is(
+  (select count(*)::int from public.project_members where project_id = '00000000-0000-0000-0000-0000000000c2' and profile_id = '00000000-0000-0000-0000-000000000103'),
+  1,
+  'approving adds the person to the project'
+);
+select is(
+  (select count(*)::int from public.notifications where type = 'project_join_request' and recipient_id = '00000000-0000-0000-0000-000000000101'
+     and entity_id = (select id from public.project_join_requests where message = 'quero ajudar')),
+  1,
+  'the coordinator is told about the join request'
+);
+select is(
+  (select count(*)::int from public.notifications where type = 'project_join_request' and recipient_id = '00000000-0000-0000-0000-000000000102'
+     and entity_id = (select id from public.project_join_requests where message = 'quero ajudar')),
+  1,
+  'project members are told about the join request'
+);
+select is(
+  (select count(*)::int from public.notifications where type = 'project_join_decision' and recipient_id = '00000000-0000-0000-0000-000000000103'
+     and params->>'approved' = 'true'),
+  1,
+  'the requester is told about the decision'
 );
 
 select * from finish();

@@ -11,7 +11,9 @@ export type NotificationType =
   | "request_status"
   | "feedback_new"
   | "purchase_new"
-  | "purchase_status";
+  | "purchase_status"
+  | "project_join_request"
+  | "project_join_decision";
 
 export type AppNotification = {
   id: string;
@@ -23,9 +25,9 @@ export type AppNotification = {
   read_at: string | null;
 };
 
-export type NotificationGroup = "bookings" | "requests" | "purchases" | "feedback";
+export type NotificationGroup = "bookings" | "requests" | "purchases" | "feedback" | "projects";
 
-export const notificationGroups: NotificationGroup[] = ["bookings", "requests", "purchases", "feedback"];
+export const notificationGroups: NotificationGroup[] = ["bookings", "requests", "purchases", "feedback", "projects"];
 
 const GROUP_BY_TYPE: Record<NotificationType, NotificationGroup> = {
   booking_pending: "bookings",
@@ -38,6 +40,8 @@ const GROUP_BY_TYPE: Record<NotificationType, NotificationGroup> = {
   feedback_new: "feedback",
   purchase_new: "purchases",
   purchase_status: "purchases",
+  project_join_request: "projects",
+  project_join_decision: "projects",
 };
 
 export function getNotificationGroup(type: NotificationType): NotificationGroup {
@@ -90,6 +94,18 @@ export function describeNotification(notification: Pick<AppNotification, "type" 
       return {
         title: params.urgency === "urgent" ? t("alert.urgentPurchase") : t("alert.newPurchase"),
         detail: text(params, "item"),
+        reason: null,
+      };
+    case "project_join_request":
+      return {
+        title: t("notif.projectJoinRequest"),
+        detail: [text(params, "requester"), text(params, "project")].filter(Boolean).join(" · ") || null,
+        reason: null,
+      };
+    case "project_join_decision":
+      return {
+        title: params.approved === true ? t("notif.projectJoinApproved") : t("notif.projectJoinRejected"),
+        detail: text(params, "project"),
         reason: null,
       };
     case "purchase_status": {

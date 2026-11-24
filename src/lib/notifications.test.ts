@@ -38,6 +38,19 @@ describe("describeNotification", () => {
   });
 });
 
+describe("notificações de projeto", () => {
+  it("descreve o pedido de entrada e a decisão", () => {
+    expect(describeNotification({ type: "project_join_request", params: { requester: "Ana", project: "Lab 3D" } })).toEqual({
+      title: "Pedido para entrar em projeto",
+      detail: "Ana · Lab 3D",
+      reason: null,
+    });
+    expect(describeNotification({ type: "project_join_decision", params: { project: "Lab 3D", approved: true } }).title).toBe("Você entrou no projeto");
+    expect(describeNotification({ type: "project_join_decision", params: { project: "Lab 3D", approved: false } }).title).toBe("Pedido de entrada recusado");
+    expect(getNotificationGroup("project_join_request")).toBe("projects");
+  });
+});
+
 describe("grupos de notificação", () => {
   it("agrupa cada tipo no assunto certo", () => {
     expect(getNotificationGroup("booking_pending")).toBe("bookings");

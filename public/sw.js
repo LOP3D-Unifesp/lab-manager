@@ -24,6 +24,9 @@ const TEXTS = {
   purchase_cancelled: { pt: "Pedido cancelado", en: "Request cancelled", es: "Pedido cancelado" },
   purchase_reopened: { pt: "Pedido voltou para análise", en: "Request back under review", es: "Pedido de vuelta en análisis" },
   purchase_updated: { pt: "Pedido de compra atualizado", en: "Purchase request updated", es: "Pedido de compra actualizado" },
+  project_join_request: { pt: "Pedido para entrar em projeto", en: "Request to join a project", es: "Solicitud para unirse a un proyecto" },
+  project_join_approved: { pt: "Você entrou no projeto", en: "You joined the project", es: "Entraste al proyecto" },
+  project_join_rejected: { pt: "Pedido de entrada recusado", en: "Join request rejected", es: "Solicitud de ingreso rechazada" },
   generic: { pt: "Nova notificação", en: "New notification", es: "Nueva notificación" },
 };
 
@@ -39,6 +42,7 @@ function textKey(type, params) {
     if (["approved", "rejected", "purchased", "delivered", "cancelled"].includes(params.status)) return "purchase_" + params.status;
     return params.status === "requested" ? "purchase_reopened" : "purchase_updated";
   }
+  if (type === "project_join_decision") return params.approved === true ? "project_join_approved" : "project_join_rejected";
   if (type === "request_status") {
     if (params.status === "resolved") return "request_resolved";
     return ["open", "in_progress", "waiting_part", "cancelled"].includes(params.status) ? "request_" + params.status : "request_updated";
@@ -49,7 +53,7 @@ function textKey(type, params) {
 function describe(data) {
   const params = data.params && typeof data.params === "object" ? data.params : {};
   const title = TEXTS[textKey(data.type, params)][language()];
-  const detail = [params.project, params.equipment, params.item].filter((value) => typeof value === "string" && value);
+  const detail = [params.requester, params.project, params.equipment, params.item].filter((value) => typeof value === "string" && value);
   return { title, body: detail.join(" · ") };
 }
 
