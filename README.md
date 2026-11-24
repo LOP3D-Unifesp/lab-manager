@@ -2,7 +2,7 @@
 
 Sistema interno para gestão da agenda de pesquisadores, disponibilidade no laboratório, habilidades técnicas e reservas de impressoras 3D do LO&P3D.
 
-O projeto centraliza informações operacionais do laboratório para que pesquisadores e coordenadores possam visualizar quem estará presente, encontrar pessoas por habilidade, acompanhar impressoras disponíveis e organizar reservas sem conflito de horário.
+O projeto centraliza informações operacionais do laboratório para que pesquisadores e coordenadores possam visualizar quem estará presente, encontrar pessoas por habilidade, acompanhar equipamentos, organizar reservas sem conflito de horário, cuidar da manutenção e acompanhar as compras dos projetos.
 
 **Ambiente de teste:** https://lop3d-unifesp.github.io/lab-manager/ (dados fictícios; veja
 [docs/DEPLOY.md](docs/DEPLOY.md)).
@@ -28,15 +28,39 @@ O projeto centraliza informações operacionais do laboratório para que pesquis
 - Capacidade presencial, dias de funcionamento, turnos, intervalos de almoço e jantar e fuso horário
   configuráveis pelo coordenador (**Administração**).
 
-**Impressoras e reservas**
+**Projetos**
 
-- Cadastro de impressoras, materiais e compatibilidade entre eles.
+- Projetos com membros, fomentos (agência, processo, vigência e valor por rubrica) e quadro de tarefas.
+- Em **Projetos**, quadro geral de tarefas; no Dashboard, **Minhas tarefas**.
+
+**Equipamentos, inventário e reservas**
+
+- Cadastro de equipamentos (impressoras, scanners, computadores…), tipos e compatibilidade de materiais.
+- **Inventário (Estoque):** rolos, frascos e outros itens, com dono (um projeto ou o estoque geral).
 - Reservas sem conflito de horário, com aprovação opcional pelo coordenador.
 - Ciclo de vida da reserva: pendente → aprovada → em andamento → concluída ou falhou; também
   rejeitada (com motivo) ou cancelada.
-- Alerta em tempo real para o coordenador quando há reservas pendentes.
 - Telas **Minhas reservas** e **Histórico de reservas** (coordenador).
-- Bloqueios de manutenção por impressora.
+
+**Manutenção**
+
+- Manutenção é um **estado do equipamento** (sem data de fim), com histórico de cada parada.
+- **Chamados de manutenção:** qualquer pessoa reporta um problema (com urgência e até 3 fotos); responsáveis
+  pela manutenção (marcados em Usuários) e o coordenador tratam a fila. Chamado urgente deixa o equipamento
+  *Parado*; **Iniciar manutenção** o coloca em manutenção; há *Aguardando peça* e **Pedir peça** (pedido de compra
+  ligado ao chamado).
+
+**Compras**
+
+- Pedidos de compra de um projeto ou do estoque geral, com rubrica, urgência, valor unitário e total.
+- Fluxo solicitado → aprovado → comprado → entregue (ou recusado/cancelado), com desfazer pelo coordenador.
+- Resumos de gasto por projeto e por equipamento (gastos de manutenção).
+
+**Avisos e feedback**
+
+- Selos no menu, campainha organizada e atualização em tempo real (reservas pendentes, chamados, feedback e
+  compras para quem trata cada um); aviso do navegador no computador (com o app aberto).
+- **Feedback:** caixa de sugestões e erros em todas as telas, tratada pelo coordenador.
 
 ## Stack
 
@@ -159,7 +183,8 @@ Nuvem (exigem `.env.admin.local`, veja [docs/DEPLOY.md](docs/DEPLOY.md)):
 - `docs/MVP_PLAN.md`: fases do MVP e situação atual.
 - `docs/LOCAL_DEVELOPMENT.md`: Docker, wizard, migrations e rotina local.
 - `docs/DEPLOY.md`: ambiente de teste na nuvem (GitHub Pages + Supabase).
-- `docs/PENDENCIAS.md`: pendências conhecidas e próximos passos.
+- `docs/PENDENCIAS.md`: o que falta fazer, decisões em aberto e limitações conhecidas.
+- `docs/MVP_PLAN.md`: fases e o que já foi entregue (inclui a revisão antes dos testes).
 
 ## Telas
 
@@ -169,12 +194,17 @@ Nuvem (exigem `.env.admin.local`, veja [docs/DEPLOY.md](docs/DEPLOY.md)):
 | `/pesquisadores` | Pesquisadores | todos |
 | `/habilidades` | Habilidades | todos |
 | `/agenda` | Agenda do Laboratório | todos |
-| `/impressoras` | Impressoras | todos (gestão: coordenador) |
+| `/projetos`, `/projetos/:id` | Projetos | todos (veem os seus; coordenador, todos) |
+| `/equipamentos` | Equipamentos e Chamados (`?vista=chamados`) | todos (gestão: coordenador) |
+| `/inventario` | Inventário | todos (gestão: coordenador) |
+| `/compras` | Compras | todos |
+| `/impressoras` | redireciona para Equipamentos | todos |
 | `/reservas` | Reservas | todos |
 | `/reservas/minhas` | Minhas reservas | todos |
 | `/reservas/historico` | Histórico de reservas | coordenador |
 | `/perfil` | Meu perfil | todos |
 | `/usuarios`, `/usuarios/convites` | Usuários e convites | coordenador |
+| `/feedback` | Feedback (sugestões e erros) | coordenador |
 | `/administracao` | Configurações do laboratório | coordenador |
 | `/instalacao` | Wizard de instalação | primeiro coordenador |
 | `/convite/aceitar` | Aceite de convite | público (com link) |
