@@ -1,0 +1,14 @@
+{
+  "name": "LO&P3D Lab Manager",
+  "short_name": "Lab Manager",
+  "description": "Sistema interno para gestão de agenda, habilidades e reservas do LO&P3D.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0095d9",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
