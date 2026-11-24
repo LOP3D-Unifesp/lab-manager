@@ -52,7 +52,7 @@ function SidebarNavItem({ badge, item }: { badge?: number; item: NavigationItem 
             {badge ? (
               <span
                 aria-label={`${badge} pendente(s)`}
-                className="ml-auto inline-flex min-w-6 items-center justify-center rounded-full bg-warning px-2 py-0.5 text-xs font-bold text-text"
+                className="ml-auto inline-flex min-w-6 items-center justify-center rounded-full bg-warning px-2 py-0.5 text-xs font-bold text-[#102033] dark:border dark:border-warning/60 dark:bg-warning-soft dark:text-warning-dark"
               >
                 {badge}
               </span>
