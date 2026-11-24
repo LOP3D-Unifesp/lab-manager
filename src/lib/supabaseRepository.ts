@@ -1,6 +1,6 @@
 import { getLocale, t } from "../i18n";
 import { supabase } from "./supabaseClient";
-import type { AppNotification } from "./notifications";
+import type { AppNotification, NotificationGroup } from "./notifications";
 import type { FeedbackKind, FeedbackReport, FeedbackStatus } from "./feedback";
 import type { MaintenanceRequest, MaintenanceRequestStatus, MaintenanceUrgency } from "./maintenanceRequests";
 import type { MaintenancePurchase, PurchaseRequest, PurchaseStatus, PurchaseUrgency } from "./purchases";
@@ -1553,4 +1553,28 @@ export async function markNotificationsRead(options: { ids?: string[]; types?: s
   if (options.types) query = query.in("type", options.types);
   const { error } = await query;
   throwIfError(error);
+}
+
+export type NotificationPreference = { topic: NotificationGroup; in_app: boolean; push: boolean };
+
+export async function listNotificationPreferences(): Promise<NotificationPreference[]> {
+  const { data, error } = await client().from("notification_preferences").select("topic, in_app, push");
+  throwIfError(error);
+  return (data ?? []) as unknown as NotificationPreference[];
+}
+
+// Só `in_app` e `push` podem ser alterados (grant de coluna), então atualiza e, se ainda não havia linha, cria.
+export async function saveNotificationPreference(profileId: string, preference: NotificationPreference) {
+  const { data, error } = await client()
+    .from("notification_preferences")
+    .update({ in_app: preference.in_app, push: preference.push })
+    .eq("profile_id", profileId)
+    .eq("topic", preference.topic)
+    .select("topic");
+  throwIfError(error);
+  if (data && data.length > 0) return;
+  const { error: insertError } = await client()
+    .from("notification_preferences")
+    .insert({ profile_id: profileId, topic: preference.topic, in_app: preference.in_app, push: preference.push });
+  throwIfError(insertError);
 }

@@ -1,9 +1,16 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { useAuth } from "../../lib/auth";
-import { syncPushSubscription } from "../../lib/desktopAlerts";
-import type { AppNotification } from "../../lib/notifications";
-import { countUnreadNotifications, listNotifications, markNotificationsRead } from "../../lib/supabaseRepository";
+import { showDesktopAlert, syncPushSubscription } from "../../lib/desktopAlerts";
+import { describeNotification, getNotificationGroup, type AppNotification, type NotificationGroup } from "../../lib/notifications";
+import {
+  countUnreadNotifications,
+  listNotificationPreferences,
+  listNotifications,
+  markNotificationsRead,
+  saveNotificationPreference,
+  type NotificationPreference,
+} from "../../lib/supabaseRepository";
 import { supabase } from "../../lib/supabaseClient";
 
 const PAGE_SIZE = 50;
@@ -22,6 +29,9 @@ type NotificationsState = {
   markRead: (ids: string[]) => Promise<void>;
   /** Marca como lidas todas (ou só as dos tipos informados). */
   markAllRead: (types?: string[]) => Promise<void>;
+  /** Preferências por assunto; sem linha, vale o padrão (tudo ligado). */
+  preferences: NotificationPreference[];
+  setPreference: (topic: NotificationGroup, change: Partial<Pick<NotificationPreference, "in_app" | "push">>) => Promise<void>;
 };
 
 const emptyState: NotificationsState = {
@@ -32,6 +42,8 @@ const emptyState: NotificationsState = {
   loadMore: async () => undefined,
   markRead: async () => undefined,
   markAllRead: async () => undefined,
+  preferences: [],
+  setPreference: async () => undefined,
 };
 
 const NotificationsContext = createContext<NotificationsState>(emptyState);
@@ -44,6 +56,9 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   const [unread, setUnread] = useState(0);
   const [error, setError] = useState(false);
   const [hasMore, setHasMore] = useState(false);
+  const [preferences, setPreferences] = useState<NotificationPreference[]>([]);
+  const preferencesRef = useRef<NotificationPreference[]>([]);
+  preferencesRef.current = preferences;
   const itemsRef = useRef<AppNotification[]>([]);
   itemsRef.current = items;
 
@@ -74,18 +89,29 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       setUnread(0);
       setError(false);
       setHasMore(false);
+      setPreferences([]);
       return undefined;
     }
 
     const controller = new AbortController();
     let debounce: number | undefined;
     let poll: number | undefined;
+    // Aviso do sistema (só com a aba em segundo plano e sem push ativo, ver showDesktopAlert), se a pessoa não desligou o assunto.
+    const avisarNoComputador = (notification: AppNotification) => {
+      const group = getNotificationGroup(notification.type);
+      if (preferencesRef.current.find((preference) => preference.topic === group)?.push === false) return;
+      const { detail, title } = describeNotification(notification);
+      showDesktopAlert({ title, body: detail ?? "", path: notification.link ?? "/", tag: notification.id });
+    };
     const agendar = () => {
       window.clearTimeout(debounce);
       debounce = window.setTimeout(() => void refresh(controller.signal), REFETCH_DEBOUNCE_MS);
     };
 
     void refresh(controller.signal);
+    listNotificationPreferences()
+      .then((saved) => !controller.signal.aborted && setPreferences(saved))
+      .catch(() => undefined);
     // Se os avisos estão ligados, garante que a assinatura de push deste navegador pertence a quem está logado.
     void syncPushSubscription();
     const onVisible = () => {
@@ -96,7 +122,10 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     const client = supabase;
     const channel = client
       .channel(`notifications_${profileId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "notifications", filter: `recipient_id=eq.${profileId}` }, agendar)
+      .on("postgres_changes", { event: "*", schema: "public", table: "notifications", filter: `recipient_id=eq.${profileId}` }, (payload) => {
+        agendar();
+        if (payload.eventType === "INSERT") avisarNoComputador(payload.new as AppNotification);
+      })
       .subscribe((status) => {
         window.clearInterval(poll);
         if (status !== "SUBSCRIBED") poll = window.setInterval(() => void refresh(controller.signal), FALLBACK_POLL_MS);
@@ -163,9 +192,26 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     [applyRead, refresh],
   );
 
+  const setPreference = useCallback(
+    async (topic: NotificationGroup, change: Partial<Pick<NotificationPreference, "in_app" | "push">>) => {
+      if (!profileId) return;
+      const current = preferencesRef.current.find((preference) => preference.topic === topic) ?? { topic, in_app: true, push: true };
+      const next: NotificationPreference = { ...current, ...change };
+      const before = preferencesRef.current;
+      setPreferences([...before.filter((preference) => preference.topic !== topic), next]);
+      try {
+        await saveNotificationPreference(profileId, next);
+      } catch (reason) {
+        setPreferences(before);
+        throw reason;
+      }
+    },
+    [profileId],
+  );
+
   const value = useMemo(
-    () => ({ items, unread, error, hasMore, loadMore, markRead, markAllRead }),
-    [items, unread, error, hasMore, loadMore, markRead, markAllRead],
+    () => ({ items, unread, error, hasMore, loadMore, markRead, markAllRead, preferences, setPreference }),
+    [items, unread, error, hasMore, loadMore, markRead, markAllRead, preferences, setPreference],
   );
 
   return <NotificationsContext.Provider value={value}>{children}</NotificationsContext.Provider>;

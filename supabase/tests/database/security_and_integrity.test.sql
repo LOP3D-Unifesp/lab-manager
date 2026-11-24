@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(355);
+select plan(360);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -1868,6 +1868,39 @@ select throws_ok(
   '42501',
   null,
   'clients cannot read the push webhook secret'
+);
+
+-- Notification preferences: stored per person, hidden from others, and honoured when notifications are created.
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
+select lives_ok(
+  $$ insert into public.notification_preferences (profile_id, topic, in_app, push) values ('00000000-0000-0000-0000-000000000102', 'bookings', false, false) $$,
+  'a user saves their own notification preference'
+);
+select throws_ok(
+  $$ update public.notification_preferences set topic = 'purchases' where topic = 'bookings' $$,
+  '42501',
+  null,
+  'only in_app and push can be changed on a preference'
+);
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000103","email":"other@example.com","role":"authenticated"}', true);
+select is(
+  (select count(*)::int from public.notification_preferences),
+  0,
+  'a user cannot read another person''s notification preferences'
+);
+set local role postgres;
+select set_config('request.jwt.claims', '', true);
+select private.notify('00000000-0000-0000-0000-000000000102', 'booking_approved', '{"project":"pgtap prefs"}'::jsonb, '/reservas/minhas', null);
+select private.notify('00000000-0000-0000-0000-000000000102', 'feedback_new', '{"kind":"pgtap-pref"}'::jsonb, '/feedback', null);
+select is(
+  (select count(*)::int from public.notifications where recipient_id = '00000000-0000-0000-0000-000000000102' and params->>'project' = 'pgtap prefs'),
+  0,
+  'a topic switched off in the panel creates no notification'
+);
+select is(
+  (select count(*)::int from public.notifications where recipient_id = '00000000-0000-0000-0000-000000000102' and params->>'kind' = 'pgtap-pref'),
+  1,
+  'topics without a saved preference are still delivered'
 );
 
 select * from finish();
