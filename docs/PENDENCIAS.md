@@ -68,9 +68,9 @@ mova-o para o histórico do PR correspondente. O que já foi entregue está em [
 
 **Avisos**
 
-- Aviso com o app fechado (push): o código está pronto (service worker, assinatura e Edge Function `send-push`);
-  falta ativar em cada ambiente, seguindo "Avisos com o app fechado (push)" em `docs/DEPLOY.md`. No iPhone/iPad só
-  funciona com o app adicionado à tela inicial, o que exigiria um `manifest.webmanifest` (ainda não existe).
+- Aviso com o app fechado (push): ativo na produção. No iPhone/iPad só funciona com o app adicionado à tela inicial
+  (Compartilhar → Adicionar à Tela de Início); o `manifest.webmanifest` e os ícones já existem. O ícone do app é
+  provisório (as 4 cores da paleta) e não troca com o logo enviado em Configurações.
 - E-mail como canal extra de aviso (hoje só painel e push).
 
 ## Rodada 2 (depois do feedback dos testadores)
