@@ -17,6 +17,7 @@ function report(overrides: Partial<FeedbackReport>): FeedbackReport {
     kind: "bug",
     message: "Algo quebrou",
     page_path: "/reservas",
+    photo_paths: [],
     user_agent: null,
     status: "new",
     coordinator_note: null,

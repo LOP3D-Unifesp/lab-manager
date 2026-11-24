@@ -205,14 +205,14 @@ isOneToOne: false
                   ]
                 },"feedback_reports": {
                   Row: {
-                    "coordinator_note": string | null,"created_at": string,"created_by": string | null,"id": string,"kind": Database["public"]['Enums']["feedback_kind"],"message": string,"page_path": string | null,"status": Database["public"]['Enums']["feedback_status"],"updated_at": string,"user_agent": string | null
+                    "coordinator_note": string | null,"created_at": string,"created_by": string | null,"id": string,"kind": Database["public"]['Enums']["feedback_kind"],"message": string,"page_path": string | null,"photo_paths": (string)[],"status": Database["public"]['Enums']["feedback_status"],"updated_at": string,"user_agent": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "coordinator_note"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"kind": Database["public"]['Enums']["feedback_kind"],"message": string,"page_path"?: string | null,"status"?: Database["public"]['Enums']["feedback_status"],"updated_at"?: string,"user_agent"?: string | null
+                    "coordinator_note"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"kind": Database["public"]['Enums']["feedback_kind"],"message": string,"page_path"?: string | null,"photo_paths"?: (string)[],"status"?: Database["public"]['Enums']["feedback_status"],"updated_at"?: string,"user_agent"?: string | null
                   }
                   Update: {
-                    "coordinator_note"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"kind"?: Database["public"]['Enums']["feedback_kind"],"message"?: string,"page_path"?: string | null,"status"?: Database["public"]['Enums']["feedback_status"],"updated_at"?: string,"user_agent"?: string | null
+                    "coordinator_note"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"kind"?: Database["public"]['Enums']["feedback_kind"],"message"?: string,"page_path"?: string | null,"photo_paths"?: (string)[],"status"?: Database["public"]['Enums']["feedback_status"],"updated_at"?: string,"user_agent"?: string | null
                   }
                   Relationships: [
                     {

@@ -11,7 +11,9 @@ import {
   validateFeedbackMessage,
   type FeedbackKind,
 } from "../../lib/feedback";
-import { createFeedback } from "../../lib/supabaseRepository";
+import { resizePhoto } from "../../lib/imageResize";
+import { createFeedback, uploadFeedbackPhotos } from "../../lib/supabaseRepository";
+import { PhotoAttachments, type PendingPhoto } from "../ui/PhotoAttachments";
 import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
 
@@ -31,6 +33,7 @@ function FeedbackModal({ onClose, pagePath }: { onClose: () => void; pagePath: s
   const [erro, setErro] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState(false);
+  const [photos, setPhotos] = useState<PendingPhoto[]>([]);
 
   async function enviar(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -43,7 +46,9 @@ function FeedbackModal({ onClose, pagePath }: { onClose: () => void; pagePath: s
       setEnviando(true);
       setErro("");
       const context = buildFeedbackContext(pagePath, navigator.userAgent);
-      await createFeedback({ kind, message, ...context });
+      const photoPaths =
+        photos.length > 0 ? await uploadFeedbackPhotos(await Promise.all(photos.map((photo) => resizePhoto(photo.file)))) : [];
+      await createFeedback({ kind, message, photoPaths, ...context });
       window.dispatchEvent(new Event(FEEDBACK_CHANGED_EVENT));
       setEnviado(true);
     } catch (error) {
@@ -114,6 +119,8 @@ function FeedbackModal({ onClose, pagePath }: { onClose: () => void; pagePath: s
             {t("feedback.pageNote", { path: pagePath })}
           </span>
         </label>
+
+        <PhotoAttachments photos={photos} onChange={setPhotos} onError={setErro} />
 
         {erro ? (
           <p className="rounded-lg border border-danger bg-danger-soft p-3 text-base font-semibold text-danger">{erro}</p>
