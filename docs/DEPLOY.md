@@ -137,6 +137,31 @@ e-mails por hora (`SMTP_RATE_LIMIT_PER_HOUR` ajusta).
 e-mail. Se trocar o remetente, atualize `SMTP_FROM_EMAIL` no `.env.admin.local` e rode
 `npm run config:remote-auth`.
 
+## Avisos com o app fechado (push)
+
+Opcional. Sem isto, o aviso no computador só aparece com o app aberto numa aba. O fluxo é: o banco cria a notificação,
+um trigger chama a Edge Function `send-push` e ela entrega o aviso às assinaturas do navegador (Web Push).
+
+1. Gere um par de chaves VAPID (uma vez): `npx web-push generate-vapid-keys`. A chave **privada** nunca vai para o
+   repositório.
+2. Segredos da função (Supabase → Edge Functions → Secrets, ou `supabase secrets set`):
+   `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (ex.: `mailto:contato@seu-lab.org`) e
+   `PUSH_WEBHOOK_SECRET` (um texto aleatório de 24+ caracteres).
+3. Publique a função: `supabase functions deploy send-push`.
+4. Diga ao banco onde chamar a função (SQL Editor, uma vez por ambiente; a tabela só é legível pelo dono do banco):
+
+   ```sql
+   insert into private.push_config (function_url, secret)
+   values ('https://<ref-do-projeto>.supabase.co/functions/v1/send-push', '<o mesmo PUSH_WEBHOOK_SECRET>');
+   ```
+
+5. No GitHub: Settings → Secrets and variables → Actions → Variables → `VITE_VAPID_PUBLIC_KEY` = a chave
+   **pública**. O próximo deploy do Pages já inclui o service worker (`sw.js`).
+6. Em cada navegador: sino → "Receber avisos no computador". Para testar, feche o app e gere um evento (por exemplo,
+   um pedido de compra) com outra conta.
+
+Sem a linha em `private.push_config` (como no banco local e na CI) nenhum push é enviado e nada mais muda.
+
 ## Solução de problemas
 
 | Sintoma | Causa provável | O que fazer |

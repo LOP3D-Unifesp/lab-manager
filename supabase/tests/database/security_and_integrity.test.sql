@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(349);
+select plan(355);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -1834,6 +1834,40 @@ select throws_ok(
   '42501',
   null,
   'only read_at can be changed on a notification'
+);
+
+-- Push subscriptions: each person sees only their own, and registering an endpoint on a shared browser moves it to the new owner.
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
+select lives_ok(
+  $$ select public.register_push_subscription('https://push.example.org/send/pgtap-endpoint', 'BPpgtapP256dhKeyValue', 'pgtapAuthSecret1', 'pgtap agent') $$,
+  'an active user registers a push subscription'
+);
+select is(
+  (select count(*)::int from public.push_subscriptions where endpoint = 'https://push.example.org/send/pgtap-endpoint'),
+  1,
+  'the owner reads their push subscription'
+);
+select throws_ok(
+  $$ select public.register_push_subscription('http://insecure.example.org/x', 'BPpgtapP256dhKeyValue', 'pgtapAuthSecret1') $$,
+  '23514',
+  null,
+  'push endpoints must be https'
+);
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000103","email":"other@example.com","role":"authenticated"}', true);
+select is(
+  (select count(*)::int from public.push_subscriptions),
+  0,
+  'a user cannot read another person''s push subscriptions'
+);
+select lives_ok(
+  $$ select public.register_push_subscription('https://push.example.org/send/pgtap-endpoint', 'BPpgtapP256dhKeyValue', 'pgtapAuthSecret1', 'pgtap agent') $$,
+  'registering the same endpoint again reassigns it'
+);
+select throws_ok(
+  $$ select secret from private.push_config $$,
+  '42501',
+  null,
+  'clients cannot read the push webhook secret'
 );
 
 select * from finish();

@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { useAuth } from "../../lib/auth";
+import { syncPushSubscription } from "../../lib/desktopAlerts";
 import type { AppNotification } from "../../lib/notifications";
 import { countUnreadNotifications, listNotifications, markNotificationsRead } from "../../lib/supabaseRepository";
 import { supabase } from "../../lib/supabaseClient";
@@ -85,6 +86,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     };
 
     void refresh(controller.signal);
+    // Se os avisos estão ligados, garante que a assinatura de push deste navegador pertence a quem está logado.
+    void syncPushSubscription();
     const onVisible = () => {
       if (document.visibilityState === "visible") void refresh(controller.signal);
     };

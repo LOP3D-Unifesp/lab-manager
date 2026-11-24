@@ -68,8 +68,10 @@ mova-o para o histórico do PR correspondente. O que já foi entregue está em [
 
 **Avisos**
 
-- Aviso com o app fechado (push): exigiria service worker e um servidor de push. Hoje o aviso do navegador só
-  funciona com o app aberto numa aba.
+- Aviso com o app fechado (push): o código está pronto (service worker, assinatura e Edge Function `send-push`);
+  falta ativar em cada ambiente, seguindo "Avisos com o app fechado (push)" em `docs/DEPLOY.md`. No iPhone/iPad só
+  funciona com o app adicionado à tela inicial, o que exigiria um `manifest.webmanifest` (ainda não existe).
+- E-mail como canal extra de aviso (hoje só painel e push).
 
 ## Rodada 2 (depois do feedback dos testadores)
 
