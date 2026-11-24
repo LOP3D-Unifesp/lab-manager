@@ -140,7 +140,7 @@ export function getDiaAbreviado(label: string) {
 }
 
 export function getCorDia(weekday: number) {
-  return weekday % 2 === 1 ? "!bg-sky-50" : "!bg-white";
+  return weekday % 2 === 1 ? "!bg-sky-50 dark:!bg-primary-soft" : "!bg-white dark:!bg-surface";
 }
 
 export function getClasseContador(total: number) {
@@ -756,36 +756,36 @@ export function getCorReserva(id: string) {
 export function getMensagemErroReserva(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
 
-  const mensagens: Array<[string, string]> = [
-    ["booking_conflict", "O equipamento já possui uma reserva nesse intervalo."],
-    ["maintenance_conflict", "O equipamento está em manutenção nesse intervalo."],
-    ["incompatible_material", "O material selecionado não é compatível com o equipamento."],
-    ["material_required", "Escolha o material da impressão."],
-    ["spool_not_available", "Esse item do estoque não está disponível para este projeto e material. Escolha outro ou deixe sem item."],
-    ["equipment_unavailable", "O equipamento selecionado não está ativo."],
-    ["equipment_not_found", "Equipamento não encontrado."],
-    ["invalid_start_time", "O horário de início precisa ser no futuro."],
-    ["booking_not_editable", "Somente reservas pendentes ou aprovadas podem ser editadas."],
-    ["invalid_booking_status_transition", "Essa mudança de status não é permitida."],
-    ["booking_not_started", "A reserva ainda não começou; aguarde o horário de início."],
-    ["booking_not_cancellable", "Somente reservas pendentes ou aprovadas podem ser canceladas."],
-    ["active_profile_required", "É necessário um perfil ativo para realizar essa operação."],
-    ["booking_forbidden", "Você não tem permissão para gerenciar essa reserva."],
-    ["coordinator_required", "Apenas o coordenador pode realizar essa operação."],
-    ["project_required", "Escolha o projeto da impressão."],
-    ["project_not_available", "Esse projeto não está disponível para novas impressões. Escolha outro."],
-    ["invalid_duration", "A duração deve ser entre 0,5h e 24h em passos de 0,5h."],
-    ["invalid_interval", "Informe um intervalo válido (início antes do fim)."],
-    ["reason_required", "Informe o motivo da manutenção."],
-    ["booking_not_found", "Reserva não encontrada."],
-  ];
+  const codigos = [
+    "booking_conflict",
+    "maintenance_conflict",
+    "incompatible_material",
+    "material_required",
+    "spool_not_available",
+    "equipment_unavailable",
+    "equipment_not_found",
+    "invalid_start_time",
+    "booking_not_editable",
+    "invalid_booking_status_transition",
+    "booking_not_started",
+    "booking_not_cancellable",
+    "active_profile_required",
+    "booking_forbidden",
+    "coordinator_required",
+    "project_required",
+    "project_not_available",
+    "invalid_duration",
+    "invalid_interval",
+    "reason_required",
+    "booking_not_found",
+  ] as const;
 
-  const correspondente = mensagens.find(([codigo]) => message.includes(codigo));
+  const correspondente = codigos.find((codigo) => message.includes(codigo));
   if (correspondente) {
-    return correspondente[1];
+    return t(`bookingError.${correspondente}`);
   }
 
-  return message || "Não foi possível salvar a reserva.";
+  return message || t("bookingError.fallback");
 }
 
 export function getProximosStatusReserva(status: BookingStatus): BookingStatus[] {

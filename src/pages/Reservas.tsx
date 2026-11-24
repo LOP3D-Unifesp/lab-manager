@@ -6,6 +6,7 @@ import { BookingLifecycleActions } from "../components/reservas/BookingLifecycle
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { Alert } from "../components/ui/Alert";
+import { getLocale, useT } from "../i18n";
 import { Field } from "../components/ui/Field";
 import { Input } from "../components/ui/Input";
 import { Modal } from "../components/ui/Modal";
@@ -74,7 +75,7 @@ function formatarDataHora(valor: string | undefined, timezone: string) {
     return "";
   }
 
-  return new Intl.DateTimeFormat("pt-BR", {
+  return new Intl.DateTimeFormat(getLocale(), {
     timeZone: timezone,
     day: "2-digit",
     month: "2-digit",
@@ -88,7 +89,7 @@ function formatarHorario(valor: string | undefined, timezone: string) {
     return "";
   }
 
-  return new Intl.DateTimeFormat("pt-BR", {
+  return new Intl.DateTimeFormat(getLocale(), {
     timeZone: timezone,
     hour: "2-digit",
     minute: "2-digit",
@@ -96,6 +97,7 @@ function formatarHorario(valor: string | undefined, timezone: string) {
 }
 
 export function Reservas() {
+  const t = useT();
   const [searchParams, setSearchParams] = useSearchParams();
   const reservaDestacadaId = searchParams.get("reserva");
   const { labSettings } = useAuth();
@@ -175,7 +177,7 @@ export function Reservas() {
 
     carregarDados().catch((error) => {
       if (ativo) {
-        setErro(error instanceof Error ? error.message : "Erro ao carregar.");
+        setErro(error instanceof Error ? error.message : t("bookings.loadError"));
       }
     });
 
@@ -433,30 +435,30 @@ export function Reservas() {
 
   function getNomeResponsavel(profileId?: string) {
     if (!profileId) {
-      return "Sem usuário";
+      return t("bookings.noUser");
     }
 
     return (
       profiles.find((profile) => profile.id === profileId)?.full_name ??
-      "Usuário removido"
+      t("bookings.removedUser")
     );
   }
 
   function getNomeImpressora(equipmentId: string) {
     return (
       equipmentList.find((equipment) => equipment.id === equipmentId)?.name ??
-      "Equipamento removido"
+      t("bookings.removedEquipment")
     );
   }
 
   function abrirModal() {
     if (!currentProfile) {
-      setErro("Entre com um perfil ativo antes de criar uma reserva.");
+      setErro(t("bookings.errSignIn"));
       return;
     }
 
     if (impressorasAtivas.length === 0) {
-      setErro("Cadastre pelo menos um equipamento ativo antes de reservar.");
+      setErro(t("bookings.errNoEquipment"));
       return;
     }
 
@@ -505,28 +507,28 @@ export function Reservas() {
   function selecionarImpressora(equipment: Equipment) {
     if (equipmentUsesMaterial(equipment)) {
       if (!novaReserva.material_id) {
-        setErro("Selecione um material antes de escolher esta impressora.");
+        setErro(t("bookings.errPickMaterial"));
         return;
       }
 
       if (!impressoraAceitaMaterial(equipment.id, novaReserva.material_id)) {
-        setErro("Este equipamento não suporta o material selecionado.");
+        setErro(t("bookings.errMaterialUnsupported"));
         return;
       }
     }
 
     if (!horarioSelecionadoValido()) {
-      setErro("Não é possível selecionar um horário que já passou.");
+      setErro(t("bookings.errPastSlot"));
       return;
     }
 
     if (getReservaConflitante(equipment.id)) {
-      setErro("O equipamento selecionado não está livre nesse horário.");
+      setErro(t("bookings.errNotFree"));
       return;
     }
 
     if (getManutencaoConflitante(equipment.id)) {
-      setErro("O equipamento está bloqueado para manutenção nesse horário.");
+      setErro(t("bookings.errBlocked"));
       return;
     }
 
@@ -558,18 +560,18 @@ export function Reservas() {
       !duracaoMinutos
     ) {
       setErro(
-        "Preencha projeto, equipamento, data, horário e duração entre 0,5h e 24h em passos de 0,5h (e o material, para impressoras).",
+        t("bookings.errFillAll"),
       );
       return;
     }
 
     if (!horarioSelecionadoValido()) {
-      setErro("Não é possível reservar um horário que já passou.");
+      setErro(t("bookings.errPastBooking"));
       return;
     }
 
     if (!impressoraAceitaMaterial(novaReserva.equipment_id, novaReserva.material_id)) {
-      setErro("Selecione um equipamento compativel com o material.");
+      setErro(t("bookings.errCompatible"));
       return;
     }
 
@@ -632,7 +634,7 @@ export function Reservas() {
     const { reserva, status } = usoPendente;
     const quantidade = informar ? parseAmount(quantidadeUso) : null;
     if (informar && quantidade === null) {
-      setErro("Informe uma quantidade válida ou conclua sem informar.");
+      setErro(t("bookings.errAmount"));
       return;
     }
     try {
@@ -681,7 +683,7 @@ export function Reservas() {
   // o projeto atual da reserva, mesmo que já tenha sido concluído.
   const projetosDisponiveis = projects
     .filter((projeto) => isProjectOpen(projeto.status) || projeto.id === reservaEmEdicao?.project_id)
-    .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+    .sort((a, b) => a.name.localeCompare(b.name, getLocale()));
 
   const formularioReservaCompleto =
     novaReserva.project_id.length > 0 &&
@@ -695,28 +697,28 @@ export function Reservas() {
   return (
     <div>
       <PageHeader
-        title="Reservas"
-        description="Reservas e manutenções com validação transacional no banco."
+        title={t("bookings.title")}
+        description={t("bookings.subtitle")}
         action={
           <div className="flex flex-col gap-2 sm:flex-row">
             {isCoordinator ? (
               <Link to="/reservas/historico">
                 <Button fullWidth variant="secondary">
                   <History className="mr-2 h-5 w-5" aria-hidden="true" />
-                  Histórico
+                  {t("bookings.history")}
                 </Button>
               </Link>
             ) : (
               <Link to="/reservas/minhas">
                 <Button fullWidth variant="secondary">
                   <CalendarCheck className="mr-2 h-5 w-5" aria-hidden="true" />
-                  Minhas reservas
+                  {t("bookings.mine")}
                 </Button>
               </Link>
             )}
             <Button fullWidth onClick={abrirModal}>
               <Plus className="mr-2 h-5 w-5" aria-hidden="true" />
-              Criar reserva
+              {t("bookings.create")}
             </Button>
           </div>
         }
@@ -725,7 +727,7 @@ export function Reservas() {
       {isCoordinator && reservasPendentes.length > 0 ? (
         <section className="mb-5 rounded-lg border border-warning-dark bg-warning-soft p-4">
           <h3 className="text-xl font-bold text-text">
-            Reservas aguardando aprovação ({reservasPendentes.length})
+            {t("bookings.pendingApproval", { count: reservasPendentes.length })}
           </h3>
           <div className="mt-3 grid gap-3">
             {reservasPendentes.map((reserva) => (
@@ -747,7 +749,7 @@ export function Reservas() {
                     onClick={() => alterarStatus(reserva, "approved")}
                   >
                     <Check className="mr-2 h-4 w-4" aria-hidden="true" />
-                    Aprovar
+                    {t("bookings.approve")}
                   </Button>
                   <Button
                     className="min-h-9 px-3 py-2 text-sm"
@@ -756,7 +758,7 @@ export function Reservas() {
                     onClick={() => alterarStatus(reserva, "rejected")}
                   >
                     <X className="mr-2 h-4 w-4" aria-hidden="true" />
-                    Negar
+                    {t("bookings.deny")}
                   </Button>
                 </div>
               </div>
@@ -767,14 +769,13 @@ export function Reservas() {
 
       <section className="mb-5 flex flex-col gap-3 rounded-lg border border-border bg-surface p-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h3 className="text-xl font-bold text-text">Agenda por equipamento</h3>
+          <h3 className="text-xl font-bold text-text">{t("bookings.scheduleByEquipment")}</h3>
           <p className="mt-1 text-base text-muted">
-            Horários de reserva e manutenção das {horariosReserva[0]} às{" "}
-            {horariosReserva[horariosReserva.length - 1]}, separados por equipamento.
+            {t("bookings.scheduleHint", { from: horariosReserva[0] ?? "", to: horariosReserva[horariosReserva.length - 1] ?? "" })}
           </p>
         </div>
         <label className="grid gap-2 text-base font-semibold text-text sm:w-56">
-          Data
+          {t("bookings.date")}
           <input
             className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
             type="date"
@@ -798,10 +799,10 @@ export function Reservas() {
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h3 className="text-xl font-bold text-text">
-                Reservas de {currentProfile.first_name}
+                {t("bookings.ofPerson", { name: currentProfile.first_name })}
               </h3>
               <p className="mt-1 text-base text-muted">
-                Impressões associadas ao usuário atual nesta data.
+                {t("bookings.ofPersonHint")}
               </p>
             </div>
             <StatusBadge
@@ -827,18 +828,17 @@ export function Reservas() {
                       {reserva.project_name}
                     </p>
                     <p className="mt-1 text-sm font-semibold text-muted">
-                      {formatarHorario(reserva.starts_at, timezone)} até{" "}
-                      {formatarHorario(reserva.ends_at, timezone)} -{" "}
-                      {reserva.equipment?.name ?? "Equipamento removido"}
-                      {reserva.material_id ? ` - ${reserva.material?.name ?? "Material removido"}` : ""}
+                      {t("bookings.timeRange", { from: formatarHorario(reserva.starts_at, timezone), to: formatarHorario(reserva.ends_at, timezone) })} -{" "}
+                      {reserva.equipment?.name ?? t("bookings.removedEquipment")}
+                      {reserva.material_id ? ` - ${reserva.material?.name ?? t("bookings.removedMaterial")}` : ""}
                     </p>
                   </div>
                   <div className="flex shrink-0 gap-1">
                     {reservaPodeSerEditada(reserva) ? (
                       <button
                         type="button"
-                        title="Editar reserva"
-                        aria-label={`Editar reserva ${reserva.project_name}`}
+                        title={t("bookings.edit")}
+                        aria-label={t("bookings.editNamed", { name: reserva.project_name })}
                         onClick={() => abrirEdicao(reserva)}
                         className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted transition hover:bg-primary-soft hover:text-primary"
                       >
@@ -848,8 +848,8 @@ export function Reservas() {
                     {reservaPodeSerCancelada(reserva) ? (
                       <button
                         type="button"
-                        title="Cancelar reserva"
-                        aria-label={`Cancelar reserva ${reserva.project_name}`}
+                        title={t("bookings.cancel")}
+                        aria-label={t("bookings.cancelNamed", { name: reserva.project_name })}
                         onClick={() => setReservaParaCancelar(reserva)}
                         className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted transition hover:bg-danger-soft hover:text-danger-dark"
                       >
@@ -878,15 +878,15 @@ export function Reservas() {
                       {equipment.name}
                     </h3>
                     <p className="mt-1 text-base font-semibold text-muted">
-                      {equipment.model ?? "Modelo não informado"}
+                      {equipment.model ?? t("bookings.modelNotInformed")}
                     </p>
                     <p className="mt-1 line-clamp-2 text-xs font-semibold leading-5 text-muted">
-                      Materiais:{" "}
+                      {t("bookings.materials")}{" "}
                       {materiaisDaImpressora.length > 0
                         ? materiaisDaImpressora
                             .map((material) => material.name)
                             .join(", ")
-                        : "Nenhum material compativel"}
+                        : t("bookings.noCompatibleMaterial")}
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center justify-end gap-2">
@@ -924,12 +924,12 @@ export function Reservas() {
                         </p>
                         <p className="mt-1 truncate text-xs font-semibold opacity-80">
                           {manutencao
-                            ? `Manutenção - ${manutencao.reason}`
+                            ? t("bookings.maintenanceDash", { reason: manutencao.reason })
                             : reserva
                             ? `${reserva.project_name} - ${getNomeResponsavel(
                                 reserva.profile_id,
                               )}`
-                            : "Livre"}
+                            : t("bookings.free")}
                         </p>
                       </div>
                     );
@@ -953,14 +953,13 @@ export function Reservas() {
                             {reserva.project_name}
                           </span>
                           <span className="block text-xs font-semibold opacity-80">
-                            {formatarHorario(reserva.starts_at, timezone)} até{" "}
-                            {formatarHorario(reserva.ends_at, timezone)} -{" "}
-                            {reserva.material_id ? `${reserva.material?.name ?? "Material removido"} - ` : ""}
+                            {t("bookings.timeRange", { from: formatarHorario(reserva.starts_at, timezone), to: formatarHorario(reserva.ends_at, timezone) })} -{" "}
+                            {reserva.material_id ? `${reserva.material?.name ?? t("bookings.removedMaterial")} - ` : ""}
                             {getBookingStatusLabel(reserva.status)}
                           </span>
                           {reserva.status === "rejected" && reserva.rejected_reason ? (
                             <span className="block truncate text-xs font-semibold opacity-80">
-                              Motivo: {reserva.rejected_reason}
+                              {t("bookings.reason", { reason: reserva.rejected_reason })}
                             </span>
                           ) : null}
                           <span className="block truncate text-xs font-semibold opacity-80">
@@ -971,8 +970,8 @@ export function Reservas() {
                           {podeGerenciarReserva(reserva) && reservaPodeSerEditada(reserva) ? (
                             <button
                               type="button"
-                              title="Editar reserva"
-                              aria-label={`Editar reserva ${reserva.project_name}`}
+                              title={t("bookings.edit")}
+                              aria-label={t("bookings.editNamed", { name: reserva.project_name })}
                               onClick={() => abrirEdicao(reserva)}
                               className="inline-flex h-8 w-8 items-center justify-center rounded-md text-current opacity-70 transition hover:bg-surface/60 hover:opacity-100"
                             >
@@ -982,8 +981,8 @@ export function Reservas() {
                           {podeGerenciarReserva(reserva) && reservaPodeSerCancelada(reserva) ? (
                             <button
                               type="button"
-                              title="Cancelar reserva"
-                              aria-label={`Cancelar reserva ${reserva.project_name}`}
+                              title={t("bookings.cancel")}
+                              aria-label={t("bookings.cancelNamed", { name: reserva.project_name })}
                               onClick={() => setReservaParaCancelar(reserva)}
                               className="inline-flex h-8 w-8 items-center justify-center rounded-md text-current opacity-70 transition hover:bg-surface/60 hover:opacity-100"
                             >
@@ -1004,9 +1003,9 @@ export function Reservas() {
                         className="flex items-center justify-between gap-3 rounded-md border border-amber-400 bg-amber-50 px-3 py-2 text-amber-950"
                       >
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-bold">Manutenção: {block.reason}</p>
+                          <p className="truncate text-sm font-bold">{t("bookings.maintenanceColon", { reason: block.reason })}</p>
                           <p className="text-xs font-semibold opacity-80">
-                            {formatarHorario(block.starts_at, timezone)} até {formatarHorario(block.ends_at, timezone)}
+                            {t("bookings.timeRange", { from: formatarHorario(block.starts_at, timezone), to: formatarHorario(block.ends_at, timezone) })}
                           </p>
                           {block.notes ? <p className="mt-1 text-xs">{block.notes}</p> : null}
                         </div>
@@ -1031,19 +1030,19 @@ export function Reservas() {
           <div className="flex items-center gap-3 text-muted">
             <Clock className="h-6 w-6" aria-hidden="true" />
             <p className="text-lg font-semibold">
-              Cadastre pelo menos um equipamento para visualizar a agenda.
+              {t("bookings.noEquipmentForSchedule")}
             </p>
           </div>
         </Card>
       )}
 
       {modalAberto ? (
-        <Modal sheet wide title={reservaEmEdicao ? "Editar reserva" : "Criar reserva"} description="Informe os dados e escolha um equipamento disponível." onClose={fecharModal}>
+        <Modal sheet wide title={reservaEmEdicao ? t("bookings.edit") : t("bookings.create")} description={t("bookings.formHint")} onClose={fecharModal}>
 
             <form className="mt-5 grid gap-5" onSubmit={salvarReserva}>
               <div className="grid items-start gap-4 md:grid-cols-[1.4fr_1fr] xl:grid-cols-[1.3fr_0.8fr_0.8fr_0.8fr]">
                 <label className="grid gap-2 text-base font-semibold text-text">
-                  Projeto
+                  {t("bookings.project")}
                   <select
                     className="min-h-11 min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
                     required
@@ -1057,7 +1056,7 @@ export function Reservas() {
                     }
                   >
                     <option value="" disabled>
-                      {projetosDisponiveis.length > 0 ? "Selecione" : "Nenhum projeto disponível"}
+                      {projetosDisponiveis.length > 0 ? t("bookings.select") : t("bookings.noProjectAvailable")}
                     </option>
                     {projetosDisponiveis.map((projeto) => (
                       <option key={projeto.id} value={projeto.id}>
@@ -1067,13 +1066,13 @@ export function Reservas() {
                   </select>
                   {projetosDisponiveis.length === 0 ? (
                     <span className="text-sm font-normal text-muted">
-                      Você ainda não participa de nenhum projeto em aberto. Peça a um coordenador para incluir você em um projeto.
+                      {t("bookings.noProjectHint")}
                     </span>
                   ) : null}
                 </label>
 
                 <label className="grid gap-2 text-base font-semibold text-text">
-                  Material
+                  {t("bookings.material")}
                   <select
                     className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
                     required={usaMaterial}
@@ -1089,7 +1088,7 @@ export function Reservas() {
                     }}
                   >
                     <option value="" disabled={usaMaterial || !equipamentoEscolhido}>
-                      {equipamentoEscolhido && !usaMaterial ? "Não se aplica" : "Selecione"}
+                      {equipamentoEscolhido && !usaMaterial ? t("bookings.notApplicable") : t("bookings.select")}
                     </option>
                     {materiaisAtivos.map((material) => (
                       <option key={material.id} value={material.id}>
@@ -1099,37 +1098,37 @@ export function Reservas() {
                   </select>
                   <span className="text-sm font-normal text-muted">
                     {equipamentoEscolhido && !usaMaterial
-                      ? "Este equipamento não usa material."
-                      : "Obrigatório para impressoras; escolha antes do equipamento."}
+                      ? t("bookings.noMaterialNeeded")
+                      : t("bookings.materialRequired")}
                   </span>
                 </label>
 
                 {novaReserva.material_id && novaReserva.project_id ? (
                   <label className="grid gap-2 text-base font-semibold text-text">
-                    Item do estoque (opcional)
+                    {t("bookings.spool")}
                     <select
                       className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
                       value={novaReserva.spool_id}
                       onChange={(event) => setNovaReserva((reserva) => ({ ...reserva, spool_id: event.target.value }))}
                     >
-                      <option value="">Sem item definido</option>
+                      <option value="">{t("bookings.noSpool")}</option>
                       {rolosDisponiveis.map((rolo) => (
                         <option key={rolo.id} value={rolo.id}>
                           {getSpoolLabel(rolo)}
-                          {rolo.project_id ? " (do projeto)" : " (estoque geral)"}
+                          {rolo.project_id ? t("bookings.ofProject") : t("bookings.generalStock")}
                         </option>
                       ))}
                     </select>
                     <span className="text-sm font-normal text-muted">
                       {rolosDisponiveis.length > 0
-                        ? "Só aparecem itens deste material, do projeto escolhido ou do estoque geral."
-                        : "Nenhum item deste material disponível para o projeto; a reserva segue sem item."}
+                        ? t("bookings.spoolsHint")
+                        : t("bookings.noSpoolsHint")}
                     </span>
                   </label>
                 ) : null}
 
                 <label className="grid gap-2 text-base font-semibold text-text">
-                  Data
+                  {t("bookings.date")}
                   <input
                     className="min-h-11 min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
                     required
@@ -1156,7 +1155,7 @@ export function Reservas() {
                 </label>
 
                 <label className="grid gap-2 text-base font-semibold text-text">
-                  Inicio
+                  {t("bookings.start")}
                   <select
                     className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
                     required
@@ -1171,7 +1170,7 @@ export function Reservas() {
                     }}
                   >
                     <option value="" disabled>
-                      Selecione
+                      {t("bookings.select")}
                     </option>
                     {horariosReserva.map((horario) => {
                       const passou =
@@ -1183,7 +1182,7 @@ export function Reservas() {
 
                       return (
                         <option key={horario} value={horario} disabled={passou}>
-                          {passou ? `${horario} - indisponivel` : horario}
+                          {passou ? t("bookings.unavailableSlot", { time: horario }) : horario}
                         </option>
                       );
                     })}
@@ -1191,7 +1190,7 @@ export function Reservas() {
                 </label>
 
                 <label className="grid gap-2 text-base font-semibold text-text">
-                  Tempo (h)
+                  {t("bookings.durationHours")}
                   <input
                     className="min-h-11 min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
                     min="0.5"
@@ -1213,12 +1212,12 @@ export function Reservas() {
               </div>
 
               <label className="grid gap-2 text-base font-semibold text-text">
-                Observações
+                {t("bookings.notes")}
                 <textarea
                   className="min-h-20 rounded-lg border border-border bg-background px-4 py-3 text-base font-normal text-text outline-none transition focus:border-primary"
                   value={novaReserva.notes}
                   onChange={(event) => setNovaReserva((reserva) => ({ ...reserva, notes: event.target.value }))}
-                  placeholder="Informações opcionais para a execução da impressão"
+                  placeholder={t("bookings.notesPlaceholder")}
                 />
               </label>
 
@@ -1231,11 +1230,10 @@ export function Reservas() {
                       : "border-border bg-background text-muted",
                   ].join(" ")}
                 >
-                  Janela solicitada:{" "}
-                  {formatarDataHora(inicioSelecionado.toISOString(), timezone)} até{" "}
-                  {formatarDataHora(fimSelecionado.toISOString(), timezone)}
+                  {t("bookings.window")}{" "}
+                  {t("bookings.timeRange", { from: formatarDataHora(inicioSelecionado.toISOString(), timezone), to: formatarDataHora(fimSelecionado.toISOString(), timezone) })}
                   {horarioSelecionadoJaPassou()
-                    ? " - horario ja passou"
+                    ? t("bookings.windowPast")
                     : ""}
                 </p>
               ) : null}
@@ -1247,7 +1245,7 @@ export function Reservas() {
                     aria-hidden="true"
                   />
                   <h4 className="text-xl font-bold text-text">
-                    Disponibilidade dos equipamentos
+                    {t("bookings.availability")}
                   </h4>
                 </div>
 
@@ -1296,7 +1294,7 @@ export function Reservas() {
                                 {equipment.name}
                               </p>
                               <p className="mt-1 text-sm font-semibold text-muted">
-                                {equipment.model ?? "Modelo não informado"}
+                                {equipment.model ?? t("bookings.modelNotInformed")}
                               </p>
                             </div>
                             <input
@@ -1310,52 +1308,49 @@ export function Reservas() {
                           </div>
 
                           <div className="flex flex-wrap gap-2">
-                            <StatusBadge label="Disponível" variant="success" />
+                            <StatusBadge label={t("bookings.available")} variant="success" />
                             {equipment.type ? <StatusBadge label={equipment.type.name} variant="neutral" /> : null}
                             {usaMaterialAqui ? (
                               <StatusBadge
                                 label={
                                   novaReserva.material_id
                                     ? compativel
-                                      ? "Material ok"
-                                      : "Material incompativel"
-                                    : "Escolha material"
+                                      ? t("bookings.materialOk")
+                                      : t("bookings.materialIncompatible")
+                                    : t("bookings.chooseMaterial")
                                 }
                                 variant={compativel ? "info" : "neutral"}
                               />
                             ) : null}
                             {horarioSelecionadoJaPassou() ? (
                               <StatusBadge
-                                label="Horario passado"
+                                label={t("bookings.timePassed")}
                                 variant="danger"
                               />
                             ) : null}
                             <StatusBadge
-                              label={manutencao ? "Em manutenção" : conflito ? "Horário ocupado" : "Horário livre"}
+                              label={manutencao ? t("bookings.inMaintenance") : conflito ? t("bookings.slotBusy") : t("bookings.slotFree")}
                               variant={conflito || manutencao ? "danger" : "success"}
                             />
                           </div>
 
                           {usaMaterialAqui ? (
                             <p className="line-clamp-2 text-xs font-semibold leading-5 text-muted">
-                              Materiais:{" "}
+                              {t("bookings.materials")}{" "}
                               {materiaisDaImpressora.length > 0
                                 ? materiaisDaImpressora
                                     .map((material) => material.name)
                                     .join(", ")
-                                : "Nenhum material compativel"}
+                                : t("bookings.noCompatibleMaterial")}
                             </p>
                           ) : null}
 
                           <p className="text-sm font-semibold text-muted">
                             {manutencao
-                              ? `Bloqueada até ${formatarDataHora(manutencao.ends_at, timezone)}`
+                              ? t("bookings.blockedUntil", { time: formatarDataHora(manutencao.ends_at, timezone) })
                               : conflito
-                              ? `Ocupada até ${formatarDataHora(
-                                  conflito.ends_at,
-                                  timezone,
-                                )}`
-                              : `${reservasDaImpressora.length} reserva(s) cadastrada(s)`}
+                              ? t("bookings.busyUntil", { time: formatarDataHora(conflito.ends_at, timezone) })
+                              : t("bookings.registeredCount", { count: reservasDaImpressora.length })}
                           </p>
                         </label>
                       );
@@ -1363,8 +1358,7 @@ export function Reservas() {
                   </div>
                 ) : (
                   <p className="rounded-lg border border-dashed border-border bg-background p-4 text-base text-muted">
-                    Cadastre pelo menos um equipamento ativo antes de criar
-                    reservas.
+                    {t("bookings.registerEquipmentFirst")}
                   </p>
                 )}
               </section>
@@ -1377,14 +1371,14 @@ export function Reservas() {
 
               <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                 <Button variant="ghost" onClick={fecharModal}>
-                  Cancelar
+                  {t("common.cancel")}
                 </Button>
                 <Button
                   type="submit"
                   variant="success"
                   disabled={!formularioReservaCompleto || salvando}
                 >
-                  {salvando ? "Salvando..." : reservaEmEdicao ? "Atualizar reserva" : "Salvar reserva"}
+                  {salvando ? t("common.saving") : reservaEmEdicao ? t("bookings.update") : t("bookings.saveBooking")}
                 </Button>
               </div>
             </form>
@@ -1393,20 +1387,20 @@ export function Reservas() {
 
       {reservaParaCancelar ? (
         <Modal
-          title="Cancelar reserva?"
-          description={`Tem certeza de que deseja cancelar ${reservaParaCancelar.project_name}?`}
+          title={t("bookings.cancelTitle")}
+          description={t("bookings.cancelConfirm", { name: reservaParaCancelar.project_name })}
           onClose={() => setReservaParaCancelar(null)}
         >
           <div className="flex flex-col-reverse items-center justify-end gap-3 sm:flex-row">
             <Button variant="ghost" onClick={() => setReservaParaCancelar(null)}>
-              Voltar
+              {t("common.back")}
             </Button>
             <Button
               variant="danger"
               disabled={salvando}
               onClick={() => cancelarReserva(reservaParaCancelar.id)}
             >
-              Cancelar reserva
+              {t("bookings.cancel")}
             </Button>
           </div>
         </Modal>
@@ -1414,28 +1408,28 @@ export function Reservas() {
 
       {reservaParaRejeitar ? (
         <Modal
-          title="Rejeitar reserva?"
-          description={`A reserva ${reservaParaRejeitar.project_name} será recusada e o horário liberado para outros pesquisadores.`}
+          title={t("bookings.rejectTitle")}
+          description={t("bookings.rejectConfirm", { name: reservaParaRejeitar.project_name })}
           onClose={() => setReservaParaRejeitar(null)}
         >
-          <Field label="Motivo (opcional)">
+          <Field label={t("bookings.rejectReason")}>
             <Input
               value={motivoRejeicao}
               onChange={(event) => setMotivoRejeicao(event.target.value)}
-              placeholder="Ex.: equipamento reservado para manutenção"
+              placeholder={t("bookings.rejectReasonPlaceholder")}
             />
           </Field>
           {erro ? <Alert className="mt-3">{erro}</Alert> : null}
           <div className="mt-6 flex flex-col-reverse items-center justify-end gap-3 sm:flex-row">
             <Button variant="ghost" onClick={() => setReservaParaRejeitar(null)}>
-              Voltar
+              {t("common.back")}
             </Button>
             <Button
               variant="danger"
               disabled={salvando}
               onClick={() => rejeitarReserva(reservaParaRejeitar.id, motivoRejeicao)}
             >
-              Rejeitar reserva
+              {t("bookings.rejectAction")}
             </Button>
           </div>
         </Modal>
@@ -1443,13 +1437,13 @@ export function Reservas() {
 
       {usoPendente ? (
         <Modal
-          title={usoPendente.status === "completed" ? "Concluir impressão" : "Registrar falha"}
-          description={`${usoPendente.reserva.project_name}. Quanto foi usado? Isso é abatido do estoque.`}
+          title={usoPendente.status === "completed" ? t("bookings.completePrint") : t("bookings.registerFailure")}
+          description={t("bookings.usageHint", { project: usoPendente.reserva.project_name })}
           onClose={() => setUsoPendente(null)}
         >
           <div className="grid gap-4">
             <label className="grid gap-2 text-base font-semibold text-text">
-              Quantidade usada ({spools.find((item) => item.id === usoPendente.reserva.spool_id)?.unit ?? "g"})
+              {t("bookings.amountUsed", { unit: spools.find((item) => item.id === usoPendente.reserva.spool_id)?.unit ?? "g" })}
               <input
                 autoFocus
                 className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
@@ -1461,7 +1455,7 @@ export function Reservas() {
                 const rolo = spools.find((item) => item.id === usoPendente.reserva.spool_id);
                 return rolo ? (
                   <span className="text-sm font-normal text-muted">
-                    Item: {getSpoolLabel(rolo)}. Restam {formatAmount(rolo.current_amount, rolo.unit)}.
+                    {t("bookings.spoolRemaining", { item: getSpoolLabel(rolo), amount: formatAmount(rolo.current_amount, rolo.unit) })}
                   </span>
                 ) : null;
               })()}
@@ -1471,10 +1465,10 @@ export function Reservas() {
             ) : null}
             <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <Button variant="secondary" disabled={salvando} onClick={() => confirmarUso(false)}>
-                Concluir sem informar
+                {t("bookings.completeWithout")}
               </Button>
               <Button disabled={salvando} onClick={() => confirmarUso(true)}>
-                {salvando ? "Salvando..." : "Concluir e abater do estoque"}
+                {salvando ? t("common.saving") : t("bookings.completeAndDeduct")}
               </Button>
             </div>
           </div>

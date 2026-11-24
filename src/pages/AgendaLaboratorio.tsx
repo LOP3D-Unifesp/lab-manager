@@ -449,7 +449,7 @@ export function AgendaLaboratorio() {
                       type="button"
                       className={[
                         "min-h-24 border-b border-r border-border p-3 text-left transition last:border-r-0 hover:bg-primary-soft focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary",
-                        ehHoje ? "bg-sky-50" : "bg-surface",
+                        ehHoje ? "bg-sky-50 dark:bg-primary-soft" : "bg-surface",
                       ].join(" ")}
                       onClick={() => abrirDetalhesDoSlot(dia, periodo)}
                     >
