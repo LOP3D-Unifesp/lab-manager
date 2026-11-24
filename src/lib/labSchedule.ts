@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import { useEffect, useMemo, useState } from "react";
 
 import { useAuth } from "./auth";
@@ -34,13 +35,13 @@ export function useLabSchedule() {
 
   const mealBreaks = useMemo<LabScheduleBreakItem[]>(() => labSettings ? [
     {
-      kind: "break", id: "lunch", label: "Almoço",
+      kind: "break", id: "lunch", label: t("admin.lunch"),
       starts_at: labSettings.lunch_starts_at.slice(0, 5),
       ends_at: labSettings.lunch_ends_at.slice(0, 5),
       horario: formatSchedulePeriod(labSettings.lunch_starts_at, labSettings.lunch_ends_at),
     },
     {
-      kind: "break", id: "dinner", label: "Jantar",
+      kind: "break", id: "dinner", label: t("admin.dinner"),
       starts_at: labSettings.dinner_starts_at.slice(0, 5),
       ends_at: labSettings.dinner_ends_at.slice(0, 5),
       horario: formatSchedulePeriod(labSettings.dinner_starts_at, labSettings.dinner_ends_at),

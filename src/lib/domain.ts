@@ -426,7 +426,7 @@ export type LabSchedulePeriodItem = {
 export type LabScheduleBreakItem = {
   kind: "break";
   id: "lunch" | "dinner";
-  label: "Almoço" | "Jantar";
+  label: string;
   starts_at: string;
   ends_at: string;
   horario: string;

@@ -1,3 +1,4 @@
+import { getLocale, useT } from "../i18n";
 import { useState } from "react";
 import { UserPlus } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -26,6 +27,7 @@ function getStatusVariant(status: StatusPresenca) {
 }
 
 export function Pesquisadores() {
+  const t = useT();
   const { pesquisadores } = usePesquisadoresCadastrados();
   const { currentProfile } = useCurrentProfile();
   const [visualizacao, setVisualizacao] = useState<Visualizacao>("cards");
@@ -35,7 +37,7 @@ export function Pesquisadores() {
   const vinculosDisponiveis = [
     TODOS_VINCULOS,
     ...Array.from(new Set(pesquisadores.map((pesquisador) => pesquisador.vinculo))).sort((a, b) =>
-      a.localeCompare(b, "pt-BR"),
+      a.localeCompare(b, getLocale()),
     ),
   ];
 
@@ -47,33 +49,33 @@ export function Pesquisadores() {
   const pesquisadoresOrdenados = [...pesquisadoresFiltrados].sort((a, b) => {
     if (ordenacao === "vinculo") {
       return (
-        a.vinculo.localeCompare(b.vinculo, "pt-BR") ||
-        a.nome.localeCompare(b.nome, "pt-BR")
+        a.vinculo.localeCompare(b.vinculo, getLocale()) ||
+        a.nome.localeCompare(b.nome, getLocale())
       );
     }
 
     if (ordenacao === "presenca") {
       return (
-        a.status.localeCompare(b.status, "pt-BR") ||
-        a.nome.localeCompare(b.nome, "pt-BR")
+        a.status.localeCompare(b.status, getLocale()) ||
+        a.nome.localeCompare(b.nome, getLocale())
       );
     }
 
     return `${a.nome} ${a.sobrenome}`.localeCompare(
       `${b.nome} ${b.sobrenome}`,
-      "pt-BR",
+      getLocale(),
     );
   });
 
   return (
     <div>
       <PageHeader
-        title="Pesquisadores"
-        description="Perfis ativos carregados da tabela profiles no Supabase."
+        title={t("researchers.title")}
+        description={t("researchers.subtitle")}
         action={
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <label className="flex min-h-9 items-center gap-1 rounded-md border border-border bg-surface px-2 text-[11px] font-semibold text-muted">
-              Ordenar
+              {t("researchers.sort")}
               <select
                 value={ordenacao}
                 onChange={(event) =>
@@ -81,13 +83,13 @@ export function Pesquisadores() {
                 }
                 className="min-h-7 rounded-md border border-border bg-background px-1.5 text-[11px] font-semibold text-text outline-none transition focus:border-primary"
               >
-                <option value="alfabetica">Ordem alfabética</option>
-                <option value="vinculo">Vínculo</option>
-                <option value="presenca">Presença</option>
+                <option value="alfabetica">{t("researchers.sortAlpha")}</option>
+                <option value="vinculo">{t("researchers.sortAffiliation")}</option>
+                <option value="presenca">{t("researchers.sortPresence")}</option>
               </select>
             </label>
             <label className="flex min-h-9 items-center gap-1 rounded-md border border-border bg-surface px-2 text-[11px] font-semibold text-muted">
-              Vínculo
+              {t("researchers.affiliation")}
               <select
                 value={vinculoFiltro}
                 onChange={(event) => setVinculoFiltro(event.target.value)}
@@ -95,7 +97,7 @@ export function Pesquisadores() {
               >
                 {vinculosDisponiveis.map((vinculo) => (
                   <option key={vinculo} value={vinculo}>
-                    {vinculo}
+                    {vinculo === TODOS_VINCULOS ? t("researchers.all") : vinculo}
                   </option>
                 ))}
               </select>
@@ -103,8 +105,8 @@ export function Pesquisadores() {
             <div className="flex min-h-9 items-center rounded-md border border-border bg-surface p-1">
               <button
                 type="button"
-                title="Visualizar em cards"
-                aria-label="Visualizar em cards"
+                title={t("researchers.viewCards")}
+                aria-label={t("researchers.viewCards")}
                 aria-pressed={visualizacao === "cards"}
                 onClick={() => setVisualizacao("cards")}
                 className={[
@@ -114,12 +116,12 @@ export function Pesquisadores() {
                     : "text-primary hover:bg-primary-soft",
                 ].join(" ")}
               >
-                Cards
+                {t("researchers.cards")}
               </button>
               <button
                 type="button"
-                title="Visualizar em lista"
-                aria-label="Visualizar em lista"
+                title={t("researchers.viewList")}
+                aria-label={t("researchers.viewList")}
                 aria-pressed={visualizacao === "lista"}
                 onClick={() => setVisualizacao("lista")}
                 className={[
@@ -129,14 +131,14 @@ export function Pesquisadores() {
                     : "text-primary hover:bg-primary-soft",
                 ].join(" ")}
               >
-                Lista
+                {t("researchers.list")}
               </button>
             </div>
             {currentProfile?.role === "coordinator" ? (
               <Link to="/usuarios/convites">
                 <Button fullWidth variant="secondary">
                   <UserPlus className="mr-2 h-5 w-5" aria-hidden="true" />
-                  Gerenciar convites
+                  {t("researchers.manageInvites")}
                 </Button>
               </Link>
             ) : null}
@@ -147,7 +149,7 @@ export function Pesquisadores() {
       {pesquisadoresOrdenados.length === 0 ? (
         <Card>
           <p className="text-lg font-semibold text-muted">
-            Nenhum pesquisador ativo encontrado.
+            {t("researchers.none")}
           </p>
         </Card>
       ) : visualizacao === "cards" ? (
@@ -166,22 +168,22 @@ export function Pesquisadores() {
                     {pesquisador.nome} {pesquisador.sobrenome}
                   </h3>
                   <p className="mt-2 text-lg text-muted">
-                    Vinculo: {pesquisador.vinculo}
+                    {t("researchers.affiliationLine", { value: pesquisador.vinculo })}
                   </p>
                   <p className="mt-2 text-sm font-semibold leading-5 text-muted">
                     {pesquisador.email}
                   </p>
                   <p className="mt-1 text-sm font-semibold leading-5 text-muted">
-                    {pesquisador.telefone || "Sem telefone"}
+                    {pesquisador.telefone || t("researchers.noPhone")}
                   </p>
                   <p className="mt-2 text-sm font-semibold leading-5 text-muted">
                     {pesquisador.bolsasFomento.length > 0
-                      ? `Bolsas de fomento: ${pesquisador.bolsasFomento.join(", ")}`
+                      ? t("researchers.grantsLong", { list: pesquisador.bolsasFomento.join(", ") })
                       : pesquisador.cargaHorariaSemanal
-                        ? "Voluntário"
-                        : "Sem bolsa de fomento"}
+                        ? t("researchers.volunteer")
+                        : t("researchers.noGrant")}
                     {pesquisador.cargaHorariaSemanal
-                      ? ` - ${pesquisador.cargaHorariaSemanal}h/semana`
+                      ? t("researchers.hoursWeek", { hours: pesquisador.cargaHorariaSemanal })
                       : ""}
                   </p>
                   {pesquisador.lattesUrl ? (
@@ -197,7 +199,7 @@ export function Pesquisadores() {
                   </div>
                 </div>
                 <StatusBadge
-                  label={pesquisador.status}
+                  label={t(`presence.${pesquisador.status}` as Parameters<typeof t>[0])}
                   variant={getStatusVariant(pesquisador.status)}
                 />
               </div>
@@ -211,19 +213,19 @@ export function Pesquisadores() {
               <thead className="bg-background text-left">
                 <tr className="border-b border-border">
                   <th className="px-5 py-3 text-sm font-semibold text-muted">
-                    Pesquisador
+                    {t("researchers.colResearcher")}
                   </th>
                   <th className="px-5 py-3 text-sm font-semibold text-muted">
-                    Vinculo
+                    {t("researchers.colAffiliation")}
                   </th>
                   <th className="px-5 py-3 text-sm font-semibold text-muted">
-                    Contato
+                    {t("researchers.colContact")}
                   </th>
                   <th className="px-5 py-3 text-sm font-semibold text-muted">
-                    Presenca
+                    {t("researchers.colPresence")}
                   </th>
                   <th className="px-5 py-3 text-sm font-semibold text-muted">
-                    Fomento/carga
+                    {t("researchers.colFunding")}
                   </th>
                 </tr>
               </thead>
@@ -251,7 +253,7 @@ export function Pesquisadores() {
                         {pesquisador.email}
                       </span>
                       <span className="block whitespace-nowrap">
-                        {pesquisador.telefone || "Sem telefone"}
+                        {pesquisador.telefone || t("researchers.noPhone")}
                       </span>
                       {pesquisador.lattesUrl ? (
                         <a
@@ -266,18 +268,18 @@ export function Pesquisadores() {
                     </td>
                     <td className="whitespace-nowrap px-5 py-3">
                       <StatusBadge
-                        label={pesquisador.status}
+                        label={t(`presence.${pesquisador.status}` as Parameters<typeof t>[0])}
                         variant={getStatusVariant(pesquisador.status)}
                       />
                     </td>
                     <td className="whitespace-nowrap px-5 py-3 text-base text-muted">
                       {pesquisador.bolsasFomento.length > 0
-                        ? `Bolsas: ${pesquisador.bolsasFomento.join(", ")}`
+                        ? t("researchers.grantsShort", { list: pesquisador.bolsasFomento.join(", ") })
                         : pesquisador.cargaHorariaSemanal
-                          ? "Voluntário"
-                          : "Sem bolsa de fomento"}
+                          ? t("researchers.volunteer")
+                          : t("researchers.noGrant")}
                       {pesquisador.cargaHorariaSemanal
-                        ? ` - ${pesquisador.cargaHorariaSemanal}h`
+                        ? t("researchers.hoursShort", { hours: pesquisador.cargaHorariaSemanal })
                         : ""}
                     </td>
                   </tr>

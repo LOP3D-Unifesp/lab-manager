@@ -85,11 +85,11 @@ export function usePesquisadoresCadastrados() {
   }, []);
 
   const adicionarPesquisador = async () => {
-    throw new Error("Cadastro direto desativado. Use o fluxo de convites.");
+    throw new Error(t("researchers.errDirectSignup"));
   };
 
   const excluirPesquisador = async () => {
-    throw new Error("Inativacao direta desativada. Use administracao de usuarios.");
+    throw new Error(t("researchers.errDirectDeactivate"));
   };
 
   return {
