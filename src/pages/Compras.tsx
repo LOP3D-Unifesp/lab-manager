@@ -1,4 +1,4 @@
-import { useT } from "../i18n";
+import { getLocale, useT } from "../i18n";
 import { ExternalLink, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -86,10 +86,16 @@ export function Compras() {
   const visiveis = useMemo(() => sortPurchases(filterPurchases(purchases, filters, profileId)), [purchases, filters, profileId]);
   const totais = useMemo(() => summarizeByProject(purchases), [purchases]);
   const gastosManutencao = useMemo(() => summarizeMaintenanceSpending(purchases), [purchases]);
+  // Todos veem todos os pedidos, então os projetos do filtro vêm dos próprios pedidos (e não só dos projetos da pessoa).
   const projetosComPedido = useMemo(() => {
-    const ids = new Set(purchases.map((purchase) => purchase.project_id));
-    return projects.filter((project) => ids.has(project.id));
-  }, [purchases, projects]);
+    const porId = new Map<string, string>();
+    for (const purchase of purchases) {
+      if (purchase.project_id) porId.set(purchase.project_id, purchase.project_name);
+    }
+    return [...porId.entries()]
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name, getLocale()));
+  }, [purchases]);
 
   async function mudar(purchase: PurchaseRequest, status: PurchaseStatus, confirmacao?: string) {
     if (confirmacao && !window.confirm(confirmacao)) return;
