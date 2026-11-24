@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(362);
+select plan(367);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -1912,6 +1912,49 @@ select is(
   (select count(*)::int from public.notifications where recipient_id = '00000000-0000-0000-0000-000000000102' and params->>'kind' = 'pgtap-pref'),
   1,
   'topics without a saved preference are still delivered'
+);
+
+-- Who is told about requests and purchases: new ones reach only coordinators; status changes reach only who opened them.
+set local role postgres;
+select set_config('request.jwt.claims', '', true);
+update public.profiles set is_maintainer = true where id = '00000000-0000-0000-0000-000000000103';
+insert into public.maintenance_requests (equipment_id, requested_by, description)
+values ('20000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000102', 'pgtap chamado avisos');
+select is(
+  (select count(*)::int from public.notifications where type = 'request_new' and recipient_id = '00000000-0000-0000-0000-000000000101'
+     and entity_id = (select id from public.maintenance_requests where description = 'pgtap chamado avisos')),
+  1,
+  'a new maintenance request notifies the coordinator'
+);
+select is(
+  (select count(*)::int from public.notifications where type = 'request_new' and recipient_id = '00000000-0000-0000-0000-000000000103'
+     and entity_id = (select id from public.maintenance_requests where description = 'pgtap chamado avisos')),
+  1,
+  'a new maintenance request also notifies maintainers'
+);
+update public.maintenance_requests set status = 'in_progress' where description = 'pgtap chamado avisos';
+select is(
+  (select count(*)::int from public.notifications where type = 'request_status' and recipient_id = '00000000-0000-0000-0000-000000000102'
+     and params->>'status' = 'in_progress'
+     and entity_id = (select id from public.maintenance_requests where description = 'pgtap chamado avisos')),
+  1,
+  'a status change on a maintenance request notifies who opened it'
+);
+insert into public.purchase_requests (funding_category, item, estimated_amount, requested_by)
+values ('custeio', 'pgtap pedido avisos', 10, '00000000-0000-0000-0000-000000000102');
+select is(
+  (select count(*)::int from public.notifications where type = 'purchase_new' and recipient_id = '00000000-0000-0000-0000-000000000102'
+     and entity_id = (select id from public.purchase_requests where item = 'pgtap pedido avisos')),
+  0,
+  'a new purchase request does not notify the person who made it'
+);
+update public.purchase_requests set status = 'cancelled' where item = 'pgtap pedido avisos';
+select is(
+  (select count(*)::int from public.notifications where type = 'purchase_status' and recipient_id = '00000000-0000-0000-0000-000000000102'
+     and params->>'status' = 'cancelled'
+     and entity_id = (select id from public.purchase_requests where item = 'pgtap pedido avisos')),
+  1,
+  'any status change on a purchase notifies who requested it'
 );
 
 select * from finish();

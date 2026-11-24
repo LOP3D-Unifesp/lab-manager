@@ -66,6 +66,7 @@ export const projetos = {
   "members.none": { pt: "Nenhuma pessoa encontrada.", en: "No one found.", es: "No se encontró a nadie." },
   "tasks.mineTitle": { pt: "Minhas tarefas", en: "My tasks", es: "Mis tareas" },
   "tasks.mineHint": { pt: "Tarefas atribuídas a você nos projetos do laboratório.", en: "Tasks assigned to you in the lab projects.", es: "Tareas asignadas a ti en los proyectos del laboratorio." },
+  "tasks.mineNoProject": { pt: "Você ainda não participa de nenhum projeto em andamento. Peça a um coordenador para te adicionar a um projeto e as tarefas atribuídas a você aparecem aqui.", en: "You are not in any open project yet. Ask a coordinator to add you to a project and the tasks assigned to you will show up here.", es: "Aún no participas en ningún proyecto en curso. Pide a un coordinador que te agregue a un proyecto y las tareas que te asignen aparecerán aquí." },
   "tasks.mineEmpty": { pt: "Você não tem tarefas atribuídas. Crie uma com “Nova tarefa” ou peça para ser incluído numa tarefa de um projeto.", en: "You have no assigned tasks. Create one with “New task” or ask to be added to a project task.", es: "No tienes tareas asignadas. Crea una con “Nueva tarea” o pide que te incluyan en una tarea de un proyecto." },
   "tasks.late": { pt: "Atrasada · ", en: "Overdue · ", es: "Atrasada · " },
   "tasks.moveTo": { pt: "Mover \"{title}\" para", en: "Move \"{title}\" to", es: "Mover \"{title}\" a" },
