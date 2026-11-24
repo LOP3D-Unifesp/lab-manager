@@ -179,17 +179,17 @@ export function Dashboard() {
         <StatCard
           title="Equipamentos ativos"
           value={`${impressorasAtivas.length}/${equipmentList.length}`}
-          description="Equipamentos disponiveis para novas reservas."
+          description="Equipamentos disponíveis para novas reservas."
           icon={Printer}
         />
         <StatCard
           title="Reservas hoje"
           value={String(reservasHoje.length)}
-          description={`${reservasEmAndamento.length} impressao(oes) em andamento agora.`}
+          description={`${reservasEmAndamento.length} impressão(ões) em andamento agora.`}
           icon={ClipboardList}
         />
         <StatCard
-          title="Proxima impressao"
+          title="Próxima impressão"
           value={proximasReservas[0] ? formatarHorario(proximasReservas[0].starts_at) : "--"}
           description={
             proximasReservas[0]

@@ -129,7 +129,7 @@ export function Sidebar() {
         </nav>
 
         <div className="mt-5 border-t border-border pt-3">
-          <ThemeToggle className="mb-3 w-full justify-between" />
+          <ThemeToggle className="mb-3 w-full" />
           <AuthUserMenu />
         </div>
       </div>

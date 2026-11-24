@@ -87,9 +87,9 @@ export function MobileAccountMenu() {
             </div>
           </div>
 
-          <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-2">
+          <div className="grid gap-1.5 border-b border-border px-3 py-2.5">
             <span className="text-sm font-semibold text-muted">Tema</span>
-            <ThemeToggle />
+            <ThemeToggle className="w-full" />
           </div>
 
           <div className="grid p-1.5">
