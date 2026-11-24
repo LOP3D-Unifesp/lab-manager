@@ -13,6 +13,7 @@ export function PageHeader({ action, description, title }: PageHeaderProps) {
         <h2 className="text-[30px] font-bold leading-tight text-text md:text-[32px]">
           {title}
         </h2>
+        <span aria-hidden="true" className="mt-2 block h-1 w-10 rounded-full bg-accent" />
         <p className="mt-2 max-w-3xl text-lg leading-7 text-muted">
           {description}
         </p>

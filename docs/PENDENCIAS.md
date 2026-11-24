@@ -110,8 +110,9 @@ Planejada na revisão e deixada para depois, para que o uso real indique a prior
 
 ## Qualidade e interface
 
-- **Fonte Dosis.** O Tailwind e o `index.css` configuram a fonte `Dosis`, mas o `index.html` não a
-  carrega. Verificar se ela aparece no navegador ou se cai na fonte padrão do sistema.
+- **Revisão visual das fontes novas.** Dosis (títulos) e Montserrat (textos) passaram a ser carregadas de verdade, e a
+  escala base ficou em `15px`. Conferir, logado, tabelas, menu lateral, formulários e modais em pt/en/es, procurando
+  textos cortados ou com quebra de linha inesperada; ajustar `font-size` do `html` em `src/index.css` se preciso.
 - **Sem testes de navegador.** A suíte E2E com Playwright foi removida para simplificar o CI. A
   cobertura atual é: testes unitários (Vitest), testes de banco (pgTAP) e teste de concorrência de
   reservas. Na revisão, os fluxos de interface foram conferidos à mão no navegador a cada mudança. Se regressões de

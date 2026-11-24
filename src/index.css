@@ -20,8 +20,11 @@
   --c-danger: 220 38 38;
   --c-danger-dark: 153 27 27;
   --c-danger-soft: 254 242 242;
+  --c-accent: 236 0 140;
+  --c-accent-dark: 190 0 112;
+  --c-accent-soft: 253 232 244;
   color-scheme: light;
-  font-family: "Dosis", system-ui, sans-serif;
+  font-family: "Montserrat Variable", system-ui, sans-serif;
   color: rgb(var(--c-text));
   background: rgb(var(--c-background));
   font-synthesis: none;
@@ -48,6 +51,9 @@
   --c-danger: 248 113 113;
   --c-danger-dark: 252 165 165;
   --c-danger-soft: 61 20 24;
+  --c-accent: 255 77 168;
+  --c-accent-dark: 255 140 200;
+  --c-accent-soft: 61 12 40;
   color-scheme: dark;
 }
 
@@ -58,6 +64,19 @@
 html {
   min-height: 100%;
   background: rgb(var(--c-background));
+  /* A interface foi dimensionada para a Dosis (estreita); a Montserrat é mais larga, então a escala base é menor. */
+  font-size: 15px;
+}
+
+@layer base {
+  /* Títulos em Dosis; textos em Montserrat (definida no :root). */
+  h1,
+  h2,
+  h3,
+  h4,
+  .font-display {
+    font-family: "Dosis Variable", system-ui, sans-serif;
+  }
 }
 
 body {

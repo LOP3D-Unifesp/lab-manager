@@ -7,6 +7,8 @@ import { AuthProvider } from "./lib/auth";
 import { LanguageProvider, LocaleBoundary } from "./i18n";
 import { ThemeProvider } from "./lib/theme";
 import { router } from "./routes";
+import "@fontsource-variable/dosis";
+import "@fontsource-variable/montserrat";
 import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(

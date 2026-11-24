@@ -26,7 +26,7 @@ export function StatCard({
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-lg font-semibold text-muted">{title}</p>
-          <p className="mt-2 text-[34px] font-bold leading-none text-text">
+          <p className="font-display mt-2 text-[34px] font-bold leading-none text-text">
             {value}
           </p>
         </div>

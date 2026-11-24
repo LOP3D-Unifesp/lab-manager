@@ -48,7 +48,7 @@ function SidebarNavItem({ badge, item }: { badge?: number; item: NavigationItem 
               aria-hidden="true"
               className={[
                 "absolute left-0 top-2 h-[calc(100%-1rem)] w-1 rounded-r-full transition",
-                isActive ? "bg-primary" : "bg-transparent",
+                isActive ? "bg-accent" : "bg-transparent",
               ].join(" ")}
             />
             <item.icon aria-hidden="true" className="h-5 w-5 shrink-0" />
@@ -98,7 +98,7 @@ export function Sidebar() {
                 </p>
                 <EnvironmentBadge />
               </div>
-              <h1 className="mt-1 truncate text-[24px] font-bold leading-tight text-text">
+              <h1 className="font-display mt-1 truncate text-[24px] font-bold leading-tight text-text">
                 Lab Manager
               </h1>
             </Link>

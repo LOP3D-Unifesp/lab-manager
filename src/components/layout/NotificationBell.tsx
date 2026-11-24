@@ -246,7 +246,7 @@ export function NotificationBell({ align = "right" }: NotificationBellProps) {
                       ) : null}
                       <p className="mt-0.5 text-xs text-muted">
                         {formatarDataHora(update.updated_at)}
-                        {novos.includes(update.id) ? t("bell.new") : ""}
+                        {novos.includes(update.id) ? <span className="font-bold text-accent-dark">{t("bell.new")}</span> : null}
                       </p>
                     </Link>
                   ))}
