@@ -1,4 +1,5 @@
 import { account } from "./messages/account";
+import { agenda } from "./messages/agenda";
 import { admin } from "./messages/admin";
 import { common } from "./messages/common";
 import { compras } from "./messages/compras";
@@ -18,7 +19,7 @@ import { nav } from "./messages/nav";
 export type Entry = { pt: string; en: string; es: string };
 
 // Cada chave traz as três traduções lado a lado: faltar um idioma vira erro de tipo.
-const catalog = { ...common, ...nav, ...account, ...dashboard, ...domain, ...labels, ...reservas, ...equipamentos, ...manutencao, ...manutencao2, ...compras, ...inventario, ...projetos, ...perfil, ...admin, ...pessoas } satisfies Record<string, Entry>;
+const catalog = { ...common, ...nav, ...account, ...dashboard, ...domain, ...labels, ...reservas, ...equipamentos, ...manutencao, ...manutencao2, ...compras, ...inventario, ...projetos, ...perfil, ...admin, ...pessoas, ...agenda } satisfies Record<string, Entry>;
 
 export type MessageKey = keyof typeof catalog;
 

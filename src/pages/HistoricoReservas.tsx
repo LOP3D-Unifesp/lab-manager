@@ -1,3 +1,4 @@
+import { getLocale, t } from "../i18n";
 import { useEffect, useMemo, useState } from "react";
 import { History } from "lucide-react";
 
@@ -18,18 +19,18 @@ const statusVariants: Record<BookingStatus, StatusVariant> = {
 };
 
 const statusFilterOptions: Array<{ value: BookingStatus | "all"; label: string }> = [
-  { value: "all", label: "Todos os status" },
-  { value: "pending", label: "Pendente" },
-  { value: "approved", label: "Aprovada" },
-  { value: "in_progress", label: "Em andamento" },
-  { value: "completed", label: "Concluída" },
-  { value: "cancelled", label: "Cancelada" },
-  { value: "rejected", label: "Rejeitada" },
-  { value: "failed", label: "Falhou" },
+  { value: "all", get label() { return t("bookingsList.allStatuses"); } },
+  { value: "pending", get label() { return t("bookingStatus.pending"); } },
+  { value: "approved", get label() { return t("bookingStatus.approved"); } },
+  { value: "in_progress", get label() { return t("bookingStatus.in_progress"); } },
+  { value: "completed", get label() { return t("bookingStatus.completed"); } },
+  { value: "cancelled", get label() { return t("bookingStatus.cancelled"); } },
+  { value: "rejected", get label() { return t("bookingStatus.rejected"); } },
+  { value: "failed", get label() { return t("bookingStatus.failed"); } },
 ];
 
 function formatarDataHora(valor: string) {
-  return new Intl.DateTimeFormat("pt-BR", {
+  return new Intl.DateTimeFormat(getLocale(), {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -53,7 +54,7 @@ export function HistoricoReservas() {
         if (ativo) setBookings(data);
       })
       .catch((error) => {
-        if (ativo) setErro(error instanceof Error ? error.message : "Erro ao carregar o histórico.");
+        if (ativo) setErro(error instanceof Error ? error.message : t("bookingsHistory.errLoad"));
       })
       .finally(() => {
         if (ativo) setCarregando(false);
@@ -93,13 +94,13 @@ export function HistoricoReservas() {
   return (
     <div>
       <PageHeader
-        title="Histórico de reservas"
-        description="Registro completo de reservas, incluindo as canceladas, para acompanhamento do laboratório."
+        title={t("bookingsHistory.title")}
+        description={t("bookingsHistory.subtitle")}
       />
 
       <section className="mb-5 flex flex-col gap-3 rounded-lg border border-border bg-surface p-4 sm:flex-row sm:items-end">
         <label className="grid gap-2 text-base font-semibold text-text sm:w-56">
-          Status
+          {t("bookingsList.status")}
           <select
             className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
             onChange={(event) => setStatusFiltro(event.target.value as BookingStatus | "all")}
@@ -113,11 +114,11 @@ export function HistoricoReservas() {
           </select>
         </label>
         <label className="grid flex-1 gap-2 text-base font-semibold text-text">
-          Buscar
+          {t("bookingsList.search")}
           <input
             className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
             onChange={(event) => setBusca(event.target.value)}
-            placeholder="Projeto, pesquisador ou equipamento"
+            placeholder={t("bookingsHistory.searchPlaceholder")}
             type="text"
             value={busca}
           />
@@ -137,26 +138,26 @@ export function HistoricoReservas() {
           </div>
           <div>
             <h2 className="text-2xl font-bold text-text">
-              {bookingsFiltradas.length} {bookingsFiltradas.length === 1 ? "reserva" : "reservas"}
+              {t("bookingsList.count", { count: bookingsFiltradas.length })}
             </h2>
-            <p className="mt-1 text-muted">Ordenado da mais recente para a mais antiga.</p>
+            <p className="mt-1 text-muted">{t("bookingsList.order")}</p>
           </div>
         </div>
 
         {carregando ? (
-          <p className="text-base font-semibold text-muted">Carregando...</p>
+          <p className="text-base font-semibold text-muted">{t("bookingsList.loading")}</p>
         ) : bookingsFiltradas.length === 0 ? (
-          <p className="text-base font-semibold text-muted">Nenhuma reserva encontrada com esses filtros.</p>
+          <p className="text-base font-semibold text-muted">{t("bookingsList.none")}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] border-collapse">
               <thead className="bg-background text-left">
                 <tr className="border-b border-border">
-                  <th className="px-4 py-3 text-sm font-semibold text-muted">Data</th>
-                  <th className="px-4 py-3 text-sm font-semibold text-muted">Projeto</th>
-                  <th className="px-4 py-3 text-sm font-semibold text-muted">Pesquisador</th>
-                  <th className="px-4 py-3 text-sm font-semibold text-muted">Equipamento</th>
-                  <th className="px-4 py-3 text-sm font-semibold text-muted">Status</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-muted">{t("bookingsList.colDate")}</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-muted">{t("bookingsList.colProject")}</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-muted">{t("bookingsList.colResearcher")}</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-muted">{t("bookingsList.colEquipment")}</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-muted">{t("bookingsList.colStatus")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -172,10 +173,10 @@ export function HistoricoReservas() {
                       {reserva.project_name}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-base text-muted">
-                      {reserva.profile?.full_name ?? "Usuário removido"}
+                      {reserva.profile?.full_name ?? t("bookings.removedUser")}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-base text-muted">
-                      {reserva.equipment?.name ?? "Equipamento removido"}
+                      {reserva.equipment?.name ?? t("bookings.removedEquipment")}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3">
                       <StatusBadge
