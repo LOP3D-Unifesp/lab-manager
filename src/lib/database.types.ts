@@ -751,7 +751,10 @@ isOneToOne: false
 "created_by": string | null,
 "dinner_ends_at": string,
 "dinner_starts_at": string,
+"favicon_url": string | null,
 "id": boolean,
+"logo_dark_url": string | null,
+"logo_light_url": string | null,
 "lunch_ends_at": string,
 "lunch_starts_at": string,
 "name": string | null,
@@ -872,7 +875,7 @@ isOneToOne: false
       } },
 "get_public_lab_identity":
 { Args: Record<PropertyKey, never>; Returns: {
-              "acronym": string,"favicon_url": string | null,"invitation_ttl_hours": number,"logo_dark_url": string | null,"logo_light_url": string | null,"name": string,"privacy_contact_email": string
+              "acronym": string,"favicon_url": string,"invitation_ttl_hours": number,"logo_dark_url": string,"logo_light_url": string,"name": string,"privacy_contact_email": string
             }[]
                            },
 "record_booking_usage":
@@ -1042,27 +1045,6 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
-"set_maintenance_request_status":
-{ Args: { "p_assigned_to"?: string,"p_request_id": string,"p_resolution_notes"?: string,"p_status": Database["public"]['Enums']["maintenance_request_status"] }; Returns: {
-              "assigned_to": string | null,
-"created_at": string,
-"description": string,
-"equipment_id": string,
-"id": string,
-"photo_paths": (string)[],
-"requested_by": string | null,
-"resolution_notes": string | null,
-"resolved_at": string | null,
-"status": Database["public"]['Enums']["maintenance_request_status"],
-"updated_at": string,
-"urgency": Database["public"]['Enums']["maintenance_urgency"]
-            }
-                          SetofOptions: {
-        from: "*"
-        to: "maintenance_requests"
-        isOneToOne: true
-        isSetofReturn: false
-      } },
 "set_lab_logo":
 { Args: { "p_url": string,"p_variant": string }; Returns: {
               "acronym": string | null,
@@ -1090,7 +1072,29 @@ isOneToOne: false
         to: "lab_settings"
         isOneToOne: true
         isSetofReturn: false
-      } },"set_my_avatar_url":
+      } },
+"set_maintenance_request_status":
+{ Args: { "p_assigned_to"?: string,"p_request_id": string,"p_resolution_notes"?: string,"p_status": Database["public"]['Enums']["maintenance_request_status"] }; Returns: {
+              "assigned_to": string | null,
+"created_at": string,
+"description": string,
+"equipment_id": string,
+"id": string,
+"photo_paths": (string)[],
+"requested_by": string | null,
+"resolution_notes": string | null,
+"resolved_at": string | null,
+"status": Database["public"]['Enums']["maintenance_request_status"],
+"updated_at": string,
+"urgency": Database["public"]['Enums']["maintenance_urgency"]
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "maintenance_requests"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
+"set_my_avatar_url":
 { Args: { "p_avatar_url": string }; Returns: {
               "academic_affiliation": Database["public"]['Enums']["academic_affiliation"] | null,
 "avatar_url": string | null,
@@ -1207,7 +1211,10 @@ isOneToOne: false
 "created_by": string | null,
 "dinner_ends_at": string,
 "dinner_starts_at": string,
+"favicon_url": string | null,
 "id": boolean,
+"logo_dark_url": string | null,
+"logo_light_url": string | null,
 "lunch_ends_at": string,
 "lunch_starts_at": string,
 "name": string | null,
@@ -1232,7 +1239,10 @@ isOneToOne: false
 "created_by": string | null,
 "dinner_ends_at": string,
 "dinner_starts_at": string,
+"favicon_url": string | null,
 "id": boolean,
+"logo_dark_url": string | null,
+"logo_light_url": string | null,
 "lunch_ends_at": string,
 "lunch_starts_at": string,
 "name": string | null,
