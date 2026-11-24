@@ -1,11 +1,12 @@
+import { t } from "../i18n";
 import type { StatusVariant } from "../components/ui/StatusBadge";
 
 export type FeedbackKind = "suggestion" | "bug" | "other";
 
 export const feedbackKindOptions: Array<{ value: FeedbackKind; label: string; hint: string }> = [
-  { value: "bug", label: "Erro", hint: "Algo não funciona como deveria" },
-  { value: "suggestion", label: "Sugestão", hint: "Uma ideia ou melhoria" },
-  { value: "other", label: "Outro", hint: "Dúvida ou comentário" },
+  { value: "bug", get label() { return t("opt.feedbackKindOptions.bug"); }, get hint() { return t("opt.feedbackKindOptions.bug.hint"); } },
+  { value: "suggestion", get label() { return t("opt.feedbackKindOptions.suggestion"); }, get hint() { return t("opt.feedbackKindOptions.suggestion.hint"); } },
+  { value: "other", get label() { return t("opt.feedbackKindOptions.other"); }, get hint() { return t("opt.feedbackKindOptions.other.hint"); } },
 ];
 
 export function getFeedbackKindLabel(kind: FeedbackKind) {
@@ -21,11 +22,11 @@ export function getFeedbackKindVariant(kind: FeedbackKind): StatusVariant {
 export type FeedbackStatus = "new" | "seen" | "planned" | "done" | "dismissed";
 
 export const feedbackStatusOptions: Array<{ value: FeedbackStatus; label: string }> = [
-  { value: "new", label: "Nova" },
-  { value: "seen", label: "Vista" },
-  { value: "planned", label: "Planejada" },
-  { value: "done", label: "Resolvida" },
-  { value: "dismissed", label: "Descartada" },
+  { value: "new", get label() { return t("opt.feedbackStatusOptions.new"); } },
+  { value: "seen", get label() { return t("opt.feedbackStatusOptions.seen"); } },
+  { value: "planned", get label() { return t("opt.feedbackStatusOptions.planned"); } },
+  { value: "done", get label() { return t("opt.feedbackStatusOptions.done"); } },
+  { value: "dismissed", get label() { return t("opt.feedbackStatusOptions.dismissed"); } },
 ];
 
 export function getFeedbackStatusLabel(status: FeedbackStatus) {

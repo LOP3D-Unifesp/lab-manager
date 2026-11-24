@@ -1,13 +1,14 @@
+import { t } from "../i18n";
 import type { StatusVariant } from "../components/ui/StatusBadge";
 
 export type ProjectStatus = "planning" | "active" | "paused" | "completed" | "archived";
 
 export const projectStatusOptions: Array<{ value: ProjectStatus; label: string }> = [
-  { value: "planning", label: "Planejamento" },
-  { value: "active", label: "Em andamento" },
-  { value: "paused", label: "Pausado" },
-  { value: "completed", label: "Concluído" },
-  { value: "archived", label: "Arquivado" },
+  { value: "planning", get label() { return t("opt.projectStatusOptions.planning"); } },
+  { value: "active", get label() { return t("opt.projectStatusOptions.active"); } },
+  { value: "paused", get label() { return t("opt.projectStatusOptions.paused"); } },
+  { value: "completed", get label() { return t("opt.projectStatusOptions.completed"); } },
+  { value: "archived", get label() { return t("opt.projectStatusOptions.archived"); } },
 ];
 
 export function getProjectStatusLabel(status: ProjectStatus) {
@@ -29,13 +30,13 @@ export function isProjectOpen(status: ProjectStatus) {
 export type FundingCategory = "capital" | "custeio" | "bolsas" | "passagens" | "diarias" | "reserva_tecnica" | "outros";
 
 export const fundingCategoryOptions: Array<{ value: FundingCategory; label: string; hint: string }> = [
-  { value: "capital", label: "Capital", hint: "Equipamentos e material permanente" },
-  { value: "custeio", label: "Custeio", hint: "Material de consumo e serviços" },
-  { value: "bolsas", label: "Bolsas", hint: "Bolsas de estudo e pesquisa" },
-  { value: "passagens", label: "Passagens", hint: "Passagens aéreas e terrestres" },
-  { value: "diarias", label: "Diárias", hint: "Hospedagem, alimentação e deslocamento" },
-  { value: "reserva_tecnica", label: "Reserva técnica", hint: "Reserva técnica e benefício institucional" },
-  { value: "outros", label: "Outros", hint: "Demais rubricas" },
+  { value: "capital", get label() { return t("opt.fundingCategoryOptions.capital"); }, get hint() { return t("opt.fundingCategoryOptions.capital.hint"); } },
+  { value: "custeio", get label() { return t("opt.fundingCategoryOptions.custeio"); }, get hint() { return t("opt.fundingCategoryOptions.custeio.hint"); } },
+  { value: "bolsas", get label() { return t("opt.fundingCategoryOptions.bolsas"); }, get hint() { return t("opt.fundingCategoryOptions.bolsas.hint"); } },
+  { value: "passagens", get label() { return t("opt.fundingCategoryOptions.passagens"); }, get hint() { return t("opt.fundingCategoryOptions.passagens.hint"); } },
+  { value: "diarias", get label() { return t("opt.fundingCategoryOptions.diarias"); }, get hint() { return t("opt.fundingCategoryOptions.diarias.hint"); } },
+  { value: "reserva_tecnica", get label() { return t("opt.fundingCategoryOptions.reserva_tecnica"); }, get hint() { return t("opt.fundingCategoryOptions.reserva_tecnica.hint"); } },
+  { value: "outros", get label() { return t("opt.fundingCategoryOptions.outros"); }, get hint() { return t("opt.fundingCategoryOptions.outros.hint"); } },
 ];
 
 export function getFundingCategoryLabel(category: FundingCategory) {
@@ -169,10 +170,10 @@ export function getProjectErrorMessage(error: unknown) {
 export type TaskStatus = "todo" | "in_progress" | "review" | "done";
 
 export const taskStatusOptions: Array<{ value: TaskStatus; label: string }> = [
-  { value: "todo", label: "A fazer" },
-  { value: "in_progress", label: "Em andamento" },
-  { value: "review", label: "Em revisão" },
-  { value: "done", label: "Concluído" },
+  { value: "todo", get label() { return t("opt.taskStatusOptions.todo"); } },
+  { value: "in_progress", get label() { return t("opt.taskStatusOptions.in_progress"); } },
+  { value: "review", get label() { return t("opt.taskStatusOptions.review"); } },
+  { value: "done", get label() { return t("opt.taskStatusOptions.done"); } },
 ];
 
 export function getTaskStatusLabel(status: TaskStatus) {

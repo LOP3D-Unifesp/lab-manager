@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 export type PeriodoId = string;
 export type ProfileRole = "coordinator" | "researcher";
 export type WorkMode = "onsite" | "remote" | "aula";
@@ -73,7 +74,7 @@ export function getEffectiveWeeklyHours(
 }
 
 export function getRoleLabel(role: ProfileRole) {
-  return role === "coordinator" ? "Coordenador" : "Pesquisador";
+  return t(role === "coordinator" ? "role.coordinator" : "role.researcher");
 }
 
 export function normalizarTextoOpcional(value: string) {
@@ -100,9 +101,9 @@ export function validarLattes(value: string | null) {
 }
 
 export function getWorkModeLabel(mode: WorkMode | undefined) {
-  if (mode === "onsite") return "Presencial";
-  if (mode === "remote") return "Home office";
-  if (mode === "aula") return "Aula";
+  if (mode === "onsite") return t("workMode.onsite");
+  if (mode === "remote") return t("workMode.remote");
+  if (mode === "aula") return t("workMode.aula");
   return "-";
 }
 
@@ -802,27 +803,9 @@ export function getProximosStatusReserva(status: BookingStatus): BookingStatus[]
 }
 
 export function getEquipmentStatusLabel(status: EquipmentStatus) {
-  const labels: Record<EquipmentStatus, string> = {
-    active: "Ativa",
-    stopped: "Parado",
-    maintenance: "Em manutenção",
-    unavailable: "Indisponivel",
-    disabled: "Desativada",
-  };
-
-  return labels[status];
+  return t(`equipmentStatus.${status}`);
 }
 
 export function getBookingStatusLabel(status: BookingStatus) {
-  const labels: Record<BookingStatus, string> = {
-    pending: "Pendente",
-    approved: "Aprovada",
-    in_progress: "Em andamento",
-    completed: "Concluída",
-    cancelled: "Cancelada",
-    rejected: "Rejeitada",
-    failed: "Falhou",
-  };
-
-  return labels[status];
+  return t(`bookingStatus.${status}`);
 }

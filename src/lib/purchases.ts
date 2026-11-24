@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import type { StatusVariant } from "../components/ui/StatusBadge";
 import { fundingCategoryOptions, type FundingCategory } from "./projects";
 
@@ -5,7 +6,7 @@ import { fundingCategoryOptions, type FundingCategory } from "./projects";
 export const purchaseCategoryOptions = fundingCategoryOptions.filter((option) => option.value !== "bolsas");
 
 export function getPurchaseCategoryLabel(category: FundingCategory | null) {
-  return category ? (fundingCategoryOptions.find((option) => option.value === category)?.label ?? category) : "Sem rubrica";
+  return category ? (fundingCategoryOptions.find((option) => option.value === category)?.label ?? category) : t("funding.noCategory");
 }
 
 // Pedido sem projeto: compra para o estoque geral do laboratório (a mesma ideia do Inventário).
@@ -15,9 +16,9 @@ export const GENERAL_STOCK_LABEL = "Estoque geral do laboratório";
 export type PurchaseUrgency = "low" | "normal" | "urgent";
 
 export const purchaseUrgencyOptions: Array<{ value: PurchaseUrgency; label: string; hint: string }> = [
-  { value: "low", label: "Baixa", hint: "Sem pressa" },
-  { value: "normal", label: "Normal", hint: "Para as próximas semanas" },
-  { value: "urgent", label: "Urgente", hint: "Está parando o trabalho" },
+  { value: "low", get label() { return t("opt.purchaseUrgencyOptions.low"); }, get hint() { return t("opt.purchaseUrgencyOptions.low.hint"); } },
+  { value: "normal", get label() { return t("opt.purchaseUrgencyOptions.normal"); }, get hint() { return t("opt.purchaseUrgencyOptions.normal.hint"); } },
+  { value: "urgent", get label() { return t("opt.purchaseUrgencyOptions.urgent"); }, get hint() { return t("opt.purchaseUrgencyOptions.urgent.hint"); } },
 ];
 
 export function getPurchaseUrgencyLabel(urgency: PurchaseUrgency) {
@@ -33,12 +34,12 @@ export function getPurchaseUrgencyVariant(urgency: PurchaseUrgency): StatusVaria
 export type PurchaseStatus = "requested" | "approved" | "rejected" | "purchased" | "delivered" | "cancelled";
 
 export const purchaseStatusOptions: Array<{ value: PurchaseStatus; label: string }> = [
-  { value: "requested", label: "Solicitado" },
-  { value: "approved", label: "Aprovado" },
-  { value: "purchased", label: "Comprado" },
-  { value: "delivered", label: "Entregue" },
-  { value: "rejected", label: "Recusado" },
-  { value: "cancelled", label: "Cancelado" },
+  { value: "requested", get label() { return t("opt.purchaseStatusOptions.requested"); } },
+  { value: "approved", get label() { return t("opt.purchaseStatusOptions.approved"); } },
+  { value: "purchased", get label() { return t("opt.purchaseStatusOptions.purchased"); } },
+  { value: "delivered", get label() { return t("opt.purchaseStatusOptions.delivered"); } },
+  { value: "rejected", get label() { return t("opt.purchaseStatusOptions.rejected"); } },
+  { value: "cancelled", get label() { return t("opt.purchaseStatusOptions.cancelled"); } },
 ];
 
 export function getPurchaseStatusLabel(status: PurchaseStatus) {

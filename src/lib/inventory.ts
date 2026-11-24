@@ -1,13 +1,14 @@
+import { t } from "../i18n";
 import type { StatusVariant } from "../components/ui/StatusBadge";
 
 export type MaterialCategory = "filament" | "resin" | "powder" | "other";
 export type MaterialUnit = "g" | "ml";
 
 export const materialCategoryOptions: Array<{ value: MaterialCategory; label: string; defaultUnit: MaterialUnit }> = [
-  { value: "filament", label: "Filamento", defaultUnit: "g" },
-  { value: "resin", label: "Resina", defaultUnit: "ml" },
-  { value: "powder", label: "Pó", defaultUnit: "g" },
-  { value: "other", label: "Outro", defaultUnit: "g" },
+  { value: "filament", get label() { return t("opt.materialCategoryOptions.filament"); }, defaultUnit: "g" },
+  { value: "resin", get label() { return t("opt.materialCategoryOptions.resin"); }, defaultUnit: "ml" },
+  { value: "powder", get label() { return t("opt.materialCategoryOptions.powder"); }, defaultUnit: "g" },
+  { value: "other", get label() { return t("opt.materialCategoryOptions.other"); }, defaultUnit: "g" },
 ];
 
 export function getMaterialCategoryLabel(category: MaterialCategory) {
@@ -26,10 +27,10 @@ export type CatalogMaterial = {
 export type SpoolStatus = "sealed" | "in_use" | "empty" | "discarded";
 
 export const spoolStatusOptions: Array<{ value: SpoolStatus; label: string }> = [
-  { value: "sealed", label: "Lacrado" },
-  { value: "in_use", label: "Em uso" },
-  { value: "empty", label: "Vazio" },
-  { value: "discarded", label: "Descartado" },
+  { value: "sealed", get label() { return t("opt.spoolStatusOptions.sealed"); } },
+  { value: "in_use", get label() { return t("opt.spoolStatusOptions.in_use"); } },
+  { value: "empty", get label() { return t("opt.spoolStatusOptions.empty"); } },
+  { value: "discarded", get label() { return t("opt.spoolStatusOptions.discarded"); } },
 ];
 
 export function getSpoolStatusLabel(status: SpoolStatus) {

@@ -1,3 +1,5 @@
+import { dictionaries, type MessageKey } from "../i18n/catalog";
+import { t } from "../i18n";
 import { useEffect, useState } from "react";
 
 import { getFundingGrantLabels, type AvailabilitySlot } from "./domain";
@@ -21,21 +23,9 @@ export type Pesquisador = {
 };
 
 function getVinculoLabel(value: string | null) {
-  const labels: Record<string, string> = {
-    ic: "IC",
-    extension: "Extensao",
-    intern: "Estagiario",
-    tcc: "TCC",
-    masters: "Mestrado",
-    phd: "Doutorado",
-    postdoc: "Pos-doutorado",
-    visitor: "Visitante",
-    technician: "Tecnico",
-    faculty: "Docente",
-    other: "Outro",
-  };
-
-  return value ? labels[value] ?? value : "Não informado";
+  if (!value) return t("common.notInformed");
+  const key = `affiliation.${value}`;
+  return key in dictionaries["pt-BR"] ? t(key as MessageKey) : value;
 }
 
 function getStatusPresenca(

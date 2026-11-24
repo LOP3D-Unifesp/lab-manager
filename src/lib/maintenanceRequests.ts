@@ -1,11 +1,12 @@
+import { t } from "../i18n";
 import type { StatusVariant } from "../components/ui/StatusBadge";
 
 export type MaintenanceUrgency = "low" | "normal" | "urgent";
 
 export const maintenanceUrgencyOptions: Array<{ value: MaintenanceUrgency; label: string; hint: string }> = [
-  { value: "low", label: "Baixa", hint: "Pode esperar" },
-  { value: "normal", label: "Normal", hint: "Atrapalha, mas dá para usar" },
-  { value: "urgent", label: "Urgente", hint: "Parou ou é perigoso" },
+  { value: "low", get label() { return t("opt.maintenanceUrgencyOptions.low"); }, get hint() { return t("opt.maintenanceUrgencyOptions.low.hint"); } },
+  { value: "normal", get label() { return t("opt.maintenanceUrgencyOptions.normal"); }, get hint() { return t("opt.maintenanceUrgencyOptions.normal.hint"); } },
+  { value: "urgent", get label() { return t("opt.maintenanceUrgencyOptions.urgent"); }, get hint() { return t("opt.maintenanceUrgencyOptions.urgent.hint"); } },
 ];
 
 export function getMaintenanceUrgencyLabel(urgency: MaintenanceUrgency) {
@@ -21,11 +22,11 @@ export function getMaintenanceUrgencyVariant(urgency: MaintenanceUrgency): Statu
 export type MaintenanceRequestStatus = "open" | "in_progress" | "waiting_part" | "resolved" | "cancelled";
 
 export const maintenanceRequestStatusOptions: Array<{ value: MaintenanceRequestStatus; label: string }> = [
-  { value: "open", label: "Aberto" },
-  { value: "in_progress", label: "Em andamento" },
-  { value: "waiting_part", label: "Aguardando peça" },
-  { value: "resolved", label: "Resolvido" },
-  { value: "cancelled", label: "Cancelado" },
+  { value: "open", get label() { return t("opt.maintenanceRequestStatusOptions.open"); } },
+  { value: "in_progress", get label() { return t("opt.maintenanceRequestStatusOptions.in_progress"); } },
+  { value: "waiting_part", get label() { return t("opt.maintenanceRequestStatusOptions.waiting_part"); } },
+  { value: "resolved", get label() { return t("opt.maintenanceRequestStatusOptions.resolved"); } },
+  { value: "cancelled", get label() { return t("opt.maintenanceRequestStatusOptions.cancelled"); } },
 ];
 
 export function getMaintenanceRequestStatusLabel(status: MaintenanceRequestStatus) {
