@@ -31,7 +31,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
       <div className="flex min-h-screen flex-col lg:pl-80">
         <div className="sticky top-0 z-20 hidden items-center justify-end gap-3 border-b border-border bg-surface/95 px-10 py-2 backdrop-blur lg:flex">
-          <LanguageSelect className="w-48" />
+          <LanguageSelect />
           <ThemeToggle compact />
           <NotificationBell />
         </div>
