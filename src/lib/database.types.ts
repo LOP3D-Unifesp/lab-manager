@@ -419,6 +419,26 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"notification_preferences": {
+                  Row: {
+                    "in_app": boolean,"profile_id": string,"push": boolean,"topic": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "in_app"?: boolean,"profile_id": string,"push"?: boolean,"topic": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "in_app"?: boolean,"profile_id"?: string,"push"?: boolean,"topic"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "notification_preferences_profile_id_fkey"
+      columns: ["profile_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"notifications": {
                   Row: {
                     "created_at": string,"entity_id": string | null,"id": string,"link": string | null,"params": NonNullable<Json>,"read_at": string | null,"recipient_id": string,"type": string

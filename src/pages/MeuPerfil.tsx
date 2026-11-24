@@ -2,6 +2,7 @@ import { t } from "../i18n";
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { CalendarDays, Save, UserRoundCog, Utensils } from "lucide-react";
 
+import { NotificationPreferences } from "../components/profile/NotificationPreferences";
 import { WorkloadField } from "../components/profile/WorkloadField";
 import { Avatar } from "../components/ui/Avatar";
 import { Button } from "../components/ui/Button";
@@ -1000,6 +1001,10 @@ export function MeuPerfil() {
           </Button>
         </div>
       </form>
+
+      <div className="mt-5">
+        <NotificationPreferences />
+      </div>
     </div>
   );
 }

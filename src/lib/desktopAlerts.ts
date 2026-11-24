@@ -1,4 +1,3 @@
-import type { MaintenanceUrgency } from "./maintenanceRequests";
 import { subscribeToPush, unsubscribeFromPush } from "./push";
 
 const STORAGE_KEY = "avisos-no-computador";
@@ -78,15 +77,6 @@ export async function releasePushSubscription() {
 // Só vale a pena avisar fora do app: com a aba em foco o selo e o sino já mostram.
 export function shouldShowDesktopAlert() {
   return getDesktopAlertState() === "on" && !isPushActive() && (document.hidden || !document.hasFocus());
-}
-
-export function describeNewRequest(request: { urgency: MaintenanceUrgency; description: string }, equipmentName: string | null) {
-  const where = equipmentName ?? "um equipamento";
-  const text = request.description.trim();
-  return {
-    title: request.urgency === "urgent" ? `Chamado urgente: ${where}` : `Novo chamado: ${where}`,
-    body: text.length > 140 ? `${text.slice(0, 137)}...` : text,
-  };
 }
 
 export function showDesktopAlert(params: { title: string; body: string; path: string; tag: string }) {
