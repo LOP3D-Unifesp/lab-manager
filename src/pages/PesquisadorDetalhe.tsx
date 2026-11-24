@@ -17,7 +17,8 @@ import {
   type PublicProfile,
 } from "../lib/domain";
 import { getStatusPresenca, getVinculoLabel, type StatusPresenca } from "../lib/pesquisadores";
-import { getProfile, listAvailability, listProfileSkills, listSkills } from "../lib/supabaseRepository";
+import { getProjectStatusLabel, getProjectStatusVariant, type ProjectDirectoryEntry } from "../lib/projects";
+import { getProfile, listAvailability, listProfileSkills, listProjectDirectory, listSkills } from "../lib/supabaseRepository";
 
 const presenceVariants: Record<StatusPresenca, "success" | "info" | "warning" | "neutral"> = {
   Presente: "success",
@@ -26,7 +27,7 @@ const presenceVariants: Record<StatusPresenca, "success" | "info" | "warning" | 
   Ausente: "neutral",
 };
 
-type Loaded = { profile: PublicProfile; slots: AvailabilitySlot[]; skills: string[] };
+type Loaded = { profile: PublicProfile; slots: AvailabilitySlot[]; skills: string[]; projects: ProjectDirectoryEntry[] };
 
 function countryName(code: string | null) {
   if (!code) return null;
@@ -66,12 +67,14 @@ export function PesquisadorDetalhe() {
     (async () => {
       const profile = await getProfile(id);
       if (!profile) return null;
-      const [slots, links, skills] = await Promise.all([listAvailability(id), listProfileSkills(id), listSkills()]);
+      const [slots, links, skills, directory] = await Promise.all([listAvailability(id), listProfileSkills(id), listSkills(), listProjectDirectory()]);
       const mine = new Set(links.map((link) => link.skill_id));
       return {
         profile,
         slots,
         skills: skills.filter((skill) => mine.has(skill.id)).map((skill) => localizedName(skill)),
+        // Projetos em que a pessoa participa (o resumo é visível para todos).
+        projects: directory.filter((entry) => entry.members.some((member) => member.profile_id === id)),
       };
     })()
       .then((loaded) => ativo && setData(loaded))
@@ -121,7 +124,7 @@ export function PesquisadorDetalhe() {
     );
   }
 
-  const { profile, skills, slots } = data;
+  const { profile, projects, skills, slots } = data;
   const grants = profile.funding_grants;
   const grantHours = getTotalWeeklyGrantHours(grants);
   const nationality = countryName(profile.nationality_country_code);
@@ -240,6 +243,27 @@ export function PesquisadorDetalhe() {
           {grants.length > 1 && grantHours > 0 ? (
             <p className="mt-3 text-sm font-semibold text-muted">{t("researcher.grantTotal", { hours: grantHours })}</p>
           ) : null}
+        </Card>
+
+        <Card className="min-w-0 p-4 sm:p-5 lg:col-span-2">
+          <h3 className="mb-3 text-lg font-bold text-text">{t("researcher.projects")}</h3>
+          {projects.length > 0 ? (
+            <ul className="grid gap-2 sm:grid-cols-2">
+              {projects.map((project) => (
+                <li key={project.id}>
+                  <Link
+                    className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2 transition hover:border-primary"
+                    to={`/projetos/${project.id}`}
+                  >
+                    <span className="min-w-0 break-words font-bold text-text">{project.name}</span>
+                    <StatusBadge label={getProjectStatusLabel(project.status)} variant={getProjectStatusVariant(project.status)} />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-base text-muted">{t("researcher.noProjects")}</p>
+          )}
         </Card>
 
         <Card className="min-w-0 p-4 sm:p-5 lg:col-span-2">
