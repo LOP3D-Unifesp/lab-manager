@@ -18,7 +18,7 @@ export const nav = {
   "nav.mobile./projetos": { pt: "Projetos", en: "Projects", es: "Proyectos" },
   "nav.desktop./habilidades": { pt: "Habilidades", en: "Skills", es: "Habilidades" },
   "nav.mobile./habilidades": { pt: "Habilidades", en: "Skills", es: "Habilidades" },
-  "nav.desktop./agenda": { pt: "Agenda do Laboratório", en: "Lab schedule", es: "Agenda del laboratorio" },
+  "nav.desktop./agenda": { pt: "Agenda", en: "Schedule", es: "Agenda" },
   "nav.mobile./agenda": { pt: "Agenda", en: "Schedule", es: "Agenda" },
   "nav.desktop./equipamentos": { pt: "Equipamentos", en: "Equipment", es: "Equipos" },
   "nav.mobile./equipamentos": { pt: "Equipamentos", en: "Equipment", es: "Equipos" },

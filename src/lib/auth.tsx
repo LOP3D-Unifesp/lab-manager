@@ -10,6 +10,7 @@ import {
 import type { Session, User } from "@supabase/supabase-js";
 
 import { supabase } from "./supabaseClient";
+import { LAB_SETTINGS_COLUMNS } from "./supabaseRepository";
 import { mergeMyProfile, type LabSettings, type MyProfile, type PublicProfile } from "./domain";
 import type { Tables } from "./database.types";
 
@@ -91,9 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!labSettings) setInstallationLoading(true);
     const { data, error } = await supabase
       .from("lab_settings")
-      .select(
-        "id, name, acronym, timezone, workspace_capacity, operating_weekdays, lunch_starts_at, lunch_ends_at, dinner_starts_at, dinner_ends_at, privacy_contact_email, setup_completed_at, created_by, updated_by, created_at, updated_at",
-      )
+      .select(LAB_SETTINGS_COLUMNS)
       .eq("id", true)
       .maybeSingle();
 

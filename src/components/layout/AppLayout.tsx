@@ -6,6 +6,8 @@ import { MobileNavigation } from "./MobileNavigation";
 import { Sidebar } from "./Sidebar";
 import { MobileAccountMenu } from "./MobileAccountMenu";
 import { EnvironmentBadge } from "./EnvironmentBadge";
+import { LanguageSelect } from "../ui/LanguageSelect";
+import { ThemeToggle } from "../ui/ThemeToggle";
 import { NotificationBell } from "./NotificationBell";
 import { BookingsAlertProvider } from "../../lib/pendingBookingsAlert";
 import { useAuth } from "../../lib/auth";
@@ -27,7 +29,13 @@ export function AppLayout({ children }: AppLayoutProps) {
     <div className="min-h-screen bg-background text-text">
       <Sidebar />
 
-      <div className="flex min-h-screen flex-col lg:pl-72">
+      <div className="flex min-h-screen flex-col lg:pl-80">
+        <div className="sticky top-0 z-20 hidden items-center justify-end gap-3 border-b border-border bg-surface/95 px-10 py-2 backdrop-blur lg:flex">
+          <LanguageSelect />
+          <ThemeToggle compact />
+          <NotificationBell />
+        </div>
+
         <header className="sticky top-0 z-20 border-b border-border bg-surface/95 px-4 py-2.5 backdrop-blur lg:hidden">
           <div className="flex items-center justify-between gap-3">
             <Link

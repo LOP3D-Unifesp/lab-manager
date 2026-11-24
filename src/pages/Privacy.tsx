@@ -1,5 +1,6 @@
 import { t } from "../i18n";
 import { BrandMark, BrandStripe } from "../components/ui/BrandMark";
+import { LabLogo } from "../components/ui/LabLogo";
 import { LanguageSelect } from "../components/ui/LanguageSelect";
 import { useEffect, useState } from "react";
 import { Database, Mail, ShieldCheck, TimerReset } from "lucide-react";
@@ -19,7 +20,7 @@ export function Privacy() {
       <div className="px-5 pb-8">
       <div className="mx-auto mb-4 flex w-full max-w-3xl justify-end"><LanguageSelect /></div>
       <article className="mx-auto w-full max-w-3xl">
-        <BrandMark className="text-3xl" text={lab?.acronym ?? "Lab Manager"} />
+        <LabLogo alt={lab?.name ?? t("logo.alt")} className="h-14 max-w-[14rem]" favicon fallback={<BrandMark className="text-3xl" text={lab?.acronym ?? "Lab Manager"} />} logos={lab} />
         <h1 className="mt-2 text-4xl font-bold">{t("privacy.title")}</h1>
         <p className="mt-4 text-lg leading-8 text-muted">{t("privacy.intro", { lab: lab?.name ?? t("privacy.labFallback") })}</p>
         <div className="mt-8 grid gap-4 sm:grid-cols-2">

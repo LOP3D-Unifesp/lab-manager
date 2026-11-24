@@ -9,7 +9,7 @@ const options: { value: ThemePreference; label: MessageKey; short: MessageKey; I
   { value: "dark", label: "theme.darkTitle", short: "theme.dark", Icon: Moon },
 ];
 
-export function ThemeToggle({ className = "" }: { className?: string }) {
+export function ThemeToggle({ className = "", compact = false }: { className?: string; compact?: boolean }) {
   const { preference, setPreference } = useTheme();
   const t = useT();
 
@@ -17,7 +17,7 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
     <div
       role="radiogroup"
       aria-label={t("theme.label")}
-      className={["flex rounded-lg border border-border bg-background p-0.5", className].join(" ")}
+      className={["flex shrink-0 rounded-lg border border-border bg-background p-0.5", className].join(" ")}
     >
       {options.map(({ value, label, short, Icon }) => {
         const active = preference === value;
@@ -31,12 +31,14 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
             title={t(label)}
             onClick={() => setPreference(value)}
             className={[
-              "inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md px-2.5 text-sm font-semibold transition",
+              compact
+                ? "inline-flex h-10 w-10 items-center justify-center rounded-md transition"
+                : "inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md px-2.5 text-sm font-semibold transition",
               active ? "bg-surface text-primary shadow-soft" : "text-muted hover:text-text",
             ].join(" ")}
           >
             <Icon className="h-4 w-4" aria-hidden="true" />
-            {t(short)}
+            {compact ? null : t(short)}
           </button>
         );
       })}

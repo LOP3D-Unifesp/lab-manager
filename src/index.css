@@ -61,6 +61,41 @@
   box-sizing: border-box;
 }
 
+/* Barras de rolagem finas e discretas, no tema atual. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--c-muted) / 0.45) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgb(var(--c-muted) / 0.4);
+  border-radius: 9999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--c-muted) / 0.65);
+}
+
+/* Listas suspensas (select) com a seta afastada da borda, igual em todos os navegadores e nos dois temas. */
+select:not([multiple]):not([size]) {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238a97a8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.9rem center;
+  background-size: 1rem;
+  padding-right: 2.75rem;
+}
+
 html {
   min-height: 100%;
   background: rgb(var(--c-background));

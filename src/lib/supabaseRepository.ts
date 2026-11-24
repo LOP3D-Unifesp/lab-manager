@@ -314,12 +314,65 @@ export async function uploadMyAvatar(file: File) {
   return (data as { avatar_url: string | null }).avatar_url;
 }
 
+export type LogoVariant = "light" | "dark" | "favicon";
+export const LAB_LOGO_MAX_BYTES = 2 * 1024 * 1024;
+const LAB_LOGO_EXTENSIONS: Record<string, string> = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/webp": "webp",
+  "image/svg+xml": "svg",
+};
+
+// Sobe o logo de uma versão (clara ou escura) e aponta `lab_settings` para ele. Só coordenadores (RLS + RPC).
+export async function validateLabLogoFile(file: File) {
+  if (!LAB_LOGO_EXTENSIONS[file.type]) throw new Error(t("logo.errType"));
+  if (file.size > LAB_LOGO_MAX_BYTES) throw new Error(t("logo.errSize"));
+  if (file.type === "image/svg+xml") {
+    // O SVG só é exibido como <img> (que não executa script); esta checagem é uma camada extra, não a proteção.
+    const text = await file.text();
+    if (/<script|\son[a-z]+\s*=|javascript:/i.test(text)) throw new Error(t("logo.errSvg"));
+  }
+}
+
+export async function uploadLabLogo(variant: LogoVariant, file: File) {
+  await validateLabLogoFile(file);
+  const extension = LAB_LOGO_EXTENSIONS[file.type];
+
+  const storage = client().storage.from("lab-logo");
+  const path = `logo-${variant}.${extension}`;
+  // Remove versões antigas com outra extensão para não sobrar arquivo órfão.
+  const others = Object.values(LAB_LOGO_EXTENSIONS)
+    .filter((item) => item !== extension)
+    .map((item) => `logo-${variant}.${item}`);
+  await storage.remove(others);
+
+  const { error: uploadError } = await storage.upload(path, file, { upsert: true, contentType: file.type });
+  throwIfError(uploadError);
+
+  const { data: publicUrlData } = storage.getPublicUrl(path);
+  const { error } = await client().rpc("set_lab_logo", {
+    p_variant: variant,
+    p_url: `${publicUrlData.publicUrl}?v=${Date.now()}`,
+  });
+  throwIfError(error);
+}
+
+export async function removeLabLogo(variant: LogoVariant) {
+  const { error } = await client().rpc("set_lab_logo", { p_variant: variant, p_url: null as unknown as string });
+  throwIfError(error);
+  await client()
+    .storage.from("lab-logo")
+    .remove(Object.values(LAB_LOGO_EXTENSIONS).map((item) => `logo-${variant}.${item}`));
+}
+
+// Colunas de `lab_settings` lidas pelo app (usada aqui e em src/lib/auth.tsx, para não divergirem).
+export const LAB_SETTINGS_COLUMNS =
+  "id, name, acronym, timezone, workspace_capacity, operating_weekdays, lunch_starts_at, lunch_ends_at, dinner_starts_at, dinner_ends_at, privacy_contact_email, logo_light_url, logo_dark_url, favicon_url, setup_completed_at, created_by, updated_by, created_at, updated_at";
+
 export async function getInstallationState(): Promise<InstallationState> {
   const { data, error } = await client()
     .from("lab_settings")
-    .select(
-      "id, name, acronym, timezone, workspace_capacity, operating_weekdays, lunch_starts_at, lunch_ends_at, dinner_starts_at, dinner_ends_at, privacy_contact_email, setup_completed_at, created_by, updated_by, created_at, updated_at",
-    )
+    .select(LAB_SETTINGS_COLUMNS)
     .eq("id", true)
     .maybeSingle();
 

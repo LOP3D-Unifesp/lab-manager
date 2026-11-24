@@ -6,6 +6,7 @@ import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { LanguageSelect } from "../components/ui/LanguageSelect";
 import { BRAND_COLORS, BrandMark, BrandStripe } from "../components/ui/BrandMark";
+import { LabLogo, usePublicLabIdentity } from "../components/ui/LabLogo";
 import { ThemeToggle } from "../components/ui/ThemeToggle";
 import { useT } from "../i18n";
 import { useAuth } from "../lib/auth";
@@ -15,6 +16,7 @@ import { supabaseConfigurationError } from "../lib/supabaseClient";
 export function Login() {
   const { authConfigured, loading, session, signIn } = useAuth();
   const t = useT();
+  const identity = usePublicLabIdentity();
   const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -49,10 +51,10 @@ export function Login() {
   }
 
   return (
-    <main className="min-h-screen bg-background text-text lg:grid lg:grid-cols-[1fr_minmax(28rem,34rem)]">
-      <aside className="relative hidden flex-col justify-center overflow-hidden border-r border-border bg-surface px-16 lg:flex">
+    <main className="min-h-screen bg-background text-text lg:grid lg:grid-cols-2">
+      <aside className="relative hidden flex-col justify-center overflow-hidden border-r border-border bg-surface px-20 lg:flex xl:px-28">
         <BrandStripe className="absolute inset-x-0 top-0 h-2" />
-        <BrandMark className="text-7xl" />
+        <LabLogo alt={identity?.name ?? t("logo.alt")} className="h-28 max-w-sm self-start" favicon fallback={<BrandMark className="text-7xl" />} logos={identity} />
         <p className="font-display mt-3 text-3xl font-semibold text-muted">Lab Manager</p>
         <p className="mt-6 max-w-sm text-lg leading-7 text-muted">{t("brand.tagline2")}</p>
         <div aria-hidden="true" className="mt-12 grid max-w-xs grid-cols-4 gap-3">
@@ -61,28 +63,27 @@ export function Login() {
           ))}
         </div>
       </aside>
-      <div>
-        <BrandStripe className="mb-6 h-1.5 lg:hidden" />
-      <div className="px-5 pb-8">
-        <div className="mx-auto flex w-full max-w-md flex-wrap justify-end gap-2 lg:pt-8">
+      <div className="flex min-h-screen flex-col">
+        <BrandStripe className="h-1.5 lg:hidden" />
+        <div className="flex flex-wrap justify-end gap-2 px-6 pt-6 lg:px-12 lg:pt-8">
           <LanguageSelect />
           <ThemeToggle />
         </div>
-      <section className="mx-auto flex min-h-[calc(100vh-8rem)] w-full max-w-md flex-col justify-center">
+      <section className="mx-auto flex w-full max-w-xl flex-1 flex-col justify-center px-6 py-10 lg:px-12">
         <div className="mb-6 lg:hidden">
-          <BrandMark className="text-3xl" />
+          <LabLogo alt={identity?.name ?? t("logo.alt")} className="h-14 max-w-[14rem]" fallback={<BrandMark className="text-3xl" />} logos={identity} />
           <h1 className="mt-1 text-[28px] font-bold leading-tight">
             Lab Manager
           </h1>
         </div>
 
-        <Card>
-          <div className="mb-5 flex items-center gap-3">
+        <Card className="p-7 sm:p-10">
+          <div className="mb-6 flex items-center gap-4">
             <div className="inline-flex h-11 w-11 items-center justify-center rounded-lg bg-primary-soft text-primary">
               <Lock className="h-5 w-5" aria-hidden="true" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold">{t("login.title")}</h2>
+              <h2 className="text-3xl font-bold">{t("login.title")}</h2>
               <p className="mt-1 text-base text-muted">
                 {t("login.subtitle")}
               </p>
@@ -96,12 +97,12 @@ export function Login() {
             </p>
           ) : null}
 
-          <form className="mt-5 grid gap-4" onSubmit={handleSubmit}>
+          <form className="mt-6 grid gap-5" onSubmit={handleSubmit}>
             <label className="grid gap-2 text-base font-semibold">
               {t("login.email")}
               <input
                 autoComplete="email"
-                className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
+                className="min-h-12 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
                 disabled={!authConfigured || submitting}
                 onChange={(event) => setEmail(event.target.value)}
                 required
@@ -114,7 +115,7 @@ export function Login() {
               {t("login.password")}
               <input
                 autoComplete="current-password"
-                className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
+                className="min-h-12 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
                 disabled={!authConfigured || submitting}
                 onChange={(event) => setPassword(event.target.value)}
                 required
@@ -130,6 +131,7 @@ export function Login() {
             ) : null}
 
             <Button
+              className="min-h-12 text-lg"
               disabled={!authConfigured || submitting}
               fullWidth
               type="submit"
@@ -140,7 +142,6 @@ export function Login() {
           </form>
         </Card>
       </section>
-      </div>
       </div>
     </main>
   );

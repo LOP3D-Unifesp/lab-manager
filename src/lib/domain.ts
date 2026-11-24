@@ -234,6 +234,9 @@ export type LabSettings = {
   dinner_starts_at: string;
   dinner_ends_at: string;
   privacy_contact_email: string | null;
+  logo_light_url?: string | null;
+  logo_dark_url?: string | null;
+  favicon_url?: string | null;
   setup_completed_at: string | null;
   created_by: string | null;
   updated_by: string | null;
@@ -246,6 +249,9 @@ export type PublicLabIdentity = {
   acronym: string;
   privacy_contact_email: string;
   invitation_ttl_hours: number;
+  logo_light_url?: string | null;
+  logo_dark_url?: string | null;
+  favicon_url?: string | null;
 };
 
 export type InvitationStage = "sent" | "opened" | "accepted" | "expired" | "revoked";

@@ -5,11 +5,9 @@ import { navLabelKey } from "../../i18n/navLabels";
 import { useAuth } from "../../lib/auth";
 import { navigationItems, navigationSectionLabels, type NavigationItem } from "../../lib/navigation";
 import { useAttention } from "./AttentionProvider";
-import { LanguageSelect } from "../ui/LanguageSelect";
-import { ThemeToggle } from "../ui/ThemeToggle";
+import { LabLogo } from "../ui/LabLogo";
 import { AuthUserMenu } from "./AuthUserMenu";
 import { EnvironmentBadge } from "./EnvironmentBadge";
-import { NotificationBell } from "./NotificationBell";
 
 function canShowDesktopItem(item: NavigationItem, role?: string) {
   return (
@@ -83,7 +81,7 @@ export function Sidebar() {
           : undefined;
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 border-r border-border bg-surface px-4 py-5 lg:block">
+    <aside className="fixed inset-y-0 left-0 z-30 hidden w-80 border-r border-border bg-surface px-4 py-5 lg:block">
       <div className="flex h-full min-h-0 flex-col">
         <div className="border-b border-border pb-5">
           <div className="flex items-start justify-between gap-2">
@@ -93,16 +91,23 @@ export function Sidebar() {
               className="block min-w-0 rounded-md transition hover:text-primary focus-visible:outline-offset-4"
             >
               <div className="flex items-center gap-2">
-                <p className="text-base font-bold leading-none text-primary">
-                  {labSettings?.acronym ?? "Lab"}
-                </p>
+                <LabLogo
+                  alt={labSettings?.name ?? t("logo.alt")}
+                  className="h-9 max-w-[9rem]"
+                  favicon
+                  logos={labSettings}
+                  fallback={
+                    <p className="text-base font-bold leading-none text-primary">
+                      {labSettings?.acronym ?? "Lab"}
+                    </p>
+                  }
+                />
                 <EnvironmentBadge />
               </div>
               <h1 className="font-display mt-1 truncate text-[24px] font-bold leading-tight text-text">
                 Lab Manager
               </h1>
             </Link>
-            <NotificationBell align="left" />
           </div>
           <p className="mt-2 text-sm font-semibold leading-5 text-muted">
             {labSettings?.name ?? t("sidebar.fallbackSubtitle")}
@@ -111,7 +116,7 @@ export function Sidebar() {
 
         <nav
           aria-label={t("nav.main")}
-          className="mt-5 min-h-0 flex-1 space-y-1 overflow-y-auto pr-1"
+          className="-mr-2 mt-5 min-h-0 flex-1 space-y-1 overflow-y-auto pr-2"
         >
           {visibleNavigationItems.map((item, index) => {
             const previousItem = visibleNavigationItems[index - 1];
@@ -134,8 +139,6 @@ export function Sidebar() {
         </nav>
 
         <div className="mt-5 border-t border-border pt-3">
-          <ThemeToggle className="mb-2 w-full" />
-          <LanguageSelect className="mb-3 w-full" />
           <AuthUserMenu />
         </div>
       </div>
