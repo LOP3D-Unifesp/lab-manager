@@ -1,4 +1,4 @@
-import { t } from "../i18n";
+import { getLocale, t } from "../i18n";
 import type { StatusVariant } from "../components/ui/StatusBadge";
 import { fundingCategoryOptions, type FundingCategory } from "./projects";
 
@@ -210,7 +210,7 @@ export function summarizeByProject(purchases: PurchaseRequest[]): ProjectPurchas
     }
     map.set(key, current);
   }
-  return [...map.values()].sort((a, b) => a.projectName.localeCompare(b.projectName, "pt-BR"));
+  return [...map.values()].sort((a, b) => a.projectName.localeCompare(b.projectName, getLocale()));
 }
 
 // Novidades de um pedido para quem o fez: só as etapas decididas pelo coordenador.
@@ -277,7 +277,7 @@ export function summarizeMaintenanceSpending(purchases: PurchaseRequest[]): Main
     group.count += 1;
     groups.set(name, group);
   }
-  total.byEquipment = [...groups.values()].sort((a, b) => b.paid + b.estimated - (a.paid + a.estimated) || a.name.localeCompare(b.name, "pt-BR"));
+  total.byEquipment = [...groups.values()].sort((a, b) => b.paid + b.estimated - (a.paid + a.estimated) || a.name.localeCompare(b.name, getLocale()));
   return total;
 }
 

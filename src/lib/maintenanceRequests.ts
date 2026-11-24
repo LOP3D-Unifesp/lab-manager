@@ -1,4 +1,4 @@
-import { t } from "../i18n";
+import { getLocale, t } from "../i18n";
 import type { StatusVariant } from "../components/ui/StatusBadge";
 
 export type MaintenanceUrgency = "low" | "normal" | "urgent";
@@ -126,7 +126,7 @@ export function orderRequests(requests: MaintenanceRequest[], sort: RequestSort)
   if (sort === "newest") return list.sort((a, b) => timeOf(b) - timeOf(a));
   if (sort === "oldest") return list.sort((a, b) => timeOf(a) - timeOf(b));
   if (sort === "equipment") {
-    return list.sort((a, b) => a.equipment_name.localeCompare(b.equipment_name, "pt-BR") || timeOf(b) - timeOf(a));
+    return list.sort((a, b) => a.equipment_name.localeCompare(b.equipment_name, getLocale()) || timeOf(b) - timeOf(a));
   }
   return list.sort(
     (a, b) => STATUS_RANK[a.status] - STATUS_RANK[b.status] || URGENCY_RANK[a.urgency] - URGENCY_RANK[b.urgency] || timeOf(a) - timeOf(b),

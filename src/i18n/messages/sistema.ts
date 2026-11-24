@@ -71,6 +71,11 @@ export const sistema = {
   "env.errUrl": { pt: "VITE_SUPABASE_URL não foi configurada.", en: "VITE_SUPABASE_URL was not configured.", es: "VITE_SUPABASE_URL no fue configurada." },
   "env.errLocalOnly": { pt: "O modo local aceita somente o Supabase Docker em localhost.", en: "Local mode only accepts Supabase Docker on localhost.", es: "El modo local solo acepta Supabase Docker en localhost." },
   "env.errRemote": { pt: "O modo remoto não pode usar uma URL local do Supabase.", en: "Remote mode cannot use a local Supabase URL.", es: "El modo remoto no puede usar una URL local de Supabase." },
+  "webcam.unsupported": { pt: "Este navegador não permite usar a câmera aqui. Use Anexar.", en: "This browser does not allow using the camera here. Use Attach.", es: "Este navegador no permite usar la cámara aquí. Usa Adjuntar." },
+  "photo.errPrepare": { pt: "Não foi possível preparar a foto.", en: "Could not prepare the photo.", es: "No se pudo preparar la foto." },
+  "env.errAnonKey": { pt: "VITE_SUPABASE_ANON_KEY não foi configurada.", en: "VITE_SUPABASE_ANON_KEY was not configured.", es: "VITE_SUPABASE_ANON_KEY no fue configurada." },
+  "auth.errNotAuthenticated": { pt: "Usuário não autenticado.", en: "User not authenticated.", es: "Usuario no autenticado." },
+  "invites.coordinatorUnavailable": { pt: "Coordenador não disponível", en: "Coordinator not available", es: "Coordinador no disponible" },
   "app.loading": { pt: "Carregando...", en: "Loading...", es: "Cargando..." },
   "auth.errNotConfigured": { pt: "Supabase não está configurado.", en: "Supabase is not configured.", es: "Supabase no está configurado." },
 } satisfies Record<string, Entry>;

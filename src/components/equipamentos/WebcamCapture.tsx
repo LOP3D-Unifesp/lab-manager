@@ -29,7 +29,7 @@ export function WebcamCapture({ onCapture, onClose }: WebcamCaptureProps) {
 
     async function iniciar() {
       if (!navigator.mediaDevices?.getUserMedia) {
-        setErro("Este navegador não permite usar a câmera aqui. Use Anexar.");
+        setErro(t("webcam.unsupported"));
         return;
       }
       try {

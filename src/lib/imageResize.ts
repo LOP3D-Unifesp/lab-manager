@@ -1,3 +1,4 @@
+import { getLocale, t } from "../i18n";
 export const MAX_PHOTO_SIDE = 1600;
 export const MAX_PHOTOS = 3;
 
@@ -22,10 +23,10 @@ export async function resizePhoto(file: File): Promise<Blob> {
     canvas.width = width;
     canvas.height = height;
     const context = canvas.getContext("2d");
-    if (!context) throw new Error("Não foi possível preparar a foto.");
+    if (!context) throw new Error(t("photo.errPrepare"));
     context.drawImage(bitmap, 0, 0, width, height);
     const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.82));
-    if (!blob) throw new Error("Não foi possível preparar a foto.");
+    if (!blob) throw new Error(t("photo.errPrepare"));
     return blob;
   } finally {
     bitmap.close();

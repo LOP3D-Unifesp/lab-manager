@@ -1,3 +1,4 @@
+import { getLocale, t } from "../i18n";
 import { supabase } from "./supabaseClient";
 import type { FeedbackKind, FeedbackReport, FeedbackStatus } from "./feedback";
 import type { MaintenanceRequest, MaintenanceRequestStatus, MaintenanceUrgency } from "./maintenanceRequests";
@@ -50,7 +51,7 @@ import {
 
 function client() {
   if (!supabase) {
-    throw new Error("Supabase não está configurado.");
+    throw new Error(t("auth.errNotConfigured"));
   }
 
   return supabase;
@@ -271,7 +272,7 @@ export async function listInvitations(): Promise<InvitationSummary[]> {
       role: invitation.role,
       stage,
       recipient: invitation.email ?? acceptedProfile?.email ?? acceptedProfile?.full_name ?? "Dados removidos",
-      invitedBy: byId.get(invitation.invited_by)?.full_name ?? "Coordenador não disponível",
+      invitedBy: byId.get(invitation.invited_by)?.full_name ?? t("invites.coordinatorUnavailable"),
       createdAt: invitation.created_at,
       openedAt: invitation.opened_at,
       acceptedAt: invitation.accepted_at,
@@ -293,7 +294,7 @@ export async function uploadMyAvatar(file: File) {
 
   const userId = userData.user?.id;
   if (!userId) {
-    throw new Error("Usuário não autenticado.");
+    throw new Error(t("auth.errNotAuthenticated"));
   }
 
   const extension = file.name.split(".").pop()?.toLowerCase() || "png";
@@ -749,7 +750,7 @@ export async function listProjectConsumption(projectId: string) {
     current.total += Number(row.consumed_amount);
     totals.set(key, current);
   }
-  return [...totals.values()].sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  return [...totals.values()].sort((a, b) => a.name.localeCompare(b.name, getLocale()));
 }
 
 export async function listEquipmentMaterials() {
@@ -1109,7 +1110,7 @@ function mapProject(row: ProjectRow): Project {
         full_name: member.profile?.full_name ?? "",
         avatar_url: member.profile?.avatar_url ?? null,
       }))
-      .sort((a, b) => a.full_name.localeCompare(b.full_name, "pt-BR")),
+      .sort((a, b) => a.full_name.localeCompare(b.full_name, getLocale())),
     funding: (row.funding ?? []).map((funding) => ({
       agency_id: funding.agency_id,
       agency_acronym: funding.agency?.acronym ?? "",
@@ -1235,7 +1236,7 @@ function mapTask(row: TaskRow): ProjectTask {
         full_name: assignee.profile?.full_name ?? "",
         avatar_url: assignee.profile?.avatar_url ?? null,
       }))
-      .sort((a, b) => a.full_name.localeCompare(b.full_name, "pt-BR")),
+      .sort((a, b) => a.full_name.localeCompare(b.full_name, getLocale())),
   };
 }
 
@@ -1371,7 +1372,7 @@ export async function uploadMaintenancePhotos(blobs: Blob[]) {
   const { data: userData, error: userError } = await client().auth.getUser();
   throwIfError(userError);
   const userId = userData.user?.id;
-  if (!userId) throw new Error("Usuário não autenticado.");
+  if (!userId) throw new Error(t("auth.errNotAuthenticated"));
 
   const paths: string[] = [];
   for (const blob of blobs) {
