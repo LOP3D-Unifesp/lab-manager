@@ -9,10 +9,10 @@ import { EnvironmentBadge } from "./EnvironmentBadge";
 import { LanguageSelect } from "../ui/LanguageSelect";
 import { ThemeToggle } from "../ui/ThemeToggle";
 import { NotificationBell } from "./NotificationBell";
-import { BookingsAlertProvider } from "../../lib/pendingBookingsAlert";
 import { useAuth } from "../../lib/auth";
 import { FeedbackProvider } from "../feedback/FeedbackProvider";
 import { AttentionProvider } from "./AttentionProvider";
+import { NotificationsProvider } from "./NotificationsProvider";
 
 type AppLayoutProps = {
   children: ReactNode;
@@ -23,7 +23,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const acronym = labSettings?.acronym ?? "Lab";
 
   return (
-    <BookingsAlertProvider>
+    <NotificationsProvider>
     <FeedbackProvider>
     <AttentionProvider>
     <div className="min-h-screen bg-background text-text">
@@ -67,6 +67,6 @@ export function AppLayout({ children }: AppLayoutProps) {
     </div>
     </AttentionProvider>
     </FeedbackProvider>
-    </BookingsAlertProvider>
+    </NotificationsProvider>
   );
 }

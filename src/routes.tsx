@@ -11,6 +11,7 @@ import { Administracao } from "./pages/Administracao";
 import { AgendaLaboratorio } from "./pages/AgendaLaboratorio";
 import { Dashboard } from "./pages/Dashboard";
 import { Feedback } from "./pages/Feedback";
+import { Notificacoes } from "./pages/Notificacoes";
 import { Equipamentos } from "./pages/Equipamentos";
 import { Habilidades } from "./pages/Habilidades";
 import { HistoricoReservas } from "./pages/HistoricoReservas";
@@ -131,6 +132,7 @@ export const router = createBrowserRouter([
           { path: "agenda", element: <AgendaLaboratorio /> },
           { path: "equipamentos", element: <Equipamentos /> },
           { path: "feedback", element: <Feedback /> },
+          { path: "notificacoes", element: <Notificacoes /> },
           { path: "inventario", element: <Inventario /> },
           { path: "compras", element: <Compras /> },
           { path: "impressoras", element: <Navigate to="/equipamentos" replace /> },

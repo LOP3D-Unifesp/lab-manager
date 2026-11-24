@@ -1,12 +1,12 @@
 import { getLocale, t } from "../../i18n";
-import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, ReactNode, useContext, useEffect, useMemo, useRef, useState } from "react";
 
 import { useAuth } from "../../lib/auth";
 import { describeNewRequest, showDesktopAlert } from "../../lib/desktopAlerts";
-import { countUnseenPurchaseUpdates, describePurchaseUpdate, isNotifiablePurchaseStatus, type PurchaseUpdate } from "../../lib/purchases";
+import { describePurchaseUpdate, isNotifiablePurchaseStatus } from "../../lib/purchases";
 import { canMaintain } from "../../lib/domain";
 import type { MaintenanceUrgency } from "../../lib/maintenanceRequests";
-import { countNewFeedback, countOpenMaintenanceRequests, countRequestedPurchases, getEquipmentName, listMyPurchaseUpdates } from "../../lib/supabaseRepository";
+import { countNewFeedback, countOpenMaintenanceRequests, countPendingBookings, countRequestedPurchases, getEquipmentName } from "../../lib/supabaseRepository";
 import { supabase } from "../../lib/supabaseClient";
 import { FEEDBACK_CHANGED_EVENT } from "../feedback/FeedbackProvider";
 
@@ -23,16 +23,12 @@ type Attention = {
   urgentRequests: number;
   /** Mensagens de feedback ainda não vistas (só para coordenadores). */
   feedback: number;
-  /** Compras que pedem atenção: pedidos aguardando decisão (coordenador) ou novidades dos próprios pedidos (demais). */
+  /** Pedidos de compra aguardando decisão (só coordenador). */
   purchases: number;
   /** Quantos dos pedidos aguardando decisão são urgentes (só coordenador). */
   urgentPurchases: number;
-  /** Novidades recentes dos pedidos da própria pessoa (aprovado, recusado, comprado, entregue); vazio para coordenadores. */
-  purchaseUpdates: PurchaseUpdate[];
-  /** Ids das novidades que chegaram depois da última visita. */
-  unseenPurchaseUpdateIds: string[];
-  /** Marca as novidades de compras como vistas (zera o selo). */
-  markPurchaseUpdatesSeen: () => void;
+  /** Reservas aguardando aprovação (só coordenador). */
+  pendingBookings: number;
   total: number;
 };
 
@@ -42,15 +38,9 @@ const emptyAttention: Attention = {
   feedback: 0,
   purchases: 0,
   urgentPurchases: 0,
-  purchaseUpdates: [],
-  unseenPurchaseUpdateIds: [],
-  markPurchaseUpdatesSeen: () => undefined,
+  pendingBookings: 0,
   total: 0,
 };
-
-function purchaseSeenKey(profileId: string) {
-  return `compras-vistas:${profileId}`;
-}
 
 const AttentionContext = createContext<Attention>(emptyAttention);
 
@@ -65,51 +55,14 @@ export function AttentionProvider({ children }: { children: ReactNode }) {
   const wantsPurchases = profile?.role === "coordinator";
   // Quem não é coordenador acompanha as decisões sobre os próprios pedidos.
   const wantsMyPurchases = Boolean(profileId) && profile?.role !== "coordinator";
-  const [updates, setUpdates] = useState<PurchaseUpdate[]>([]);
-  const [seenAt, setSeenAt] = useState<string | null>(null);
-  const [counts, setCounts] = useState({ maintenanceRequests: 0, urgentRequests: 0, feedback: 0, purchases: 0, urgentPurchases: 0 });
+  const [counts, setCounts] = useState({ maintenanceRequests: 0, urgentRequests: 0, feedback: 0, purchases: 0, urgentPurchases: 0, pendingBookings: 0 });
   const realtimeOk = useRef(false);
   const lastRequests = useRef<number | null>(null);
-
-  // Na primeira vez a "última visita" é agora, para não tratar pedidos antigos como novidade.
-  useEffect(() => {
-    if (!wantsMyPurchases || !profileId) {
-      setSeenAt(null);
-      return;
-    }
-    let saved: string | null = null;
-    try {
-      saved = window.localStorage.getItem(purchaseSeenKey(profileId));
-    } catch {
-      saved = null;
-    }
-    if (!saved) {
-      saved = new Date().toISOString();
-      try {
-        window.localStorage.setItem(purchaseSeenKey(profileId), saved);
-      } catch {
-        // sem armazenamento local: vale só nesta visita
-      }
-    }
-    setSeenAt(saved);
-  }, [profileId, wantsMyPurchases]);
-
-  const markPurchaseUpdatesSeen = useCallback(() => {
-    if (!profileId) return;
-    const now = new Date().toISOString();
-    setSeenAt(now);
-    try {
-      window.localStorage.setItem(purchaseSeenKey(profileId), now);
-    } catch {
-      // sem armazenamento local: vale só nesta visita
-    }
-  }, [profileId]);
 
   useEffect(() => {
     lastRequests.current = null;
     if (!profileId || (!wantsRequests && !wantsFeedback && !wantsPurchases && !wantsMyPurchases)) {
-      setCounts({ maintenanceRequests: 0, urgentRequests: 0, feedback: 0, purchases: 0, urgentPurchases: 0 });
-      setUpdates([]);
+      setCounts({ maintenanceRequests: 0, urgentRequests: 0, feedback: 0, purchases: 0, urgentPurchases: 0, pendingBookings: 0 });
       return undefined;
     }
 
@@ -119,11 +72,10 @@ export function AttentionProvider({ children }: { children: ReactNode }) {
         wantsRequests ? countOpenMaintenanceRequests() : Promise.resolve({ open: 0, urgent: 0 }),
         wantsFeedback ? countNewFeedback() : Promise.resolve(0),
         wantsPurchases ? countRequestedPurchases() : Promise.resolve({ open: 0, urgent: 0 }),
-        wantsMyPurchases && profileId ? listMyPurchaseUpdates(profileId) : Promise.resolve([] as PurchaseUpdate[]),
+        wantsPurchases ? countPendingBookings() : Promise.resolve(0),
       ])
-        .then(([requests, feedback, purchases, myUpdates]) => {
+        .then(([requests, feedback, purchases, pendingBookings]) => {
           if (!ativo) return;
-          setUpdates(myUpdates);
           // Sem tempo real, um aumento na contagem ainda gera um aviso (genérico) no computador.
           if (!realtimeOk.current && lastRequests.current !== null && requests.open > lastRequests.current) {
             showDesktopAlert({
@@ -134,7 +86,7 @@ export function AttentionProvider({ children }: { children: ReactNode }) {
             });
           }
           lastRequests.current = requests.open;
-          setCounts({ maintenanceRequests: requests.open, urgentRequests: requests.urgent, feedback, purchases: purchases.open, urgentPurchases: purchases.urgent });
+          setCounts({ maintenanceRequests: requests.open, urgentRequests: requests.urgent, feedback, purchases: purchases.open, urgentPurchases: purchases.urgent, pendingBookings });
         })
         .catch(() => undefined);
     };
@@ -178,6 +130,9 @@ export function AttentionProvider({ children }: { children: ReactNode }) {
             });
           }
         });
+      }
+      if (wantsPurchases) {
+        channel.on("postgres_changes", { event: "*", schema: "public", table: "equipment_bookings" }, atualizar);
       }
       if (wantsMyPurchases && profileId) {
         channel.on(
@@ -227,18 +182,10 @@ export function AttentionProvider({ children }: { children: ReactNode }) {
     };
   }, [profileId, wantsRequests, wantsFeedback, wantsPurchases, wantsMyPurchases]);
 
-  const value = useMemo(() => {
-    const unseenUpdates = countUnseenPurchaseUpdates(updates, seenAt);
-    const purchases = counts.purchases + unseenUpdates;
-    return {
-      ...counts,
-      purchases,
-      purchaseUpdates: updates,
-      unseenPurchaseUpdateIds: seenAt ? updates.filter((update) => new Date(update.updated_at).getTime() > new Date(seenAt).getTime()).map((update) => update.id) : [],
-      markPurchaseUpdatesSeen,
-      total: counts.maintenanceRequests + counts.feedback + purchases,
-    };
-  }, [counts, updates, seenAt, markPurchaseUpdatesSeen]);
+  const value = useMemo(
+    () => ({ ...counts, total: counts.maintenanceRequests + counts.feedback + counts.purchases + counts.pendingBookings }),
+    [counts],
+  );
 
   return <AttentionContext.Provider value={value}>{children}</AttentionContext.Provider>;
 }

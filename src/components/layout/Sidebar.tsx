@@ -5,6 +5,7 @@ import { navLabelKey } from "../../i18n/navLabels";
 import { useAuth } from "../../lib/auth";
 import { navigationItems, navigationSectionLabels, type NavigationItem } from "../../lib/navigation";
 import { useAttention } from "./AttentionProvider";
+import { useNotifications } from "./NotificationsProvider";
 import { LabLogo } from "../ui/LabLogo";
 import { AuthUserMenu } from "./AuthUserMenu";
 import { EnvironmentBadge } from "./EnvironmentBadge";
@@ -71,13 +72,16 @@ export function Sidebar() {
   const { labSettings, profile } = useAuth();
   const visibleNavigationItems = getVisibleDesktopItems(profile?.role);
   const attention = useAttention();
+  const { items: notificacoes } = useNotifications();
+  // Quem pede compras vê o selo quando há decisão nova sobre um pedido seu; o coordenador, os pedidos aguardando.
+  const novidadesDeCompras = notificacoes.filter((item) => item.type === "purchase_status" && !item.read_at).length;
   const badgeFor = (path: string) =>
     path === "/feedback"
       ? attention.feedback
       : path === "/equipamentos"
         ? attention.maintenanceRequests
         : path === "/compras"
-          ? attention.purchases
+          ? attention.purchases + novidadesDeCompras
           : undefined;
 
   return (

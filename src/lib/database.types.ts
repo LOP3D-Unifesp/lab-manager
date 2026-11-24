@@ -419,6 +419,26 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"notifications": {
+                  Row: {
+                    "created_at": string,"entity_id": string | null,"id": string,"link": string | null,"params": NonNullable<Json>,"read_at": string | null,"recipient_id": string,"type": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"entity_id"?: string | null,"id"?: string,"link"?: string | null,"params"?: NonNullable<Json>,"read_at"?: string | null,"recipient_id": string,"type": string
+                  }
+                  Update: {
+                    "created_at"?: string,"entity_id"?: string | null,"id"?: string,"link"?: string | null,"params"?: NonNullable<Json>,"read_at"?: string | null,"recipient_id"?: string,"type"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "notifications_recipient_id_fkey"
+      columns: ["recipient_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"profile_funding_grants": {
                   Row: {
                     "agency": Database["public"]['Enums']["funding_agency"],"agency_other": string | null,"created_at": string,"grant_name": string | null,"id": string,"monthly_value": number | null,"profile_id": string,"weekly_hours": number | null

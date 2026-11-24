@@ -1,8 +1,9 @@
 import { getLocale, t } from "../i18n";
 import { supabase } from "./supabaseClient";
+import type { AppNotification } from "./notifications";
 import type { FeedbackKind, FeedbackReport, FeedbackStatus } from "./feedback";
 import type { MaintenanceRequest, MaintenanceRequestStatus, MaintenanceUrgency } from "./maintenanceRequests";
-import type { MaintenancePurchase, PurchaseRequest, PurchaseStatus, PurchaseUpdate, PurchaseUrgency } from "./purchases";
+import type { MaintenancePurchase, PurchaseRequest, PurchaseStatus, PurchaseUrgency } from "./purchases";
 import type {
   CatalogMaterial,
   MaterialCategory,
@@ -23,7 +24,6 @@ import type {
 import {
   AvailabilitySlot,
   AcademicAffiliation,
-  BookingAlertSummary,
   BookingStatus,
   FundingAgency,
   FundingGrant,
@@ -847,117 +847,6 @@ export async function listBookings() {
   ) as unknown as EquipmentBooking[];
 }
 
-// Coordinator feed: pending bookings awaiting a decision plus recent
-// cancellations by someone else (a researcher cancelling their print also
-// deserves the coordinator's attention).
-export async function listCoordinatorBookingsAlertsSummary(profileId: string, signal?: AbortSignal) {
-  const cutoff = new Date(Date.now() - BOOKING_ALERT_WINDOW_HOURS * 60 * 60 * 1000).toISOString();
-
-  let query = client()
-    .from("equipment_bookings")
-    .select(`
-      id, project_name, starts_at, status, approved_at, rejected_at, rejected_reason,
-      cancelled_at, cancelled_by,
-      equipment:equipment!equipment_bookings_equipment_id_fkey(name),
-      profile:profiles!equipment_bookings_profile_id_fkey(full_name),
-      cancelled_by_profile:profiles!equipment_bookings_cancelled_by_fkey(full_name)
-    `)
-    .or(`status.eq.pending,and(status.eq.cancelled,cancelled_at.gte.${cutoff},cancelled_by.neq.${profileId})`)
-    .order("starts_at");
-  if (signal) query = query.abortSignal(signal);
-  const { data, error } = await query;
-  throwIfError(error);
-
-  return ((data ?? []) as unknown as Array<{
-    id: string;
-    project_name: string;
-    starts_at: string;
-    status: BookingStatus;
-    approved_at: string | null;
-    rejected_at: string | null;
-    rejected_reason: string | null;
-    cancelled_at: string | null;
-    cancelled_by: string | null;
-    equipment: { name: string } | null;
-    profile: { full_name: string } | null;
-    cancelled_by_profile: { full_name: string } | null;
-  }>).map((booking) => ({
-    id: booking.id,
-    project_name: booking.project_name,
-    starts_at: booking.starts_at,
-    status: booking.status,
-    approved_at: booking.approved_at,
-    approved_by_name: null,
-    rejected_at: booking.rejected_at,
-    rejected_by_name: null,
-    rejected_reason: booking.rejected_reason,
-    cancelled_at: booking.cancelled_at,
-    cancelled_by: booking.cancelled_by,
-    cancelled_by_name: booking.cancelled_by_profile?.full_name ?? null,
-    equipment_name: booking.equipment?.name ?? "Equipamento removido",
-    profile_name: booking.profile?.full_name ?? "Usuário removido",
-  })) as BookingAlertSummary[];
-}
-
-// Booking outcomes (approved/rejected by a coordinator, or cancelled by someone
-// else) stay in the researcher's alert list for this long. The bell has no
-// read/unread state, so the window keeps decisions visible for a while.
-const BOOKING_ALERT_WINDOW_HOURS = 48;
-
-export async function listMyBookingAlertsSummary(profileId: string, signal?: AbortSignal) {
-  const cutoff = new Date(Date.now() - BOOKING_ALERT_WINDOW_HOURS * 60 * 60 * 1000).toISOString();
-
-  let query = client()
-    .from("equipment_bookings")
-    .select(`
-      id, project_name, starts_at, status, approved_at, rejected_at, rejected_reason,
-      cancelled_at, cancelled_by,
-      equipment:equipment!equipment_bookings_equipment_id_fkey(name),
-      approved_by_profile:profiles!equipment_bookings_approved_by_fkey(full_name),
-      rejected_by_profile:profiles!equipment_bookings_rejected_by_fkey(full_name),
-      cancelled_by_profile:profiles!equipment_bookings_cancelled_by_fkey(full_name)
-    `)
-    .eq("profile_id", profileId)
-    .or(
-      `approved_at.gte.${cutoff},rejected_at.gte.${cutoff},and(cancelled_at.gte.${cutoff},cancelled_by.neq.${profileId})`,
-    )
-    .order("starts_at");
-  if (signal) query = query.abortSignal(signal);
-  const { data, error } = await query;
-  throwIfError(error);
-
-  return ((data ?? []) as unknown as Array<{
-    id: string;
-    project_name: string;
-    starts_at: string;
-    status: BookingStatus;
-    approved_at: string | null;
-    rejected_at: string | null;
-    rejected_reason: string | null;
-    cancelled_at: string | null;
-    cancelled_by: string | null;
-    equipment: { name: string } | null;
-    approved_by_profile: { full_name: string } | null;
-    rejected_by_profile: { full_name: string } | null;
-    cancelled_by_profile: { full_name: string } | null;
-  }>).map((booking) => ({
-    id: booking.id,
-    project_name: booking.project_name,
-    starts_at: booking.starts_at,
-    status: booking.status,
-    approved_at: booking.approved_at,
-    approved_by_name: booking.approved_by_profile?.full_name ?? null,
-    rejected_at: booking.rejected_at,
-    rejected_by_name: booking.rejected_by_profile?.full_name ?? null,
-    rejected_reason: booking.rejected_reason,
-    cancelled_at: booking.cancelled_at,
-    cancelled_by: booking.cancelled_by,
-    cancelled_by_name: booking.cancelled_by_profile?.full_name ?? null,
-    equipment_name: booking.equipment?.name ?? "Equipamento removido",
-    profile_name: "",
-  })) as BookingAlertSummary[];
-}
-
 export async function listMaintenanceBlocks() {
   const { data, error } = await client()
     .from("maintenance_blocks")
@@ -1391,6 +1280,15 @@ export async function updateFeedback(id: string, params: { status: FeedbackStatu
   throwIfError(error);
 }
 
+export async function countPendingBookings() {
+  const { count, error } = await client()
+    .from("equipment_bookings")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "pending");
+  throwIfError(error);
+  return count ?? 0;
+}
+
 export async function countNewFeedback() {
   const { count, error } = await client()
     .from("feedback_reports")
@@ -1617,25 +1515,42 @@ export async function listPurchasesForMaintenance() {
   return (data ?? []) as unknown as MaintenancePurchase[];
 }
 
-// Pedidos da própria pessoa que o coordenador já decidiu, dos últimos 14 dias (para avisar quem pediu).
-export async function listMyPurchaseUpdates(profileId: string) {
-  const since = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
-  const { data, error } = await client()
-    .from("purchase_requests")
-    .select("id, item, status, rejected_reason, updated_at")
-    .eq("requested_by", profileId)
-    .in("status", ["approved", "rejected", "purchased", "delivered"])
-    .gte("updated_at", since)
-    .order("updated_at", { ascending: false })
-    .limit(10);
-  throwIfError(error);
-  return (data ?? []) as unknown as PurchaseUpdate[];
-}
-
 // Pedidos aguardando decisão e quantos deles são urgentes.
 export async function countRequestedPurchases() {
   const { data, error } = await client().from("purchase_requests").select("urgency").eq("status", "requested").limit(500);
   throwIfError(error);
   const rows = (data ?? []) as Array<{ urgency: PurchaseUrgency }>;
   return { open: rows.length, urgent: rows.filter((row) => row.urgency === "urgent").length };
+}
+
+// ---------------------------------------------------------------------------
+// Notificações (histórico e lido no banco)
+// ---------------------------------------------------------------------------
+
+const NOTIFICATION_COLUMNS = "id, type, params, link, entity_id, created_at, read_at";
+
+export async function listNotifications(limit = 50, before?: string, signal?: AbortSignal): Promise<AppNotification[]> {
+  let query = client().from("notifications").select(NOTIFICATION_COLUMNS).order("created_at", { ascending: false }).limit(limit);
+  if (before) query = query.lt("created_at", before);
+  if (signal) query = query.abortSignal(signal);
+  const { data, error } = await query;
+  throwIfError(error);
+  return (data ?? []) as unknown as AppNotification[];
+}
+
+export async function countUnreadNotifications(signal?: AbortSignal): Promise<number> {
+  let query = client().from("notifications").select("id", { count: "exact", head: true }).is("read_at", null);
+  if (signal) query = query.abortSignal(signal);
+  const { count, error } = await query;
+  throwIfError(error);
+  return count ?? 0;
+}
+
+// Só `read_at` pode ser alterado (grant de coluna); sem `ids`, marca todas as não lidas (ou só dos `types`).
+export async function markNotificationsRead(options: { ids?: string[]; types?: string[] } = {}) {
+  let query = client().from("notifications").update({ read_at: new Date().toISOString() }).is("read_at", null);
+  if (options.ids) query = query.in("id", options.ids);
+  if (options.types) query = query.in("type", options.types);
+  const { error } = await query;
+  throwIfError(error);
 }

@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildMaintenancePurchaseNote,
-  countUnseenPurchaseUpdates,
   describePurchaseUpdate,
   calculateTotal,
   filterPurchases,
@@ -156,16 +155,6 @@ describe("avisos para quem pediu", () => {
     expect(isNotifiablePurchaseStatus("approved")).toBe(true);
     expect(isNotifiablePurchaseStatus("requested")).toBe(false);
     expect(isNotifiablePurchaseStatus("cancelled")).toBe(false);
-  });
-
-  it("conta só as novidades depois da última visita", () => {
-    const updates = [
-      { id: "a", item: "A", status: "approved" as const, rejected_reason: null, updated_at: "2026-06-10T12:00:00Z" },
-      { id: "b", item: "B", status: "delivered" as const, rejected_reason: null, updated_at: "2026-06-10T09:00:00Z" },
-    ];
-    expect(countUnseenPurchaseUpdates(updates, "2026-06-10T10:00:00Z")).toBe(1);
-    expect(countUnseenPurchaseUpdates(updates, "2026-06-10T13:00:00Z")).toBe(0);
-    expect(countUnseenPurchaseUpdates(updates, null)).toBe(0);
   });
 });
 
