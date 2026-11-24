@@ -47,6 +47,11 @@ fora do MVP e nao possuem tabelas nesta versao.
 | Aviso de privacidade | Leitura minima | Leitura minima | Leitura minima | Leitura minima |
 | Convites | Nao | Nao | Nao | Edge Functions e leitura de auditoria |
 | Configuracao de funcionamento | Somente identidade publica minima (`get_public_lab_identity`) | Somente identidade publica minima | Leitura | Capacidade, turnos e intervalos validados transacionalmente via RPC |
+| Pedidos de compra | Nao | Nao | Leitura de todos; pedir para os proprios projetos (ou estoque geral) | Leitura, edicao e decisao via RPC |
+| Notificacoes e preferencias | Nao | Nao | Leitura, "lido" e exclusao das proprias; preferencias proprias | Idem (so as proprias) |
+| Assinaturas de push | Nao | Nao | Leitura e exclusao das proprias; registro via RPC | Idem (so as proprias) |
+| Resumo de projetos | Nao | Nao | Leitura de todos (sem financiamento, tarefas nem compras); pedir para entrar | Leitura e decisao dos pedidos |
+| Pedidos de entrada em projetos | Nao | Nao | Le os proprios e os do projeto em que participa; decide como membro | Leitura e decisao |
 
 As escritas em `availability_slots` são realizadas pela RPC `replace_profile_availability`.
 Ela serializa alteracoes concorrentes, valida dias/turnos ativos e impede ocupação presencial
@@ -63,6 +68,11 @@ feitas por coordenadores; `in_progress`, `completed` e `failed` so sao aceitos a
 do inicio. A tabela `printer_bookings` esta na publicacao `supabase_realtime`: mudancas sao enviadas
 aos clientes sujeitas a RLS, e qualquer usuario ativo le todas as reservas (incluindo o motivo de
 rejeicao).
+
+Notificacoes (`notifications`) so sao criadas por gatilhos `security definer`; o cliente nao insere e so altera `read_at`.
+A chamada da Edge Function `send-push` usa um segredo compartilhado guardado em `private.push_config`, tabela fechada para
+`anon` e `authenticated`. O resumo de projetos (`list_project_directory`) e as funcoes de pedido de entrada sao
+`security definer` e conferem o perfil ativo; `projects` e `project_members` continuam sem leitura para quem nao participa.
 
 RLS continua sendo aplicada quando o navegador chama a Data API diretamente. Operacoes
 que alteram varias linhas ou validam concorrencia sao expostas somente como funcoes transacionais.

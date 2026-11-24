@@ -1,7 +1,26 @@
 # Pendências conhecidas
 
 Lista viva do que ainda precisa ser resolvido. Quando um item for concluído, remova-o daqui ou
-mova-o para o histórico do PR correspondente. O que já foi entregue está em [MVP_PLAN.md](MVP_PLAN.md).
+mova-o para o histórico do PR correspondente. O que já foi entregue está em [MVP_PLAN.md](MVP_PLAN.md) e, depois do
+MVP, em [HISTORICO_ENTREGAS.md](HISTORICO_ENTREGAS.md).
+
+## Conferir no navegador (nada disso foi visto em tela)
+
+O assistente não consegue entrar no app; as telas abaixo passaram em `tsc`, testes e build, mas precisam de olho humano
+com duas contas (coordenadora e pesquisador):
+
+- [ ] **Notificações:** sino (pendências, "Novidades", "Marcar tudo como lido"), página `/notificacoes` (filtros e
+  "Carregar mais"), cartão "Notificações" em Meu perfil (desligar um assunto e conferir que o aviso para).
+- [ ] **Push com o app fechado:** ligar os avisos, fechar a aba e gerar um evento com outra conta; testar no Chrome
+  (desktop e Android) e no iPhone/iPad com o app instalado na tela inicial.
+- [ ] **Pesquisadores:** card enxuto, página `/pesquisadores/:id` (sem bio, sem bolsa, sem projeto, agenda no celular) e
+  a seção "Projetos" do perfil.
+- [ ] **Compras como pesquisador sem ser do projeto:** vê os pedidos dos outros, com o nome do projeto certo e sem
+  botões de editar, cancelar ou aprovar; o filtro de projeto lista os projetos dos pedidos que ele enxerga.
+- [ ] **Projetos:** aba "Todos os projetos", pedir para entrar, cancelar o pedido, aprovar e recusar como membro e como
+  coordenador, e conferir os avisos.
+- [ ] **Dashboard:** "Minhas tarefas" para pesquisador sem projeto (mensagem) e com projeto (criar tarefa).
+- [ ] **Tarefas:** prioridade no cartão e no filtro; **Feedback** com fotos; **Logo e favicon** em Configurações.
 
 ## Antes de abrir para os testadores
 
@@ -68,10 +87,44 @@ mova-o para o histórico do PR correspondente. O que já foi entregue está em [
 
 **Avisos**
 
-- Aviso com o app fechado (push): ativo na produção. No iPhone/iPad só funciona com o app adicionado à tela inicial
-  (Compartilhar → Adicionar à Tela de Início); o `manifest.webmanifest` e os ícones já existem. O ícone do app é
-  provisório (as 4 cores da paleta) e não troca com o logo enviado em Configurações.
+- Aviso com o app fechado (push): ativo na produção (ver [DEPLOY.md](DEPLOY.md)). No iPhone/iPad só funciona com o app
+  adicionado à tela inicial (Compartilhar → Adicionar à Tela de Início); o `manifest.webmanifest` e os ícones já
+  existem, mas o ícone é provisório (as 4 cores da paleta) e não troca com o logo enviado em Configurações.
 - E-mail como canal extra de aviso (hoje só painel e push).
+
+- Histórico retroativo: as notificações só existem para eventos depois de `20260926`; reservas, chamados e compras
+  anteriores não geram histórico (dá para preencher com uma migration, se fizer falta).
+- `notifications.read_at` é gravado com o relógio do navegador e pode ficar alguns décimos de segundo antes de
+  `created_at`; o ideal é o banco gravar o horário (gatilho `before update`).
+- Notificação por assunto, não por evento: desligar "Chamados" também desliga o aviso de mudança de status dos chamados
+  que a pessoa abriu.
+- Reservas: o painel não mostra mais o "quem aprovou/recusou" nem o horário da reserva (só tipo, projeto e
+  equipamento); reintroduzir se os testadores sentirem falta.
+
+**Projetos**
+
+- Não há "dono" do projeto nem como **sair** de um projeto; só coordenadores removem membros (aba Membros).
+- Pedidos de entrada: não há lembrete se ninguém decidir e os pedidos antigos cancelados/recusados não têm tela de
+  histórico.
+- O resumo de projetos mostra o nome e o avatar de quem participa a todos os usuários ativos (decisão tomada).
+
+**Segurança e privacidade (revisar)**
+
+- Qualquer usuário ativo lê o **valor mensal e o nome do contrato** das bolsas (`profile_funding_grants`); a tela de
+  perfil não mostra, mas o banco permite. Se for sensível, restringir por RLS ou por função.
+- Pedidos de compra visíveis a todos incluem valores estimados e pagos (escolha feita em `20260929`).
+
+**Outros**
+
+- Salvar o idioma escolhido no perfil (`profiles.language`) em vez de só no navegador; usar o idioma também no e-mail
+  de convite, que ainda usa a paleta e a fonte antigas.
+- O teste 106 do pgTAP falha no banco local (8 períodos em vez de 7); investigar se é dado do ambiente local.
+- Strings ainda fixas em português em `MeuPerfil.tsx` ("Presencial:", "Home office:", "Aula:", "presencial") e o rótulo
+  "Outro" em `fundingAgencyOptions`; `Pesquisador.habilidades` (em `src/lib/pesquisadores.ts`) está sempre vazio e
+  pode ser removido.
+- Apagar as branches antigas já mescladas (`feat/compras*`, `feat/chamados-*`, `fix/*`...), se não forem mais úteis.
+- Confirmar o resultado do job `database` da CI na `main` depois de cada migration (ele regenera
+  `database.types.ts` e falha se houver diferença).
 
 ## Rodada 2 (depois do feedback dos testadores)
 

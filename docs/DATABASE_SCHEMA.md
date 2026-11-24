@@ -72,6 +72,17 @@ Status do MVP implementado:
 | `20260918_purchase_from_maintenance` | `purchase_requests.maintenance_request_id`: pedido de peca ligado a um chamado de manutencao (secao 3.19). |
 | `20260919_purchase_for_maintenance` | `purchase_requests.for_maintenance`: marca de gasto de manutencao, a parte da rubrica (secao 3.19). |
 | `20260920_maintenance_waiting_part` | Situacao `waiting_part` (Aguardando peca) em `maintenance_request_status`, sincronizada com as compras ligadas ao chamado (secao 3.18). |
+| `20260921_translated_names` | `name_en` e `name_es` em tipos de equipamento, habilidades e catalogos, para mostrar os nomes na lingua da pessoa. |
+| `20260922_lab_logo` | Logos (claro e escuro) do laboratorio em `lab_settings` e bucket publico `lab-logo`. |
+| `20260923_lab_favicon` | `lab_settings.favicon_url`: icone da aba do navegador. |
+| `20260924_task_priority` | `task_priority` (`low`, `normal`, `urgent`) e `project_tasks.priority` (padrao `normal`; so informa e filtra, nao reordena). |
+| `20260925_feedback_photos` | `feedback_reports.photo_paths` (ate 3 fotos) e bucket privado `feedback-photos` (autor e coordenadores leem). |
+| `20260926_notifications` | Notificacoes guardadas no banco: `notifications`, gatilhos por evento e Realtime (secao 3.20). |
+| `20260927_push_subscriptions` | Avisos com o app fechado: `push_subscriptions`, `register_push_subscription`, `private.push_config` e gatilho que chama a Edge Function `send-push` (secao 3.20). |
+| `20260928_notification_preferences` | `notification_preferences` (por assunto: painel e computador) respeitadas pelos gatilhos (secao 3.20). |
+| `20260929_purchases_visible_to_all` | Leitura de `purchase_requests` para qualquer usuario ativo e `get_purchase_project_names` (secao 3.19). |
+| `20260930_notification_recipients` | Quem recebe aviso de compra e de chamado; tipo `request_status` (secao 3.20). |
+| `20261001_project_join_requests` | Pedidos de entrada em projetos e resumo de projetos para todos (secao 3.21). |
 
 Resumo dos objetos que mais mudam o entendimento do schema:
 
@@ -1144,6 +1155,58 @@ compra e confirma a entrega.
   `maintenance_request_id` esta preenchido; nos demais pedidos o autor marca enquanto o pedido esta `requested`
   (`p_for_maintenance` em `update_purchase_request`; nulo mantem o valor atual).
 - A tabela esta na publicacao `supabase_realtime` (aviso ao coordenador).
+
+- **Leitura (a partir de `20260929`):** qualquer usuario ativo le todos os pedidos (item, projeto, valores, rubrica e quem
+  pediu). Pedir, editar, cancelar e decidir continuam restritos pelas regras de insert e pelas funcoes
+  (`update_purchase_request`, `set_purchase_status`). Quem nao e do projeto nao le a tabela `projects`; o nome do
+  projeto de um pedido alheio vem de `get_purchase_project_names` (so projetos que tem pedido).
+
+### 3.20 Notificacoes, avisos no computador e preferencias
+
+Finalidade: historico e "lido" no banco (valem em qualquer aparelho), aviso com o app fechado e escolha do que receber.
+O texto nao e guardado: so o tipo e os dados do evento (`params`), e o cliente monta a frase na lingua de quem le.
+
+- `notifications`: `recipient_id` (`ON DELETE CASCADE`), `type` (`booking_pending`, `booking_approved`,
+  `booking_rejected`, `booking_cancelled`, `request_new`, `request_resolved`, `request_status`, `feedback_new`,
+  `purchase_new`, `purchase_status`, `project_join_request`, `project_join_decision`), `params` (jsonb), `link`
+  (caminho do app), `entity_id`, `created_at` e `read_at`. Cada pessoa le e apaga as proprias e so altera `read_at`
+  (grant de coluna); ninguem insere pelo cliente. Na publicacao `supabase_realtime`. Ao criar uma notificacao,
+  as lidas ha mais de 90 dias do destinatario sao apagadas.
+- Quem cria: gatilhos `security definer` em `equipment_bookings`, `maintenance_requests`, `feedback_reports`,
+  `purchase_requests` e `project_join_requests`, via `private.notify` (nunca avisa quem fez a acao). Destinatarios:
+  reserva pendente, feedback novo e pedido de compra novo, so coordenadores; chamado novo, coordenadores e
+  mantenedores; reserva aprovada/recusada/cancelada, o dono (e os coordenadores quando o dono cancela); qualquer
+  mudanca de status de chamado ou de compra, so quem abriu/pediu; pedido de entrada em projeto, coordenadores e
+  membros; decisao do pedido, quem pediu.
+- `notification_preferences`: `(profile_id, topic)` com `topic` em `bookings`, `requests`, `purchases`, `feedback`,
+  `projects`, `in_app` e `push` (padrao ligado). `private.wants_notification` consulta a tabela: com `in_app`
+  desligado a notificacao nem e criada (e o push, que parte dela, tambem nao).
+- `push_subscriptions`: uma linha por navegador (`endpoint` unico, `p256dh`, `auth`). A pessoa le e apaga as
+  proprias; criar e reatribuir passa por `register_push_subscription` (se outra pessoa entra no mesmo navegador, a
+  assinatura muda de dono).
+- `private.push_config`: URL da funcao `send-push` e segredo compartilhado, preenchidos a mao em cada ambiente (so o
+  dono do banco le). Sem a linha (banco local e CI) nenhum push e enviado. O gatilho `notifications_send_push` chama a
+  funcao por `pg_net` e ignora qualquer erro, para nunca atrapalhar o evento original.
+- Edge Function `send-push`: confere o segredo (`x-push-secret`), entrega com Web Push (VAPID) e apaga assinaturas
+  que o navegador cancelou (404/410). Segredos: `PUSH_WEBHOOK_SECRET`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`,
+  `VAPID_SUBJECT`. Passo a passo em [DEPLOY.md](DEPLOY.md).
+
+### 3.21 Projetos: resumo para todos e pedidos de entrada
+
+Finalidade: qualquer pessoa ativa ve o resumo de todos os projetos e pede para entrar; coordenadores e membros do
+projeto decidem. `projects` e `project_members` continuam legiveis so por membros e coordenadores.
+
+- `project_join_requests`: `project_id` e `profile_id` (`ON DELETE CASCADE`), `message` (ate 300), `status`
+  (`project_join_status`: `pending`, `approved`, `rejected`, `cancelled`), `decided_by`, `decided_at`. Um pedido
+  pendente por pessoa e projeto (indice unico parcial). Leitura: quem pediu, membros e coordenadores; escrita so pelas
+  funcoes abaixo.
+- `request_project_join(p_project_id, p_message)` (so projetos `planning`, `active` ou `paused`; erros
+  `already_member`, `request_already_pending`, `project_closed`), `cancel_project_join_request(p_request_id)` e
+  `decide_project_join_request(p_request_id, p_approve)` (coordenador ou membro; aprovar insere em `project_members`;
+  erros `not_allowed`, `own_request`, `request_not_found`).
+- `list_project_directory(p_project_id)`: resumo (nome, descricao, status, datas, participantes, se a pessoa e membro, o
+  pedido pendente dela e a contagem de pedidos para quem pode decidir). **Nao** devolve financiamento, tarefas nem compras.
+  Tambem alimenta a secao "Projetos" do perfil do pesquisador.
 
 ## 4. Relacionamentos principais
 
