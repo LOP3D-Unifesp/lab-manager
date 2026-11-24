@@ -5,6 +5,7 @@ import { navLabelKey } from "../../i18n/navLabels";
 import { useAuth } from "../../lib/auth";
 import { navigationItems, navigationSectionLabels, type NavigationItem } from "../../lib/navigation";
 import { useAttention } from "./AttentionProvider";
+import { LabLogo } from "../ui/LabLogo";
 import { LanguageSelect } from "../ui/LanguageSelect";
 import { ThemeToggle } from "../ui/ThemeToggle";
 import { AuthUserMenu } from "./AuthUserMenu";
@@ -93,9 +94,17 @@ export function Sidebar() {
               className="block min-w-0 rounded-md transition hover:text-primary focus-visible:outline-offset-4"
             >
               <div className="flex items-center gap-2">
-                <p className="text-base font-bold leading-none text-primary">
-                  {labSettings?.acronym ?? "Lab"}
-                </p>
+                <LabLogo
+                  alt={labSettings?.name ?? t("logo.alt")}
+                  className="h-9 max-w-[9rem]"
+                  favicon
+                  logos={labSettings}
+                  fallback={
+                    <p className="text-base font-bold leading-none text-primary">
+                      {labSettings?.acronym ?? "Lab"}
+                    </p>
+                  }
+                />
                 <EnvironmentBadge />
               </div>
               <h1 className="font-display mt-1 truncate text-[24px] font-bold leading-tight text-text">

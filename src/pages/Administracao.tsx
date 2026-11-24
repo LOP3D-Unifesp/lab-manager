@@ -1,6 +1,6 @@
 import { t } from "../i18n";
 import { FormEvent, useEffect, useState } from "react";
-import { Building2, Clock3, Pencil, Plus, Power, Utensils, X } from "lucide-react";
+import { Building2, Clock3, ImageIcon, Pencil, Plus, Power, Utensils, X } from "lucide-react";
 
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
@@ -9,7 +9,7 @@ import { StatusBadge } from "../components/ui/StatusBadge";
 import { TimezoneSelect } from "../components/ui/TimezoneSelect";
 import { useAuth } from "../lib/auth";
 import { formatSchedulePeriod, type LabSchedulePeriod } from "../lib/domain";
-import { listLabSchedulePeriods, saveLabSchedulePeriod, updateLabBreaks, updateLabSettings } from "../lib/supabaseRepository";
+import { listLabSchedulePeriods, removeLabLogo, saveLabSchedulePeriod, updateLabBreaks, updateLabSettings, uploadLabLogo, type LogoVariant } from "../lib/supabaseRepository";
 
 type MealBreakId = "lunch" | "dinner";
 
@@ -39,6 +39,9 @@ export function Administracao() {
   const [savingPeriod, setSavingPeriod] = useState(false);
   const [scheduleMessage, setScheduleMessage] = useState("");
   const [scheduleError, setScheduleError] = useState("");
+  const [logoBusy, setLogoBusy] = useState<LogoVariant | null>(null);
+  const [logoMessage, setLogoMessage] = useState("");
+  const [logoError, setLogoError] = useState("");
 
   async function reloadPeriods() { setPeriods(await listLabSchedulePeriods(true)); }
 
@@ -49,6 +52,42 @@ export function Administracao() {
     setLabTimezone(labSettings.timezone); setPrivacyContactEmail(labSettings.privacy_contact_email ?? "");
     setCapacity(labSettings.workspace_capacity); setOperatingWeekdays(labSettings.operating_weekdays);
   }, [labSettings]);
+
+  async function changeLogo(variant: LogoVariant, file: File | undefined) {
+    if (!file) return;
+    setLogoBusy(variant); setLogoError(""); setLogoMessage("");
+    try { await uploadLabLogo(variant, file); await refreshInstallation(); setLogoMessage(t("logo.saved")); }
+    catch (reason) { setLogoError(reason instanceof Error ? reason.message : t("logo.errSave")); }
+    finally { setLogoBusy(null); }
+  }
+
+  async function deleteLogo(variant: LogoVariant) {
+    setLogoBusy(variant); setLogoError(""); setLogoMessage("");
+    try { await removeLabLogo(variant); await refreshInstallation(); setLogoMessage(t("logo.removed")); }
+    catch (reason) { setLogoError(reason instanceof Error ? reason.message : t("logo.errSave")); }
+    finally { setLogoBusy(null); }
+  }
+
+  function renderLogoSlot(variant: LogoVariant) {
+    const url = variant === "light" ? labSettings?.logo_light_url : labSettings?.logo_dark_url;
+    const busy = logoBusy === variant;
+    return (
+      <div className="grid gap-3">
+        <p className="font-semibold">{t(variant === "light" ? "logo.light" : "logo.dark")}</p>
+        <div className={["flex h-28 items-center justify-center rounded-lg border border-border p-3", variant === "light" ? "bg-white" : "bg-[#0b1220]"].join(" ")}>
+          {url ? <img alt={t("logo.alt")} className="max-h-full max-w-full object-contain" src={url} /> : <span className="flex items-center gap-2 text-sm text-muted"><ImageIcon className="h-4 w-4" aria-hidden="true" />{t("logo.empty")}</span>}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <label className={["inline-flex min-h-9 cursor-pointer items-center rounded-xl border border-primary bg-surface px-3 text-sm font-semibold text-primary transition hover:bg-primary-soft", busy ? "pointer-events-none opacity-60" : ""].join(" ")}>
+            {busy ? t("logo.uploading") : url ? t("logo.replace") : t("logo.upload")}
+            <input accept="image/png,image/jpeg,image/webp,image/svg+xml" className="hidden" disabled={logoBusy !== null} type="file" onChange={(event) => { void changeLogo(variant, event.target.files?.[0]); event.target.value = ""; }} />
+          </label>
+          {url ? <Button className="min-h-9 px-3 py-1.5 text-sm" disabled={logoBusy !== null} onClick={() => deleteLogo(variant)} variant="ghost">{t("logo.remove")}</Button> : null}
+        </div>
+        {variant === "dark" ? <p className="text-sm text-muted">{t("logo.darkHint")}</p> : null}
+      </div>
+    );
+  }
 
   async function saveSettings(event: FormEvent) {
     event.preventDefault(); setSaving(true); setError(""); setMessage("");
@@ -218,6 +257,16 @@ export function Administracao() {
           <fieldset className="md:col-span-2 xl:col-span-3"><legend className="mb-2 font-semibold">{t("admin.operatingDays")}</legend><div className="flex flex-wrap gap-2">{weekdays.map((day) => <label className="flex min-h-11 items-center gap-2 rounded-lg border border-border bg-background px-3" key={day.value}><input checked={operatingWeekdays.includes(day.value)} type="checkbox" onChange={(e) => setOperatingWeekdays((current) => e.target.checked ? [...current, day.value] : current.filter((value) => value !== day.value))} />{day.label}</label>)}</div></fieldset>
           <div className="md:col-span-2 xl:col-span-3"><Button disabled={saving || operatingWeekdays.length === 0} type="submit">{saving ? t("common.saving") : t("admin.saveSettings")}</Button></div>
         </form>
+      </Card>
+
+      <Card className="mb-5">
+        <div className="mb-5 flex items-start gap-3"><div className="rounded-lg bg-primary-soft p-3 text-primary"><ImageIcon className="h-5 w-5" /></div><div><h2 className="text-2xl font-bold">{t("logo.title")}</h2><p className="mt-1 text-muted">{t("logo.hint")}</p></div></div>
+        {logoMessage ? <p className="mb-4 rounded-lg border border-success bg-success-soft p-3 font-semibold text-success-dark">{logoMessage}</p> : null}
+        {logoError ? <p className="mb-4 rounded-lg border border-danger bg-danger-soft p-3 font-semibold text-danger">{logoError}</p> : null}
+        <div className="grid gap-5 md:grid-cols-2">
+          {renderLogoSlot("light")}
+          {renderLogoSlot("dark")}
+        </div>
       </Card>
 
       <Card>

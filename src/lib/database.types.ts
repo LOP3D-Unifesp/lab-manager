@@ -291,14 +291,14 @@ isOneToOne: false
                   ]
                 },"lab_settings": {
                   Row: {
-                    "acronym": string | null,"created_at": string,"created_by": string | null,"dinner_ends_at": string,"dinner_starts_at": string,"id": boolean,"lunch_ends_at": string,"lunch_starts_at": string,"name": string | null,"operating_weekdays": (number)[],"privacy_contact_email": string | null,"setup_completed_at": string | null,"timezone": string,"updated_at": string,"updated_by": string | null,"workspace_capacity": number
+                    "acronym": string | null,"created_at": string,"created_by": string | null,"dinner_ends_at": string,"dinner_starts_at": string,"id": boolean,"logo_dark_url": string | null,"logo_light_url": string | null,"lunch_ends_at": string,"lunch_starts_at": string,"name": string | null,"operating_weekdays": (number)[],"privacy_contact_email": string | null,"setup_completed_at": string | null,"timezone": string,"updated_at": string,"updated_by": string | null,"workspace_capacity": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "acronym"?: string | null,"created_at"?: string,"created_by"?: string | null,"dinner_ends_at"?: string,"dinner_starts_at"?: string,"id"?: boolean,"lunch_ends_at"?: string,"lunch_starts_at"?: string,"name"?: string | null,"operating_weekdays"?: (number)[],"privacy_contact_email"?: string | null,"setup_completed_at"?: string | null,"timezone"?: string,"updated_at"?: string,"updated_by"?: string | null,"workspace_capacity"?: number
+                    "acronym"?: string | null,"created_at"?: string,"created_by"?: string | null,"dinner_ends_at"?: string,"dinner_starts_at"?: string,"id"?: boolean,"logo_dark_url"?: string | null,"logo_light_url"?: string | null,"lunch_ends_at"?: string,"lunch_starts_at"?: string,"name"?: string | null,"operating_weekdays"?: (number)[],"privacy_contact_email"?: string | null,"setup_completed_at"?: string | null,"timezone"?: string,"updated_at"?: string,"updated_by"?: string | null,"workspace_capacity"?: number
                   }
                   Update: {
-                    "acronym"?: string | null,"created_at"?: string,"created_by"?: string | null,"dinner_ends_at"?: string,"dinner_starts_at"?: string,"id"?: boolean,"lunch_ends_at"?: string,"lunch_starts_at"?: string,"name"?: string | null,"operating_weekdays"?: (number)[],"privacy_contact_email"?: string | null,"setup_completed_at"?: string | null,"timezone"?: string,"updated_at"?: string,"updated_by"?: string | null,"workspace_capacity"?: number
+                    "acronym"?: string | null,"created_at"?: string,"created_by"?: string | null,"dinner_ends_at"?: string,"dinner_starts_at"?: string,"id"?: boolean,"logo_dark_url"?: string | null,"logo_light_url"?: string | null,"lunch_ends_at"?: string,"lunch_starts_at"?: string,"name"?: string | null,"operating_weekdays"?: (number)[],"privacy_contact_email"?: string | null,"setup_completed_at"?: string | null,"timezone"?: string,"updated_at"?: string,"updated_by"?: string | null,"workspace_capacity"?: number
                   }
                   Relationships: [
                     {
@@ -872,7 +872,7 @@ isOneToOne: false
       } },
 "get_public_lab_identity":
 { Args: Record<PropertyKey, never>; Returns: {
-              "acronym": string,"invitation_ttl_hours": number,"name": string,"privacy_contact_email": string
+              "acronym": string,"invitation_ttl_hours": number,"logo_dark_url": string | null,"logo_light_url": string | null,"name": string,"privacy_contact_email": string
             }[]
                            },
 "record_booking_usage":
@@ -1063,7 +1063,33 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
-"set_my_avatar_url":
+"set_lab_logo":
+{ Args: { "p_url": string,"p_variant": string }; Returns: {
+              "acronym": string | null,
+"created_at": string,
+"created_by": string | null,
+"dinner_ends_at": string,
+"dinner_starts_at": string,
+"id": boolean,
+"logo_dark_url": string | null,
+"logo_light_url": string | null,
+"lunch_ends_at": string,
+"lunch_starts_at": string,
+"name": string | null,
+"operating_weekdays": (number)[],
+"privacy_contact_email": string | null,
+"setup_completed_at": string | null,
+"timezone": string,
+"updated_at": string,
+"updated_by": string | null,
+"workspace_capacity": number
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "lab_settings"
+        isOneToOne: true
+        isSetofReturn: false
+      } },"set_my_avatar_url":
 { Args: { "p_avatar_url": string }; Returns: {
               "academic_affiliation": Database["public"]['Enums']["academic_affiliation"] | null,
 "avatar_url": string | null,
@@ -1231,6 +1257,8 @@ isOneToOne: false
 "dinner_ends_at": string,
 "dinner_starts_at": string,
 "id": boolean,
+"logo_dark_url": string | null,
+"logo_light_url": string | null,
 "lunch_ends_at": string,
 "lunch_starts_at": string,
 "name": string | null,

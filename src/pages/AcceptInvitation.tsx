@@ -1,5 +1,6 @@
 import { t } from "../i18n";
 import { BrandMark, BrandStripe } from "../components/ui/BrandMark";
+import { LabLogo } from "../components/ui/LabLogo";
 import { LanguageSelect } from "../components/ui/LanguageSelect";
 import { useEffect, useState } from "react";
 import { CheckCircle2, MailCheck, ShieldCheck } from "lucide-react";
@@ -52,7 +53,7 @@ export function AcceptInvitation() {
       <div className="mx-auto flex w-full max-w-xl justify-end"><LanguageSelect /></div>
       <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-xl flex-col justify-center">
         <Card>
-          <div className="flex items-start gap-3"><div className="rounded-lg bg-primary-soft p-3 text-primary"><MailCheck className="h-6 w-6" /></div><div><BrandMark className="text-2xl" text={lab?.acronym ?? t("accept.fallbackLab")} /><h1 className="mt-1 text-3xl font-bold">{t("accept.title")}</h1></div></div>
+          <div className="flex items-start gap-3"><div className="rounded-lg bg-primary-soft p-3 text-primary"><MailCheck className="h-6 w-6" /></div><div><LabLogo alt={lab?.name ?? t("logo.alt")} className="h-12 max-w-[12rem]" favicon fallback={<BrandMark className="text-2xl" text={lab?.acronym ?? t("accept.fallbackLab")} />} logos={lab} /><h1 className="mt-1 text-3xl font-bold">{t("accept.title")}</h1></div></div>
           <p className="mt-6 leading-7 text-muted">{t("accept.intro", { lab: lab?.name ?? t("accept.labFallback") })}</p>
           <div className="mt-5 rounded-lg border border-border bg-background p-4"><p className="flex items-center gap-2 font-semibold"><ShieldCheck className="h-5 w-5 text-success-dark" />{t("accept.validity")}</p><p className="mt-2 text-sm text-muted">{t("accept.afterHint")}</p></div>
           {!validLinkShape ? <p className="mt-5 rounded-lg border border-danger bg-danger-soft p-3 font-semibold text-danger">{t("accept.incompleteLink")}</p> : null}

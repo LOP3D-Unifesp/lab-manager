@@ -6,6 +6,7 @@ import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { LanguageSelect } from "../components/ui/LanguageSelect";
 import { BRAND_COLORS, BrandMark, BrandStripe } from "../components/ui/BrandMark";
+import { LabLogo, usePublicLabIdentity } from "../components/ui/LabLogo";
 import { ThemeToggle } from "../components/ui/ThemeToggle";
 import { useT } from "../i18n";
 import { useAuth } from "../lib/auth";
@@ -15,6 +16,7 @@ import { supabaseConfigurationError } from "../lib/supabaseClient";
 export function Login() {
   const { authConfigured, loading, session, signIn } = useAuth();
   const t = useT();
+  const identity = usePublicLabIdentity();
   const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -52,7 +54,7 @@ export function Login() {
     <main className="min-h-screen bg-background text-text lg:grid lg:grid-cols-[1fr_minmax(28rem,34rem)]">
       <aside className="relative hidden flex-col justify-center overflow-hidden border-r border-border bg-surface px-16 lg:flex">
         <BrandStripe className="absolute inset-x-0 top-0 h-2" />
-        <BrandMark className="text-7xl" />
+        <LabLogo alt={identity?.name ?? t("logo.alt")} className="h-28 max-w-sm self-start" favicon fallback={<BrandMark className="text-7xl" />} logos={identity} />
         <p className="font-display mt-3 text-3xl font-semibold text-muted">Lab Manager</p>
         <p className="mt-6 max-w-sm text-lg leading-7 text-muted">{t("brand.tagline2")}</p>
         <div aria-hidden="true" className="mt-12 grid max-w-xs grid-cols-4 gap-3">
@@ -70,7 +72,7 @@ export function Login() {
         </div>
       <section className="mx-auto flex min-h-[calc(100vh-8rem)] w-full max-w-md flex-col justify-center">
         <div className="mb-6 lg:hidden">
-          <BrandMark className="text-3xl" />
+          <LabLogo alt={identity?.name ?? t("logo.alt")} className="h-14 max-w-[14rem]" fallback={<BrandMark className="text-3xl" />} logos={identity} />
           <h1 className="mt-1 text-[28px] font-bold leading-tight">
             Lab Manager
           </h1>
