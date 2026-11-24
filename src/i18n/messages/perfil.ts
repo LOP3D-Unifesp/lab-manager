@@ -81,6 +81,7 @@ export const perfil = {
   "workload.manual": { pt: "Sem bolsa: informe a carga manualmente.", en: "No grant: enter the workload manually.", es: "Sin beca: indica la carga manualmente." },
   "grants.title": { pt: "Bolsas de fomento", en: "Funding grants", es: "Becas de financiamiento" },
   "grants.add": { pt: "Adicionar bolsa", en: "Add grant", es: "Agregar beca" },
+  "grants.otherAgency": { pt: "Outra agência", en: "Other agency", es: "Otra agencia" },
   "grants.none": { pt: "Nenhuma bolsa cadastrada.", en: "No grants registered.", es: "Ninguna beca registrada." },
   "grants.agency": { pt: "Agência", en: "Agency", es: "Agencia" },
   "grants.whichAgency": { pt: "Qual agência?", en: "Which agency?", es: "¿Qué agencia?" },

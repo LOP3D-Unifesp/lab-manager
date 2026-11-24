@@ -154,62 +154,41 @@ export function Pesquisadores() {
         </Card>
       ) : visualizacao === "cards" ? (
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {pesquisadoresOrdenados.map((pesquisador) => (
-            <Card key={pesquisador.id}>
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-3">
-                  <Avatar
-                    avatarUrl={pesquisador.avatarUrl}
-                    name={`${pesquisador.nome} ${pesquisador.sobrenome}`}
-                    className="h-12 w-12 shrink-0"
-                  />
-                  <div>
-                  <h3 className="text-2xl font-bold text-text">
-                    {pesquisador.nome} {pesquisador.sobrenome}
-                  </h3>
-                  <p className="mt-2 text-lg text-muted">
-                    {t("researchers.affiliationLine", { value: pesquisador.vinculo })}
-                  </p>
-                  <p className="mt-2 text-sm font-semibold leading-5 text-muted">
-                    {pesquisador.email}
-                  </p>
-                  <p className="mt-1 text-sm font-semibold leading-5 text-muted">
-                    {pesquisador.telefone || t("researchers.noPhone")}
-                  </p>
-                  <p className="mt-2 text-sm font-semibold leading-5 text-muted">
-                    {pesquisador.bolsasFomento.length > 0
-                      ? t("researchers.grantsLong", { list: pesquisador.bolsasFomento.join(", ") })
-                      : pesquisador.cargaHorariaSemanal
-                        ? t("researchers.volunteer")
-                        : t("researchers.noGrant")}
-                    {pesquisador.cargaHorariaSemanal
-                      ? t("researchers.hoursWeek", { hours: pesquisador.cargaHorariaSemanal })
-                      : ""}
-                  </p>
-                  {pesquisador.lattesUrl ? (
-                    <a
-                      className="mt-2 inline-flex text-sm font-bold text-primary hover:text-primary-dark"
-                      href={pesquisador.lattesUrl}
-                      rel="noreferrer"
-                      target="_blank"
-                    >
-                      Lattes
-                    </a>
-                  ) : null}
+          {pesquisadoresOrdenados.map((pesquisador) => {
+            const nomeCompleto = `${pesquisador.nome} ${pesquisador.sobrenome}`;
+            return (
+              <Link
+                key={pesquisador.id}
+                to={`/pesquisadores/${pesquisador.id}`}
+                aria-label={t("researchers.openProfile", { name: nomeCompleto })}
+                className="group block rounded-lg focus-visible:outline-offset-2"
+              >
+                <Card className="h-full transition group-hover:border-primary group-hover:shadow-md">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex min-w-0 items-start gap-3">
+                      <Avatar avatarUrl={pesquisador.avatarUrl} name={nomeCompleto} className="h-12 w-12 shrink-0" />
+                      <div className="min-w-0">
+                        <h3 className="break-words text-xl font-bold text-text">{nomeCompleto}</h3>
+                        <p className="mt-1 text-base text-muted">
+                          {t("researchers.affiliationLine", { value: pesquisador.vinculo })}
+                        </p>
+                        <p className="mt-1 break-all text-sm font-semibold leading-5 text-muted">{pesquisador.email}</p>
+                      </div>
+                    </div>
+                    <StatusBadge
+                      label={t(`presence.${pesquisador.status}` as Parameters<typeof t>[0])}
+                      variant={getStatusVariant(pesquisador.status)}
+                    />
                   </div>
-                </div>
-                <StatusBadge
-                  label={t(`presence.${pesquisador.status}` as Parameters<typeof t>[0])}
-                  variant={getStatusVariant(pesquisador.status)}
-                />
-              </div>
-            </Card>
-          ))}
+                </Card>
+              </Link>
+            );
+          })}
         </section>
       ) : (
         <section className="overflow-hidden rounded-lg border border-border bg-surface shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[620px] border-collapse">
+            <table className="w-full min-w-[560px] border-collapse">
               <thead className="bg-background text-left">
                 <tr className="border-b border-border">
                   <th className="px-5 py-3 text-sm font-semibold text-muted">
@@ -219,13 +198,10 @@ export function Pesquisadores() {
                     {t("researchers.colAffiliation")}
                   </th>
                   <th className="px-5 py-3 text-sm font-semibold text-muted">
-                    {t("researchers.colContact")}
+                    {t("researchers.colEmail")}
                   </th>
                   <th className="px-5 py-3 text-sm font-semibold text-muted">
                     {t("researchers.colPresence")}
-                  </th>
-                  <th className="px-5 py-3 text-sm font-semibold text-muted">
-                    {t("researchers.colFunding")}
                   </th>
                 </tr>
               </thead>
@@ -242,45 +218,22 @@ export function Pesquisadores() {
                           name={`${pesquisador.nome} ${pesquisador.sobrenome}`}
                           className="h-8 w-8 shrink-0 text-xs"
                         />
-                        {pesquisador.nome} {pesquisador.sobrenome}
+                        <Link className="text-primary hover:text-primary-dark" to={`/pesquisadores/${pesquisador.id}`}>
+                          {pesquisador.nome} {pesquisador.sobrenome}
+                        </Link>
                       </div>
                     </td>
                     <td className="whitespace-nowrap px-5 py-3 text-base text-muted">
                       {pesquisador.vinculo}
                     </td>
-                    <td className="px-5 py-3 text-sm font-semibold leading-5 text-muted">
-                      <span className="block whitespace-nowrap">
-                        {pesquisador.email}
-                      </span>
-                      <span className="block whitespace-nowrap">
-                        {pesquisador.telefone || t("researchers.noPhone")}
-                      </span>
-                      {pesquisador.lattesUrl ? (
-                        <a
-                          className="block whitespace-nowrap text-primary hover:text-primary-dark"
-                          href={pesquisador.lattesUrl}
-                          rel="noreferrer"
-                          target="_blank"
-                        >
-                          Lattes
-                        </a>
-                      ) : null}
+                    <td className="whitespace-nowrap px-5 py-3 text-sm font-semibold text-muted">
+                      {pesquisador.email}
                     </td>
                     <td className="whitespace-nowrap px-5 py-3">
                       <StatusBadge
                         label={t(`presence.${pesquisador.status}` as Parameters<typeof t>[0])}
                         variant={getStatusVariant(pesquisador.status)}
                       />
-                    </td>
-                    <td className="whitespace-nowrap px-5 py-3 text-base text-muted">
-                      {pesquisador.bolsasFomento.length > 0
-                        ? t("researchers.grantsShort", { list: pesquisador.bolsasFomento.join(", ") })
-                        : pesquisador.cargaHorariaSemanal
-                          ? t("researchers.volunteer")
-                          : t("researchers.noGrant")}
-                      {pesquisador.cargaHorariaSemanal
-                        ? t("researchers.hoursShort", { hours: pesquisador.cargaHorariaSemanal })
-                        : ""}
                     </td>
                   </tr>
                 ))}
