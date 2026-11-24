@@ -96,7 +96,7 @@ export const navigationItems: NavigationItem[] = [
     mobileOrder: 5,
   },
   {
-    desktopLabel: "Agenda do Laboratório",
+    desktopLabel: "Agenda",
     desktopSection: "work",
     desktopOrder: 2,
     mobileLabel: "Agenda",
