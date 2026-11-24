@@ -260,7 +260,7 @@ export function Administracao() {
       </Card>
 
       <Card className="mb-5">
-        <div className="mb-5 flex items-start gap-3"><div className="rounded-lg bg-primary-soft p-3 text-primary"><ImageIcon className="h-5 w-5" /></div><div><h2 className="text-2xl font-bold">{t("logo.title")}</h2><p className="mt-1 text-muted">{t("logo.hint")}</p></div></div>
+        <div className="mb-5 flex items-start gap-3"><div className="rounded-lg bg-primary-soft p-3 text-primary"><ImageIcon className="h-5 w-5" /></div><div><h2 className="text-2xl font-bold">{t("logo.title")}</h2><p className="mt-1 text-muted">{t("logo.hint")}</p><p className="mt-2 text-sm font-semibold text-muted">{t("logo.sizeHint")}</p></div></div>
         {logoMessage ? <p className="mb-4 rounded-lg border border-success bg-success-soft p-3 font-semibold text-success-dark">{logoMessage}</p> : null}
         {logoError ? <p className="mb-4 rounded-lg border border-danger bg-danger-soft p-3 font-semibold text-danger">{logoError}</p> : null}
         <div className="grid gap-5 md:grid-cols-2">
