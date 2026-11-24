@@ -938,6 +938,11 @@ isOneToOne: false
               "acronym": string,"favicon_url": string,"invitation_ttl_hours": number,"logo_dark_url": string,"logo_light_url": string,"name": string,"privacy_contact_email": string
             }[]
                            },
+"get_purchase_project_names":
+{ Args: { "p_project_ids": (string)[] }; Returns: {
+              "id": string,"name": string
+            }[]
+                           },
 "record_booking_usage":
 { Args: { "p_amount": number,"p_booking_id": string }; Returns: {
               "approved_at": string | null,

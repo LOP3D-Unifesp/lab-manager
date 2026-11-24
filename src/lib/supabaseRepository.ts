@@ -1448,11 +1448,22 @@ export async function listPurchaseRequests() {
     )
     .order("created_at", { ascending: false });
   throwIfError(error);
-  return ((data ?? []) as unknown as PurchaseRequestRow[]).map(({ decider, maintenance, project, requester, ...row }) => ({
+  const rows = (data ?? []) as unknown as PurchaseRequestRow[];
+  // Todos veem os pedidos, mas só os membros leem `projects`: o nome dos demais projetos vem de uma função própria.
+  const unknownProjects = [...new Set(rows.filter((row) => row.project_id && !row.project).map((row) => row.project_id as string))];
+  const projectNames = new Map<string, string>();
+  if (unknownProjects.length > 0) {
+    const { data: names, error: namesError } = await client().rpc("get_purchase_project_names", { p_project_ids: unknownProjects });
+    throwIfError(namesError);
+    for (const item of (names ?? []) as Array<{ id: string; name: string }>) projectNames.set(item.id, item.name);
+  }
+  return rows.map(({ decider, maintenance, project, requester, ...row }) => ({
     ...row,
     estimated_amount: Number(row.estimated_amount),
     actual_amount: row.actual_amount === null ? null : Number(row.actual_amount),
-    project_name: project?.name ?? (row.project_id ? "Projeto removido" : "Estoque geral do laboratório"),
+    project_name:
+      project?.name ??
+      (row.project_id ? (projectNames.get(row.project_id) ?? "Projeto removido") : "Estoque geral do laboratório"),
     requested_by_name: requester?.full_name ?? null,
     decided_by_name: decider?.full_name ?? null,
     maintenance_equipment_name: maintenance?.equipment?.name ?? null,

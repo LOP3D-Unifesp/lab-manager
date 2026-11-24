@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(360);
+select plan(362);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -1580,11 +1580,22 @@ select throws_ok(
   '42501', null,
   'someone outside the project cannot request a purchase for it'
 );
-select is((select count(*) from public.purchase_requests where item like 'pgtap%'), 0::bigint, 'someone outside the project does not see the request');
+select is((select count(*) from public.purchase_requests where item like 'pgtap%'), 1::bigint, 'someone outside the project can see the request (read-only)');
 select throws_ok(
   $$ select public.set_purchase_status((select id from public.purchase_requests where item = 'pgtap bico'), 'approved') $$,
-  'P0001', 'purchase_not_found',
-  'someone outside the project cannot even reach the purchase'
+  'P0001', 'coordinator_required',
+  'someone outside the project cannot decide the purchase they can see'
+);
+select throws_ok(
+  $$ select public.update_purchase_request((select id from public.purchase_requests where item = 'pgtap bico'), 'pgtap alterado', null, 1, 1) $$,
+  'P0001',
+  null,
+  'someone outside the project cannot edit the purchase they can see'
+);
+select is(
+  (select name from public.get_purchase_project_names(array['00000000-0000-0000-0000-0000000000c2'::uuid])),
+  'Compras Alfa',
+  'the project name of a visible purchase is available to everyone'
 );
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
@@ -1708,7 +1719,7 @@ select lives_ok(
 select is((select count(*) from public.purchase_requests where item = 'pgtap estoque geral'), 1::bigint, 'the author sees the general stock request');
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
-select is((select count(*) from public.purchase_requests where item = 'pgtap estoque geral'), 0::bigint, 'a project member does not see someone else general stock request');
+select is((select count(*) from public.purchase_requests where item = 'pgtap estoque geral'), 1::bigint, 'everyone sees the general stock request (read-only)');
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000104","email":"inactive@example.com","role":"authenticated"}', true);
 select throws_ok(
