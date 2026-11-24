@@ -150,8 +150,46 @@ export function sortProjects(projects: Project[]) {
   );
 }
 
+// Resumo de um projeto para qualquer pessoa ativa (sem financiamento, tarefas nem compras).
+export type ProjectDirectoryEntry = {
+  id: string;
+  name: string;
+  description: string | null;
+  status: ProjectStatus;
+  starts_on: string | null;
+  ends_on: string | null;
+  members: ProjectMember[];
+  is_member: boolean;
+  my_request_id: string | null;
+  my_request_status: "pending" | null;
+  /** Pedidos de entrada pendentes (0 para quem não pode decidir). */
+  pending_count: number;
+};
+
+export type ProjectJoinRequest = {
+  id: string;
+  project_id: string;
+  profile_id: string;
+  message: string | null;
+  created_at: string;
+  requester_name: string;
+  requester_avatar_url: string | null;
+};
+
+const JOIN_ERROR_CODES = [
+  "request_already_pending",
+  "already_member",
+  "project_closed",
+  "request_not_found",
+  "not_allowed",
+  "own_request",
+  "active_profile_required",
+] as const;
+
 export function getProjectErrorMessage(error: unknown) {
   const text = error instanceof Error ? error.message : String(error ?? "");
+  const joinCode = JOIN_ERROR_CODES.find((code) => text.includes(code));
+  if (joinCode) return t(`projectError.${joinCode}` as Parameters<typeof t>[0]);
   if (text.includes("projects_name_key")) return t("projectError.projects_name_key");
   if (text.includes("funding_agencies_acronym_key")) return t("projectError.funding_agencies_acronym_key");
   if (text.includes("coordinator_required")) return t("projectError.coordinator_required");

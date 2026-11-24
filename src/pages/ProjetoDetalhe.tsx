@@ -5,6 +5,8 @@ import { ArrowLeft, Pencil, Plus } from "lucide-react";
 
 import { FundingEditor, fundingFormToInput, fundingToForm, type FundingForm } from "../components/projetos/FundingEditor";
 import { KanbanBoard } from "../components/projetos/KanbanBoard";
+import { JoinRequestsPanel } from "../components/projetos/JoinRequestsPanel";
+import { ProjectSummaryView } from "../components/projetos/ProjectSummaryView";
 import { SpoolCard } from "../components/inventario/SpoolCard";
 import { MembersEditor } from "../components/projetos/MembersEditor";
 import { ProjectFormModal } from "../components/projetos/ProjectFormModal";
@@ -30,12 +32,14 @@ import {
   getTaskErrorMessage,
   type FundingAgencyRecord,
   type Project,
+  type ProjectDirectoryEntry,
   type ProjectTask,
   type TaskPriority,
   type TaskStatus,
 } from "../lib/projects";
 import {
   getProject,
+  getProjectDirectoryEntry,
   listFundingAgencies,
   listProfiles,
   listProjectConsumption,
@@ -62,6 +66,8 @@ export function ProjetoDetalhe() {
   const { profile } = useAuth();
   const isCoordinator = profile?.role === "coordinator";
   const [project, setProject] = useState<Project | null | undefined>(undefined);
+  // Quem não participa do projeto vê só o resumo (e pode pedir para entrar).
+  const [resumo, setResumo] = useState<ProjectDirectoryEntry | null>(null);
   const [aba, setAba] = useState<Aba>("geral");
   const [editando, setEditando] = useState(false);
   const [erro, setErro] = useState("");
@@ -84,6 +90,7 @@ export function ProjetoDetalhe() {
   const carregar = useCallback(async () => {
     const data = await getProject(id);
     setProject(data);
+    setResumo(data ? null : await getProjectDirectoryEntry(id));
     if (data) {
       setMembrosForm(data.members.map((member) => member.profile_id));
       setFomentoForm(fundingToForm(data.funding));
@@ -200,6 +207,10 @@ export function ProjetoDetalhe() {
     return <p className="text-lg text-muted">{t("projects.loadingOne")}</p>;
   }
 
+  if (project === null && resumo) {
+    return <ProjectSummaryView entry={resumo} onChanged={carregar} />;
+  }
+
   if (project === null) {
     return (
       <Card>
@@ -289,6 +300,8 @@ export function ProjetoDetalhe() {
           </dl>
         </Card>
       ) : null}
+
+      {aba === "geral" ? <JoinRequestsPanel projectId={id} onDecided={carregar} /> : null}
 
       {aba === "kanban" ? (
         <div className="grid gap-4">

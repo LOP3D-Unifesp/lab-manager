@@ -1,4 +1,4 @@
-import { CalendarCheck, CheckCircle2, MessageSquare, ShoppingCart, Wrench, XCircle, type LucideIcon } from "lucide-react";
+import { CalendarCheck, CheckCircle2, MessageSquare, ShoppingCart, UserCheck, UserPlus, Wrench, XCircle, type LucideIcon } from "lucide-react";
 
 import { getLocale, t } from "../../i18n";
 import { describeNotification, type AppNotification, type NotificationType } from "../../lib/notifications";
@@ -16,6 +16,8 @@ const ICONS: Record<NotificationType, LucideIcon> = {
   feedback_new: MessageSquare,
   purchase_new: ShoppingCart,
   purchase_status: ShoppingCart,
+  project_join_request: UserPlus,
+  project_join_decision: UserCheck,
 };
 
 type NotificationRowProps = {

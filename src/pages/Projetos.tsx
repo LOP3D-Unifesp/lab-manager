@@ -22,10 +22,11 @@ import {
   projectStatusOptions,
   sortProjects,
   type Project,
+  type ProjectDirectoryEntry,
   type ProjectFundingFilter,
   type ProjectStatus,
 } from "../lib/projects";
-import { listProjects } from "../lib/supabaseRepository";
+import { listProjectDirectory, listProjects } from "../lib/supabaseRepository";
 
 const selectClassName =
   "min-h-11 rounded-lg border border-border bg-surface px-4 text-base outline-none transition focus:border-primary";
@@ -35,8 +36,11 @@ export function Projetos() {
   const { profile } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const vista = searchParams.get("vista") === "quadro" ? "quadro" : "lista";
   const isCoordinator = profile?.role === "coordinator";
+  const vistaParam = searchParams.get("vista");
+  // "todos" (resumo de todos os projetos, para pedir entrada) só existe para quem não é coordenador: eles já veem tudo.
+  const vista = vistaParam === "quadro" ? "quadro" : vistaParam === "todos" && !isCoordinator ? "todos" : "lista";
+  const [diretorio, setDiretorio] = useState<ProjectDirectoryEntry[] | null>(null);
   const [projects, setProjects] = useState<Project[] | null>(null);
   const [erro, setErro] = useState("");
   const [modalAberto, setModalAberto] = useState(false);
@@ -54,6 +58,24 @@ export function Projetos() {
     };
   }, []);
 
+  useEffect(() => {
+    if (vista !== "todos" || diretorio !== null) return undefined;
+    let ativo = true;
+    listProjectDirectory()
+      .then((data) => ativo && setDiretorio(data))
+      .catch((error) => ativo && setErro(getProjectErrorMessage(error)));
+    return () => {
+      ativo = false;
+    };
+  }, [vista, diretorio]);
+
+  const diretorioVisivel = useMemo(() => {
+    const termo = busca.trim().toLowerCase();
+    return (diretorio ?? []).filter(
+      (item) => (status === "all" || item.status === status) && (!termo || item.name.toLowerCase().includes(termo)),
+    );
+  }, [diretorio, status, busca]);
+
   const visiveis = useMemo(
     () => sortProjects(filterProjects(projects ?? [], { status, funding, search: busca })),
     [projects, status, funding, busca],
@@ -66,7 +88,9 @@ export function Projetos() {
         description={
           isCoordinator
             ? t("projects.subtitleCoordinator")
-            : t("projects.subtitleResearcher")
+            : vista === "todos"
+              ? t("projects.allHint")
+              : t("projects.subtitleResearcher")
         }
         action={
           isCoordinator && vista === "lista" ? (
@@ -83,7 +107,8 @@ export function Projetos() {
           [
             { id: "lista", label: t("projects.tabList") },
             { id: "quadro", label: t("projects.tabBoard") },
-          ] as const
+            ...(isCoordinator ? [] : [{ id: "todos", label: t("projects.tabAll") }]),
+          ] as ReadonlyArray<{ id: "lista" | "quadro" | "todos"; label: string }>
         ).map((item) => (
           <button
             key={item.id}
@@ -93,14 +118,81 @@ export function Projetos() {
               "rounded-md px-4 py-2 text-base font-semibold transition",
               vista === item.id ? "bg-primary-dark text-white dark:bg-primary" : "text-muted hover:text-text",
             ].join(" ")}
-            onClick={() => setSearchParams(item.id === "quadro" ? { vista: "quadro" } : {}, { replace: true })}
+            onClick={() => setSearchParams(item.id === "lista" ? {} : { vista: item.id }, { replace: true })}
           >
             {item.label}
           </button>
         ))}
       </div>
 
-      {vista === "quadro" ? (
+      {vista === "todos" ? (
+        <>
+          <div className="mb-5 grid gap-3 sm:grid-cols-[1fr_200px]">
+            <input
+              className={selectClassName}
+              placeholder={t("projects.searchByName")}
+              value={busca}
+              onChange={(event) => setBusca(event.target.value)}
+            />
+            <select
+              aria-label={t("projects.filterStatus")}
+              className={selectClassName}
+              value={status}
+              onChange={(event) => setStatus(event.target.value as ProjectStatus | "all")}
+            >
+              <option value="all">{t("projects.allStatuses")}</option>
+              {projectStatusOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          {erro ? (
+            <p className="mb-4 rounded-lg border border-danger bg-danger-soft p-3 text-base font-semibold text-danger">{erro}</p>
+          ) : null}
+          {diretorio === null && !erro ? <p className="text-lg text-muted">{t("projects.loading")}</p> : null}
+          {diretorio !== null && diretorioVisivel.length === 0 ? (
+            <Card>
+              <p className="py-4 text-center text-lg font-semibold">{t("projects.noneFiltered")}</p>
+            </Card>
+          ) : null}
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {diretorioVisivel.map((project) => {
+              const periodo = formatProjectPeriod(project.starts_on, project.ends_on);
+              return (
+                <Link key={project.id} to={`/projetos/${project.id}`} className="block rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                  <Card className="h-full transition hover:border-primary">
+                    <div className="flex h-full flex-col gap-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <h3 className="text-xl font-bold leading-snug text-text">{project.name}</h3>
+                        <StatusBadge label={getProjectStatusLabel(project.status)} variant={getProjectStatusVariant(project.status)} />
+                      </div>
+                      {project.description ? <p className="line-clamp-2 text-base text-muted">{project.description}</p> : null}
+                      {periodo ? <p className="text-sm text-muted">{periodo}</p> : null}
+                      <div className="flex flex-wrap gap-2">
+                        {project.is_member ? <StatusBadge label={t("projects.badgeMember")} variant="success" /> : null}
+                        {project.my_request_id ? <StatusBadge label={t("projects.badgeRequested")} variant="warning" /> : null}
+                        {project.pending_count > 0 ? (
+                          <StatusBadge label={t("projects.pendingRequests", { count: project.pending_count })} variant="info" />
+                        ) : null}
+                      </div>
+                      <div className="mt-auto flex items-center gap-2 pt-2">
+                        <div className="flex -space-x-2">
+                          {project.members.slice(0, 5).map((member) => (
+                            <Avatar key={member.profile_id} avatarUrl={member.avatar_url} name={member.full_name} className="h-8 w-8 ring-2 ring-surface" />
+                          ))}
+                        </div>
+                        <span className="text-sm text-muted">{t("projects.peopleCount", { count: project.members.length })}</span>
+                      </div>
+                    </div>
+                  </Card>
+                </Link>
+              );
+            })}
+          </div>
+        </>
+      ) : vista === "quadro" ? (
         projects === null ? (
           erro ? (
             <p className="rounded-lg border border-danger bg-danger-soft p-3 text-base font-semibold text-danger">{erro}</p>

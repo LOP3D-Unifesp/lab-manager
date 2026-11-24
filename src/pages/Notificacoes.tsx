@@ -16,6 +16,7 @@ const GROUP_LABELS: Record<NotificationGroup, () => string> = {
   requests: () => t("notifPage.group.requests"),
   purchases: () => t("notifPage.group.purchases"),
   feedback: () => t("notifPage.group.feedback"),
+  projects: () => t("notifPage.group.projects"),
 };
 
 const selectClassName =
