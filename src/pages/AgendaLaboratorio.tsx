@@ -550,7 +550,7 @@ export function AgendaLaboratorio() {
                     "flex min-h-28 flex-col rounded-lg border p-3",
                     diaMobileAtivo.weekday === hoje
                       ? "border-primary bg-primary-soft"
-                      : "border-border bg-white/80",
+                      : "border-border bg-surface/80",
                   ].join(" ")}
                 >
                   <div className="mb-2 flex items-start justify-between gap-3">
@@ -581,7 +581,7 @@ export function AgendaLaboratorio() {
       {popupSlot ? (
         <div
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-text/40 px-4 py-6"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6"
           role="dialog"
         >
           <Card className="w-full max-w-md shadow-soft">

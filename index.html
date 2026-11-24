@@ -5,8 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Sistema interno para gestao de agenda, habilidades e reservas do LO&P3D."
+      content="Sistema interno para gestão de agenda, habilidades e reservas do LO&P3D."
     />
+    <script>
+      try {
+        var t = localStorage.getItem("lab-manager:theme");
+        if (t === "dark" || ((!t || t === "system") && matchMedia("(prefers-color-scheme: dark)").matches)) {
+          document.documentElement.classList.add("dark");
+        }
+      } catch (e) {}
+    </script>
     <title>LO&P3D Lab Manager</title>
   </head>
   <body>

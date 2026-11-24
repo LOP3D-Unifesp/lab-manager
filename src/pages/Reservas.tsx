@@ -971,7 +971,7 @@ export function Reservas() {
                               title="Editar reserva"
                               aria-label={`Editar reserva ${reserva.project_name}`}
                               onClick={() => abrirEdicao(reserva)}
-                              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-current opacity-70 transition hover:bg-white/60 hover:opacity-100"
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-current opacity-70 transition hover:bg-surface/60 hover:opacity-100"
                             >
                               <Pencil className="h-4 w-4" aria-hidden="true" />
                             </button>
@@ -982,7 +982,7 @@ export function Reservas() {
                               title="Cancelar reserva"
                               aria-label={`Cancelar reserva ${reserva.project_name}`}
                               onClick={() => setReservaParaCancelar(reserva)}
-                              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-current opacity-70 transition hover:bg-white/60 hover:opacity-100"
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-current opacity-70 transition hover:bg-surface/60 hover:opacity-100"
                             >
                               <Trash2 className="h-4 w-4" aria-hidden="true" />
                             </button>
@@ -1037,7 +1037,7 @@ export function Reservas() {
       {modalAberto ? (
         <div
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-end justify-center bg-text/40 px-4 py-6 sm:items-center"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 px-4 py-6 sm:items-center"
           role="dialog"
         >
           <Card className="max-h-[90vh] w-full max-w-5xl overflow-y-auto shadow-soft">
@@ -1415,7 +1415,7 @@ export function Reservas() {
       {reservaParaCancelar ? (
         <div
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-text/40 px-4 py-6"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6"
           role="dialog"
         >
           <Card className="w-full max-w-md text-center shadow-soft">
@@ -1453,7 +1453,7 @@ export function Reservas() {
       {reservaParaRejeitar ? (
         <div
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-text/40 px-4 py-6"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6"
           role="dialog"
         >
           <Card className="w-full max-w-md shadow-soft">

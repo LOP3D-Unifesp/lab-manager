@@ -292,7 +292,7 @@ export function Habilidades() {
       {gerenciamentoAberto && isCoordinator ? (
         <div
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-end justify-center bg-text/40 px-4 py-6 sm:items-center"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 px-4 py-6 sm:items-center"
           role="dialog"
         >
           <Card className="w-full max-w-xl shadow-soft">
@@ -360,7 +360,7 @@ export function Habilidades() {
       {detalheAberto && skillSelecionada ? (
         <div
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-end justify-center bg-text/40 px-4 py-6 sm:items-center"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 px-4 py-6 sm:items-center"
           role="dialog"
         >
           <Card className="max-h-[88vh] w-full max-w-3xl overflow-y-auto shadow-soft">

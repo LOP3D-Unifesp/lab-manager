@@ -246,7 +246,7 @@ export function Administracao() {
             const { period } = item;
             if (editingPeriodId === period.id) return <div key={period.id}>{renderPeriodEditor(period)}</div>;
             return (
-              <article className={["flex flex-col gap-4 rounded-lg border border-border bg-background p-4 sm:flex-row sm:items-center sm:justify-between", period.is_active ? "" : "bg-slate-50"].join(" ")} key={period.id}>
+              <article className={["flex flex-col gap-4 rounded-lg border border-border bg-background p-4 sm:flex-row sm:items-center sm:justify-between", period.is_active ? "" : "opacity-70"].join(" ")} key={period.id}>
                 <div className="flex min-w-0 items-center gap-3">
                   <div className={["rounded-lg p-2.5", period.is_active ? "bg-primary-soft text-primary" : "bg-border/60 text-muted"].join(" ")}><Clock3 className="h-5 w-5" /></div>
                   <div><p className={["text-xl font-bold", period.is_active ? "text-text" : "text-muted"].join(" ")}>{formatSchedulePeriod(period.starts_at, period.ends_at)}</p><div className="mt-1"><StatusBadge label={period.is_active ? "Ativo" : "Inativo"} variant={period.is_active ? "success" : "neutral"} /></div></div>

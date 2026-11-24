@@ -3,6 +3,7 @@ import { Link, NavLink } from "react-router-dom";
 import { useAuth } from "../../lib/auth";
 import { navigationItems, navigationSectionLabels, type NavigationItem } from "../../lib/navigation";
 import { useAttention } from "./AttentionProvider";
+import { ThemeToggle } from "../ui/ThemeToggle";
 import { AuthUserMenu } from "./AuthUserMenu";
 import { EnvironmentBadge } from "./EnvironmentBadge";
 import { NotificationBell } from "./NotificationBell";
@@ -128,6 +129,7 @@ export function Sidebar() {
         </nav>
 
         <div className="mt-5 border-t border-border pt-3">
+          <ThemeToggle className="mb-3 w-full justify-between" />
           <AuthUserMenu />
         </div>
       </div>

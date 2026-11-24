@@ -31,7 +31,7 @@ export function Modal({ children, description, onClose, title, wide = false }: M
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "rgb(16 32 51 / 0.45)",
+        backgroundColor: "rgb(0 0 0 / 0.5)",
         backdropFilter: "blur(4px)",
       }}
     >

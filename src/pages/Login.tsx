@@ -4,6 +4,7 @@ import { Lock, LogIn } from "lucide-react";
 
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
+import { ThemeToggle } from "../components/ui/ThemeToggle";
 import { useAuth } from "../lib/auth";
 import { getSafeInternalRedirect } from "../lib/navigation";
 import { supabaseConfigurationError } from "../lib/supabaseClient";
@@ -45,6 +46,9 @@ export function Login() {
 
   return (
     <main className="min-h-screen bg-background px-5 py-8 text-text">
+      <div className="mx-auto flex w-full max-w-md justify-end">
+        <ThemeToggle />
+      </div>
       <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-md flex-col justify-center">
         <div className="mb-6">
           <p className="text-lg font-semibold text-primary">LO&P3D</p>

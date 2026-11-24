@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../../lib/auth";
 import { useFeedback } from "../feedback/FeedbackProvider";
 import { Avatar } from "../ui/Avatar";
+import { ThemeToggle } from "../ui/ThemeToggle";
 import { StatusBadge } from "../ui/StatusBadge";
 
 function getRoleLabel(role?: string) {
@@ -84,6 +85,11 @@ export function MobileAccountMenu() {
                 MVP
               </span>
             </div>
+          </div>
+
+          <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-2">
+            <span className="text-sm font-semibold text-muted">Tema</span>
+            <ThemeToggle />
           </div>
 
           <div className="grid p-1.5">

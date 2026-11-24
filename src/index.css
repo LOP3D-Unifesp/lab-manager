@@ -3,22 +3,52 @@
 @tailwind utilities;
 
 :root {
-  --color-primary: #0095d9;
-  --color-success: #00a651;
-  --color-warning: #ffcb05;
-  --color-background: #f8fafc;
-  --color-surface: #ffffff;
-  --color-border: #dbe3ea;
-  --color-text: #102033;
-  --color-muted: #5f6b7a;
-  --color-danger: #dc2626;
+  --c-primary: 0 149 217;
+  --c-primary-dark: 0 111 163;
+  --c-primary-soft: 232 246 252;
+  --c-success: 0 166 81;
+  --c-success-dark: 4 120 63;
+  --c-success-soft: 232 248 239;
+  --c-warning: 255 203 5;
+  --c-warning-dark: 138 106 0;
+  --c-warning-soft: 255 247 209;
+  --c-background: 248 250 252;
+  --c-surface: 255 255 255;
+  --c-border: 219 227 234;
+  --c-text: 16 32 51;
+  --c-muted: 95 107 122;
+  --c-danger: 220 38 38;
+  --c-danger-dark: 153 27 27;
+  --c-danger-soft: 254 242 242;
+  color-scheme: light;
   font-family: "Dosis", system-ui, sans-serif;
-  color: var(--color-text);
-  background: var(--color-background);
+  color: rgb(var(--c-text));
+  background: rgb(var(--c-background));
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.dark {
+  --c-primary: 2 132 199;
+  --c-primary-dark: 125 211 252;
+  --c-primary-soft: 12 45 66;
+  --c-success: 22 163 74;
+  --c-success-dark: 134 239 172;
+  --c-success-soft: 10 46 28;
+  --c-warning: 250 204 21;
+  --c-warning-dark: 253 224 71;
+  --c-warning-soft: 56 44 6;
+  --c-background: 11 18 32;
+  --c-surface: 17 27 46;
+  --c-border: 38 52 77;
+  --c-text: 232 238 247;
+  --c-muted: 154 169 189;
+  --c-danger: 248 113 113;
+  --c-danger-dark: 252 165 165;
+  --c-danger-soft: 61 20 24;
+  color-scheme: dark;
 }
 
 * {
@@ -27,14 +57,14 @@
 
 html {
   min-height: 100%;
-  background: var(--color-background);
+  background: rgb(var(--c-background));
 }
 
 body {
   min-width: 320px;
   min-height: 100vh;
   margin: 0;
-  background: var(--color-background);
+  background: rgb(var(--c-background));
 }
 
 button,
@@ -43,6 +73,13 @@ a {
 }
 
 :focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--color-primary), white 20%);
+  outline: 3px solid color-mix(in srgb, rgb(var(--c-primary)), white 20%);
   outline-offset: 3px;
+}
+
+input:disabled,
+select:disabled,
+textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
