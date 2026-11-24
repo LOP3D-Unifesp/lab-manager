@@ -69,6 +69,8 @@ export const projetos = {
   "tasks.mineEmpty": { pt: "Você não tem tarefas atribuídas. Crie uma com “Nova tarefa” ou peça para ser incluído numa tarefa de um projeto.", en: "You have no assigned tasks. Create one with “New task” or ask to be added to a project task.", es: "No tienes tareas asignadas. Crea una con “Nueva tarea” o pide que te incluyan en una tarea de un proyecto." },
   "tasks.late": { pt: "Atrasada · ", en: "Overdue · ", es: "Atrasada · " },
   "tasks.moveTo": { pt: "Mover \"{title}\" para", en: "Move \"{title}\" to", es: "Mover \"{title}\" a" },
+  "tasks.setPriority": { pt: "Prioridade de \"{title}\"", en: "Priority of \"{title}\"", es: "Prioridad de \"{title}\"" },
+  "tasks.moveLabel": { pt: "Mover para", en: "Move to", es: "Mover a" },
   "tasks.noTasks": { pt: "Nenhuma tarefa.", en: "No tasks.", es: "Ninguna tarea." },
   "tasks.filterProject": { pt: "Projeto", en: "Project", es: "Proyecto" },
   "tasks.allProjects": { pt: "Todos os projetos", en: "All projects", es: "Todos los proyectos" },

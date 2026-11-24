@@ -38,7 +38,7 @@ type GeneralTasksBoardProps = {
 // Quadro com as tarefas de todos os projetos que a pessoa vê (coordenador: todos), com filtros.
 export function GeneralTasksBoard({ isCoordinator, profileId, projects }: GeneralTasksBoardProps) {
   const loader = useCallback(() => listVisibleTasks(), []);
-  const { erro, mover, recarregar, tarefas } = useTaskBoard(loader);
+  const { erro, mover, mudarPrioridade, recarregar, tarefas } = useTaskBoard(loader);
   const [filtros, setFiltros] = useState<TaskFilters>({ projectId: "all", assignee: "all", priority: "all", overdueOnly: false });
   const [modal, setModal] = useState<{ task: ProjectTask | null } | null>(null);
 
@@ -153,7 +153,7 @@ export function GeneralTasksBoard({ isCoordinator, profileId, projects }: Genera
               </button>
             </div>
           ) : null}
-          <KanbanBoard tasks={visiveis} showProject onMove={mover} onOpen={(task) => setModal({ task })} />
+          <KanbanBoard tasks={visiveis} showProject onMove={mover} onPriorityChange={mudarPrioridade} onOpen={(task) => setModal({ task })} />
         </>
       ) : null}
 
