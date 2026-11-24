@@ -155,8 +155,8 @@ um trigger chama a Edge Function `send-push` e ela entrega o aviso às assinatur
    values ('https://<ref-do-projeto>.supabase.co/functions/v1/send-push', '<o mesmo PUSH_WEBHOOK_SECRET>');
    ```
 
-5. No GitHub: Settings → Secrets and variables → Actions → Variables → `VITE_VAPID_PUBLIC_KEY` = a chave
-   **pública**. O próximo deploy do Pages já inclui o service worker (`sw.js`).
+5. A chave **pública** já está no `deploy-pages.yml` (não é segredo). Para usar outra, defina a variável de Actions
+   `VITE_VAPID_PUBLIC_KEY`, que tem prioridade. O deploy do Pages inclui o service worker (`sw.js`).
 6. Em cada navegador: sino → "Receber avisos no computador". Para testar, feche o app e gere um evento (por exemplo,
    um pedido de compra) com outra conta.
 
