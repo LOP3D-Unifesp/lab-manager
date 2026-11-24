@@ -24,6 +24,7 @@ import { MeuPerfil } from "./pages/MeuPerfil";
 import { MinhasReservas } from "./pages/MinhasReservas";
 import { NotFound } from "./pages/NotFound";
 import { Pesquisadores } from "./pages/Pesquisadores";
+import { PesquisadorDetalhe } from "./pages/PesquisadorDetalhe";
 import { ProfileRequired } from "./pages/ProfileRequired";
 import { ProjetoDetalhe } from "./pages/ProjetoDetalhe";
 import { Projetos } from "./pages/Projetos";
@@ -126,6 +127,7 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <Dashboard /> },
           { path: "pesquisadores", element: <Pesquisadores /> },
+          { path: "pesquisadores/:id", element: <PesquisadorDetalhe /> },
           { path: "projetos", element: <Projetos /> },
           { path: "projetos/:id", element: <ProjetoDetalhe /> },
           { path: "habilidades", element: <Habilidades /> },

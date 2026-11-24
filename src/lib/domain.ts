@@ -36,7 +36,7 @@ export function getFundingAgencyLabel(
   other: string | null = null,
 ) {
   if (!agency) return null;
-  if (agency === "other") return other?.trim() || "Outra agência";
+  if (agency === "other") return other?.trim() || t("grants.otherAgency");
   return fundingAgencyOptions.find((option) => option.value === agency)?.label ?? agency;
 }
 

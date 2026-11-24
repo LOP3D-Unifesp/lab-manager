@@ -22,13 +22,13 @@ export type Pesquisador = {
   habilidades: string[];
 };
 
-function getVinculoLabel(value: string | null) {
+export function getVinculoLabel(value: string | null) {
   if (!value) return t("common.notInformed");
   const key = `affiliation.${value}`;
   return key in dictionaries["pt-BR"] ? t(key as MessageKey) : value;
 }
 
-function getStatusPresenca(
+export function getStatusPresenca(
   profileId: string,
   availability: AvailabilitySlot[],
   weekdayHoje: number,

@@ -173,6 +173,13 @@ export async function listProfiles() {
   );
 }
 
+// Perfil ativo de uma pessoa (ou null se não existe ou está inativo), para a página de detalhe.
+export async function getProfile(id: string) {
+  const { data, error } = await client().from("profiles").select(publicProfileSelect).eq("id", id).eq("is_active", true).maybeSingle();
+  throwIfError(error);
+  return data ? mapPublicProfile(data as unknown as Omit<PublicProfile, "first_name" | "last_name">) : null;
+}
+
 export async function updateMyProfile(params: ProfileInput) {
   const { data, error } = await client().rpc("update_my_profile", profileRpcArgs(params));
   throwIfError(error);
@@ -535,8 +542,10 @@ export async function updateSkill(
   return data as Skill;
 }
 
-export async function listProfileSkills() {
-  const { data, error } = await client().from("profile_skills").select("profile_id, skill_id");
+export async function listProfileSkills(profileId?: string) {
+  let query = client().from("profile_skills").select("profile_id, skill_id");
+  if (profileId) query = query.eq("profile_id", profileId);
+  const { data, error } = await query;
   throwIfError(error);
   return (data ?? []) as ProfileSkill[];
 }
@@ -558,12 +567,14 @@ export async function toggleMySkill(profileId: string, skillId: string, enabled:
   throwIfError(error);
 }
 
-export async function listAvailability() {
-  const { data, error } = await client()
+export async function listAvailability(profileId?: string) {
+  let query = client()
     .from("availability_slots")
     .select("id, profile_id, weekday, starts_at, ends_at, schedule_period_id, work_mode")
     .order("weekday")
     .order("starts_at");
+  if (profileId) query = query.eq("profile_id", profileId);
+  const { data, error } = await query;
   throwIfError(error);
 
   return ((data ?? []) as Omit<AvailabilitySlot, "periodo">[]).map((slot) => ({
