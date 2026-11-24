@@ -63,10 +63,21 @@ describe("lista de pedidos", () => {
     purchase({ id: "f", status: "cancelled", created_at: "2026-06-08T10:00:00Z" }),
   ];
   const ids = (items: PurchaseRequest[]) => items.map((item) => item.id);
-  const all = { status: "all" as const, projectId: "all", category: "all" as const, kind: "all" as const, mine: false };
+  const all = { status: "all" as const, projectId: "all", category: "all" as const, urgency: "all" as const, kind: "all" as const, mine: false };
 
   it("ordena quem espera decisão primeiro (mais antigo antes) e os encerrados por último", () => {
     expect(ids(sortPurchases(list))).toEqual(["c", "b", "d", "a", "e", "f"]);
+  });
+
+  it("filtra os pedidos pela prioridade", () => {
+    const items = [
+      purchase({ id: "u", urgency: "urgent" }),
+      purchase({ id: "n", urgency: "normal" }),
+      purchase({ id: "l", urgency: "low" }),
+    ];
+    expect(ids(filterPurchases(items, { ...all, urgency: "urgent" }, "ana"))).toEqual(["u"]);
+    expect(ids(filterPurchases(items, { ...all, urgency: "low" }, "ana"))).toEqual(["l"]);
+    expect(filterPurchases(items, all, "ana")).toHaveLength(3);
   });
 
   it("separa os pedidos do estoque geral dos de projeto", () => {
@@ -74,7 +85,7 @@ describe("lista de pedidos", () => {
       purchase({ id: "g1", project_id: null, project_name: GENERAL_STOCK_LABEL }),
       purchase({ id: "p1", project_id: "alfa" }),
     ];
-    const none = { status: "all" as const, projectId: "all", category: "all" as const, kind: "all" as const, mine: false };
+    const none = { status: "all" as const, projectId: "all", category: "all" as const, urgency: "all" as const, kind: "all" as const, mine: false };
     expect(filterPurchases(mixed, { ...none, projectId: "general" }, "ana").map((item) => item.id)).toEqual(["g1"]);
     expect(filterPurchases(mixed, { ...none, projectId: "alfa" }, "ana").map((item) => item.id)).toEqual(["p1"]);
     expect(filterPurchases(mixed, none, "ana")).toHaveLength(2);
@@ -266,7 +277,7 @@ describe("gastos de manutenção", () => {
   });
 
   it("filtra por tipo de compra", () => {
-    const none = { status: "all" as const, projectId: "all", category: "all" as const, mine: false };
+    const none = { status: "all" as const, projectId: "all", category: "all" as const, urgency: "all" as const, mine: false };
     expect(filterPurchases(list, { ...none, kind: "maintenance" }, "ana").map((item) => item.id)).toEqual(["a", "b", "c", "d", "e"]);
     expect(filterPurchases(list, { ...none, kind: "other" }, "ana").map((item) => item.id)).toEqual(["f"]);
   });

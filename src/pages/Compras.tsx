@@ -29,6 +29,7 @@ import {
   isValidPurchaseUrl,
   purchaseCategoryOptions,
   purchaseStatusOptions,
+  purchaseUrgencyOptions,
   sortPurchases,
   summarizeByProject,
   summarizeMaintenanceSpending,
@@ -52,7 +53,7 @@ export function Compras() {
   const [purchases, setPurchases] = useState<PurchaseRequest[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [carregado, setCarregado] = useState(false);
-  const [filters, setFilters] = useState<PurchaseFilters>({ status: "open", projectId: "all", category: "all", kind: "all", mine: false });
+  const [filters, setFilters] = useState<PurchaseFilters>({ status: "open", projectId: "all", category: "all", urgency: "all", kind: "all", mine: false });
   const [formulario, setFormulario] = useState<{ purchase: PurchaseRequest | null } | null>(null);
   const [passo, setPasso] = useState<{ mode: "reject" | "purchase"; purchase: PurchaseRequest } | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
@@ -194,6 +195,19 @@ export function Compras() {
         >
           <option value="all">{t("purchases.allCategories")}</option>
           {purchaseCategoryOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <select
+          aria-label={t("purchases.filterUrgency")}
+          className={selectClassName}
+          value={filters.urgency}
+          onChange={(event) => setFilters({ ...filters, urgency: event.target.value as PurchaseFilters["urgency"] })}
+        >
+          <option value="all">{t("purchases.allUrgencies")}</option>
+          {purchaseUrgencyOptions.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>
