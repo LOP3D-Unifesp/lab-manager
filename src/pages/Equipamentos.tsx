@@ -44,6 +44,7 @@ import {
   setEquipmentMaterials,
   updateEquipment,
 } from "../lib/supabaseRepository";
+import { inputClassName } from "../components/ui/formStyles";
 
 type EquipmentForm = {
   name: string;
@@ -57,9 +58,6 @@ type EquipmentForm = {
 };
 
 const statusOptions: EquipmentStatus[] = ["active", "unavailable", "disabled"];
-
-const inputClassName =
-  "min-h-11 min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary";
 
 function toNullable(value: string) {
   const trimmed = value.trim();

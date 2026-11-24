@@ -146,7 +146,7 @@ export function Inventario() {
             aria-selected={aba === item.id}
             className={[
               "rounded-md px-4 py-2 text-base font-semibold transition",
-              aba === item.id ? "bg-primary-dark text-white" : "text-muted hover:text-text",
+              aba === item.id ? "bg-primary-dark text-white dark:bg-primary" : "text-muted hover:text-text",
             ].join(" ")}
             onClick={() => setAba(item.id)}
           >

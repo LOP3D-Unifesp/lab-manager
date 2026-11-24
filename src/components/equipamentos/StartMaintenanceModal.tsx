@@ -5,9 +5,7 @@ import { formatMaintenanceDateTime, getMaintenanceErrorMessage, splitAffectedBoo
 import { listActiveBookingsForEquipment, startEquipmentMaintenance } from "../../lib/supabaseRepository";
 import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
-
-const inputClassName =
-  "min-h-11 min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary";
+import { inputClassName } from "../ui/formStyles";
 
 function BookingList({ bookings, timezone }: { bookings: BookingSlot[]; timezone: string }) {
   return (

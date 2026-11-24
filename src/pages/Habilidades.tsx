@@ -3,6 +3,7 @@ import { Mail, Pencil, Phone, Plus, UserCheck, Users, X } from "lucide-react";
 
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
+import { Modal } from "../components/ui/Modal";
 import { PageHeader } from "../components/ui/PageHeader";
 import { StatusBadge } from "../components/ui/StatusBadge";
 import { useCurrentProfile } from "../lib/currentUser";
@@ -290,31 +291,7 @@ export function Habilidades() {
       )}
 
       {gerenciamentoAberto && isCoordinator ? (
-        <div
-          aria-modal="true"
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 px-4 py-6 sm:items-center"
-          role="dialog"
-        >
-          <Card className="w-full max-w-xl shadow-soft">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="text-2xl font-bold text-text">
-                  {skillEmEdicao ? "Editar habilidade" : "Nova habilidade"}
-                </h3>
-                <p className="mt-1 text-base text-muted">
-                  Competências ativas podem ser selecionadas pelos pesquisadores.
-                </p>
-              </div>
-              <button
-                type="button"
-                title="Fechar"
-                aria-label="Fechar gerenciamento de habilidade"
-                className="inline-flex h-10 w-10 items-center justify-center rounded-md text-muted hover:bg-background hover:text-text"
-                onClick={fecharGerenciamento}
-              >
-                <X className="h-5 w-5" aria-hidden="true" />
-              </button>
-            </div>
+        <Modal sheet title={skillEmEdicao ? "Editar habilidade" : "Nova habilidade"} description="Competências ativas podem ser selecionadas pelos pesquisadores." onClose={fecharGerenciamento}>
 
             <form className="mt-5 grid gap-4" onSubmit={salvarSkill}>
               <label className="grid gap-2 font-semibold text-text">
@@ -353,36 +330,11 @@ export function Habilidades() {
                 </Button>
               </div>
             </form>
-          </Card>
-        </div>
+          </Modal>
       ) : null}
 
       {detalheAberto && skillSelecionada ? (
-        <div
-          aria-modal="true"
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 px-4 py-6 sm:items-center"
-          role="dialog"
-        >
-          <Card className="max-h-[88vh] w-full max-w-3xl overflow-y-auto shadow-soft">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="text-2xl font-bold text-text">
-                  {skillSelecionada.name}
-                </h3>
-                <p className="mt-1 text-base font-semibold text-muted">
-                  Pessoas registradas nesta habilidade.
-                </p>
-              </div>
-              <button
-                type="button"
-                title="Fechar"
-                aria-label="Fechar habilidade"
-                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-muted transition hover:bg-background hover:text-text"
-                onClick={() => setDetalheAberto(false)}
-              >
-                <X className="h-5 w-5" aria-hidden="true" />
-              </button>
-            </div>
+        <Modal sheet wide title={skillSelecionada.name} description="Pessoas registradas nesta habilidade." onClose={() => setDetalheAberto(false)}>
 
             <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <StatusBadge
@@ -433,8 +385,7 @@ export function Habilidades() {
                 Nenhuma pessoa registrada nesta habilidade.
               </p>
             )}
-          </Card>
-        </div>
+          </Modal>
       ) : null}
     </div>
   );

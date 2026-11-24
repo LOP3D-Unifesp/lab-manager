@@ -17,7 +17,7 @@ export function NotFound() {
         </p>
         <Link
           to="/"
-          className="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-primary-dark px-5 py-3 text-lg font-semibold text-white transition hover:bg-primary"
+          className="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-primary-dark px-5 py-3 text-lg font-semibold text-white transition hover:bg-primary dark:bg-primary"
         >
           Ir para o dashboard
         </Link>

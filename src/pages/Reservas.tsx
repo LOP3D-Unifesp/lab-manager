@@ -5,6 +5,9 @@ import { Link, useSearchParams } from "react-router-dom";
 import { BookingLifecycleActions } from "../components/reservas/BookingLifecycleActions";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
+import { Alert } from "../components/ui/Alert";
+import { Field } from "../components/ui/Field";
+import { Input } from "../components/ui/Input";
 import { Modal } from "../components/ui/Modal";
 import { PageHeader } from "../components/ui/PageHeader";
 import { StatusBadge } from "../components/ui/StatusBadge";
@@ -1035,30 +1038,7 @@ export function Reservas() {
       )}
 
       {modalAberto ? (
-        <div
-          aria-modal="true"
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 px-4 py-6 sm:items-center"
-          role="dialog"
-        >
-          <Card className="max-h-[90vh] w-full max-w-5xl overflow-y-auto shadow-soft">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h3 className="text-2xl font-bold text-text">
-                  {reservaEmEdicao ? "Editar reserva" : "Criar reserva"}
-                </h3>
-                <p className="mt-1 text-lg text-muted">
-                  Informe os dados e escolha um equipamento disponível.
-                </p>
-              </div>
-              <button
-                aria-label="Fechar reserva"
-                className="self-start rounded-lg p-2 text-muted transition hover:bg-background hover:text-text"
-                onClick={fecharModal}
-                type="button"
-              >
-                <X aria-hidden="true" className="h-6 w-6" />
-              </button>
-            </div>
+        <Modal sheet wide title={reservaEmEdicao ? "Editar reserva" : "Criar reserva"} description="Informe os dados e escolha um equipamento disponível." onClose={fecharModal}>
 
             <form className="mt-5 grid gap-5" onSubmit={salvarReserva}>
               <div className="grid items-start gap-4 md:grid-cols-[1.4fr_1fr] xl:grid-cols-[1.3fr_0.8fr_0.8fr_0.8fr]">
@@ -1408,91 +1388,57 @@ export function Reservas() {
                 </Button>
               </div>
             </form>
-          </Card>
-        </div>
+        </Modal>
       ) : null}
 
       {reservaParaCancelar ? (
-        <div
-          aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6"
-          role="dialog"
+        <Modal
+          title="Cancelar reserva?"
+          description={`Tem certeza de que deseja cancelar ${reservaParaCancelar.project_name}?`}
+          onClose={() => setReservaParaCancelar(null)}
         >
-          <Card className="w-full max-w-md text-center shadow-soft">
-            <div className="flex justify-center">
-              <div className="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-danger-soft text-danger-dark">
-                <Trash2 className="h-6 w-6" aria-hidden="true" />
-              </div>
-            </div>
-            <h3 className="mt-4 text-2xl font-bold text-text">
-              Cancelar reserva?
-            </h3>
-            <p className="mt-2 text-base leading-6 text-muted">
-              Tem certeza de que deseja cancelar{" "}
-              {reservaParaCancelar.project_name}?
-            </p>
-            <div className="mt-6 flex flex-col-reverse items-center justify-center gap-3 sm:flex-row">
-              <Button
-                variant="ghost"
-                onClick={() => setReservaParaCancelar(null)}
-              >
-                Voltar
-              </Button>
-              <Button
-                variant="danger"
-                disabled={salvando}
-                onClick={() => cancelarReserva(reservaParaCancelar.id)}
-              >
-                Cancelar reserva
-              </Button>
-            </div>
-          </Card>
-        </div>
+          <div className="flex flex-col-reverse items-center justify-end gap-3 sm:flex-row">
+            <Button variant="ghost" onClick={() => setReservaParaCancelar(null)}>
+              Voltar
+            </Button>
+            <Button
+              variant="danger"
+              disabled={salvando}
+              onClick={() => cancelarReserva(reservaParaCancelar.id)}
+            >
+              Cancelar reserva
+            </Button>
+          </div>
+        </Modal>
       ) : null}
 
       {reservaParaRejeitar ? (
-        <div
-          aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6"
-          role="dialog"
+        <Modal
+          title="Rejeitar reserva?"
+          description={`A reserva ${reservaParaRejeitar.project_name} será recusada e o horário liberado para outros pesquisadores.`}
+          onClose={() => setReservaParaRejeitar(null)}
         >
-          <Card className="w-full max-w-md shadow-soft">
-            <h3 className="text-2xl font-bold text-text">Rejeitar reserva?</h3>
-            <p className="mt-2 text-base leading-6 text-muted">
-              A reserva {reservaParaRejeitar.project_name} será recusada e o
-              horário liberado para outros pesquisadores.
-            </p>
-            <label className="mt-4 grid gap-2 text-base font-semibold text-text">
-              Motivo (opcional)
-              <input
-                className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
-                value={motivoRejeicao}
-                onChange={(event) => setMotivoRejeicao(event.target.value)}
-                placeholder="Ex.: equipamento reservado para manutenção"
-              />
-            </label>
-            {erro ? (
-              <p className="mt-3 rounded-lg border border-danger bg-danger-soft p-3 text-base font-semibold text-danger">
-                {erro}
-              </p>
-            ) : null}
-            <div className="mt-6 flex flex-col-reverse items-center justify-center gap-3 sm:flex-row">
-              <Button
-                variant="ghost"
-                onClick={() => setReservaParaRejeitar(null)}
-              >
-                Voltar
-              </Button>
-              <Button
-                variant="danger"
-                disabled={salvando}
-                onClick={() => rejeitarReserva(reservaParaRejeitar.id, motivoRejeicao)}
-              >
-                Rejeitar reserva
-              </Button>
-            </div>
-          </Card>
-        </div>
+          <Field label="Motivo (opcional)">
+            <Input
+              value={motivoRejeicao}
+              onChange={(event) => setMotivoRejeicao(event.target.value)}
+              placeholder="Ex.: equipamento reservado para manutenção"
+            />
+          </Field>
+          {erro ? <Alert className="mt-3">{erro}</Alert> : null}
+          <div className="mt-6 flex flex-col-reverse items-center justify-end gap-3 sm:flex-row">
+            <Button variant="ghost" onClick={() => setReservaParaRejeitar(null)}>
+              Voltar
+            </Button>
+            <Button
+              variant="danger"
+              disabled={salvando}
+              onClick={() => rejeitarReserva(reservaParaRejeitar.id, motivoRejeicao)}
+            >
+              Rejeitar reserva
+            </Button>
+          </div>
+        </Modal>
       ) : null}
 
       {usoPendente ? (

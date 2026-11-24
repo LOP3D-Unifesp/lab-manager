@@ -3,6 +3,7 @@ import { CalendarDays, Trash2, Users, Utensils, X } from "lucide-react";
 
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
+import { Modal } from "../components/ui/Modal";
 import { PageHeader } from "../components/ui/PageHeader";
 import {
   getClasseContador,
@@ -579,30 +580,7 @@ export function AgendaLaboratorio() {
       </section>
 
       {popupSlot ? (
-        <div
-          aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6"
-          role="dialog"
-        >
-          <Card className="w-full max-w-md shadow-soft">
-            <div className="mb-4 flex items-start justify-between gap-4 border-b border-border pb-4">
-              <div>
-                <h3 className="text-2xl font-bold text-text">
-                  {popupSlot.titulo}
-                </h3>
-                <p className="mt-1 text-base font-semibold text-muted">
-                  {popupSlot.horario}
-                </p>
-              </div>
-              <button
-                aria-label="Fechar lista"
-                className="rounded-lg p-2 text-muted transition hover:bg-background hover:text-text"
-                onClick={() => setPopupSlot(null)}
-                type="button"
-              >
-                <X aria-hidden="true" className="h-6 w-6" />
-              </button>
-            </div>
+        <Modal title={popupSlot.titulo} description={popupSlot.horario} onClose={() => setPopupSlot(null)}>
 
             {popupSlot.entries.length > 0 ? (
               <div className="grid gap-4">
@@ -727,8 +705,7 @@ export function AgendaLaboratorio() {
                 Nenhum pesquisador registrado.
               </p>
             )}
-          </Card>
-        </div>
+        </Modal>
       ) : null}
     </div>
   );

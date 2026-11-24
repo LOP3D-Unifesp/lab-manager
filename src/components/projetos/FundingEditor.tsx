@@ -12,6 +12,7 @@ import {
 } from "../../lib/projects";
 import { createFundingAgency, type ProjectFundingInput } from "../../lib/supabaseRepository";
 import { Button } from "../ui/Button";
+import { inputClassName } from "../ui/formStyles";
 
 export type FundingFormItem = { category: FundingCategory; description: string; amount: string };
 export type FundingForm = {
@@ -63,9 +64,6 @@ export function fundingFormToInput(forms: FundingForm[]): ProjectFundingInput[] 
   }
   return result;
 }
-
-const inputClassName =
-  "min-h-11 min-w-0 rounded-lg border border-border bg-surface px-4 text-base font-normal outline-none transition focus:border-primary";
 
 type FundingEditorProps = {
   value: FundingForm[];

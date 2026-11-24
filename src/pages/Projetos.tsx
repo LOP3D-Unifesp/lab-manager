@@ -89,7 +89,7 @@ export function Projetos() {
             aria-selected={vista === item.id}
             className={[
               "rounded-md px-4 py-2 text-base font-semibold transition",
-              vista === item.id ? "bg-primary-dark text-white" : "text-muted hover:text-text",
+              vista === item.id ? "bg-primary-dark text-white dark:bg-primary" : "text-muted hover:text-text",
             ].join(" ")}
             onClick={() => setSearchParams(item.id === "quadro" ? { vista: "quadro" } : {}, { replace: true })}
           >

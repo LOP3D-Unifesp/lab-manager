@@ -96,8 +96,8 @@ export function MobileNavigation() {
               [
                 "-mt-5 flex h-[70px] min-w-0 flex-col items-center justify-center gap-1 rounded-full border-4 border-surface px-1 text-[12px] font-bold leading-none shadow-soft transition",
                 isActive
-                  ? "bg-success-dark text-white"
-                  : "bg-success text-white hover:bg-success-dark",
+                  ? "bg-success-dark text-white dark:bg-success"
+                  : "bg-success text-white hover:bg-success-dark dark:hover:bg-success/85",
               ].join(" ")
             }
           >

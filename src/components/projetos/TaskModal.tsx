@@ -18,9 +18,7 @@ import {
 import { Avatar } from "../ui/Avatar";
 import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
-
-const inputClassName =
-  "min-h-11 min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary";
+import { inputClassName } from "../ui/formStyles";
 
 type TaskModalProps = {
   // Projeto fixo (aba Kanban do projeto): informe também `members`.

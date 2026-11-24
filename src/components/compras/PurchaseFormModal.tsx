@@ -22,6 +22,7 @@ import {
 import type { FundingCategory } from "../../lib/projects";
 import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
+import { inputClassName } from "../ui/formStyles";
 
 type PurchaseFormModalProps = {
   /** Pedido de peça feito a partir de um chamado de manutenção: já vem preenchido e fica ligado ao chamado. */
@@ -32,9 +33,6 @@ type PurchaseFormModalProps = {
   onClose: () => void;
   onDone: () => Promise<void> | void;
 };
-
-const inputClassName =
-  "min-h-11 min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary";
 
 export function PurchaseFormModal({ defaultProjectId, fromMaintenance, onClose, onDone, projects, purchase }: PurchaseFormModalProps) {
   const [projectId, setProjectId] = useState(purchase ? (purchase.project_id ?? GENERAL_STOCK_VALUE) : defaultProjectId);

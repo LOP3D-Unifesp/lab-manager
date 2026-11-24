@@ -2,15 +2,13 @@ import { Plus, Trash2 } from "lucide-react";
 
 import { fundingAgencyOptions, type FundingAgency, type FundingGrant } from "../../lib/domain";
 import { Button } from "../ui/Button";
+import { inputClassName } from "../ui/formStyles";
 
 type FundingGrantsEditorProps = {
   value: FundingGrant[];
   onChange: (grants: FundingGrant[]) => void;
   disabled?: boolean;
 };
-
-const inputClassName =
-  "min-h-11 rounded-lg border border-border bg-surface px-4 text-base font-normal outline-none transition focus:border-primary";
 
 export function FundingGrantsEditor({ value, onChange, disabled }: FundingGrantsEditorProps) {
   function addGrant() {

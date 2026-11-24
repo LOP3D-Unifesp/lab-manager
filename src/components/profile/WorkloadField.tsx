@@ -1,5 +1,6 @@
 import type { FundingGrant } from "../../lib/domain";
 import { FundingGrantsEditor } from "./FundingGrantsEditor";
+import { inputClassName } from "../ui/formStyles";
 
 type WorkloadFieldProps = {
   isScholarshipHolder: boolean;
@@ -13,9 +14,6 @@ type WorkloadFieldProps = {
   label?: string;
   className?: string;
 };
-
-const inputClassName =
-  "min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary";
 
 export function WorkloadField({
   isScholarshipHolder,
@@ -35,7 +33,7 @@ export function WorkloadField({
         <label className="grid min-w-0 gap-2 text-base font-semibold text-text">
           Bolsista ou voluntário?
           <select
-            className={inputClassName}
+            className={`${inputClassName} w-full`}
             disabled={disabled}
             onChange={(event) => onIsScholarshipHolderChange(event.target.value === "holder")}
             value={isScholarshipHolder ? "holder" : "volunteer"}
@@ -64,7 +62,7 @@ export function WorkloadField({
           <label className="grid min-w-0 gap-2 text-base font-semibold text-text">
             {label}
             <input
-              className={inputClassName}
+              className={`${inputClassName} w-full`}
               disabled={disabled}
               inputMode="numeric"
               max={60}

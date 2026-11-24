@@ -6,6 +6,7 @@ import { MoneyInput } from "../ui/MoneyInput";
 import { setPurchaseStatus } from "../../lib/supabaseRepository";
 import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
+import { inputClassName } from "../ui/formStyles";
 
 type PurchaseStepModalProps = {
   mode: "reject" | "purchase";
@@ -13,9 +14,6 @@ type PurchaseStepModalProps = {
   onClose: () => void;
   onDone: () => Promise<void> | void;
 };
-
-const inputClassName =
-  "min-h-11 min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary";
 
 // Recusar (com motivo) ou marcar como comprado (com o valor pago).
 export function PurchaseStepModal({ mode, onClose, onDone, purchase }: PurchaseStepModalProps) {
