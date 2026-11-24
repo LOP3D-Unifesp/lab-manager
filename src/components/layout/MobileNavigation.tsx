@@ -8,6 +8,8 @@ import {
   mobileSecondaryNavigationItems,
   type NavigationItem,
 } from "../../lib/navigation";
+import { useT } from "../../i18n";
+import { navLabelKey } from "../../i18n/navLabels";
 import { useAuth } from "../../lib/auth";
 
 function canShowMobileItem(item: NavigationItem, role?: string) {
@@ -25,6 +27,7 @@ function getRegularItemClass(isActive: boolean) {
 
 export function MobileNavigation() {
   const { profile } = useAuth();
+  const t = useT();
   const [isOpen, setIsOpen] = useState(false);
   const secondaryNavigationId = "mobile-secondary-navigation";
   const primaryItems = mobilePrimaryNavigationItems.filter((item) =>
@@ -43,7 +46,7 @@ export function MobileNavigation() {
 
   return (
     <nav
-      aria-label="Navegação móvel"
+      aria-label={t("nav.mobile")}
       className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2 shadow-soft lg:hidden"
     >
       {isOpen ? (
@@ -66,7 +69,7 @@ export function MobileNavigation() {
               }
             >
               <item.icon aria-hidden="true" className="h-4 w-4 shrink-0" />
-              <span className="min-w-0 truncate">{item.mobileLabel}</span>
+              <span className="min-w-0 truncate">{t(navLabelKey(item, "mobile"))}</span>
             </NavLink>
           ))}
         </div>
@@ -83,7 +86,7 @@ export function MobileNavigation() {
           >
             <item.icon aria-hidden="true" className="h-5 w-5 shrink-0" />
             <span className="max-w-full whitespace-nowrap leading-none">
-              {item.mobileLabel}
+              {t(navLabelKey(item, "mobile"))}
             </span>
           </NavLink>
         ))}
@@ -96,8 +99,8 @@ export function MobileNavigation() {
               [
                 "-mt-5 flex h-[70px] min-w-0 flex-col items-center justify-center gap-1 rounded-full border-4 border-surface px-1 text-[12px] font-bold leading-none shadow-soft transition",
                 isActive
-                  ? "bg-success-dark text-white"
-                  : "bg-success text-white hover:bg-success-dark",
+                  ? "bg-success-dark text-white dark:bg-success"
+                  : "bg-success text-white hover:bg-success-dark dark:hover:bg-success/85",
               ].join(" ")
             }
           >
@@ -106,7 +109,7 @@ export function MobileNavigation() {
               className="h-6 w-6 shrink-0"
             />
             <span className="max-w-full whitespace-nowrap leading-none">
-              {actionItem.mobileLabel}
+              {t(navLabelKey(actionItem, "mobile"))}
             </span>
           </NavLink>
         ) : null}
@@ -121,7 +124,7 @@ export function MobileNavigation() {
           >
             <item.icon aria-hidden="true" className="h-5 w-5 shrink-0" />
             <span className="max-w-full whitespace-nowrap leading-none">
-              {item.mobileLabel}
+              {t(navLabelKey(item, "mobile"))}
             </span>
           </NavLink>
         ))}
@@ -130,7 +133,7 @@ export function MobileNavigation() {
           type="button"
           aria-controls={secondaryNavigationId}
           aria-expanded={isOpen}
-          aria-label="Abrir navegação secundária"
+          aria-label={t("nav.mobileSecondary")}
           onClick={() => setIsOpen((current) => !current)}
           className={[
             "flex h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-md px-1 py-1.5 text-[12px] font-bold leading-none transition",
@@ -140,7 +143,7 @@ export function MobileNavigation() {
           ].join(" ")}
         >
           <Menu aria-hidden="true" className="h-5 w-5 shrink-0" />
-          <span className="whitespace-nowrap leading-none">Mais</span>
+          <span className="whitespace-nowrap leading-none">{t("nav.more")}</span>
         </button>
       </div>
     </nav>

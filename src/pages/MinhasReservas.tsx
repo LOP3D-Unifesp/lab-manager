@@ -1,3 +1,4 @@
+import { getLocale, t } from "../i18n";
 import { useEffect, useMemo, useState } from "react";
 import { CalendarCheck } from "lucide-react";
 
@@ -24,14 +25,14 @@ const statusVariants: Record<BookingStatus, StatusVariant> = {
 };
 
 const statusFilterOptions: Array<{ value: BookingStatus | "all"; label: string }> = [
-  { value: "all", label: "Todos os status" },
-  { value: "pending", label: "Pendente" },
-  { value: "approved", label: "Aprovada" },
-  { value: "in_progress", label: "Em andamento" },
-  { value: "completed", label: "Concluída" },
-  { value: "cancelled", label: "Cancelada" },
-  { value: "rejected", label: "Rejeitada" },
-  { value: "failed", label: "Falhou" },
+  { value: "all", get label() { return t("bookingsList.allStatuses"); } },
+  { value: "pending", get label() { return t("bookingStatus.pending"); } },
+  { value: "approved", get label() { return t("bookingStatus.approved"); } },
+  { value: "in_progress", get label() { return t("bookingStatus.in_progress"); } },
+  { value: "completed", get label() { return t("bookingStatus.completed"); } },
+  { value: "cancelled", get label() { return t("bookingStatus.cancelled"); } },
+  { value: "rejected", get label() { return t("bookingStatus.rejected"); } },
+  { value: "failed", get label() { return t("bookingStatus.failed"); } },
 ];
 
 export function MinhasReservas() {
@@ -51,7 +52,7 @@ export function MinhasReservas() {
         if (ativo) setBookings(data);
       })
       .catch((error) => {
-        if (ativo) setErro(error instanceof Error ? error.message : "Erro ao carregar suas reservas.");
+        if (ativo) setErro(error instanceof Error ? error.message : t("bookingsMine.errLoad"));
       })
       .finally(() => {
         if (ativo) setCarregando(false);
@@ -89,7 +90,7 @@ export function MinhasReservas() {
   }, [minhasReservas, statusFiltro, busca]);
 
   const formatarDataHora = (valor: string) =>
-    new Intl.DateTimeFormat("pt-BR", {
+    new Intl.DateTimeFormat(getLocale(), {
       timeZone: timezone,
       day: "2-digit",
       month: "2-digit",
@@ -101,15 +102,15 @@ export function MinhasReservas() {
   function detalhesDaReserva(reserva: EquipmentBooking) {
     const decisao =
       reserva.status === "approved" && reserva.approved_by_profile
-        ? `Aprovada por ${reserva.approved_by_profile.full_name}`
+        ? t("bookingsList.approvedBy", { name: reserva.approved_by_profile.full_name })
         : reserva.status === "rejected" && reserva.rejected_by_profile
-          ? `Rejeitada por ${reserva.rejected_by_profile.full_name}`
+          ? t("bookingsList.rejectedBy", { name: reserva.rejected_by_profile.full_name })
           : reserva.status === "cancelled" && reserva.cancelled_by_profile
-            ? `Cancelada por ${reserva.cancelled_by_profile.full_name}`
+            ? t("bookingsList.cancelledBy", { name: reserva.cancelled_by_profile.full_name })
             : null;
     const motivo =
       reserva.status === "rejected" && reserva.rejected_reason
-        ? `Motivo: ${reserva.rejected_reason}`
+        ? t("bookingsList.reason", { reason: reserva.rejected_reason })
         : reserva.notes;
 
     return [decisao, motivo].filter(Boolean).join(" · ") || "-";
@@ -118,13 +119,13 @@ export function MinhasReservas() {
   return (
     <div>
       <PageHeader
-        title="Minhas reservas"
-        description="Histórico completo das suas reservas, incluindo aprovadas, rejeitadas e canceladas."
+        title={t("bookingsMine.title")}
+        description={t("bookingsMine.subtitle")}
       />
 
       <section className="mb-5 flex flex-col gap-3 rounded-lg border border-border bg-surface p-4 sm:flex-row sm:items-end">
         <label className="grid gap-2 text-base font-semibold text-text sm:w-56">
-          Status
+          {t("bookingsList.status")}
           <select
             className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
             onChange={(event) => setStatusFiltro(event.target.value as BookingStatus | "all")}
@@ -138,11 +139,11 @@ export function MinhasReservas() {
           </select>
         </label>
         <label className="grid flex-1 gap-2 text-base font-semibold text-text">
-          Buscar
+          {t("bookingsList.search")}
           <input
             className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary"
             onChange={(event) => setBusca(event.target.value)}
-            placeholder="Projeto, equipamento ou material"
+            placeholder={t("bookingsMine.searchPlaceholder")}
             type="text"
             value={busca}
           />
@@ -162,29 +163,28 @@ export function MinhasReservas() {
           </div>
           <div>
             <h2 className="text-2xl font-bold text-text">
-              {reservasFiltradas.length}{" "}
-              {reservasFiltradas.length === 1 ? "reserva" : "reservas"}
+              {t("bookingsList.count", { count: reservasFiltradas.length })}
             </h2>
-            <p className="mt-1 text-muted">Ordenado da mais recente para a mais antiga.</p>
+            <p className="mt-1 text-muted">{t("bookingsList.order")}</p>
           </div>
         </div>
 
         {carregando ? (
-          <p className="text-base font-semibold text-muted">Carregando...</p>
+          <p className="text-base font-semibold text-muted">{t("bookingsList.loading")}</p>
         ) : reservasFiltradas.length === 0 ? (
           <p className="text-base font-semibold text-muted">
-            Nenhuma reserva encontrada com esses filtros.
+            {t("bookingsList.none")}
           </p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] table-collapse">
+            <table className="w-full min-w-[720px] border-collapse">
               <thead className="bg-background text-left">
                 <tr className="border-b border-border">
-                  <th className="px-4 py-3 text-sm font-semibold text-muted">Data</th>
-                  <th className="px-4 py-3 text-sm font-semibold text-muted">Projeto</th>
-                  <th className="px-4 py-3 text-sm font-semibold text-muted">Equipamento</th>
-                  <th className="px-4 py-3 text-sm font-semibold text-muted">Status</th>
-                  <th className="px-4 py-3 text-sm font-semibold text-muted">Detalhes</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-muted">{t("bookingsList.colDate")}</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-muted">{t("bookingsList.colProject")}</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-muted">{t("bookingsList.colEquipment")}</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-muted">{t("bookingsList.colStatus")}</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-muted">{t("bookingsList.colDetails")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -200,7 +200,7 @@ export function MinhasReservas() {
                       {reserva.project_name}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-base text-muted">
-                      {reserva.equipment?.name ?? "Equipamento removido"}
+                      {reserva.equipment?.name ?? t("bookings.removedEquipment")}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3">
                       <StatusBadge

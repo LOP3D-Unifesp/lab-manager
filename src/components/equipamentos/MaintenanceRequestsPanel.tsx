@@ -1,3 +1,4 @@
+import { localizedName, useT } from "../../i18n";
 import { ShoppingCart } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
@@ -73,6 +74,7 @@ function readSavedType() {
 }
 
 export function MaintenanceRequestsPanel({ canMaintainNow, equipment, onChanged, profileId, requests, timezone, types }: PanelProps) {
+  const t = useT();
   const [filters, setFilters] = useState<RequestFilters>(() => ({ typeId: readSavedType(), equipmentId: "all", status: "active", mine: false }));
   const [sort, setSort] = useState<RequestSort>(readSavedSort);
   const [releaseToo, setReleaseToo] = useState(true);
@@ -189,9 +191,9 @@ export function MaintenanceRequestsPanel({ canMaintainNow, equipment, onChanged,
       const files = await Promise.all(
         request.photo_paths.map(async (path, index) => {
           const url = photoUrls[path];
-          if (!url) throw new Error("As fotos ainda estão carregando. Tente de novo em instantes.");
+          if (!url) throw new Error(t("requests.photosLoading"));
           const response = await fetch(url);
-          if (!response.ok) throw new Error("Não foi possível baixar uma das fotos.");
+          if (!response.ok) throw new Error(t("requests.photoDownloadFailed"));
           return { name: `foto-${index + 1}.jpg`, data: new Uint8Array(await response.arrayBuffer()) };
         }),
       );
@@ -202,7 +204,7 @@ export function MaintenanceRequestsPanel({ canMaintainNow, equipment, onChanged,
       link.click();
       window.setTimeout(() => URL.revokeObjectURL(link.href), 10_000);
     } catch (error) {
-      setErro(error instanceof Error ? error.message : "Não foi possível baixar as fotos.");
+      setErro(error instanceof Error ? error.message : t("requests.photosDownloadFailed"));
     } finally {
       setDownloadingId(null);
     }
@@ -212,44 +214,44 @@ export function MaintenanceRequestsPanel({ canMaintainNow, equipment, onChanged,
     <div className="grid gap-4">
       <div className="flex flex-wrap items-center gap-3">
         <select
-          aria-label="Situação"
+          aria-label={t("requests.filterStatus")}
           className={selectClassName}
           value={filters.status}
           onChange={(event) => setFilters({ ...filters, status: event.target.value as RequestFilters["status"] })}
         >
-          <option value="active">Ativos (em aberto, em andamento e aguardando peça)</option>
-          <option value="waiting_part">Aguardando peça</option>
-          <option value="all">Todos</option>
-          <option value="resolved">Resolvidos</option>
-          <option value="cancelled">Cancelados</option>
+          <option value="active">{t("requests.statusActive")}</option>
+          <option value="waiting_part">{t("requests.statusWaiting")}</option>
+          <option value="all">{t("requests.statusAll")}</option>
+          <option value="resolved">{t("requests.statusResolved")}</option>
+          <option value="cancelled">{t("requests.statusCancelled")}</option>
         </select>
-        <select aria-label="Tipo de equipamento" className={selectClassName} value={filters.typeId} onChange={(event) => changeType(event.target.value)}>
-          <option value="all">Todos os tipos</option>
+        <select aria-label={t("requests.equipmentType")} className={selectClassName} value={filters.typeId} onChange={(event) => changeType(event.target.value)}>
+          <option value="all">{t("requests.allTypes")}</option>
           {types
             .filter((type) => equipment.some((item) => item.type_id === type.id))
             .map((type) => (
               <option key={type.id} value={type.id}>
-                {type.name}
+                {localizedName(type)}
               </option>
             ))}
         </select>
         <select
-          aria-label="Equipamento"
+          aria-label={t("requests.equipment")}
           className={selectClassName}
           value={filters.equipmentId}
           onChange={(event) => setFilters({ ...filters, equipmentId: event.target.value })}
         >
-          <option value="all">Todos os equipamentos</option>
+          <option value="all">{t("requests.allEquipment")}</option>
           {equipment.filter((item) => filters.typeId === "all" || item.type_id === filters.typeId).map((item) => (
             <option key={item.id} value={item.id}>
               {item.name}
             </option>
           ))}
         </select>
-        <select aria-label="Ordenar por" className={selectClassName} value={sort} onChange={(event) => changeSort(event.target.value)}>
+        <select aria-label={t("requests.sortBy")} className={selectClassName} value={sort} onChange={(event) => changeSort(event.target.value)}>
           {requestSortOptions.map((option) => (
             <option key={option.value} value={option.value}>
-              Ordenar: {option.label}
+              {t("requests.sortPrefix", { label: option.label })}
             </option>
           ))}
         </select>
@@ -260,7 +262,7 @@ export function MaintenanceRequestsPanel({ canMaintainNow, equipment, onChanged,
             type="checkbox"
             onChange={(event) => setFilters({ ...filters, mine: event.target.checked })}
           />
-          Só os meus
+          {t("requests.onlyMine")}
         </label>
       </div>
 
@@ -270,7 +272,7 @@ export function MaintenanceRequestsPanel({ canMaintainNow, equipment, onChanged,
 
       {visible.length === 0 ? (
         <Card>
-          <p className="text-lg font-semibold text-muted">Nenhum chamado por aqui.</p>
+          <p className="text-lg font-semibold text-muted">{t("requests.none")}</p>
         </Card>
       ) : (
         <ul className="grid gap-3">
@@ -284,7 +286,7 @@ export function MaintenanceRequestsPanel({ canMaintainNow, equipment, onChanged,
                     <div className="min-w-0">
                       <h3 className="text-xl font-bold text-text">{request.equipment_name}</h3>
                       <p className="mt-1 text-sm text-muted">
-                        {request.requested_by_name ?? "Alguém"} · {formatMaintenanceDateTime(request.created_at, timezone)}
+                        {request.requested_by_name ?? t("requests.someone")} · {formatMaintenanceDateTime(request.created_at, timezone)}
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
@@ -300,11 +302,11 @@ export function MaintenanceRequestsPanel({ canMaintainNow, equipment, onChanged,
                           <button
                             key={path}
                             type="button"
-                            aria-label={`Ampliar foto ${index + 1}`}
+                            aria-label={t("requests.enlargePhoto", { n: index + 1 })}
                             className="rounded-lg transition hover:opacity-80"
                             onClick={() => setViewer({ request, index })}
                           >
-                            <img src={photoUrls[path]} alt={`Foto ${index + 1} do chamado`} className="h-20 w-20 rounded-lg border border-border object-cover" />
+                            <img src={photoUrls[path]} alt={t("requests.photoAlt", { n: index + 1 })} className="h-20 w-20 rounded-lg border border-border object-cover" />
                           </button>
                         ) : (
                           <div key={path} className="h-20 w-20 rounded-lg border border-border bg-background" />
@@ -315,16 +317,16 @@ export function MaintenanceRequestsPanel({ canMaintainNow, equipment, onChanged,
                   {request.photo_paths.length > 1 ? (
                     <div>
                       <Button className="min-h-9 px-3 py-2 text-sm" variant="ghost" disabled={downloadingId === request.id} onClick={() => downloadPhotos(request)}>
-                        {downloadingId === request.id ? "Preparando..." : `Baixar fotos (${request.photo_paths.length})`}
+                        {downloadingId === request.id ? t("requests.preparing") : t("requests.downloadPhotos", { count: request.photo_paths.length })}
                       </Button>
                     </div>
                   ) : null}
                   {request.assigned_to_name ? (
-                    <p className="text-sm text-muted">Responsável: {request.assigned_to_name}</p>
+                    <p className="text-sm text-muted">{t("requests.assignedTo", { name: request.assigned_to_name })}</p>
                   ) : null}
                   {request.resolution_notes ? (
                     <p className="rounded-lg border border-border bg-background p-3 text-sm text-text">
-                      <span className="font-semibold">Solução:</span> {request.resolution_notes}
+                      <span className="font-semibold">{t("requests.solution")}</span> {request.resolution_notes}
                     </p>
                   ) : null}
                   {linkedParts.some((part) => part.maintenance_request_id === request.id) ? (
@@ -334,7 +336,7 @@ export function MaintenanceRequestsPanel({ canMaintainNow, equipment, onChanged,
                         .map((part) => (
                           <li key={part.id} className="flex flex-wrap items-center justify-between gap-2">
                             <Link to="/compras" className="min-w-0 break-words font-semibold text-primary underline">
-                              Peça: {part.item}
+                              {t("requests.part", { item: part.item })}
                               {part.quantity > 1 ? ` × ${part.quantity}` : ""}
                             </Link>
                             <StatusBadge label={getPurchaseStatusLabel(part.status)} variant={getPurchaseStatusVariant(part.status)} />
@@ -347,42 +349,42 @@ export function MaintenanceRequestsPanel({ canMaintainNow, equipment, onChanged,
                       {canMaintainNow && isRequestActive(request.status) ? (
                         <Button className="min-h-9 px-3 py-2 text-sm" variant="ghost" disabled={busy} onClick={() => setPartFor(request)}>
                           <ShoppingCart className="mr-2 h-4 w-4" aria-hidden="true" />
-                          Pedir peça
+                          {t("requests.orderPart")}
                         </Button>
                       ) : null}
                       {actions.take ? (
                         <Button className="min-h-9 px-3 py-2 text-sm" variant="secondary" disabled={busy} onClick={() => change(request, "in_progress")}>
-                          Iniciar manutenção
+                          {t("requests.startMaintenance")}
                         </Button>
                       ) : null}
                       {actions.waitPart ? (
                         <Button className="min-h-9 px-3 py-2 text-sm" variant="secondary" disabled={busy} onClick={() => change(request, "waiting_part")}>
-                          Aguardar peça
+                          {t("requests.waitPart")}
                         </Button>
                       ) : null}
                       {actions.resume ? (
                         <Button className="min-h-9 px-3 py-2 text-sm" variant="secondary" disabled={busy} onClick={() => change(request, "in_progress")}>
-                          Retomar manutenção
+                          {t("requests.resume")}
                         </Button>
                       ) : null}
                       {actions.giveBack ? (
                         <Button className="min-h-9 px-3 py-2 text-sm" variant="ghost" disabled={busy} onClick={() => change(request, "open")}>
-                          Devolver à fila
+                          {t("requests.giveBack")}
                         </Button>
                       ) : null}
                       {actions.reopen ? (
                         <Button className="min-h-9 px-3 py-2 text-sm" variant="ghost" disabled={busy} onClick={() => change(request, "open")}>
-                          Reabrir
+                          {t("requests.reopen")}
                         </Button>
                       ) : null}
                       {actions.cancel ? (
                         <Button className="min-h-9 px-3 py-2 text-sm" variant="ghost" disabled={busy} onClick={() => change(request, "cancelled")}>
-                          Cancelar chamado
+                          {t("requests.cancel")}
                         </Button>
                       ) : null}
                       {actions.resolve ? (
                         <Button className="min-h-9 px-3 py-2 text-sm" variant="success" disabled={busy} onClick={() => { setNotes(""); setReleaseToo(true); setResolving(request); }}>
-                          Resolver
+                          {t("requests.resolve")}
                         </Button>
                       ) : null}
                     </div>
@@ -417,7 +419,7 @@ export function MaintenanceRequestsPanel({ canMaintainNow, equipment, onChanged,
         <PhotoViewer
           photos={viewer.request.photo_paths
             .filter((path) => photoUrls[path])
-            .map((path, position) => ({ url: photoUrls[path], alt: `Foto ${position + 1} do chamado de ${viewer.request.equipment_name}` }))}
+            .map((path, position) => ({ url: photoUrls[path], alt: t("requests.photoViewerAlt", { n: position + 1, name: viewer.request.equipment_name }) }))}
           startIndex={viewer.index}
           onClose={() => setViewer(null)}
         />
@@ -425,14 +427,14 @@ export function MaintenanceRequestsPanel({ canMaintainNow, equipment, onChanged,
 
       {resolving ? (
         <Modal
-          title={`Resolver chamado: ${resolving.equipment_name}`}
-          description="Registre o que foi feito, para consulta futura."
+          title={t("requests.resolveTitle", { name: resolving.equipment_name })}
+          description={t("requests.resolveHint")}
           onClose={() => setResolving(null)}
         >
           <form className="grid gap-4" onSubmit={resolve}>
             <p className="rounded-lg border border-border bg-background p-3 text-base text-text">{resolving.description}</p>
             <label className="grid gap-2 text-base font-semibold text-text">
-              O que foi feito? (opcional)
+              {t("requests.whatWasDone")}
               <textarea
                 autoFocus
                 className="min-h-24 min-w-0 rounded-lg border border-border bg-background px-4 py-3 text-base font-normal text-text outline-none transition focus:border-primary"
@@ -444,8 +446,8 @@ export function MaintenanceRequestsPanel({ canMaintainNow, equipment, onChanged,
               <label className="flex items-start gap-2 text-base font-semibold text-text">
                 <input checked={releaseToo} className="mt-1 h-4 w-4 accent-primary" type="checkbox" onChange={(event) => setReleaseToo(event.target.checked)} />
                 <span>
-                  Liberar o equipamento também
-                  <span className="block text-sm font-normal text-muted">Ele volta a aceitar reservas e a manutenção fica encerrada no histórico.</span>
+                  {t("requests.releaseToo")}
+                  <span className="block text-sm font-normal text-muted">{t("requests.releaseTooHint")}</span>
                 </span>
               </label>
             ) : null}
@@ -454,10 +456,10 @@ export function MaintenanceRequestsPanel({ canMaintainNow, equipment, onChanged,
             ) : null}
             <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <Button variant="secondary" onClick={() => setResolving(null)}>
-                Cancelar
+                {t("common.cancel")}
               </Button>
               <Button type="submit" variant="success" disabled={busyId === resolving.id}>
-                {busyId === resolving.id ? "Salvando..." : "Marcar como resolvido"}
+                {busyId === resolving.id ? t("common.saving") : t("requests.markResolved")}
               </Button>
             </div>
           </form>

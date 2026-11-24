@@ -1,3 +1,4 @@
+import { t } from "./i18n";
 import {
   createBrowserRouter,
   Navigate,
@@ -34,7 +35,7 @@ import { useAuth } from "./lib/auth";
 function LoadingScreen() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-5 text-text">
-      <p className="text-lg font-semibold text-muted">Carregando...</p>
+      <p className="text-lg font-semibold text-muted">{t("app.loading")}</p>
     </main>
   );
 }
@@ -75,12 +76,12 @@ function ProtectedApp() {
       return (
         <main className="flex min-h-screen items-center justify-center bg-background px-5 text-text">
           <div className="max-w-lg rounded-lg border border-border bg-surface p-6 text-center shadow-sm">
-            <h1 className="text-2xl font-bold">Instalação pendente</h1>
+            <h1 className="text-2xl font-bold">{t("install.pendingTitle")}</h1>
             <p className="mt-3 text-muted">
-              O primeiro coordenador ainda precisa configurar este laboratório.
+              {t("install.pendingBody")}
             </p>
             <button className="mt-5 font-semibold text-primary underline" onClick={signOut}>
-              Sair
+              {t("common.signOut")}
             </button>
           </div>
         </main>

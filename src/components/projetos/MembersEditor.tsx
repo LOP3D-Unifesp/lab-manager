@@ -1,3 +1,4 @@
+import { useT } from "../../i18n";
 import { useMemo, useState } from "react";
 
 import type { PublicProfile } from "../../lib/domain";
@@ -11,6 +12,7 @@ type MembersEditorProps = {
 };
 
 export function MembersEditor({ disabled, onChange, profiles, value }: MembersEditorProps) {
+  const t = useT();
   const [busca, setBusca] = useState("");
   const selecionados = useMemo(() => new Set(value), [value]);
   const visiveis = profiles.filter((profile) =>
@@ -25,11 +27,11 @@ export function MembersEditor({ disabled, onChange, profiles, value }: MembersEd
     <div className="grid gap-3">
       <input
         className="min-h-11 rounded-lg border border-border bg-background px-4 text-base outline-none transition focus:border-primary"
-        placeholder="Buscar pessoa"
+        placeholder={t("members.search")}
         value={busca}
         onChange={(event) => setBusca(event.target.value)}
       />
-      <p className="text-sm text-muted">{value.length} selecionado(s)</p>
+      <p className="text-sm text-muted">{t("members.selected", { count: value.length })}</p>
       <div className="grid max-h-80 gap-2 overflow-y-auto sm:grid-cols-2">
         {visiveis.map((profile) => {
           const selecionado = selecionados.has(profile.id);
@@ -55,7 +57,7 @@ export function MembersEditor({ disabled, onChange, profiles, value }: MembersEd
             </label>
           );
         })}
-        {visiveis.length === 0 ? <p className="text-base text-muted">Nenhuma pessoa encontrada.</p> : null}
+        {visiveis.length === 0 ? <p className="text-base text-muted">{t("members.none")}</p> : null}
       </div>
     </div>
   );

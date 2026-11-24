@@ -13,7 +13,7 @@ type StatusBadgeProps = {
 const variantClasses: Record<StatusVariant, string> = {
   neutral: "border-border bg-background text-muted",
   success: "border-success bg-success-soft text-success-dark",
-  warning: "border-warning-dark bg-warning text-text",
+  warning: "border-warning-dark bg-warning text-[#102033] dark:border-warning/60 dark:bg-warning-soft dark:text-warning-dark",
   danger: "border-danger bg-danger-soft text-danger-dark",
   info: "border-primary bg-primary-soft text-primary-dark",
 };

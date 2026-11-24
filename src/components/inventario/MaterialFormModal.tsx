@@ -1,3 +1,4 @@
+import { useT } from "../../i18n";
 import { FormEvent, useState } from "react";
 
 import {
@@ -10,9 +11,7 @@ import {
 import { createCatalogMaterial, updateCatalogMaterial } from "../../lib/supabaseRepository";
 import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
-
-const inputClassName =
-  "min-h-11 min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary";
+import { inputClassName } from "../ui/formStyles";
 
 type MaterialFormModalProps = {
   material?: CatalogMaterial | null;
@@ -21,6 +20,7 @@ type MaterialFormModalProps = {
 };
 
 export function MaterialFormModal({ material, onClose, onSaved }: MaterialFormModalProps) {
+  const t = useT();
   const [name, setName] = useState(material?.name ?? "");
   const [description, setDescription] = useState(material?.description ?? "");
   const [category, setCategory] = useState<MaterialCategory>(material?.category ?? "filament");
@@ -39,7 +39,7 @@ export function MaterialFormModal({ material, onClose, onSaved }: MaterialFormMo
     event.preventDefault();
     const trimmed = name.trim();
     if (!trimmed) {
-      setErro("Informe o nome do material.");
+      setErro(t("material.errName"));
       return;
     }
     const input = { name: trimmed, description: description.trim() || null, category, unit };
@@ -58,18 +58,18 @@ export function MaterialFormModal({ material, onClose, onSaved }: MaterialFormMo
 
   return (
     <Modal
-      title={material ? "Editar material" : "Novo material"}
-      description="O material diz o que é (PLA, PETG, resina). Os itens de estoque (rolos, frascos...) são cadastrados na aba Estoque."
+      title={material ? t("material.edit") : t("material.new")}
+      description={t("material.hint")}
       onClose={onClose}
     >
       <form className="grid gap-4" onSubmit={salvar}>
         <label className="grid gap-2 text-base font-semibold text-text">
-          Nome
+          {t("material.name")}
           <input className={inputClassName} required value={name} onChange={(e) => setName(e.target.value)} />
         </label>
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="grid gap-2 text-base font-semibold text-text">
-            Categoria
+            {t("material.category")}
             <select className={inputClassName} value={category} onChange={(e) => escolherCategoria(e.target.value as MaterialCategory)}>
               {materialCategoryOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -79,21 +79,21 @@ export function MaterialFormModal({ material, onClose, onSaved }: MaterialFormMo
             </select>
           </label>
           <label className="grid gap-2 text-base font-semibold text-text">
-            Unidade
+            {t("material.unit")}
             <select className={inputClassName} value={unit} onChange={(e) => setUnit(e.target.value as MaterialUnit)}>
-              <option value="g">gramas (g)</option>
-              <option value="ml">mililitros (ml)</option>
+              <option value="g">{t("material.unitGrams")}</option>
+              <option value="ml">{t("material.unitMl")}</option>
             </select>
           </label>
         </div>
         <label className="grid gap-2 text-base font-semibold text-text">
-          Descrição
+          {t("material.description")}
           <textarea className={`${inputClassName} min-h-20 py-3`} value={description} onChange={(e) => setDescription(e.target.value)} />
         </label>
         {material ? (
           <label className="flex items-center gap-2 text-base font-semibold text-text">
             <input checked={active} className="h-4 w-4 accent-primary" type="checkbox" onChange={(e) => setActive(e.target.checked)} />
-            Material ativo (arquivar tira das novas reservas e compatibilidades)
+            {t("material.active")}
           </label>
         ) : null}
 
@@ -103,10 +103,10 @@ export function MaterialFormModal({ material, onClose, onSaved }: MaterialFormMo
 
         <div className="mt-2 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Button variant="secondary" onClick={onClose}>
-            Cancelar
+            {t("common.cancel")}
           </Button>
           <Button type="submit" disabled={salvando}>
-            {salvando ? "Salvando..." : "Salvar material"}
+            {salvando ? t("common.saving") : t("material.save")}
           </Button>
         </div>
       </form>

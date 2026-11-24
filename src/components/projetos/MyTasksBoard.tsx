@@ -1,3 +1,4 @@
+import { useT } from "../../i18n";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 
@@ -12,6 +13,7 @@ import { useTaskBoard } from "./useTaskBoard";
 // Kanban pessoal: só as tarefas atribuídas à pessoa, de todos os projetos. Fica visível enquanto ela
 // participar de algum projeto, para poder criar a primeira tarefa sem sair do Dashboard.
 export function MyTasksBoard({ isCoordinator, profileId }: { isCoordinator: boolean; profileId: string }) {
+  const t = useT();
   const loader = useCallback(() => listMyTasks(profileId), [profileId]);
   const { erro, mover, recarregar, tarefas } = useTaskBoard(loader);
   const [projetos, setProjetos] = useState<Project[]>([]);
@@ -36,13 +38,13 @@ export function MyTasksBoard({ isCoordinator, profileId }: { isCoordinator: bool
       <Card>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h3 className="text-2xl font-bold text-text">Minhas tarefas</h3>
-            <p className="mt-1 text-base text-muted">Tarefas atribuídas a você nos projetos do laboratório.</p>
+            <h3 className="text-2xl font-bold text-text">{t("tasks.mineTitle")}</h3>
+            <p className="mt-1 text-base text-muted">{t("tasks.mineHint")}</p>
           </div>
           {projetosAbertos.length > 0 ? (
             <Button variant="secondary" onClick={() => setModal({ task: null })}>
               <Plus className="mr-2 h-5 w-5" aria-hidden="true" />
-              Nova tarefa
+              {t("projects.newTask")}
             </Button>
           ) : null}
         </div>
@@ -51,7 +53,7 @@ export function MyTasksBoard({ isCoordinator, profileId }: { isCoordinator: bool
         ) : null}
         {tarefas.length === 0 ? (
           <p className="mt-4 rounded-lg border border-dashed border-border bg-background p-4 text-base text-muted">
-            Você não tem tarefas atribuídas. Crie uma com “Nova tarefa” ou peça para ser incluído numa tarefa de um projeto.
+            {t("tasks.mineEmpty")}
           </p>
         ) : (
           <div className="mt-4">

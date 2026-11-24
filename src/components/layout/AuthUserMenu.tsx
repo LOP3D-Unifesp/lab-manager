@@ -1,16 +1,14 @@
 import { LogOut } from "lucide-react";
 import { Link } from "react-router-dom";
 
+import { useT } from "../../i18n";
 import { useAuth } from "../../lib/auth";
 import { Avatar } from "../ui/Avatar";
 import { StatusBadge } from "../ui/StatusBadge";
 
-function getRoleLabel(role?: string) {
-  return role === "coordinator" ? "Coordenador" : "Pesquisador";
-}
-
 export function AuthUserMenu() {
   const { profile, signOut } = useAuth();
+  const t = useT();
 
   if (!profile) {
     return null;
@@ -31,19 +29,19 @@ export function AuthUserMenu() {
       </div>
 
       <div className="flex min-w-0 items-center gap-2">
-        <StatusBadge label={getRoleLabel(profile.role)} variant="info" />
+        <StatusBadge label={t(profile.role === "coordinator" ? "role.coordinator" : "role.researcher")} variant="info" />
         <Link
           to="/perfil"
           className="inline-flex h-8 items-center rounded-md px-2 text-sm font-bold text-primary transition hover:bg-primary-soft"
         >
-          Meu perfil
+          {t("account.profile")}
         </Link>
         <button
           type="button"
           className="ml-auto inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition hover:bg-danger-soft hover:text-danger-dark"
           onClick={signOut}
-          title="Sair"
-          aria-label="Sair"
+          title={t("common.signOut")}
+          aria-label={t("common.signOut")}
         >
           <LogOut className="h-4 w-4" aria-hidden="true" />
         </button>

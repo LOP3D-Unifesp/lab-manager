@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import { Link } from "react-router-dom";
 
 import { Card } from "../components/ui/Card";
@@ -7,19 +8,19 @@ export function NotFound() {
   return (
     <div>
       <PageHeader
-        title="Página não encontrada"
-        description="O endereço acessado não corresponde a uma área disponível no Lab Manager."
+        title={t("notFound.title")}
+        description={t("notFound.hint")}
       />
 
       <Card>
         <p className="text-lg leading-7 text-muted">
-          Volte para o dashboard ou escolha uma seção pela navegação principal.
+          {t("notFound.back")}
         </p>
         <Link
           to="/"
-          className="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-primary-dark px-5 py-3 text-lg font-semibold text-white transition hover:bg-primary"
+          className="mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-primary-dark px-5 py-3 text-lg font-semibold text-white transition hover:bg-primary dark:bg-primary"
         >
-          Ir para o dashboard
+          {t("notFound.goDashboard")}
         </Link>
       </Card>
     </div>

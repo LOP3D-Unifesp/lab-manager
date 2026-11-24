@@ -4,12 +4,16 @@ import { Lock, LogIn } from "lucide-react";
 
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
+import { LanguageSelect } from "../components/ui/LanguageSelect";
+import { ThemeToggle } from "../components/ui/ThemeToggle";
+import { useT } from "../i18n";
 import { useAuth } from "../lib/auth";
 import { getSafeInternalRedirect } from "../lib/navigation";
 import { supabaseConfigurationError } from "../lib/supabaseClient";
 
 export function Login() {
   const { authConfigured, loading, session, signIn } = useAuth();
+  const t = useT();
   const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -37,7 +41,7 @@ export function Login() {
     try {
       await signIn(email.trim(), password);
     } catch {
-      setErrorMessage("Email ou senha invalidos.");
+      setErrorMessage(t("login.invalidCredentials"));
     } finally {
       setSubmitting(false);
     }
@@ -45,6 +49,10 @@ export function Login() {
 
   return (
     <main className="min-h-screen bg-background px-5 py-8 text-text">
+      <div className="mx-auto flex w-full max-w-md flex-wrap justify-end gap-2">
+        <LanguageSelect />
+        <ThemeToggle />
+      </div>
       <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-md flex-col justify-center">
         <div className="mb-6">
           <p className="text-lg font-semibold text-primary">LO&P3D</p>
@@ -59,9 +67,9 @@ export function Login() {
               <Lock className="h-5 w-5" aria-hidden="true" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold">Entrar</h2>
+              <h2 className="text-2xl font-bold">{t("login.title")}</h2>
               <p className="mt-1 text-base text-muted">
-                Use seu email e senha do Supabase.
+                {t("login.subtitle")}
               </p>
             </div>
           </div>
@@ -69,13 +77,13 @@ export function Login() {
           {!authConfigured ? (
             <p className="rounded-lg border border-danger bg-danger-soft p-3 text-base font-semibold text-danger">
               {supabaseConfigurationError ??
-                "Supabase nao esta configurado. Execute npm run setup:local."}
+                t("login.notConfigured")}
             </p>
           ) : null}
 
           <form className="mt-5 grid gap-4" onSubmit={handleSubmit}>
             <label className="grid gap-2 text-base font-semibold">
-              Email
+              {t("login.email")}
               <input
                 autoComplete="email"
                 className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
@@ -88,7 +96,7 @@ export function Login() {
             </label>
 
             <label className="grid gap-2 text-base font-semibold">
-              Senha
+              {t("login.password")}
               <input
                 autoComplete="current-password"
                 className="min-h-11 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary"
@@ -112,7 +120,7 @@ export function Login() {
               type="submit"
             >
               <LogIn className="mr-2 h-5 w-5" aria-hidden="true" />
-              {submitting ? "Entrando..." : "Entrar"}
+              {submitting ? t("login.submitting") : t("login.submit")}
             </Button>
           </form>
         </Card>

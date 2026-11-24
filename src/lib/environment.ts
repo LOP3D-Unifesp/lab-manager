@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 export type AppEnvironment = "local" | "remote" | "production";
 
 export function isLoopbackSupabaseUrl(value: string) {
@@ -13,14 +14,14 @@ export function validateSupabaseEnvironment(
   environment: AppEnvironment,
   supabaseUrl: string | undefined,
 ) {
-  if (!supabaseUrl) return "VITE_SUPABASE_URL nao foi configurada.";
+  if (!supabaseUrl) return t("env.errUrl");
 
   if (environment === "local" && !isLoopbackSupabaseUrl(supabaseUrl)) {
-    return "O modo local aceita somente o Supabase Docker em localhost.";
+    return t("env.errLocalOnly");
   }
 
   if (environment !== "local" && isLoopbackSupabaseUrl(supabaseUrl)) {
-    return "O modo remoto nao pode usar uma URL local do Supabase.";
+    return t("env.errRemote");
   }
 
   return null;

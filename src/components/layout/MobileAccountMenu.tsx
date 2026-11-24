@@ -2,17 +2,17 @@ import { LogOut, MessageSquarePlus, User } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
+import { useT } from "../../i18n";
 import { useAuth } from "../../lib/auth";
 import { useFeedback } from "../feedback/FeedbackProvider";
 import { Avatar } from "../ui/Avatar";
+import { LanguageSelect } from "../ui/LanguageSelect";
+import { ThemeToggle } from "../ui/ThemeToggle";
 import { StatusBadge } from "../ui/StatusBadge";
-
-function getRoleLabel(role?: string) {
-  return role === "coordinator" ? "Coordenador" : "Pesquisador";
-}
 
 export function MobileAccountMenu() {
   const { profile, signOut } = useAuth();
+  const t = useT();
   const { openFeedback } = useFeedback();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -52,7 +52,7 @@ export function MobileAccountMenu() {
       <button
         type="button"
         aria-expanded={isOpen}
-        aria-label="Abrir menu da conta"
+        aria-label={t("account.openMenu")}
         onClick={() => setIsOpen((current) => !current)}
         className={[
           "inline-flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border text-sm font-bold transition",
@@ -79,11 +79,17 @@ export function MobileAccountMenu() {
               </div>
             </div>
             <div className="mt-3 flex items-center justify-between gap-2">
-              <StatusBadge label={getRoleLabel(profile.role)} variant="info" />
+              <StatusBadge label={t(profile.role === "coordinator" ? "role.coordinator" : "role.researcher")} variant="info" />
               <span className="rounded-full border border-border bg-background px-2.5 py-1 text-xs font-bold text-muted">
                 MVP
               </span>
             </div>
+          </div>
+
+          <div className="grid gap-1.5 border-b border-border px-3 py-2.5">
+            <span className="text-sm font-semibold text-muted">{t("account.theme")}</span>
+            <ThemeToggle className="w-full" />
+            <LanguageSelect className="w-full" />
           </div>
 
           <div className="grid p-1.5">
@@ -93,7 +99,7 @@ export function MobileAccountMenu() {
               className="flex min-h-11 items-center gap-3 rounded-md px-3 text-base font-semibold text-text transition hover:bg-background hover:text-primary"
             >
               <User className="h-4 w-4 text-primary" aria-hidden="true" />
-              Meu perfil
+              {t("account.profile")}
             </Link>
             <button
               type="button"
@@ -104,7 +110,7 @@ export function MobileAccountMenu() {
               className="flex min-h-11 items-center gap-3 rounded-md px-3 text-left text-base font-semibold text-text transition hover:bg-background hover:text-primary"
             >
               <MessageSquarePlus className="h-4 w-4 text-primary" aria-hidden="true" />
-              Enviar feedback
+              {t("account.sendFeedback")}
             </button>
             <button
               type="button"
@@ -112,7 +118,7 @@ export function MobileAccountMenu() {
               className="flex min-h-11 items-center gap-3 rounded-md px-3 text-left text-base font-semibold text-danger-dark transition hover:bg-danger-soft"
             >
               <LogOut className="h-4 w-4" aria-hidden="true" />
-              Sair
+              {t("common.signOut")}
             </button>
           </div>
         </div>

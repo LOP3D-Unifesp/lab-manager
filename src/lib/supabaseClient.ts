@@ -1,3 +1,4 @@
+import { getLocale, t } from "../i18n";
 import { createClient } from "@supabase/supabase-js";
 
 import type { Database } from "./database.types";
@@ -20,7 +21,7 @@ export const appEnvironment = (import.meta.env.VITE_APP_ENV ??
   defaultEnvironment) as AppEnvironment;
 export const supabaseConfigurationError =
   validateSupabaseEnvironment(appEnvironment, supabaseUrl) ??
-  (!supabaseAnonKey ? "VITE_SUPABASE_ANON_KEY nao foi configurada." : null);
+  (!supabaseAnonKey ? t("env.errAnonKey") : null);
 
 export const supabase =
   !supabaseConfigurationError && supabaseUrl && supabaseAnonKey

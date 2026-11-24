@@ -1,16 +1,15 @@
+import { t } from "../../i18n";
 import { Plus, Trash2 } from "lucide-react";
 
 import { fundingAgencyOptions, type FundingAgency, type FundingGrant } from "../../lib/domain";
 import { Button } from "../ui/Button";
+import { inputClassName } from "../ui/formStyles";
 
 type FundingGrantsEditorProps = {
   value: FundingGrant[];
   onChange: (grants: FundingGrant[]) => void;
   disabled?: boolean;
 };
-
-const inputClassName =
-  "min-h-11 rounded-lg border border-border bg-surface px-4 text-base font-normal outline-none transition focus:border-primary";
 
 export function FundingGrantsEditor({ value, onChange, disabled }: FundingGrantsEditorProps) {
   function addGrant() {
@@ -37,7 +36,7 @@ export function FundingGrantsEditor({ value, onChange, disabled }: FundingGrants
   return (
     <div className="grid gap-3">
       <div className="flex items-center justify-between">
-        <p className="text-base font-semibold">Bolsas de fomento</p>
+        <p className="text-base font-semibold">{t("grants.title")}</p>
         <Button
           type="button"
           variant="secondary"
@@ -46,18 +45,18 @@ export function FundingGrantsEditor({ value, onChange, disabled }: FundingGrants
           onClick={addGrant}
         >
           <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
-          Adicionar bolsa
+          {t("grants.add")}
         </Button>
       </div>
 
       {value.length === 0 ? (
-        <p className="text-sm text-muted">Nenhuma bolsa cadastrada.</p>
+        <p className="text-sm text-muted">{t("grants.none")}</p>
       ) : (
         value.map((grant, index) => (
           <div key={index} className="grid gap-3 rounded-lg border border-border bg-background p-3">
             <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
               <label className="grid gap-2 text-sm font-semibold">
-                Agência
+                {t("grants.agency")}
                 <select
                   className={inputClassName}
                   disabled={disabled}
@@ -80,7 +79,7 @@ export function FundingGrantsEditor({ value, onChange, disabled }: FundingGrants
 
               {grant.agency === "other" ? (
                 <label className="grid gap-2 text-sm font-semibold">
-                  Qual agência?
+                  {t("grants.whichAgency")}
                   <input
                     className={inputClassName}
                     disabled={disabled}
@@ -107,19 +106,19 @@ export function FundingGrantsEditor({ value, onChange, disabled }: FundingGrants
 
             <div className="grid gap-3 sm:grid-cols-3">
               <label className="grid gap-2 text-sm font-semibold">
-                Nome da bolsa
+                {t("grants.name")}
                 <input
                   className={inputClassName}
                   disabled={disabled}
                   maxLength={120}
                   onChange={(event) => updateGrant(index, { grant_name: event.target.value || null })}
-                  placeholder="Opcional"
+                  placeholder={t("profile.optional")}
                   value={grant.grant_name ?? ""}
                 />
               </label>
 
               <label className="grid gap-2 text-sm font-semibold">
-                Horas semanais
+                {t("grants.weeklyHours")}
                 <input
                   className={inputClassName}
                   disabled={disabled}
@@ -131,14 +130,14 @@ export function FundingGrantsEditor({ value, onChange, disabled }: FundingGrants
                       weekly_hours: event.target.value ? Number(event.target.value) : null,
                     })
                   }
-                  placeholder="Opcional"
+                  placeholder={t("profile.optional")}
                   type="number"
                   value={grant.weekly_hours ?? ""}
                 />
               </label>
 
               <label className="grid gap-2 text-sm font-semibold">
-                Valor mensal (R$)
+                {t("grants.monthlyValue")}
                 <input
                   className={inputClassName}
                   disabled={disabled}
@@ -149,7 +148,7 @@ export function FundingGrantsEditor({ value, onChange, disabled }: FundingGrants
                       monthly_value: event.target.value ? Number(event.target.value) : null,
                     })
                   }
-                  placeholder="Opcional"
+                  placeholder={t("profile.optional")}
                   step="0.01"
                   type="number"
                   value={grant.monthly_value ?? ""}

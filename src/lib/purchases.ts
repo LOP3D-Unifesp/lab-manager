@@ -1,3 +1,4 @@
+import { getLocale, t } from "../i18n";
 import type { StatusVariant } from "../components/ui/StatusBadge";
 import { fundingCategoryOptions, type FundingCategory } from "./projects";
 
@@ -5,19 +6,21 @@ import { fundingCategoryOptions, type FundingCategory } from "./projects";
 export const purchaseCategoryOptions = fundingCategoryOptions.filter((option) => option.value !== "bolsas");
 
 export function getPurchaseCategoryLabel(category: FundingCategory | null) {
-  return category ? (fundingCategoryOptions.find((option) => option.value === category)?.label ?? category) : "Sem rubrica";
+  return category ? (fundingCategoryOptions.find((option) => option.value === category)?.label ?? category) : t("funding.noCategory");
 }
 
 // Pedido sem projeto: compra para o estoque geral do laboratório (a mesma ideia do Inventário).
 export const GENERAL_STOCK_VALUE = "general";
 export const GENERAL_STOCK_LABEL = "Estoque geral do laboratório";
+// Nome interno do grupo "sem equipamento" nos gastos de manutenção (a tela traduz na exibição).
+export const NO_EQUIPMENT_NAME = "Sem equipamento definido";
 
 export type PurchaseUrgency = "low" | "normal" | "urgent";
 
 export const purchaseUrgencyOptions: Array<{ value: PurchaseUrgency; label: string; hint: string }> = [
-  { value: "low", label: "Baixa", hint: "Sem pressa" },
-  { value: "normal", label: "Normal", hint: "Para as próximas semanas" },
-  { value: "urgent", label: "Urgente", hint: "Está parando o trabalho" },
+  { value: "low", get label() { return t("opt.purchaseUrgencyOptions.low"); }, get hint() { return t("opt.purchaseUrgencyOptions.low.hint"); } },
+  { value: "normal", get label() { return t("opt.purchaseUrgencyOptions.normal"); }, get hint() { return t("opt.purchaseUrgencyOptions.normal.hint"); } },
+  { value: "urgent", get label() { return t("opt.purchaseUrgencyOptions.urgent"); }, get hint() { return t("opt.purchaseUrgencyOptions.urgent.hint"); } },
 ];
 
 export function getPurchaseUrgencyLabel(urgency: PurchaseUrgency) {
@@ -33,12 +36,12 @@ export function getPurchaseUrgencyVariant(urgency: PurchaseUrgency): StatusVaria
 export type PurchaseStatus = "requested" | "approved" | "rejected" | "purchased" | "delivered" | "cancelled";
 
 export const purchaseStatusOptions: Array<{ value: PurchaseStatus; label: string }> = [
-  { value: "requested", label: "Solicitado" },
-  { value: "approved", label: "Aprovado" },
-  { value: "purchased", label: "Comprado" },
-  { value: "delivered", label: "Entregue" },
-  { value: "rejected", label: "Recusado" },
-  { value: "cancelled", label: "Cancelado" },
+  { value: "requested", get label() { return t("opt.purchaseStatusOptions.requested"); } },
+  { value: "approved", get label() { return t("opt.purchaseStatusOptions.approved"); } },
+  { value: "purchased", get label() { return t("opt.purchaseStatusOptions.purchased"); } },
+  { value: "delivered", get label() { return t("opt.purchaseStatusOptions.delivered"); } },
+  { value: "rejected", get label() { return t("opt.purchaseStatusOptions.rejected"); } },
+  { value: "cancelled", get label() { return t("opt.purchaseStatusOptions.cancelled"); } },
 ];
 
 export function getPurchaseStatusLabel(status: PurchaseStatus) {
@@ -162,10 +165,10 @@ export type PurchaseActions = {
 
 // Só o coordenador volta uma etapa, para corrigir um engano; o que a etapa gravou é apagado.
 export function getPurchaseUndo(status: PurchaseStatus): PurchaseUndo | null {
-  if (status === "approved") return { status: "requested", label: "Voltar para solicitado", warning: null };
-  if (status === "purchased") return { status: "approved", label: "Desfazer compra", warning: "O valor pago e a data da compra serão apagados." };
-  if (status === "delivered") return { status: "purchased", label: "Desfazer entrega", warning: null };
-  if (status === "rejected" || status === "cancelled") return { status: "requested", label: "Reabrir pedido", warning: null };
+  if (status === "approved") return { status: "requested", label: t("purchases.undoApproved"), warning: null };
+  if (status === "purchased") return { status: "approved", label: t("purchases.undoPurchased"), warning: t("purchases.undoPurchasedWarning") };
+  if (status === "delivered") return { status: "purchased", label: t("purchases.undoDelivered"), warning: null };
+  if (status === "rejected" || status === "cancelled") return { status: "requested", label: t("purchases.reopen"), warning: null };
   return null;
 }
 
@@ -207,7 +210,7 @@ export function summarizeByProject(purchases: PurchaseRequest[]): ProjectPurchas
     }
     map.set(key, current);
   }
-  return [...map.values()].sort((a, b) => a.projectName.localeCompare(b.projectName, "pt-BR"));
+  return [...map.values()].sort((a, b) => a.projectName.localeCompare(b.projectName, getLocale()));
 }
 
 // Novidades de um pedido para quem o fez: só as etapas decididas pelo coordenador.
@@ -227,12 +230,15 @@ export function isNotifiablePurchaseStatus(status: string): status is PurchaseSt
 
 export function describePurchaseUpdate(update: Pick<PurchaseUpdate, "item" | "status" | "rejected_reason">) {
   const item = `“${update.item}”`;
-  if (update.status === "approved") return { title: "Pedido aprovado", body: `${item} foi aprovado.` };
+  if (update.status === "approved") return { title: t("purchases.notifApprovedTitle"), body: t("purchases.notifApprovedBody", { item }) };
   if (update.status === "rejected") {
-    return { title: "Pedido recusado", body: update.rejected_reason ? `${item} foi recusado: ${update.rejected_reason}` : `${item} foi recusado.` };
+    return {
+      title: t("purchases.notifRejectedTitle"),
+      body: update.rejected_reason ? t("purchases.notifRejectedReason", { item, reason: update.rejected_reason }) : t("purchases.notifRejectedBody", { item }),
+    };
   }
-  if (update.status === "purchased") return { title: "Pedido comprado", body: `${item} foi comprado.` };
-  return { title: "Pedido entregue", body: `${item} foi entregue.` };
+  if (update.status === "purchased") return { title: t("purchases.notifPurchasedTitle"), body: t("purchases.notifPurchasedBody", { item }) };
+  return { title: t("purchases.notifDeliveredTitle"), body: t("purchases.notifDeliveredBody", { item }) };
 }
 
 // Quantas novidades chegaram depois da última vez que a pessoa olhou.
@@ -258,7 +264,7 @@ export function summarizeMaintenanceSpending(purchases: PurchaseRequest[]): Main
     if (!purchase.for_maintenance || purchase.status === "rejected" || purchase.status === "cancelled") continue;
     const paid = purchase.status === "purchased" || purchase.status === "delivered";
     const value = paid ? (purchase.actual_amount ?? purchase.estimated_amount) : purchase.estimated_amount;
-    const name = purchase.maintenance_equipment_name ?? "Sem equipamento definido";
+    const name = purchase.maintenance_equipment_name ?? NO_EQUIPMENT_NAME;
     const group = groups.get(name) ?? { name, estimated: 0, paid: 0, count: 0 };
     if (paid) {
       total.paid += value;
@@ -271,7 +277,7 @@ export function summarizeMaintenanceSpending(purchases: PurchaseRequest[]): Main
     group.count += 1;
     groups.set(name, group);
   }
-  total.byEquipment = [...groups.values()].sort((a, b) => b.paid + b.estimated - (a.paid + a.estimated) || a.name.localeCompare(b.name, "pt-BR"));
+  total.byEquipment = [...groups.values()].sort((a, b) => b.paid + b.estimated - (a.paid + a.estimated) || a.name.localeCompare(b.name, getLocale()));
   return total;
 }
 
@@ -350,30 +356,30 @@ export function getUnitAmount(total: number, quantity: number): number | null {
 export type PurchaseFormValues = { projectId: string; category: string; urgency: string; item: string; url: string; quantity: string; amount: string; notes: string };
 
 export function validatePurchaseForm(values: PurchaseFormValues) {
-  if (!values.projectId) return "Escolha o projeto ou o estoque geral.";
-  if (!purchaseCategoryOptions.some((option) => option.value === values.category)) return "Escolha a rubrica do item.";
-  if (!purchaseUrgencyOptions.some((option) => option.value === values.urgency)) return "Escolha a urgência.";
+  if (!values.projectId) return t("purchaseError.chooseProject");
+  if (!purchaseCategoryOptions.some((option) => option.value === values.category)) return t("purchaseError.chooseCategory");
+  if (!purchaseUrgencyOptions.some((option) => option.value === values.urgency)) return t("purchaseError.chooseUrgency");
   const item = values.item.trim();
-  if (item.length < 2 || item.length > 200) return "Descreva o item (de 2 a 200 caracteres).";
-  if (values.url.trim() && !isValidPurchaseUrl(values.url)) return "O link precisa começar com http:// ou https://.";
+  if (item.length < 2 || item.length > 200) return t("purchaseError.itemLength");
+  if (values.url.trim() && !isValidPurchaseUrl(values.url)) return t("purchaseError.link");
   const quantity = Number(values.quantity);
-  if (!Number.isInteger(quantity) || quantity < 1 || quantity > 100000) return "A quantidade precisa ser um número inteiro maior que zero.";
+  if (!Number.isInteger(quantity) || quantity < 1 || quantity > 100000) return t("purchaseError.quantity");
   const unit = parseMaskedMoney(values.amount);
-  if (unit === null) return "Informe o valor unitário, por exemplo 129,90.";
-  if (calculateTotal(unit, quantity) >= 100_000_000) return "Valor alto demais.";
-  if (values.notes.length > 1000) return "As observações podem ter até 1000 caracteres.";
+  if (unit === null) return t("purchaseError.unitValue");
+  if (calculateTotal(unit, quantity) >= 100_000_000) return t("purchaseError.tooHigh");
+  if (values.notes.length > 1000) return t("purchaseError.notesLength");
   return null;
 }
 
 export function getPurchaseErrorMessage(error: unknown) {
   const text = error instanceof Error ? error.message : String(error ?? "");
-  if (text.includes("coordinator_required")) return "Apenas o coordenador pode fazer essa alteração.";
-  if (text.includes("invalid_purchase_transition")) return "Esse pedido não pode mudar para essa situação.";
-  if (text.includes("purchase_not_editable")) return "O pedido já foi decidido e não pode mais ser editado.";
-  if (text.includes("purchase_not_found")) return "Pedido não encontrado.";
-  if (text.includes("project_not_available")) return "Você não pode usar esse projeto: ele precisa estar em aberto e você ser membro.";
-  if (text.includes("purchase_forbidden")) return "Só quem pediu (ou o coordenador) pode editar este pedido.";
-  if (text.includes("purchase_requests_url_check")) return "O link precisa começar com http:// ou https://.";
-  if (text.includes("row-level security")) return "Você não pode pedir compras para esse projeto (ele precisa estar em aberto e você ser membro).";
-  return text || "Não foi possível concluir a operação.";
+  if (text.includes("coordinator_required")) return t("purchaseError.coordinator_required");
+  if (text.includes("invalid_purchase_transition")) return t("purchaseError.invalid_purchase_transition");
+  if (text.includes("purchase_not_editable")) return t("purchaseError.purchase_not_editable");
+  if (text.includes("purchase_not_found")) return t("purchaseError.purchase_not_found");
+  if (text.includes("project_not_available")) return t("purchaseError.project_not_available");
+  if (text.includes("purchase_forbidden")) return t("purchaseError.purchase_forbidden");
+  if (text.includes("purchase_requests_url_check")) return t("purchaseError.link");
+  if (text.includes("row-level security")) return t("purchaseError.rls");
+  return text || t("purchaseError.fallback");
 }

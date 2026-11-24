@@ -1,3 +1,4 @@
+import { useT } from "../../i18n";
 import { Camera, ImagePlus, X } from "lucide-react";
 import { FormEvent, useEffect, useRef, useState } from "react";
 
@@ -22,6 +23,7 @@ type ReportProblemModalProps = {
 };
 
 export function ReportProblemModal({ equipment, onClose, onDone, openCount }: ReportProblemModalProps) {
+  const t = useT();
   const [description, setDescription] = useState("");
   const [urgency, setUrgency] = useState<MaintenanceUrgency>("normal");
   const [erro, setErro] = useState("");
@@ -45,7 +47,7 @@ export function ReportProblemModal({ equipment, onClose, onDone, openCount }: Re
     if (!files) return;
     const list = Array.from(files);
     const accepted = list.filter(isAcceptedPhoto);
-    setErro(accepted.length < list.length ? "Só é possível anexar imagens." : "");
+    setErro(accepted.length < list.length ? t("report.imagesOnly") : "");
     setPhotos((current) =>
       [...current, ...accepted.map((file) => ({ file, preview: URL.createObjectURL(file) }))].slice(0, MAX_PHOTOS),
     );
@@ -81,19 +83,18 @@ export function ReportProblemModal({ equipment, onClose, onDone, openCount }: Re
 
   return (
     <Modal
-      title={`Reportar problema: ${equipment.name}`}
-      description="Os responsáveis pela manutenção são avisados."
+      title={t("report.title", { name: equipment.name })}
+      description={t("report.hint")}
       onClose={onClose}
     >
       <form className="grid gap-4" onSubmit={enviar}>
         {openCount > 0 ? (
           <p className="rounded-lg border border-warning-dark bg-warning-soft p-3 text-sm text-text">
-            Já há {openCount === 1 ? "1 chamado aberto" : `${openCount} chamados abertos`} para este equipamento. Confira a
-            aba Chamados antes de abrir outro.
+            {t("report.alreadyOpen", { count: openCount })}
           </p>
         ) : null}
         <label className="grid gap-2 text-base font-semibold text-text">
-          O que está acontecendo?
+          {t("report.whatsHappening")}
           <textarea
             autoFocus
             className="min-h-28 min-w-0 rounded-lg border border-border bg-background px-4 py-3 text-base font-normal text-text outline-none transition focus:border-primary"
@@ -103,7 +104,7 @@ export function ReportProblemModal({ equipment, onClose, onDone, openCount }: Re
           />
         </label>
         <fieldset className="grid gap-2">
-          <legend className="mb-1 text-base font-semibold text-text">Urgência</legend>
+          <legend className="mb-1 text-base font-semibold text-text">{t("report.urgency")}</legend>
           <div className="grid gap-2 sm:grid-cols-3">
             {maintenanceUrgencyOptions.map((option) => (
               <label
@@ -129,14 +130,14 @@ export function ReportProblemModal({ equipment, onClose, onDone, openCount }: Re
           </div>
         </fieldset>
         <div className="grid gap-2">
-          <p className="text-base font-semibold text-text">Fotos (opcional)</p>
+          <p className="text-base font-semibold text-text">{t("report.photos")}</p>
           <div className="flex flex-wrap items-center gap-2">
             {photos.map((photo, index) => (
               <div key={photo.preview} className="relative h-20 w-20 overflow-hidden rounded-lg border border-border">
-                <img src={photo.preview} alt={`Foto ${index + 1}`} className="h-full w-full object-cover" />
+                <img src={photo.preview} alt={t("report.photoAlt", { n: index + 1 })} className="h-full w-full object-cover" />
                 <button
                   type="button"
-                  aria-label={`Remover foto ${index + 1}`}
+                  aria-label={t("report.removePhoto", { n: index + 1 })}
                   className="absolute right-1 top-1 inline-flex h-6 w-6 items-center justify-center rounded-full bg-text/80 text-white"
                   onClick={() => removePhoto(index)}
                 >
@@ -148,11 +149,11 @@ export function ReportProblemModal({ equipment, onClose, onDone, openCount }: Re
               <>
                 <Button variant="secondary" className="min-h-11 px-3 py-2 text-sm" onClick={tirarFoto}>
                   <Camera className="mr-2 h-4 w-4" aria-hidden="true" />
-                  Tirar foto
+                  {t("report.takePhoto")}
                 </Button>
                 <Button variant="secondary" className="min-h-11 px-3 py-2 text-sm" onClick={() => galleryRef.current?.click()}>
                   <ImagePlus className="mr-2 h-4 w-4" aria-hidden="true" />
-                  Anexar
+                  {t("report.attach")}
                 </Button>
               </>
             ) : null}
@@ -166,13 +167,13 @@ export function ReportProblemModal({ equipment, onClose, onDone, openCount }: Re
               onClose={() => setWebcamAberta(false)}
             />
           ) : null}
-          <p className="text-sm text-muted">Até {MAX_PHOTOS} fotos; elas são reduzidas antes do envio.</p>
+          <p className="text-sm text-muted">{t("report.photoLimit", { max: MAX_PHOTOS })}</p>
           <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(event) => { addPhotos(event.target.files); event.target.value = ""; }} />
           <input ref={galleryRef} type="file" accept="image/*" multiple className="hidden" onChange={(event) => { addPhotos(event.target.files); event.target.value = ""; }} />
         </div>
         {urgency === "urgent" && equipment.status === "active" ? (
           <p className="rounded-lg border border-danger bg-danger-soft p-3 text-sm font-semibold text-danger">
-            Chamado urgente bloqueia o equipamento na hora: ele deixa de aceitar novas reservas até um responsável liberar.
+            {t("report.urgentWarning")}
           </p>
         ) : null}
         {erro ? (
@@ -180,10 +181,10 @@ export function ReportProblemModal({ equipment, onClose, onDone, openCount }: Re
         ) : null}
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Button variant="secondary" onClick={onClose}>
-            Cancelar
+            {t("common.cancel")}
           </Button>
           <Button type="submit" disabled={salvando}>
-            {salvando ? "Enviando..." : "Enviar chamado"}
+            {salvando ? t("report.sending") : t("report.send")}
           </Button>
         </div>
       </form>

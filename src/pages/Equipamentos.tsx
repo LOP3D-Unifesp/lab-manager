@@ -44,6 +44,8 @@ import {
   setEquipmentMaterials,
   updateEquipment,
 } from "../lib/supabaseRepository";
+import { inputClassName } from "../components/ui/formStyles";
+import { getLocale, localizedName, t as translate, useT } from "../i18n";
 
 type EquipmentForm = {
   name: string;
@@ -58,9 +60,6 @@ type EquipmentForm = {
 
 const statusOptions: EquipmentStatus[] = ["active", "unavailable", "disabled"];
 
-const inputClassName =
-  "min-h-11 min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary";
-
 function toNullable(value: string) {
   const trimmed = value.trim();
   return trimmed ? trimmed : null;
@@ -72,12 +71,13 @@ function materialIdsForEquipment(equipmentId: string, items: EquipmentMaterial[]
 
 function getErrorMessage(error: unknown) {
   const text = error instanceof Error ? error.message : "";
-  if (text.includes("equipment_name_key")) return "Já existe um equipamento com esse nome.";
-  if (text.includes("equipment_types_name_key")) return "Já existe um tipo com esse nome.";
-  return text || "Não foi possível salvar.";
+  if (text.includes("equipment_name_key")) return translate("equipment.errDuplicateName");
+  if (text.includes("equipment_types_name_key")) return translate("equipment.errDuplicateType");
+  return text || translate("equipment.errSave");
 }
 
 export function Equipamentos() {
+  const t = useT();
   const { labSettings, profile } = useAuth();
   const timezone = labSettings?.timezone || getTimezonePadrao();
   const isCoordinator = profile?.role === "coordinator";
@@ -98,7 +98,7 @@ export function Equipamentos() {
   const [modalAberto, setModalAberto] = useState(false);
   const [emEdicao, setEmEdicao] = useState<Equipment | null>(null);
   const [form, setForm] = useState<EquipmentForm | null>(null);
-  const [novoTipo, setNovoTipo] = useState<{ name: string; uses_material: boolean } | null>(null);
+  const [novoTipo, setNovoTipo] = useState<{ name: string; name_en: string; name_es: string; uses_material: boolean } | null>(null);
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
 
@@ -131,7 +131,7 @@ export function Equipamentos() {
   useEffect(() => {
     let ativo = true;
     carregarDados().catch((error) => {
-      if (ativo) setErro(error instanceof Error ? error.message : "Erro ao carregar.");
+      if (ativo) setErro(error instanceof Error ? error.message : t("equipment.loadError"));
     });
     return () => {
       ativo = false;
@@ -227,13 +227,13 @@ export function Equipamentos() {
   async function cadastrarTipo() {
     const name = novoTipo?.name.trim();
     if (!novoTipo || !name) {
-      setErro("Informe o nome do tipo.");
+      setErro(t("equipment.errTypeName"));
       return;
     }
     try {
       setSalvando(true);
-      const type = await createEquipmentType({ name, uses_material: novoTipo.uses_material });
-      setTypes((current) => [...current, type].sort((a, b) => a.name.localeCompare(b.name, "pt-BR")));
+      const type = await createEquipmentType({ name, name_en: novoTipo.name_en.trim() || null, name_es: novoTipo.name_es.trim() || null, uses_material: novoTipo.uses_material });
+      setTypes((current) => [...current, type].sort((a, b) => a.name.localeCompare(b.name, getLocale())));
       atualizarForm({ type_id: type.id });
       setNovoTipo(null);
       setErro("");
@@ -247,16 +247,16 @@ export function Equipamentos() {
   async function salvarEquipamento(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!isCoordinator || !form) {
-      setErro("Apenas coordenadores podem adicionar ou editar equipamentos.");
+      setErro(t("equipment.errCoordinatorOnly"));
       return;
     }
     const name = form.name.trim();
     if (!name) {
-      setErro("Informe o nome do equipamento.");
+      setErro(t("equipment.errName"));
       return;
     }
     if (!form.type_id) {
-      setErro("Escolha o tipo do equipamento.");
+      setErro(t("equipment.errType"));
       return;
     }
 
@@ -287,20 +287,20 @@ export function Equipamentos() {
   return (
     <div>
       <PageHeader
-        title="Equipamentos"
-        description="Impressoras, scanners e demais equipamentos do laboratório, com situação e compatibilidade de materiais."
+        title={t("equipment.title")}
+        description={t("equipment.subtitle")}
         action={
           isCoordinator ? (
             <Button fullWidth variant="success" onClick={abrirCadastro}>
               <Plus className="mr-2 h-5 w-5" aria-hidden="true" />
-              Cadastrar equipamento
+              {t("equipment.register")}
             </Button>
           ) : undefined
         }
       />
 
-      <div role="tablist" aria-label="Seção" className="mb-4 flex gap-2 border-b border-border">
-        {([["equipamentos", "Equipamentos"], ["chamados", "Chamados"]] as const).map(([id, label]) => (
+      <div role="tablist" aria-label={t("equipment.section")} className="mb-4 flex gap-2 border-b border-border">
+        {([["equipamentos", t("equipment.tabEquipment")], ["chamados", t("equipment.tabRequests")]] as const).map(([id, label]) => (
           <button
             key={id}
             role="tab"
@@ -331,8 +331,8 @@ export function Equipamentos() {
         />
       ) : equipmentList.length > 0 ? (
         <>
-          <div role="tablist" aria-label="Tipo de equipamento" className="mb-4 flex flex-wrap gap-2">
-            {[{ id: "all", name: "Todos", total: equipmentList.length }, ...types.filter((type) => contagemPorTipo[type.id]).map((type) => ({ id: type.id, name: type.name, total: contagemPorTipo[type.id] }))].map(
+          <div role="tablist" aria-label={t("equipment.typeFilter")} className="mb-4 flex flex-wrap gap-2">
+            {[{ id: "all", name: t("equipment.all"), total: equipmentList.length }, ...types.filter((type) => contagemPorTipo[type.id]).map((type) => ({ id: type.id, name: localizedName(type), total: contagemPorTipo[type.id] }))].map(
               (item) => (
                 <button
                   key={item.id}
@@ -368,7 +368,7 @@ export function Equipamentos() {
                   </div>
                   {/* Tipo e modelo numa linha própria, com a largura toda do card (o selo não a divide). */}
                   <p className="mt-2 break-words text-lg text-muted">
-                    {[item.type?.name, item.model].filter(Boolean).join(" · ") || "Modelo não informado"}
+                    {[item.type ? localizedName(item.type) : null, item.model].filter(Boolean).join(" · ") || t("equipment.modelNotInformed")}
                   </p>
                   {(() => {
                     const ativos = sortRequests(requests.filter((request) => request.equipment_id === item.id && isRequestActive(request.status)));
@@ -380,17 +380,17 @@ export function Equipamentos() {
                       item.status === "stopped"
                         ? {
                             classes: "border-danger bg-danger-soft",
-                            titulo: "Parado",
-                            detalhe: "Sem reservas até iniciar a manutenção.",
+                            titulo: t("equipment.stopped"),
+                            detalhe: t("equipment.stoppedHint"),
                           }
                         : item.status === "maintenance"
                           ? {
                               classes: "border-warning-dark bg-warning-soft",
-                              titulo: aberto ? `Em manutenção desde ${formatMaintenanceDateTime(aberto.started_at, timezone)}` : "Em manutenção",
+                              titulo: aberto ? t("equipment.inMaintenanceSince", { date: formatMaintenanceDateTime(aberto.started_at, timezone) }) : t("equipment.inMaintenance"),
                               detalhe: [
-                                aberto ? `há ${formatMaintenanceDuration(aberto.started_at, null, new Date())}` : null,
+                                aberto ? t("equipment.ago", { duration: formatMaintenanceDuration(aberto.started_at, null, new Date()) }) : null,
                                 aberto && !motivoJaListado ? aberto.reason : null,
-                                aberto?.expected_return_on ? `volta prevista ${formatMaintenanceDate(aberto.expected_return_on)}` : null,
+                                aberto?.expected_return_on ? t("equipment.expectedReturn", { date: formatMaintenanceDate(aberto.expected_return_on) }) : null,
                               ]
                                 .filter(Boolean)
                                 .join(" · "),
@@ -411,12 +411,13 @@ export function Equipamentos() {
                           <ul className="mt-3 grid gap-1.5 text-sm text-muted">
                             {ativos.slice(0, 2).map((request) => (
                               <li key={request.id} className="break-words">
-                                <span className="font-semibold text-text">{request.requested_by_name ?? "Alguém"}</span> abriu um chamado
-                                {request.urgency === "urgent" ? " urgente" : ""} em {formatMaintenanceDateTime(request.created_at, timezone)}:{" "}
+                                <span className="font-semibold text-text">{request.requested_by_name ?? t("equipment.someone")}</span>{" "}
+                                {request.urgency === "urgent" ? t("equipment.openedUrgent") : t("equipment.openedRequest")}{" "}
+                                {t("equipment.openedOn", { date: formatMaintenanceDateTime(request.created_at, timezone) })}{" "}
                                 “{request.description.length > 90 ? `${request.description.slice(0, 87)}...` : request.description}”
                               </li>
                             ))}
-                            {ativos.length > 2 ? <li>+ {ativos.length - 2} outros na aba Chamados</li> : null}
+                            {ativos.length > 2 ? <li>{t("equipment.moreRequests", { count: ativos.length - 2 })}</li> : null}
                           </ul>
                         ) : null}
                       </>
@@ -424,22 +425,22 @@ export function Equipamentos() {
                   })()}
                   <dl className="mt-4 grid gap-2 text-base leading-6 text-muted">
                     <div>
-                      <dt className="font-semibold text-text">Local</dt>
-                      <dd>{item.location ?? "Não informado"}</dd>
+                      <dt className="font-semibold text-text">{t("equipment.location")}</dt>
+                      <dd>{item.location ?? t("common.notInformed")}</dd>
                     </div>
                     {item.asset_tag ? (
                       <div>
-                        <dt className="font-semibold text-text">Patrimônio</dt>
+                        <dt className="font-semibold text-text">{t("equipment.assetTag")}</dt>
                         <dd>{item.asset_tag}</dd>
                       </div>
                     ) : null}
                     {equipmentUsesMaterial(item) ? (
                       <div>
-                        <dt className="font-semibold text-text">Materiais compatíveis</dt>
+                        <dt className="font-semibold text-text">{t("equipment.compatibleMaterials")}</dt>
                         <dd>
                           {compatibilities.length > 0
                             ? compatibilities.map((material) => material.name).join(", ")
-                            : "Nenhum material compatível"}
+                            : t("equipment.noCompatibleMaterial")}
                         </dd>
                       </div>
                     ) : null}
@@ -453,7 +454,7 @@ export function Equipamentos() {
                           onClick={() => setHistoricoDe(item)}
                         >
                           <History className="h-4 w-4" aria-hidden="true" />
-                          Histórico
+                          {t("equipment.history")}
                         </button>
                       ) : null}
                       <button
@@ -462,7 +463,7 @@ export function Equipamentos() {
                         onClick={() => setReportarEm(item)}
                       >
                         <MessageSquareWarning className="h-4 w-4" aria-hidden="true" />
-                        Reportar problema
+                        {t("equipment.reportProblem")}
                       </button>
                       {countOpenRequests(requests, item.id) > 0 ? (
                         <button
@@ -470,7 +471,7 @@ export function Equipamentos() {
                           className="inline-flex min-h-9 items-center whitespace-nowrap rounded-full bg-warning-soft px-3 text-sm font-semibold text-text transition hover:underline"
                           onClick={() => setSearchParams({ vista: "chamados" }, { replace: true })}
                         >
-                          {countOpenRequests(requests, item.id)} {countOpenRequests(requests, item.id) === 1 ? "chamado aberto" : "chamados abertos"}
+                          {t("equipment.openRequests", { count: countOpenRequests(requests, item.id) })}
                         </button>
                       ) : null}
                     </div>
@@ -478,19 +479,19 @@ export function Equipamentos() {
                       {podeManter ? (
                         item.status === "maintenance" || item.status === "stopped" ? (
                           <Button className="min-h-9 whitespace-nowrap px-3 py-2 text-sm" variant="success" onClick={() => setLiberarEm(item)}>
-                            Liberar equipamento
+                            {t("equipment.release")}
                           </Button>
                         ) : (
                           <Button className="min-h-9 whitespace-nowrap px-3 py-2 text-sm" variant="secondary" onClick={() => setIniciarEm(item)}>
                             <Wrench className="mr-2 h-4 w-4" aria-hidden="true" />
-                            Colocar em manutenção
+                            {t("equipment.startMaintenance")}
                           </Button>
                         )
                       ) : null}
                       <button
                         type="button"
-                        title="Editar equipamento"
-                        aria-label={`Editar ${item.name}`}
+                        title={t("equipment.edit")}
+                        aria-label={t("equipment.editNamed", { name: item.name })}
                         disabled={!isCoordinator}
                         onClick={() => abrirEdicao(item)}
                         className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted transition hover:bg-primary-soft hover:text-primary"
@@ -506,7 +507,7 @@ export function Equipamentos() {
         </>
       ) : (
         <Card>
-          <p className="text-lg font-semibold text-muted">Nenhum equipamento cadastrado ainda.</p>
+          <p className="text-lg font-semibold text-muted">{t("equipment.none")}</p>
         </Card>
       )}
 
@@ -565,15 +566,15 @@ export function Equipamentos() {
 
       {modalAberto && form ? (
         <Modal
-          title={emEdicao ? "Editar equipamento" : "Cadastrar equipamento"}
-          description="Informe o tipo, o modelo e o local. Para impressoras, marque os materiais que ela aceita."
+          title={emEdicao ? t("equipment.edit") : t("equipment.register")}
+          description={t("equipment.formHint")}
           onClose={fecharModal}
           wide
         >
           <form className="grid gap-4" onSubmit={salvarEquipamento}>
             <div className="grid items-start gap-4 sm:grid-cols-2">
               <label className="grid gap-2 text-base font-semibold text-text">
-                Nome
+                {t("equipment.name")}
                 <input
                   className={inputClassName}
                   required
@@ -583,13 +584,13 @@ export function Equipamentos() {
               </label>
               <div className="grid gap-2">
                 <div className="flex items-baseline justify-between gap-2 text-base font-semibold text-text">
-                  <label htmlFor="equipamento-tipo">Tipo</label>
+                  <label htmlFor="equipamento-tipo">{t("equipment.type")}</label>
                   <button
                     type="button"
                     className="text-sm font-semibold text-primary underline"
-                    onClick={() => setNovoTipo((current) => (current ? null : { name: "", uses_material: false }))}
+                    onClick={() => setNovoTipo((current) => (current ? null : { name: "", name_en: "", name_es: "", uses_material: false }))}
                   >
-                    + Novo tipo
+                    {t("equipment.newType")}
                   </button>
                 </div>
                 <select
@@ -600,11 +601,11 @@ export function Equipamentos() {
                   onChange={(event) => atualizarForm({ type_id: event.target.value })}
                 >
                   <option value="" disabled>
-                    Selecione
+                    {t("equipment.select")}
                   </option>
                   {types.map((type) => (
                     <option key={type.id} value={type.id}>
-                      {type.name}
+                      {localizedName(type)}
                     </option>
                   ))}
                 </select>
@@ -612,13 +613,29 @@ export function Equipamentos() {
             </div>
 
             {novoTipo ? (
-              <div className="grid gap-3 rounded-lg border border-border bg-background p-4 sm:grid-cols-[1fr_auto_auto] sm:items-end">
+              <div className="grid gap-3 rounded-lg border border-border bg-background p-4 sm:grid-cols-2 sm:items-end">
                 <label className="grid gap-2 text-sm font-semibold text-text">
-                  Nome do tipo
+                  {t("equipment.typeName")}
                   <input
                     className={inputClassName}
                     value={novoTipo.name}
                     onChange={(event) => setNovoTipo({ ...novoTipo, name: event.target.value })}
+                  />
+                </label>
+                <label className="grid gap-2 text-sm font-semibold text-text">
+                  {t("translations.en")}
+                  <input
+                    className={inputClassName}
+                    value={novoTipo.name_en}
+                    onChange={(event) => setNovoTipo({ ...novoTipo, name_en: event.target.value })}
+                  />
+                </label>
+                <label className="grid gap-2 text-sm font-semibold text-text">
+                  {t("translations.es")}
+                  <input
+                    className={inputClassName}
+                    value={novoTipo.name_es}
+                    onChange={(event) => setNovoTipo({ ...novoTipo, name_es: event.target.value })}
                   />
                 </label>
                 <label className="flex min-h-11 items-center gap-2 text-sm font-semibold text-text">
@@ -628,21 +645,21 @@ export function Equipamentos() {
                     type="checkbox"
                     onChange={(event) => setNovoTipo({ ...novoTipo, uses_material: event.target.checked })}
                   />
-                  Usa material nas reservas
+                  {t("equipment.usesMaterial")}
                 </label>
                 <Button disabled={salvando} onClick={cadastrarTipo}>
-                  Cadastrar tipo
+                  {t("equipment.registerType")}
                 </Button>
               </div>
             ) : null}
 
             <div className="grid items-start gap-4 sm:grid-cols-2">
               <label className="grid gap-2 text-base font-semibold text-text">
-                Modelo
+                {t("equipment.model")}
                 <input className={inputClassName} value={form.model} onChange={(event) => atualizarForm({ model: event.target.value })} />
               </label>
               <label className="grid gap-2 text-base font-semibold text-text">
-                Patrimônio ou identificação
+                {t("equipment.assetOrId")}
                 <input
                   className={inputClassName}
                   value={form.asset_tag}
@@ -653,11 +670,11 @@ export function Equipamentos() {
 
             <div className="grid items-start gap-4 sm:grid-cols-2">
               <label className="grid gap-2 text-base font-semibold text-text">
-                Local
+                {t("equipment.location")}
                 <input className={inputClassName} value={form.location} onChange={(event) => atualizarForm({ location: event.target.value })} />
               </label>
               <label className="grid gap-2 text-base font-semibold text-text">
-                Estado
+                {t("equipment.state")}
                 <select
                   className={inputClassName}
                   disabled={form.status === "maintenance" || form.status === "stopped"}
@@ -671,13 +688,13 @@ export function Equipamentos() {
                   ))}
                 </select>
                 {form.status === "maintenance" || form.status === "stopped" ? (
-                  <span className="text-sm font-normal text-muted">Para tirar da manutenção, use “Liberar equipamento” no card.</span>
+                  <span className="text-sm font-normal text-muted">{t("equipment.releaseHint")}</span>
                 ) : null}
               </label>
             </div>
 
             <label className="grid gap-2 text-base font-semibold text-text">
-              Observações
+              {t("equipment.notes")}
               <textarea
                 className={`${inputClassName} min-h-24 py-3`}
                 value={form.notes}
@@ -687,7 +704,7 @@ export function Equipamentos() {
 
             {tipoDoForm?.uses_material ? (
               <fieldset className="grid gap-3 rounded-lg border border-border bg-background p-4">
-                <legend className="px-1 text-base font-semibold text-text">Materiais compatíveis</legend>
+                <legend className="px-1 text-base font-semibold text-text">{t("equipment.compatibleMaterials")}</legend>
                 {materials.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {materials.map((material) => {
@@ -715,7 +732,7 @@ export function Equipamentos() {
                   </div>
                 ) : (
                   <p className="rounded-md border border-dashed border-border bg-surface p-3 text-base text-muted">
-                    Cadastre materiais no Inventário antes de definir a compatibilidade.
+                    {t("equipment.registerMaterialsFirst")}
                   </p>
                 )}
               </fieldset>
@@ -727,10 +744,10 @@ export function Equipamentos() {
 
             <div className="mt-2 flex flex-col-reverse items-center gap-3 sm:flex-row sm:justify-end">
               <Button variant="ghost" onClick={fecharModal}>
-                Cancelar
+                {t("common.cancel")}
               </Button>
               <Button type="submit" disabled={salvando}>
-                {salvando ? "Salvando..." : "Salvar equipamento"}
+                {salvando ? t("common.saving") : t("equipment.saveEquipment")}
               </Button>
             </div>
           </form>

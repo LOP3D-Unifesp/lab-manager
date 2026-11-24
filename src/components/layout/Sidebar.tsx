@@ -1,8 +1,12 @@
 import { Link, NavLink } from "react-router-dom";
 
+import { useT, type MessageKey } from "../../i18n";
+import { navLabelKey } from "../../i18n/navLabels";
 import { useAuth } from "../../lib/auth";
 import { navigationItems, navigationSectionLabels, type NavigationItem } from "../../lib/navigation";
 import { useAttention } from "./AttentionProvider";
+import { LanguageSelect } from "../ui/LanguageSelect";
+import { ThemeToggle } from "../ui/ThemeToggle";
 import { AuthUserMenu } from "./AuthUserMenu";
 import { EnvironmentBadge } from "./EnvironmentBadge";
 import { NotificationBell } from "./NotificationBell";
@@ -30,6 +34,7 @@ function getNavItemClass(isActive: boolean) {
 }
 
 function SidebarNavItem({ badge, item }: { badge?: number; item: NavigationItem }) {
+  const t = useT();
   return (
     <div>
       <NavLink
@@ -47,11 +52,11 @@ function SidebarNavItem({ badge, item }: { badge?: number; item: NavigationItem 
               ].join(" ")}
             />
             <item.icon aria-hidden="true" className="h-5 w-5 shrink-0" />
-            <span className="min-w-0 truncate">{item.desktopLabel}</span>
+            <span className="min-w-0 truncate">{t(navLabelKey(item, "desktop"))}</span>
             {badge ? (
               <span
-                aria-label={`${badge} pendente(s)`}
-                className="ml-auto inline-flex min-w-6 items-center justify-center rounded-full bg-warning px-2 py-0.5 text-xs font-bold text-text"
+                aria-label={t("common.pending", { count: badge })}
+                className="ml-auto inline-flex min-w-6 items-center justify-center rounded-full bg-warning px-2 py-0.5 text-xs font-bold text-[#102033] dark:border dark:border-warning/60 dark:bg-warning-soft dark:text-warning-dark"
               >
                 {badge}
               </span>
@@ -64,6 +69,7 @@ function SidebarNavItem({ badge, item }: { badge?: number; item: NavigationItem 
 }
 
 export function Sidebar() {
+  const t = useT();
   const { labSettings, profile } = useAuth();
   const visibleNavigationItems = getVisibleDesktopItems(profile?.role);
   const attention = useAttention();
@@ -83,7 +89,7 @@ export function Sidebar() {
           <div className="flex items-start justify-between gap-2">
             <Link
               to="/"
-              aria-label="Ir para o início"
+              aria-label={t("nav.home")}
               className="block min-w-0 rounded-md transition hover:text-primary focus-visible:outline-offset-4"
             >
               <div className="flex items-center gap-2">
@@ -99,12 +105,12 @@ export function Sidebar() {
             <NotificationBell align="left" />
           </div>
           <p className="mt-2 text-sm font-semibold leading-5 text-muted">
-            {labSettings?.name ?? "Gestão interna do laboratório."}
+            {labSettings?.name ?? t("sidebar.fallbackSubtitle")}
           </p>
         </div>
 
         <nav
-          aria-label="Navegação principal"
+          aria-label={t("nav.main")}
           className="mt-5 min-h-0 flex-1 space-y-1 overflow-y-auto pr-1"
         >
           {visibleNavigationItems.map((item, index) => {
@@ -118,7 +124,7 @@ export function Sidebar() {
               <div key={item.path}>
                 {sectionLabel ? (
                   <p className="mt-4 px-3.5 pb-1 text-xs font-bold uppercase tracking-wide text-muted">
-                    {sectionLabel}
+                    {t(`navSection.${item.desktopSection}` as MessageKey)}
                   </p>
                 ) : null}
                 <SidebarNavItem item={item} badge={badgeFor(item.path)} />
@@ -128,6 +134,8 @@ export function Sidebar() {
         </nav>
 
         <div className="mt-5 border-t border-border pt-3">
+          <ThemeToggle className="mb-2 w-full" />
+          <LanguageSelect className="mb-3 w-full" />
           <AuthUserMenu />
         </div>
       </div>

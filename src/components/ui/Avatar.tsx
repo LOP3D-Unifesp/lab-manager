@@ -1,3 +1,4 @@
+import { t } from "../../i18n";
 import { User } from "lucide-react";
 
 type AvatarProps = {
@@ -25,7 +26,7 @@ export function Avatar({ avatarUrl, name, className = "h-10 w-10" }: AvatarProps
     return (
       <img
         src={avatarUrl}
-        alt={name ? `Foto de ${name}` : "Foto de perfil"}
+        alt={name ? t("avatar.photoOf", { name }) : t("avatar.profilePhoto")}
         className={`inline-flex shrink-0 rounded-full object-cover ${className}`}
       />
     );

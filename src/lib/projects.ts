@@ -1,13 +1,14 @@
+import { getLocale, t } from "../i18n";
 import type { StatusVariant } from "../components/ui/StatusBadge";
 
 export type ProjectStatus = "planning" | "active" | "paused" | "completed" | "archived";
 
 export const projectStatusOptions: Array<{ value: ProjectStatus; label: string }> = [
-  { value: "planning", label: "Planejamento" },
-  { value: "active", label: "Em andamento" },
-  { value: "paused", label: "Pausado" },
-  { value: "completed", label: "Concluído" },
-  { value: "archived", label: "Arquivado" },
+  { value: "planning", get label() { return t("opt.projectStatusOptions.planning"); } },
+  { value: "active", get label() { return t("opt.projectStatusOptions.active"); } },
+  { value: "paused", get label() { return t("opt.projectStatusOptions.paused"); } },
+  { value: "completed", get label() { return t("opt.projectStatusOptions.completed"); } },
+  { value: "archived", get label() { return t("opt.projectStatusOptions.archived"); } },
 ];
 
 export function getProjectStatusLabel(status: ProjectStatus) {
@@ -29,13 +30,13 @@ export function isProjectOpen(status: ProjectStatus) {
 export type FundingCategory = "capital" | "custeio" | "bolsas" | "passagens" | "diarias" | "reserva_tecnica" | "outros";
 
 export const fundingCategoryOptions: Array<{ value: FundingCategory; label: string; hint: string }> = [
-  { value: "capital", label: "Capital", hint: "Equipamentos e material permanente" },
-  { value: "custeio", label: "Custeio", hint: "Material de consumo e serviços" },
-  { value: "bolsas", label: "Bolsas", hint: "Bolsas de estudo e pesquisa" },
-  { value: "passagens", label: "Passagens", hint: "Passagens aéreas e terrestres" },
-  { value: "diarias", label: "Diárias", hint: "Hospedagem, alimentação e deslocamento" },
-  { value: "reserva_tecnica", label: "Reserva técnica", hint: "Reserva técnica e benefício institucional" },
-  { value: "outros", label: "Outros", hint: "Demais rubricas" },
+  { value: "capital", get label() { return t("opt.fundingCategoryOptions.capital"); }, get hint() { return t("opt.fundingCategoryOptions.capital.hint"); } },
+  { value: "custeio", get label() { return t("opt.fundingCategoryOptions.custeio"); }, get hint() { return t("opt.fundingCategoryOptions.custeio.hint"); } },
+  { value: "bolsas", get label() { return t("opt.fundingCategoryOptions.bolsas"); }, get hint() { return t("opt.fundingCategoryOptions.bolsas.hint"); } },
+  { value: "passagens", get label() { return t("opt.fundingCategoryOptions.passagens"); }, get hint() { return t("opt.fundingCategoryOptions.passagens.hint"); } },
+  { value: "diarias", get label() { return t("opt.fundingCategoryOptions.diarias"); }, get hint() { return t("opt.fundingCategoryOptions.diarias.hint"); } },
+  { value: "reserva_tecnica", get label() { return t("opt.fundingCategoryOptions.reserva_tecnica"); }, get hint() { return t("opt.fundingCategoryOptions.reserva_tecnica.hint"); } },
+  { value: "outros", get label() { return t("opt.fundingCategoryOptions.outros"); }, get hint() { return t("opt.fundingCategoryOptions.outros.hint"); } },
 ];
 
 export function getFundingCategoryLabel(category: FundingCategory) {
@@ -93,7 +94,7 @@ export function getProjectFundingTotal(project: Pick<Project, "funding">) {
 }
 
 export function formatCurrencyBRL(value: number) {
-  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
+  return new Intl.NumberFormat(getLocale(), { style: "currency", currency: "BRL" }).format(value);
 }
 
 // Aceita "1234.56" (campo numérico) e "1.234,56" (digitado à mão). Retorna null se inválido.
@@ -108,7 +109,8 @@ export function parseAmountInput(value: string) {
 export function formatProjectDate(value: string | null) {
   if (!value) return null;
   const [year, month, day] = value.split("-");
-  return year && month && day ? `${day}/${month}/${year}` : value;
+  if (!(year && month && day)) return value;
+  return new Intl.DateTimeFormat(getLocale(), { timeZone: "UTC" }).format(new Date(`${year}-${month}-${day}T00:00:00Z`));
 }
 
 export function formatProjectPeriod(startsOn: string | null, endsOn: string | null) {
@@ -144,22 +146,22 @@ export function sortProjects(projects: Project[]) {
     archived: 4,
   };
   return [...projects].sort(
-    (a, b) => order[a.status] - order[b.status] || a.name.localeCompare(b.name, "pt-BR"),
+    (a, b) => order[a.status] - order[b.status] || a.name.localeCompare(b.name, getLocale()),
   );
 }
 
 export function getProjectErrorMessage(error: unknown) {
   const text = error instanceof Error ? error.message : String(error ?? "");
-  if (text.includes("projects_name_key")) return "Já existe um projeto com esse nome.";
-  if (text.includes("funding_agencies_acronym_key")) return "Já existe uma agência com essa sigla.";
-  if (text.includes("coordinator_required")) return "Apenas coordenadores podem fazer essa alteração.";
-  if (text.includes("project_not_found")) return "Projeto não encontrado.";
-  if (text.includes("invalid_project_members")) return "A lista de membros contém uma pessoa inativa ou inexistente.";
-  if (text.includes("invalid_funding")) return "Revise os dados de fomento (agência, datas e valores).";
+  if (text.includes("projects_name_key")) return t("projectError.projects_name_key");
+  if (text.includes("funding_agencies_acronym_key")) return t("projectError.funding_agencies_acronym_key");
+  if (text.includes("coordinator_required")) return t("projectError.coordinator_required");
+  if (text.includes("project_not_found")) return t("projectError.project_not_found");
+  if (text.includes("invalid_project_members")) return t("projectError.invalid_project_members");
+  if (text.includes("invalid_funding")) return t("projectError.invalid_funding");
   if (text.includes("projects_dates_check") || text.includes("project_funding_dates_check")) {
-    return "A data final não pode ser anterior à inicial.";
+    return t("projectError.dates");
   }
-  return text || "Não foi possível concluir a operação.";
+  return text || t("projectError.fallback");
 }
 
 // ---------------------------------------------------------------------------
@@ -169,10 +171,10 @@ export function getProjectErrorMessage(error: unknown) {
 export type TaskStatus = "todo" | "in_progress" | "review" | "done";
 
 export const taskStatusOptions: Array<{ value: TaskStatus; label: string }> = [
-  { value: "todo", label: "A fazer" },
-  { value: "in_progress", label: "Em andamento" },
-  { value: "review", label: "Em revisão" },
-  { value: "done", label: "Concluído" },
+  { value: "todo", get label() { return t("opt.taskStatusOptions.todo"); } },
+  { value: "in_progress", get label() { return t("opt.taskStatusOptions.in_progress"); } },
+  { value: "review", get label() { return t("opt.taskStatusOptions.review"); } },
+  { value: "done", get label() { return t("opt.taskStatusOptions.done"); } },
 ];
 
 export function getTaskStatusLabel(status: TaskStatus) {
@@ -196,7 +198,7 @@ export function groupTasksByStatus(tasks: ProjectTask[]) {
   const groups: Record<TaskStatus, ProjectTask[]> = { todo: [], in_progress: [], review: [], done: [] };
   for (const task of tasks) groups[task.status].push(task);
   for (const status of Object.keys(groups) as TaskStatus[]) {
-    groups[status].sort((a, b) => a.position - b.position || a.title.localeCompare(b.title, "pt-BR"));
+    groups[status].sort((a, b) => a.position - b.position || a.title.localeCompare(b.title, getLocale()));
   }
   return groups;
 }
@@ -213,11 +215,11 @@ export function isTaskOverdue(task: Pick<ProjectTask, "due_on" | "status">, toda
 
 export function getTaskErrorMessage(error: unknown) {
   const text = error instanceof Error ? error.message : String(error ?? "");
-  if (text.includes("assignee_must_be_project_member")) return "Só membros do projeto podem ser responsáveis pela tarefa.";
-  if (text.includes("project_access_required")) return "Você não participa deste projeto.";
-  if (text.includes("task_not_found")) return "Tarefa não encontrada.";
-  if (text.includes("project_tasks_title_check")) return "Informe o título da tarefa.";
-  if (text.includes("row-level security")) return "Você não tem permissão para fazer essa alteração.";
+  if (text.includes("assignee_must_be_project_member")) return t("taskError.assignee_must_be_project_member");
+  if (text.includes("project_access_required")) return t("taskError.project_access_required");
+  if (text.includes("task_not_found")) return t("taskError.task_not_found");
+  if (text.includes("project_tasks_title_check")) return t("taskError.title_check");
+  if (text.includes("row-level security")) return t("taskError.rls");
   return getProjectErrorMessage(error);
 }
 
@@ -261,5 +263,5 @@ export function getTaskAssigneeOptions(tasks: ProjectTask[]) {
   for (const task of tasks) for (const assignee of task.assignees) byId.set(assignee.profile_id, assignee.full_name);
   return [...byId.entries()]
     .map(([profile_id, full_name]) => ({ profile_id, full_name }))
-    .sort((a, b) => a.full_name.localeCompare(b.full_name, "pt-BR"));
+    .sort((a, b) => a.full_name.localeCompare(b.full_name, getLocale()));
 }

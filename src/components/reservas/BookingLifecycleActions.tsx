@@ -6,6 +6,7 @@ import {
   type BookingStatus,
   type EquipmentBooking,
 } from "../../lib/domain";
+import { useT } from "../../i18n";
 import { Button } from "../ui/Button";
 
 type Props = {
@@ -15,12 +16,13 @@ type Props = {
 };
 
 export function BookingLifecycleActions({ bookings, disabled, onChangeStatus }: Props) {
+  const t = useT();
   const actionable = bookings.filter((booking) => getProximosStatusReserva(booking.status).length > 0);
   if (actionable.length === 0) return null;
 
   return (
     <section className="mt-4 grid gap-3 border-t border-border pt-3">
-      <p className="text-sm font-bold text-text">Ciclo operacional</p>
+      <p className="text-sm font-bold text-text">{t("bookings.lifecycle")}</p>
       {actionable.map((booking) => (
         <div
           key={`status-${booking.id}`}

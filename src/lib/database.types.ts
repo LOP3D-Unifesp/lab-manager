@@ -191,14 +191,14 @@ isOneToOne: false
                   ]
                 },"equipment_types": {
                   Row: {
-                    "created_at": string,"id": string,"is_active": boolean,"name": string,"updated_at": string,"uses_material": boolean
+                    "created_at": string,"id": string,"is_active": boolean,"name": string,"name_en": string | null,"name_es": string | null,"updated_at": string,"uses_material": boolean
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"id"?: string,"is_active"?: boolean,"name": string,"updated_at"?: string,"uses_material"?: boolean
+                    "created_at"?: string,"id"?: string,"is_active"?: boolean,"name": string,"name_en"?: string | null,"name_es"?: string | null,"updated_at"?: string,"uses_material"?: boolean
                   }
                   Update: {
-                    "created_at"?: string,"id"?: string,"is_active"?: boolean,"name"?: string,"updated_at"?: string,"uses_material"?: boolean
+                    "created_at"?: string,"id"?: string,"is_active"?: boolean,"name"?: string,"name_en"?: string | null,"name_es"?: string | null,"updated_at"?: string,"uses_material"?: boolean
                   }
                   Relationships: [
                     
@@ -695,14 +695,14 @@ isOneToOne: false
                   ]
                 },"skills": {
                   Row: {
-                    "created_at": string,"description": string | null,"id": string,"is_active": boolean,"name": string,"updated_at": string
+                    "created_at": string,"description": string | null,"id": string,"is_active": boolean,"name": string,"name_en": string | null,"name_es": string | null,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"description"?: string | null,"id"?: string,"is_active"?: boolean,"name": string,"updated_at"?: string
+                    "created_at"?: string,"description"?: string | null,"id"?: string,"is_active"?: boolean,"name": string,"name_en"?: string | null,"name_es"?: string | null,"updated_at"?: string
                   }
                   Update: {
-                    "created_at"?: string,"description"?: string | null,"id"?: string,"is_active"?: boolean,"name"?: string,"updated_at"?: string
+                    "created_at"?: string,"description"?: string | null,"id"?: string,"is_active"?: boolean,"name"?: string,"name_en"?: string | null,"name_es"?: string | null,"updated_at"?: string
                   }
                   Relationships: [
                     

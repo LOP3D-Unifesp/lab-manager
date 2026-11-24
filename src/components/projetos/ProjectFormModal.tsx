@@ -1,3 +1,4 @@
+import { useT } from "../../i18n";
 import { FormEvent, useState } from "react";
 
 import { createProject, updateProject } from "../../lib/supabaseRepository";
@@ -9,9 +10,7 @@ import {
 } from "../../lib/projects";
 import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
-
-const inputClassName =
-  "min-h-11 min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal text-text outline-none transition focus:border-primary";
+import { inputClassName } from "../ui/formStyles";
 
 type ProjectFormModalProps = {
   project?: Project | null;
@@ -20,6 +19,7 @@ type ProjectFormModalProps = {
 };
 
 export function ProjectFormModal({ onClose, onSaved, project }: ProjectFormModalProps) {
+  const t = useT();
   const [name, setName] = useState(project?.name ?? "");
   const [description, setDescription] = useState(project?.description ?? "");
   const [status, setStatus] = useState<ProjectStatus>(project?.status ?? "active");
@@ -32,11 +32,11 @@ export function ProjectFormModal({ onClose, onSaved, project }: ProjectFormModal
     event.preventDefault();
     const trimmedName = name.trim();
     if (!trimmedName) {
-      setErro("Informe o nome do projeto.");
+      setErro(t("projectForm.errName"));
       return;
     }
     if (startsOn && endsOn && endsOn < startsOn) {
-      setErro("A data final não pode ser anterior à inicial.");
+      setErro(t("projectForm.errDates"));
       return;
     }
 
@@ -66,17 +66,17 @@ export function ProjectFormModal({ onClose, onSaved, project }: ProjectFormModal
 
   return (
     <Modal
-      title={project ? "Editar projeto" : "Novo projeto"}
-      description="Membros e fomento são definidos na página do projeto."
+      title={project ? t("projectForm.edit") : t("projectForm.new")}
+      description={t("projectForm.hint")}
       onClose={onClose}
     >
       <form className="grid gap-4" onSubmit={salvar}>
         <label className="grid gap-2 text-base font-semibold text-text">
-          Nome
+          {t("projectForm.name")}
           <input className={inputClassName} required value={name} onChange={(e) => setName(e.target.value)} />
         </label>
         <label className="grid gap-2 text-base font-semibold text-text">
-          Descrição
+          {t("projectForm.description")}
           <textarea
             className={`${inputClassName} min-h-24 py-3`}
             value={description}
@@ -85,7 +85,7 @@ export function ProjectFormModal({ onClose, onSaved, project }: ProjectFormModal
         </label>
         <div className="grid items-start gap-4 sm:grid-cols-3">
           <label className="grid gap-2 text-base font-semibold text-text">
-            Situação
+            {t("projectForm.status")}
             <select className={inputClassName} value={status} onChange={(e) => setStatus(e.target.value as ProjectStatus)}>
               {projectStatusOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -95,11 +95,11 @@ export function ProjectFormModal({ onClose, onSaved, project }: ProjectFormModal
             </select>
           </label>
           <label className="grid gap-2 text-base font-semibold text-text">
-            Início
+            {t("projectForm.start")}
             <input className={inputClassName} type="date" value={startsOn} onChange={(e) => setStartsOn(e.target.value)} />
           </label>
           <label className="grid gap-2 text-base font-semibold text-text">
-            Término previsto
+            {t("projectForm.end")}
             <input className={inputClassName} type="date" value={endsOn} onChange={(e) => setEndsOn(e.target.value)} />
           </label>
         </div>
@@ -110,10 +110,10 @@ export function ProjectFormModal({ onClose, onSaved, project }: ProjectFormModal
 
         <div className="mt-2 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Button variant="secondary" onClick={onClose}>
-            Cancelar
+            {t("common.cancel")}
           </Button>
           <Button type="submit" disabled={salvando}>
-            {salvando ? "Salvando..." : "Salvar projeto"}
+            {salvando ? t("common.saving") : t("projectForm.save")}
           </Button>
         </div>
       </form>

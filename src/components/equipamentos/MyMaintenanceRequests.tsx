@@ -1,3 +1,4 @@
+import { useT } from "../../i18n";
 import { Wrench } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
@@ -21,6 +22,7 @@ import { StatusBadge } from "../ui/StatusBadge";
 const VISIBLE_PER_GROUP = 5;
 
 function RequestRow({ request, timezone }: { request: MaintenanceRequest; timezone: string }) {
+  const t = useT();
   return (
     <li>
       <Link
@@ -38,8 +40,8 @@ function RequestRow({ request, timezone }: { request: MaintenanceRequest; timezo
           {request.description.length > 140 ? `${request.description.slice(0, 137)}...` : request.description}
         </p>
         <p className="text-sm text-muted">
-          Aberto por {request.requested_by_name ?? "alguém"} em {formatMaintenanceDateTime(request.created_at, timezone)}
-          {request.assigned_to_name ? ` · Responsável: ${request.assigned_to_name}` : ""}
+          {t("myRequests.openedBy", { name: request.requested_by_name ?? t("myRequests.someone"), date: formatMaintenanceDateTime(request.created_at, timezone) })}
+          {request.assigned_to_name ? t("myRequests.assignee", { name: request.assigned_to_name }) : ""}
         </p>
       </Link>
     </li>
@@ -47,6 +49,7 @@ function RequestRow({ request, timezone }: { request: MaintenanceRequest; timezo
 }
 
 function Group({ title, requests, timezone }: { title: string; requests: MaintenanceRequest[]; timezone: string }) {
+  const t = useT();
   if (requests.length === 0) return null;
   return (
     <div className="mt-4">
@@ -58,7 +61,7 @@ function Group({ title, requests, timezone }: { title: string; requests: Mainten
       </ul>
       {requests.length > VISIBLE_PER_GROUP ? (
         <Link to="/equipamentos?vista=chamados" className="mt-2 inline-block text-sm font-semibold text-primary underline">
-          Ver mais {requests.length - VISIBLE_PER_GROUP} na aba Chamados
+          {t("myRequests.seeMore", { count: requests.length - VISIBLE_PER_GROUP })}
         </Link>
       ) : null}
     </div>
@@ -67,6 +70,7 @@ function Group({ title, requests, timezone }: { title: string; requests: Mainten
 
 // Bloco do Dashboard: chamados que a pessoa precisa atender (responsáveis) e os que ela mesma abriu.
 export function MyMaintenanceRequests() {
+  const t = useT();
   const { profile, labSettings } = useAuth();
   const timezone = labSettings?.timezone || getTimezonePadrao();
   const [requests, setRequests] = useState<MaintenanceRequest[] | null>(null);
@@ -102,14 +106,14 @@ export function MyMaintenanceRequests() {
             <Wrench className="h-6 w-6" aria-hidden="true" />
           </div>
           <div className="min-w-0">
-            <h3 className="text-2xl font-bold text-text">Chamados de manutenção</h3>
+            <h3 className="text-2xl font-bold text-text">{t("myRequests.title")}</h3>
             <p className="mt-1 text-base text-muted">
-              {podeManter ? "O que está esperando atendimento e os chamados que você abriu." : "Os chamados que você abriu e ainda não foram encerrados."}
+              {podeManter ? t("myRequests.hintMaintainer") : t("myRequests.hintUser")}
             </p>
           </div>
         </div>
-        <Group title="Para atender" requests={toHandle} timezone={timezone} />
-        <Group title="Que eu abri" requests={mine} timezone={timezone} />
+        <Group title={t("myRequests.toHandle")} requests={toHandle} timezone={timezone} />
+        <Group title={t("myRequests.mine")} requests={mine} timezone={timezone} />
       </Card>
     </section>
   );

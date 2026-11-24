@@ -1,8 +1,10 @@
+import { getLocale, t } from "../i18n";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CalendarDays, Trash2, Users, Utensils, X } from "lucide-react";
 
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
+import { Modal } from "../components/ui/Modal";
 import { PageHeader } from "../components/ui/PageHeader";
 import {
   getClasseContador,
@@ -37,15 +39,6 @@ type PopupSlot = {
   entries: AgendaEntry[];
 } | null;
 
-const diasDaSemana = [
-  "Domingo",
-  "Segunda",
-  "Terca",
-  "Quarta",
-  "Quinta",
-  "Sexta",
-  "Sabado",
-];
 
 function getSemanaAtual(operatingWeekdays: number[]) {
   const hoje = new Date();
@@ -58,8 +51,8 @@ function getSemanaAtual(operatingWeekdays: number[]) {
     return {
       data,
       weekday: data.getDay(),
-      label: diasDaSemana[data.getDay()],
-      numero: data.toLocaleDateString("pt-BR", {
+      label: t(`weekday.${data.getDay()}` as Parameters<typeof t>[0]),
+      numero: data.toLocaleDateString(getLocale(), {
         day: "2-digit",
         month: "2-digit",
       }),
@@ -113,7 +106,7 @@ export function AgendaLaboratorio() {
       [...pesquisadores].sort((a, b) =>
         `${a.nome} ${a.sobrenome}`.localeCompare(
           `${b.nome} ${b.sobrenome}`,
-          "pt-BR",
+          getLocale(),
         ),
       ),
     [pesquisadores],
@@ -139,7 +132,7 @@ export function AgendaLaboratorio() {
       if (document.visibilityState === "visible") {
         carregarDisponibilidade().catch((error) => {
           if (ativo) {
-            setErro(error instanceof Error ? error.message : "Erro ao carregar.");
+            setErro(error instanceof Error ? error.message : t("agenda.errLoad"));
           }
         });
       }
@@ -290,7 +283,7 @@ export function AgendaLaboratorio() {
         };
       });
     } catch (error) {
-      setErro(error instanceof Error ? error.message : "Nao foi possivel excluir.");
+      setErro(error instanceof Error ? error.message : t("agenda.errDelete"));
     } finally {
       setSalvando(false);
     }
@@ -306,8 +299,8 @@ export function AgendaLaboratorio() {
   return (
     <div>
       <PageHeader
-        title="Agenda do Laboratório"
-        description="Quem está no laboratório em cada turno. Cada pessoa registra a própria disponibilidade em Meu perfil."
+        title={t("agenda.title")}
+        description={t("agenda.subtitle")}
         action={
           <div className="flex w-full flex-col gap-2 sm:flex-row md:w-auto">
             <Button
@@ -317,7 +310,7 @@ export function AgendaLaboratorio() {
               onClick={() => trocarVista("hoje")}
             >
               <CalendarDays aria-hidden="true" className="mr-2 h-5 w-5" />
-              Ver hoje
+              {t("agenda.viewToday")}
             </Button>
             <Button
               className="md:min-h-10 md:px-4 md:py-2 md:text-base"
@@ -326,14 +319,14 @@ export function AgendaLaboratorio() {
               onClick={() => trocarVista("semana")}
             >
               <CalendarDays aria-hidden="true" className="mr-2 h-5 w-5" />
-              Ver semana
+              {t("agenda.viewWeek")}
             </Button>
           </div>
         }
       />
 
       {!loadingSchedule && periodos.length === 0 ? (
-        <Card><p className="font-semibold text-muted">Nenhum turno ativo. Um coordenador deve configurar o funcionamento em Administração.</p></Card>
+        <Card><p className="font-semibold text-muted">{t("agenda.noShift")}</p></Card>
       ) : null}
 
       {erro ? (
@@ -346,23 +339,23 @@ export function AgendaLaboratorio() {
         <div className="grid gap-3 text-sm font-semibold text-muted md:grid-cols-3">
           <div className="flex items-center gap-2">
             <CalendarDays aria-hidden="true" className="h-4 w-4 text-primary" />
-            <span>Semana atual</span>
+            <span>{t("agenda.currentWeek")}</span>
             <strong className="ml-auto text-base text-text">
               {semanaAtual[0].numero} - {semanaAtual[4].numero}
             </strong>
           </div>
           <div className="flex items-center gap-2">
             <Users aria-hidden="true" className="h-4 w-4 text-success-dark" />
-            <span>Pesquisadores</span>
+            <span>{t("agenda.researchers")}</span>
             <strong className="ml-auto text-base text-text">
-              {totalPesquisadores} de {nomesPesquisadores.length}
+              {t("agenda.xOfY", { a: totalPesquisadores, b: nomesPesquisadores.length })}
             </strong>
           </div>
           <div className="flex items-center gap-2">
             <Users aria-hidden="true" className="h-4 w-4 text-warning-dark" />
-            <span>Horarios cheios</span>
+            <span>{t("agenda.fullSlots")}</span>
             <strong className="ml-auto text-base text-text">
-              {slotsCheios} de {totalSlots}
+              {t("agenda.xOfY", { a: slotsCheios, b: totalSlots })}
             </strong>
           </div>
         </div>
@@ -377,7 +370,7 @@ export function AgendaLaboratorio() {
             }}
           >
             <div className="border-r border-border px-4 py-3 text-sm font-bold uppercase text-muted">
-              Horario
+              {t("agenda.time")}
             </div>
             {diasVisiveis.map((dia) => {
               const ehHoje = dia.weekday === hoje;
@@ -448,7 +441,7 @@ export function AgendaLaboratorio() {
                       type="button"
                       className={[
                         "min-h-24 border-b border-r border-border p-3 text-left transition last:border-r-0 hover:bg-primary-soft focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary",
-                        ehHoje ? "bg-sky-50" : "bg-surface",
+                        ehHoje ? "bg-sky-50 dark:bg-primary-soft" : "bg-surface",
                       ].join(" ")}
                       onClick={() => abrirDetalhesDoSlot(dia, periodo)}
                     >
@@ -475,14 +468,14 @@ export function AgendaLaboratorio() {
 
         <Card className="min-w-0 p-3 sm:p-4 lg:hidden">
           <div className="mb-4 border-b border-border pb-3">
-            <h3 className="text-xl font-bold text-text">Agenda da semana</h3>
+            <h3 className="text-xl font-bold text-text">{t("agenda.weekSchedule")}</h3>
             <p className="mt-1 text-base text-muted">
               {diaMobileAtivo.label}, {diaMobileAtivo.numero}
             </p>
           </div>
 
           <div
-            aria-label="Selecionar dia da agenda do laboratorio"
+            aria-label={t("agenda.pickDay")}
             className={[
               "mb-3 grid gap-1",
               diasMobileVisiveis.length === 1 ? "grid-cols-1" : "grid-cols-5",
@@ -550,7 +543,7 @@ export function AgendaLaboratorio() {
                     "flex min-h-28 flex-col rounded-lg border p-3",
                     diaMobileAtivo.weekday === hoje
                       ? "border-primary bg-primary-soft"
-                      : "border-border bg-white/80",
+                      : "border-border bg-surface/80",
                   ].join(" ")}
                 >
                   <div className="mb-2 flex items-start justify-between gap-3">
@@ -579,36 +572,13 @@ export function AgendaLaboratorio() {
       </section>
 
       {popupSlot ? (
-        <div
-          aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-text/40 px-4 py-6"
-          role="dialog"
-        >
-          <Card className="w-full max-w-md shadow-soft">
-            <div className="mb-4 flex items-start justify-between gap-4 border-b border-border pb-4">
-              <div>
-                <h3 className="text-2xl font-bold text-text">
-                  {popupSlot.titulo}
-                </h3>
-                <p className="mt-1 text-base font-semibold text-muted">
-                  {popupSlot.horario}
-                </p>
-              </div>
-              <button
-                aria-label="Fechar lista"
-                className="rounded-lg p-2 text-muted transition hover:bg-background hover:text-text"
-                onClick={() => setPopupSlot(null)}
-                type="button"
-              >
-                <X aria-hidden="true" className="h-6 w-6" />
-              </button>
-            </div>
+        <Modal title={popupSlot.titulo} description={popupSlot.horario} onClose={() => setPopupSlot(null)}>
 
             {popupSlot.entries.length > 0 ? (
               <div className="grid gap-4">
                 <div>
                   <p className="mb-2 text-sm font-bold uppercase tracking-wide text-muted">
-                    Presenciais
+                    {t("agenda.onsite")}
                   </p>
                   {popupEntriesPresenciais.length > 0 ? (
                     <ul className="grid gap-2">
@@ -625,8 +595,8 @@ export function AgendaLaboratorio() {
                           {isCoordinator || entry.profileId === profile?.id ? (
                           <button
                             type="button"
-                            title="Excluir horario"
-                            aria-label={`Excluir horario de ${entry.pesquisador}`}
+                            title={t("agenda.deleteSlot")}
+                            aria-label={t("agenda.deleteSlotOf", { name: entry.pesquisador })}
                             className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition hover:bg-danger-soft hover:text-danger-dark disabled:opacity-50"
                             disabled={salvando}
                             onClick={() => excluirHorario(entry.id)}
@@ -639,7 +609,7 @@ export function AgendaLaboratorio() {
                     </ul>
                   ) : (
                     <p className="rounded-md border border-dashed border-border bg-background px-3 py-3 text-base text-muted">
-                      Nenhum pesquisador presencial.
+                      {t("agenda.noOnsite")}
                     </p>
                   )}
                 </div>
@@ -647,7 +617,7 @@ export function AgendaLaboratorio() {
                 {popupEntriesHomeOffice.length > 0 ? (
                   <div>
                     <p className="mb-2 text-sm font-bold uppercase tracking-wide text-muted">
-                      Home office
+                      {t("agenda.remote")}
                     </p>
                     <ul className="grid gap-2">
                       {popupEntriesHomeOffice.map((entry) => (
@@ -662,13 +632,13 @@ export function AgendaLaboratorio() {
                           </span>
                           <span className="flex shrink-0 items-center gap-2">
                             <span className="rounded-full border border-primary bg-primary-soft px-2.5 py-1 text-xs font-bold text-primary">
-                              Home office
+                              {t("agenda.remote")}
                             </span>
                             {isCoordinator || entry.profileId === profile?.id ? (
                             <button
                               type="button"
-                              title="Excluir horario"
-                              aria-label={`Excluir horario de ${entry.pesquisador}`}
+                              title={t("agenda.deleteSlot")}
+                              aria-label={t("agenda.deleteSlotOf", { name: entry.pesquisador })}
                               className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted transition hover:bg-danger-soft hover:text-danger-dark disabled:opacity-50"
                               disabled={salvando}
                               onClick={() => excluirHorario(entry.id)}
@@ -686,7 +656,7 @@ export function AgendaLaboratorio() {
                 {popupEntriesAula.length > 0 ? (
                   <div>
                     <p className="mb-2 text-sm font-bold uppercase tracking-wide text-muted">
-                      Em aula
+                      {t("agenda.inClass")}
                     </p>
                     <ul className="grid gap-2">
                       {popupEntriesAula.map((entry) => (
@@ -701,13 +671,13 @@ export function AgendaLaboratorio() {
                           </span>
                           <span className="flex shrink-0 items-center gap-2">
                             <span className="rounded-full border border-warning bg-warning-soft px-2.5 py-1 text-xs font-bold text-warning-dark">
-                              Aula
+                              {t("agenda.classTag")}
                             </span>
                             {isCoordinator || entry.profileId === profile?.id ? (
                             <button
                               type="button"
-                              title="Excluir horario"
-                              aria-label={`Excluir horario de ${entry.pesquisador}`}
+                              title={t("agenda.deleteSlot")}
+                              aria-label={t("agenda.deleteSlotOf", { name: entry.pesquisador })}
                               className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted transition hover:bg-danger-soft hover:text-danger-dark disabled:opacity-50"
                               disabled={salvando}
                               onClick={() => excluirHorario(entry.id)}
@@ -724,11 +694,10 @@ export function AgendaLaboratorio() {
               </div>
             ) : (
               <p className="rounded-md border border-dashed border-border bg-background px-3 py-4 text-base text-muted">
-                Nenhum pesquisador registrado.
+                {t("agenda.nobody")}
               </p>
             )}
-          </Card>
-        </div>
+        </Modal>
       ) : null}
     </div>
   );

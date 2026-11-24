@@ -1,8 +1,10 @@
+import { getLocale, localizedName, t } from "../i18n";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Mail, Pencil, Phone, Plus, UserCheck, Users, X } from "lucide-react";
 
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
+import { Modal } from "../components/ui/Modal";
 import { PageHeader } from "../components/ui/PageHeader";
 import { StatusBadge } from "../components/ui/StatusBadge";
 import { useCurrentProfile } from "../lib/currentUser";
@@ -39,7 +41,7 @@ export function Habilidades() {
   const [detalheAberto, setDetalheAberto] = useState(false);
   const [gerenciamentoAberto, setGerenciamentoAberto] = useState(false);
   const [skillEmEdicao, setSkillEmEdicao] = useState<Skill | null>(null);
-  const [skillForm, setSkillForm] = useState({ name: "", description: "", isActive: true });
+  const [skillForm, setSkillForm] = useState({ name: "", name_en: "", name_es: "", description: "", isActive: true });
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState("");
   const [salvando, setSalvando] = useState(false);
@@ -62,7 +64,7 @@ export function Habilidades() {
 
     carregarDados().catch((error) => {
       if (ativo) {
-        setErro(error instanceof Error ? error.message : "Erro ao carregar.");
+        setErro(error instanceof Error ? error.message : t("skills.errLoad"));
       }
     });
 
@@ -73,7 +75,7 @@ export function Habilidades() {
 
   function abrirCadastro() {
     setSkillEmEdicao(null);
-    setSkillForm({ name: "", description: "", isActive: true });
+    setSkillForm({ name: "", name_en: "", name_es: "", description: "", isActive: true });
     setErro("");
     setGerenciamentoAberto(true);
   }
@@ -82,6 +84,8 @@ export function Habilidades() {
     setSkillEmEdicao(skill);
     setSkillForm({
       name: skill.name,
+      name_en: skill.name_en ?? "",
+      name_es: skill.name_es ?? "",
       description: skill.description ?? "",
       isActive: skill.is_active,
     });
@@ -99,7 +103,7 @@ export function Habilidades() {
     event.preventDefault();
     const name = skillForm.name.trim();
     if (!name) {
-      setErro("Informe o nome da habilidade.");
+      setErro(t("skills.errName"));
       return;
     }
 
@@ -109,20 +113,24 @@ export function Habilidades() {
       if (skillEmEdicao) {
         await updateSkill(skillEmEdicao.id, {
           name,
+          name_en: skillForm.name_en.trim() || null,
+          name_es: skillForm.name_es.trim() || null,
           description: skillForm.description.trim() || null,
           isActive: skillForm.isActive,
         });
       } else {
         await createSkill({
           name,
+          name_en: skillForm.name_en.trim() || null,
+          name_es: skillForm.name_es.trim() || null,
           description: skillForm.description.trim() || null,
         });
       }
       await carregarDados();
-      setSucesso(skillEmEdicao ? "Habilidade atualizada." : "Habilidade cadastrada.");
+      setSucesso(skillEmEdicao ? t("skills.updated") : t("skills.created"));
       fecharGerenciamento();
     } catch (error) {
-      setErro(error instanceof Error ? error.message : "Não foi possível salvar.");
+      setErro(error instanceof Error ? error.message : t("skills.errSave"));
     } finally {
       setSalvando(false);
     }
@@ -141,7 +149,7 @@ export function Habilidades() {
 
     return profiles
       .filter((profile) => profileIds.has(profile.id))
-      .sort((a, b) => a.full_name.localeCompare(b.full_name, "pt-BR"));
+      .sort((a, b) => a.full_name.localeCompare(b.full_name, getLocale()));
   }, [profileSkills, profiles, skillSelecionada]);
 
   function getQuantidadeHabilidade(skillId: string) {
@@ -170,7 +178,7 @@ export function Habilidades() {
       const profileSkillsData = await listProfileSkills();
       setProfileSkills(profileSkillsData);
     } catch (error) {
-      setErro(error instanceof Error ? error.message : "Nao foi possivel salvar.");
+      setErro(error instanceof Error ? error.message : t("skills.errSave"));
     }
   }
 
@@ -183,12 +191,12 @@ export function Habilidades() {
   return (
     <div>
       <PageHeader
-        title="Habilidades"
-        description="Competências técnicas cadastradas no Supabase."
+        title={t("skills.title")}
+        description={t("skills.subtitle")}
         action={isCoordinator ? (
           <Button fullWidth onClick={abrirCadastro}>
             <Plus className="mr-2 h-5 w-5" aria-hidden="true" />
-            Nova habilidade
+            {t("skills.new")}
           </Button>
         ) : undefined}
       />
@@ -222,9 +230,9 @@ export function Habilidades() {
                 onClick={() => abrirDetalhe(skill)}
               >
                 <div className="flex items-start justify-between gap-4">
-                  <h3 className="text-2xl font-bold text-text">{skill.name}</h3>
+                  <h3 className="text-2xl font-bold text-text">{localizedName(skill)}</h3>
                   <StatusBadge
-                    label={skill.is_active ? `${quantidade} pessoa(s)` : "Inativa"}
+                    label={skill.is_active ? t("skills.peopleCount", { count: quantidade }) : t("skills.inactive")}
                     variant={!skill.is_active ? "neutral" : quantidade > 0 ? "info" : "neutral"}
                   />
                 </div>
@@ -237,7 +245,7 @@ export function Habilidades() {
                   <div className="flex items-center gap-2 text-sm font-semibold text-muted">
                     <Users className="h-4 w-4" aria-hidden="true" />
                     <span>
-                      {registrada ? "Voce participa" : "Nao registrado"}
+                      {registrada ? t("skills.youTakePart") : t("skills.notRegistered")}
                     </span>
                   </div>
                   <div className="flex gap-2">
@@ -251,7 +259,7 @@ export function Habilidades() {
                         }}
                       >
                         <Pencil className="mr-2 h-4 w-4" aria-hidden="true" />
-                        Editar
+                        {t("skills.editButton")}
                       </Button>
                     ) : null}
                     <Button
@@ -264,7 +272,7 @@ export function Habilidades() {
                       disabled={!currentProfile || !skill.is_active}
                     >
                       <UserCheck className="mr-2 h-4 w-4" aria-hidden="true" />
-                      {registrada ? "Sair" : "Registrar"}
+                      {registrada ? t("skills.leave") : t("skills.register")}
                     </Button>
                   </div>
                 </div>
@@ -275,50 +283,26 @@ export function Habilidades() {
       ) : (
         <Card>
           <p className="text-lg font-semibold text-muted">
-            Nenhuma habilidade cadastrada ainda.
+            {t("skills.none")}
           </p>
           {isCoordinator ? (
             <Button className="mt-4" onClick={abrirCadastro}>
-              Cadastrar primeira habilidade
+              {t("skills.registerFirst")}
             </Button>
           ) : (
             <p className="mt-2 text-base text-muted">
-              Solicite ao coordenador o cadastro das competências do laboratório.
+              {t("skills.askCoordinator")}
             </p>
           )}
         </Card>
       )}
 
       {gerenciamentoAberto && isCoordinator ? (
-        <div
-          aria-modal="true"
-          className="fixed inset-0 z-50 flex items-end justify-center bg-text/40 px-4 py-6 sm:items-center"
-          role="dialog"
-        >
-          <Card className="w-full max-w-xl shadow-soft">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="text-2xl font-bold text-text">
-                  {skillEmEdicao ? "Editar habilidade" : "Nova habilidade"}
-                </h3>
-                <p className="mt-1 text-base text-muted">
-                  Competências ativas podem ser selecionadas pelos pesquisadores.
-                </p>
-              </div>
-              <button
-                type="button"
-                title="Fechar"
-                aria-label="Fechar gerenciamento de habilidade"
-                className="inline-flex h-10 w-10 items-center justify-center rounded-md text-muted hover:bg-background hover:text-text"
-                onClick={fecharGerenciamento}
-              >
-                <X className="h-5 w-5" aria-hidden="true" />
-              </button>
-            </div>
+        <Modal sheet title={skillEmEdicao ? t("skills.edit") : t("skills.new")} description={t("skills.formHint")} onClose={fecharGerenciamento}>
 
             <form className="mt-5 grid gap-4" onSubmit={salvarSkill}>
               <label className="grid gap-2 font-semibold text-text">
-                Nome
+                {t("skills.name")}
                 <input
                   className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal"
                   value={skillForm.name}
@@ -327,7 +311,23 @@ export function Habilidades() {
                 />
               </label>
               <label className="grid gap-2 font-semibold text-text">
-                Descrição
+                {t("translations.en")}
+                <input
+                  className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal"
+                  value={skillForm.name_en}
+                  onChange={(event) => setSkillForm((current) => ({ ...current, name_en: event.target.value }))}
+                />
+              </label>
+              <label className="grid gap-2 font-semibold text-text">
+                {t("translations.es")}
+                <input
+                  className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal"
+                  value={skillForm.name_es}
+                  onChange={(event) => setSkillForm((current) => ({ ...current, name_es: event.target.value }))}
+                />
+              </label>
+              <label className="grid gap-2 font-semibold text-text">
+                {t("skills.description")}
                 <textarea
                   className="min-h-24 rounded-lg border border-border bg-background px-4 py-3 font-normal"
                   value={skillForm.description}
@@ -341,48 +341,23 @@ export function Habilidades() {
                     checked={skillForm.isActive}
                     onChange={(event) => setSkillForm((current) => ({ ...current, isActive: event.target.checked }))}
                   />
-                  Habilidade ativa
+                  {t("skills.active")}
                 </label>
               ) : null}
               <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                 <Button type="button" variant="ghost" onClick={fecharGerenciamento}>
-                  Cancelar
+                  {t("common.cancel")}
                 </Button>
                 <Button type="submit" disabled={salvando}>
-                  {salvando ? "Salvando..." : "Salvar habilidade"}
+                  {salvando ? t("common.saving") : t("skills.save")}
                 </Button>
               </div>
             </form>
-          </Card>
-        </div>
+          </Modal>
       ) : null}
 
       {detalheAberto && skillSelecionada ? (
-        <div
-          aria-modal="true"
-          className="fixed inset-0 z-50 flex items-end justify-center bg-text/40 px-4 py-6 sm:items-center"
-          role="dialog"
-        >
-          <Card className="max-h-[88vh] w-full max-w-3xl overflow-y-auto shadow-soft">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="text-2xl font-bold text-text">
-                  {skillSelecionada.name}
-                </h3>
-                <p className="mt-1 text-base font-semibold text-muted">
-                  Pessoas registradas nesta habilidade.
-                </p>
-              </div>
-              <button
-                type="button"
-                title="Fechar"
-                aria-label="Fechar habilidade"
-                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-muted transition hover:bg-background hover:text-text"
-                onClick={() => setDetalheAberto(false)}
-              >
-                <X className="h-5 w-5" aria-hidden="true" />
-              </button>
-            </div>
+        <Modal sheet wide title={localizedName(skillSelecionada)} description={t("skills.detailHint")} onClose={() => setDetalheAberto(false)}>
 
             <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <StatusBadge
@@ -396,7 +371,7 @@ export function Habilidades() {
                 disabled={!currentProfile}
               >
                 <UserCheck className="mr-2 h-4 w-4" aria-hidden="true" />
-                {usuarioRegistrado ? "Remover meu registro" : "Registrar-me"}
+                {usuarioRegistrado ? t("skills.removeMine") : t("skills.registerMe")}
               </Button>
             </div>
 
@@ -412,17 +387,17 @@ export function Habilidades() {
                         {profile.full_name}
                       </p>
                       <p className="mt-1 text-sm font-semibold text-muted">
-                        {profile.academic_affiliation ?? "Vinculo nao informado"}
+                        {profile.academic_affiliation ?? t("skills.affiliationUnknown")}
                       </p>
                     </div>
                     <div className="grid gap-2 text-sm font-semibold text-muted">
                       <span className="inline-flex items-center gap-2">
                         <Mail className="h-4 w-4" aria-hidden="true" />
-                        {profile.email || "Sem email"}
+                        {profile.email || t("skills.noEmail")}
                       </span>
                       <span className="inline-flex items-center gap-2">
                         <Phone className="h-4 w-4" aria-hidden="true" />
-                        {profile.phone || "Sem telefone"}
+                        {profile.phone || t("skills.noPhone")}
                       </span>
                     </div>
                   </div>
@@ -430,11 +405,10 @@ export function Habilidades() {
               </div>
             ) : (
               <p className="mt-5 rounded-lg border border-dashed border-border bg-background p-4 text-base font-semibold text-muted">
-                Nenhuma pessoa registrada nesta habilidade.
+                {t("skills.nobody")}
               </p>
             )}
-          </Card>
-        </div>
+          </Modal>
       ) : null}
     </div>
   );

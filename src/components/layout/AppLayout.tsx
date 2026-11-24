@@ -1,3 +1,4 @@
+import { t } from "../../i18n";
 import { ReactNode } from "react";
 import { Link } from "react-router-dom";
 
@@ -31,7 +32,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           <div className="flex items-center justify-between gap-3">
             <Link
               to="/"
-              aria-label="Ir para o início"
+              aria-label={t("nav.home")}
               className="min-w-0 rounded-md transition hover:text-primary focus-visible:outline-offset-4"
             >
               <div className="flex items-center gap-2">

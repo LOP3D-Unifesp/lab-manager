@@ -1,3 +1,4 @@
+import { getLocale, useT } from "../../i18n";
 import { useState } from "react";
 import { CalendarDays } from "lucide-react";
 
@@ -21,7 +22,7 @@ function todayLocal() {
 
 function formatDueDate(value: string) {
   const [, month, day] = value.split("-");
-  return `${day}/${month}`;
+  return new Intl.DateTimeFormat(getLocale(), { day: "2-digit", month: "2-digit", timeZone: "UTC" }).format(new Date(`${value}T00:00:00Z`));
 }
 
 type KanbanBoardProps = {
@@ -32,6 +33,7 @@ type KanbanBoardProps = {
 };
 
 export function KanbanBoard({ onMove, onOpen, showProject = false, tasks }: KanbanBoardProps) {
+  const t = useT();
   const groups = groupTasksByStatus(tasks);
   const today = todayLocal();
   const [arrastando, setArrastando] = useState<string | null>(null);
@@ -103,7 +105,7 @@ export function KanbanBoard({ onMove, onOpen, showProject = false, tasks }: Kanb
                 {task.due_on ? (
                   <p className={["flex items-center gap-1 text-sm", atrasada ? "font-semibold text-danger" : "text-muted"].join(" ")}>
                     <CalendarDays className="h-4 w-4" aria-hidden="true" />
-                    {atrasada ? "Atrasada · " : ""}
+                    {atrasada ? t("tasks.late") : ""}
                     {formatDueDate(task.due_on)}
                   </p>
                 ) : null}
@@ -119,7 +121,7 @@ export function KanbanBoard({ onMove, onOpen, showProject = false, tasks }: Kanb
                     ))}
                   </div>
                   <select
-                    aria-label={`Mover "${task.title}" para`}
+                    aria-label={t("tasks.moveTo", { title: task.title })}
                     className="min-h-9 max-w-[9rem] rounded-md border border-border bg-background px-2 text-sm"
                     value={task.status}
                     onChange={(event) => onMove(task, event.target.value as TaskStatus)}
@@ -135,7 +137,7 @@ export function KanbanBoard({ onMove, onOpen, showProject = false, tasks }: Kanb
             );
           })}
 
-          {groups[column.value].length === 0 ? <p className="text-sm text-muted">Nenhuma tarefa.</p> : null}
+          {groups[column.value].length === 0 ? <p className="text-sm text-muted">{t("tasks.noTasks")}</p> : null}
         </section>
       ))}
     </div>

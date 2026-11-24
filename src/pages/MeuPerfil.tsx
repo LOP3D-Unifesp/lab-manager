@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { CalendarDays, Save, UserRoundCog, Utensils } from "lucide-react";
 
@@ -36,27 +37,27 @@ const academicAffiliationOptions: Array<{
   value: AcademicAffiliation;
   label: string;
 }> = [
-  { value: "ic", label: "Iniciacao cientifica" },
-  { value: "extension", label: "Extensao" },
-  { value: "intern", label: "Estagio" },
-  { value: "tcc", label: "TCC" },
-  { value: "masters", label: "Mestrado" },
-  { value: "phd", label: "Doutorado" },
-  { value: "postdoc", label: "Pos-doutorado" },
-  { value: "visitor", label: "Visitante" },
-  { value: "technician", label: "Tecnico" },
-  { value: "faculty", label: "Docente" },
-  { value: "other", label: "Outro" },
+  { value: "ic", get label() { return t("profile.aff.ic"); } },
+  { value: "extension", get label() { return t("profile.aff.extension"); } },
+  { value: "intern", get label() { return t("profile.aff.intern"); } },
+  { value: "tcc", get label() { return t("profile.aff.tcc"); } },
+  { value: "masters", get label() { return t("profile.aff.masters"); } },
+  { value: "phd", get label() { return t("profile.aff.phd"); } },
+  { value: "postdoc", get label() { return t("profile.aff.postdoc"); } },
+  { value: "visitor", get label() { return t("profile.aff.visitor"); } },
+  { value: "technician", get label() { return t("profile.aff.technician"); } },
+  { value: "faculty", get label() { return t("profile.aff.faculty"); } },
+  { value: "other", get label() { return t("profile.aff.other"); } },
 ];
 
 const allWeekdays = [
-  { weekday: 0, label: "Domingo" },
-  { weekday: 1, label: "Segunda" },
-  { weekday: 2, label: "Terça" },
-  { weekday: 3, label: "Quarta" },
-  { weekday: 4, label: "Quinta" },
-  { weekday: 5, label: "Sexta" },
-  { weekday: 6, label: "Sábado" },
+  { weekday: 0, get label() { return t("weekday.0"); } },
+  { weekday: 1, get label() { return t("weekday.1"); } },
+  { weekday: 2, get label() { return t("weekday.2"); } },
+  { weekday: 3, get label() { return t("weekday.3"); } },
+  { weekday: 4, get label() { return t("weekday.4"); } },
+  { weekday: 5, get label() { return t("weekday.5"); } },
+  { weekday: 6, get label() { return t("weekday.6"); } },
 ];
 
 type AgendaState = Record<string, WorkMode>;
@@ -205,7 +206,7 @@ export function MeuPerfil() {
       })
       .catch(() => {
         if (ativo) {
-          setErrorMessage("Nao foi possivel carregar sua agenda.");
+          setErrorMessage(t("profile.errLoadAgenda"));
         }
       });
 
@@ -287,7 +288,7 @@ export function MeuPerfil() {
       await uploadMyAvatar(file);
       await refreshProfile();
     } catch (error) {
-      setAvatarError(error instanceof Error ? error.message : "Nao foi possivel enviar a foto.");
+      setAvatarError(error instanceof Error ? error.message : t("profile.errPhoto"));
     } finally {
       setAvatarUploading(false);
     }
@@ -315,22 +316,22 @@ export function MeuPerfil() {
     setSuccessMessage("");
 
     if (nomeNormalizado.length < 3) {
-      setErrorMessage("Informe um nome com pelo menos 3 caracteres.");
+      setErrorMessage(t("profile.errNameShort"));
       return;
     }
 
     if (nomeNormalizado.length > 120) {
-      setErrorMessage("O nome deve ter no maximo 120 caracteres.");
+      setErrorMessage(t("profile.errNameLong"));
       return;
     }
 
     if (telefoneNormalizado && telefoneNormalizado.length > 40) {
-      setErrorMessage("O telefone deve ter no maximo 40 caracteres.");
+      setErrorMessage(t("profile.errPhone"));
       return;
     }
 
     if (cpfNormalizado && cpfNormalizado.length !== 11) {
-      setErrorMessage("Informe um CPF com 11 digitos ou deixe em branco.");
+      setErrorMessage(t("profile.errCpf"));
       return;
     }
 
@@ -338,17 +339,17 @@ export function MeuPerfil() {
       nationalityNormalizada &&
       !/^[A-Z]{2}$/.test(nationalityNormalizada)
     ) {
-      setErrorMessage("Informe a nacionalidade com 2 letras, como BR ou CL.");
+      setErrorMessage(t("profile.errNationality"));
       return;
     }
 
     if (bioNormalizada && bioNormalizada.length > 500) {
-      setErrorMessage("A bio deve ter no maximo 500 caracteres.");
+      setErrorMessage(t("profile.errBio"));
       return;
     }
 
     if (!validarLattes(lattesNormalizado)) {
-      setErrorMessage("Informe uma URL valida para o Lattes.");
+      setErrorMessage(t("profile.errLattes"));
       return;
     }
 
@@ -358,7 +359,7 @@ export function MeuPerfil() {
         cargaHoraria < 1 ||
         cargaHoraria > 60)
     ) {
-      setErrorMessage("A carga horaria deve estar entre 1 e 60 horas.");
+      setErrorMessage(t("profile.errWorkload"));
       return;
     }
 
@@ -366,7 +367,7 @@ export function MeuPerfil() {
       isScholarshipHolder &&
       fundingGrants.some((grant) => grant.agency === "other" && !grant.agency_other?.trim())
     ) {
-      setErrorMessage("Informe o nome de cada outra agência de fomento adicionada.");
+      setErrorMessage(t("profile.errOtherAgency"));
       return;
     }
 
@@ -409,9 +410,9 @@ export function MeuPerfil() {
         }),
       );
       await refreshProfile();
-      setSuccessMessage("Perfil atualizado.");
+      setSuccessMessage(t("profile.updated"));
     } catch {
-      setErrorMessage("Nao foi possivel atualizar seu perfil agora.");
+      setErrorMessage(t("profile.errUpdate"));
     } finally {
       setSubmitting(false);
     }
@@ -424,8 +425,8 @@ export function MeuPerfil() {
   return (
     <div className="min-w-0">
       <PageHeader
-        title="Meu perfil"
-        description="Atualize seus dados usados pelo laboratorio."
+        title={t("profile.title")}
+        description={t("profile.subtitle")}
       />
 
       <form className="grid min-w-0 gap-5" onSubmit={handleSubmit}>
@@ -437,10 +438,10 @@ export function MeuPerfil() {
               </div>
               <div className="min-w-0">
                 <h2 className="text-2xl font-bold text-text">
-                  Dados do usuario
+                  {t("profile.userData")}
                 </h2>
                 <p className="mt-1 text-base text-muted">
-                  O email e o papel sao controlados pela administracao.
+                  {t("profile.userDataHint")}
                 </p>
               </div>
             </div>
@@ -449,7 +450,7 @@ export function MeuPerfil() {
               <Avatar avatarUrl={avatarPreview ?? profile?.avatar_url} name={profile?.full_name} className="h-16 w-16 text-lg" />
               <div className="grid gap-1">
                 <label className="inline-flex w-fit cursor-pointer items-center rounded-lg border border-primary bg-surface px-4 py-2 text-sm font-bold text-primary transition hover:bg-primary-soft">
-                  {avatarUploading ? "Enviando..." : "Alterar foto"}
+                  {avatarUploading ? t("profile.uploading") : t("profile.changePhoto")}
                   <input
                     accept="image/png,image/jpeg,image/webp"
                     className="hidden"
@@ -466,7 +467,7 @@ export function MeuPerfil() {
 
             <div className="grid items-start gap-4 md:grid-cols-2">
               <label className="grid gap-2 text-base font-semibold text-text md:col-span-2">
-                Nome completo
+                {t("profile.fullName")}
                 <input
                   className={getInputClassName()}
                   disabled={submitting}
@@ -478,7 +479,7 @@ export function MeuPerfil() {
               </label>
 
               <label className="grid gap-2 text-base font-semibold text-text">
-                Data de nascimento
+                {t("profile.birthDate")}
                 <input
                   className={getInputClassName()}
                   disabled={submitting}
@@ -489,20 +490,20 @@ export function MeuPerfil() {
               </label>
 
               <label className="grid gap-2 text-base font-semibold text-text">
-                Telefone
+                {t("profile.phone")}
                 <input
                   autoComplete="tel"
                   className={getInputClassName()}
                   disabled={submitting}
                   maxLength={40}
                   onChange={(event) => setPhone(event.target.value)}
-                  placeholder="Opcional"
+                  placeholder={t("profile.optional")}
                   value={phone}
                 />
               </label>
 
               <label className="grid gap-2 text-base font-semibold text-text">
-                Vinculo
+                {t("profile.affiliation")}
                 <select
                   className={getInputClassName()}
                   disabled={submitting}
@@ -513,7 +514,7 @@ export function MeuPerfil() {
                   }
                   value={academicAffiliation}
                 >
-                  <option value="">Nao informado</option>
+                  <option value="">{t("common.notInformed")}</option>
                   {academicAffiliationOptions.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
@@ -523,7 +524,7 @@ export function MeuPerfil() {
               </label>
 
               <label className="grid gap-2 text-base font-semibold text-text">
-                Nacionalidade / pais principal
+                {t("profile.nationality")}
                 <input
                   autoCapitalize="characters"
                   className={getInputClassName()}
@@ -554,7 +555,7 @@ export function MeuPerfil() {
               />
 
               <label className="grid gap-2 text-base font-semibold text-text md:col-span-2">
-                Link do Lattes
+                {t("profile.lattes")}
                 <input
                   className={getInputClassName()}
                   disabled={submitting}
@@ -566,13 +567,13 @@ export function MeuPerfil() {
               </label>
 
               <label className="grid gap-2 text-base font-semibold text-text md:col-span-2">
-                Bio / resumo do pesquisador
+                {t("profile.bio")}
                 <textarea
                   className={`${getInputClassName()} min-h-28 py-3`}
                   disabled={submitting}
                   maxLength={500}
                   onChange={(event) => setBio(event.target.value)}
-                  placeholder="Resumo breve sobre sua atuacao no laboratorio."
+                  placeholder={t("profile.bioPlaceholder")}
                   value={bio}
                 />
               </label>
@@ -581,16 +582,16 @@ export function MeuPerfil() {
           </Card>
 
           <Card className="min-w-0 p-4 sm:p-5">
-            <h2 className="text-2xl font-bold text-text">Acesso</h2>
+            <h2 className="text-2xl font-bold text-text">{t("profile.access")}</h2>
             <dl className="mt-4 grid gap-4 text-base">
               <div>
-                <dt className="font-semibold text-muted">Email</dt>
+                <dt className="font-semibold text-muted">{t("profile.email")}</dt>
                 <dd className="mt-1 break-words font-bold text-text">
                   {profile.email}
                 </dd>
               </div>
               <div>
-                <dt className="font-semibold text-muted">Papel</dt>
+                <dt className="font-semibold text-muted">{t("profile.role")}</dt>
                 <dd className="mt-2">
                   <StatusBadge
                     label={getRoleLabel(profile.role)}
@@ -604,7 +605,7 @@ export function MeuPerfil() {
 
         <section className="grid min-w-0 gap-5 lg:grid-cols-2">
           <Card className="min-w-0 p-4 sm:p-5">
-            <h2 className="text-2xl font-bold text-text">Documentos</h2>
+            <h2 className="text-2xl font-bold text-text">{t("profile.documents")}</h2>
             <div className="mt-4 grid gap-4">
               <div className="grid items-start gap-4 md:grid-cols-2">
                 <label className="grid gap-2 text-base font-semibold text-text">
@@ -634,10 +635,10 @@ export function MeuPerfil() {
           </Card>
 
           <Card className="min-w-0 p-4 sm:p-5">
-            <h2 className="text-2xl font-bold text-text">Endereco</h2>
+            <h2 className="text-2xl font-bold text-text">{t("profile.address")}</h2>
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <label className="grid gap-2 text-base font-semibold text-text">
-                CEP
+                {t("profile.zip")}
                 <input
                   className={getInputClassName()}
                   disabled={submitting}
@@ -648,7 +649,7 @@ export function MeuPerfil() {
               </label>
 
               <label className="grid gap-2 text-base font-semibold text-text">
-                Pais do endereco
+                {t("profile.addressCountry")}
                 <input
                   className={getInputClassName()}
                   disabled={submitting}
@@ -659,7 +660,7 @@ export function MeuPerfil() {
               </label>
 
               <label className="grid gap-2 text-base font-semibold text-text md:col-span-2">
-                Rua
+                {t("profile.street")}
                 <input
                   className={getInputClassName()}
                   disabled={submitting}
@@ -670,7 +671,7 @@ export function MeuPerfil() {
               </label>
 
               <label className="grid gap-2 text-base font-semibold text-text">
-                Numero
+                {t("profile.number")}
                 <input
                   className={getInputClassName()}
                   disabled={submitting}
@@ -681,7 +682,7 @@ export function MeuPerfil() {
               </label>
 
               <label className="grid gap-2 text-base font-semibold text-text">
-                Complemento
+                {t("profile.complement")}
                 <input
                   className={getInputClassName()}
                   disabled={submitting}
@@ -694,7 +695,7 @@ export function MeuPerfil() {
               </label>
 
               <label className="grid gap-2 text-base font-semibold text-text">
-                Bairro
+                {t("profile.district")}
                 <input
                   className={getInputClassName()}
                   disabled={submitting}
@@ -705,7 +706,7 @@ export function MeuPerfil() {
               </label>
 
               <label className="grid gap-2 text-base font-semibold text-text">
-                Cidade
+                {t("profile.city")}
                 <input
                   className={getInputClassName()}
                   disabled={submitting}
@@ -716,7 +717,7 @@ export function MeuPerfil() {
               </label>
 
               <label className="grid gap-2 text-base font-semibold text-text">
-                UF
+                {t("profile.state")}
                 <input
                   className={getInputClassName()}
                   disabled={submitting}
@@ -737,7 +738,7 @@ export function MeuPerfil() {
               </div>
               <div className="min-w-0">
                 <h2 className="text-2xl font-bold text-text">
-                  Agenda semanal
+                  {t("profile.weeklySchedule")}
                 </h2>
                 {totalWeeklyHours > 0 ? (
                   (() => {
@@ -746,23 +747,23 @@ export function MeuPerfil() {
                     return (
                       <p className="mt-1 text-base font-semibold">
                         <span className={horasAgendadas > meta ? "text-danger" : "text-text"}>
-                          {horasAgendadas}h agendadas de {meta}h
+                          {t("profile.hoursOfGoal", { hours: horasAgendadas, goal: meta })}
                         </span>
                         {faltam > 0 && (
-                          <span className="text-muted"> · faltam {faltam}h</span>
+                          <span className="text-muted">{t("profile.hoursMissing", { hours: faltam })}</span>
                         )}
                         {faltam < 0 && (
-                          <span className="text-danger"> · {Math.abs(faltam)}h acima da meta</span>
+                          <span className="text-danger">{t("profile.hoursOver", { hours: Math.abs(faltam) })}</span>
                         )}
                         {faltam === 0 && (
-                          <span className="text-success-dark"> · carga completa</span>
+                          <span className="text-success-dark">{t("profile.hoursFull")}</span>
                         )}
                       </p>
                     );
                   })()
                 ) : (
                   <p className="mt-1 text-base text-muted">
-                    {horasAgendadas > 0 ? `${horasAgendadas}h agendadas.` : "Nenhum horario cadastrado."}
+                    {horasAgendadas > 0 ? t("profile.hoursScheduled", { hours: horasAgendadas }) : t("profile.noSchedule")}
                   </p>
                 )}
                 {Object.keys(agenda).length > 0 ? (
@@ -784,7 +785,7 @@ export function MeuPerfil() {
 
           <div className="md:hidden">
             <div
-              aria-label="Selecionar dia da agenda"
+              aria-label={t("profile.pickDay")}
               className="mb-3 grid grid-cols-5 gap-1"
               role="tablist"
             >
@@ -891,7 +892,7 @@ export function MeuPerfil() {
                         className="w-full rounded-lg px-2 py-1.5 text-sm font-bold text-text transition hover:bg-background disabled:pointer-events-none"
                         disabled={submitting}
                         onClick={() => toggleDia(dia.weekday)}
-                        title={`Marcar/desmarcar toda a ${dia.label}`}
+                        title={t("profile.toggleDay", { day: dia.label })}
                         type="button"
                       >
                         {dia.label}
@@ -925,7 +926,7 @@ export function MeuPerfil() {
                         className="w-full rounded-lg px-2 py-2 text-left text-sm font-bold text-text transition hover:bg-background disabled:pointer-events-none"
                         disabled={submitting}
                         onClick={() => togglePeriodo(periodo.id)}
-                        title={`Marcar/desmarcar ${periodo.label} em todos os dias`}
+                        title={t("profile.togglePeriod", { period: periodo.label })}
                         type="button"
                       >
                         <span className="block">{periodo.label}</span>
@@ -946,9 +947,9 @@ export function MeuPerfil() {
                             onClick={() => cycleSlot(dia.weekday, periodo.id)}
                             type="button"
                           >
-                            {mode === "onsite" ? "Presencial" : mode === "remote" ? "Home office" : mode === "aula" ? "Aula" : "—"}
+                            {mode === "onsite" || mode === "remote" || mode === "aula" ? getWorkModeLabel(mode) : "—"}
                             <span className="mt-0.5 block text-sm font-semibold opacity-75">
-                              {countPresencial(dia.weekday, periodo.id)} presencial
+                              {t("profile.slotCount", { count: countPresencial(dia.weekday, periodo.id) })}
                             </span>
                           </button>
                         </td>
@@ -963,19 +964,19 @@ export function MeuPerfil() {
           <div className="mt-3 flex flex-wrap gap-4 text-xs font-semibold text-muted">
               <span className="flex items-center gap-1.5">
                 <span className="inline-block h-3 w-3 rounded-sm bg-success-soft border border-success" />
-                Presencial
+                {t("workMode.onsite")}
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="inline-block h-3 w-3 rounded-sm bg-primary-soft border border-primary" />
-                Home office
+                {t("workMode.remote")}
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="inline-block h-3 w-3 rounded-sm bg-warning-soft border border-warning" />
-                Aula
+                {t("workMode.aula")}
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="inline-block h-3 w-3 rounded-sm bg-background border border-border" />
-                Nao disponivel
+                {t("profile.legendNotAvailable")}
               </span>
           </div>
         </Card>
@@ -995,7 +996,7 @@ export function MeuPerfil() {
         <div className="flex justify-end">
           <Button disabled={submitting} type="submit">
             <Save className="mr-2 h-5 w-5" aria-hidden="true" />
-            {submitting ? "Salvando..." : "Salvar perfil"}
+            {submitting ? t("common.saving") : t("profile.save")}
           </Button>
         </div>
       </form>

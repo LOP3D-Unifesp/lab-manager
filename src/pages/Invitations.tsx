@@ -1,3 +1,4 @@
+import { getLocale, t } from "../i18n";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Clock3, RefreshCw, ShieldAlert, UserPlus, XCircle } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -11,25 +12,25 @@ import { inviteUser, listInvitations, resendInvitation, revokeInvitation } from 
 
 type Filter = "all" | "active" | "accepted" | "expired" | "revoked";
 const stages: Record<InvitationStage, { label: string; variant: StatusVariant }> = {
-  sent: { label: "Enviado", variant: "info" },
-  opened: { label: "Link confirmado", variant: "warning" },
-  accepted: { label: "Aceito", variant: "success" },
-  expired: { label: "Expirado", variant: "neutral" },
-  revoked: { label: "Revogado", variant: "danger" },
+  sent: { get label() { return t("invites.stageSent"); }, variant: "info" },
+  opened: { get label() { return t("invites.stageOpened"); }, variant: "warning" },
+  accepted: { get label() { return t("invites.stageAccepted"); }, variant: "success" },
+  expired: { get label() { return t("invites.stageExpired"); }, variant: "neutral" },
+  revoked: { get label() { return t("invites.stageRevoked"); }, variant: "danger" },
 };
 
 function roleLabel(role: ProfileRole) {
-  return role === "coordinator" ? "Coordenador(a)" : "Pesquisador(a)";
+  return t(role === "coordinator" ? "invites.roleCoordinator" : "invites.roleResearcher");
 }
 
 function remainingLabel(expiresAt: string, now: number) {
   const value = new Date(expiresAt).getTime() - now;
-  if (value <= 0) return "Prazo encerrado";
-  return `${Math.floor(value / 3_600_000)}h ${Math.floor((value % 3_600_000) / 60_000)}min restantes`;
+  if (value <= 0) return t("invites.deadlineEnded");
+  return t("invites.remaining", { hours: Math.floor(value / 3_600_000), minutes: Math.floor((value % 3_600_000) / 60_000) });
 }
 
 function dateTime(value: string | null) {
-  return value ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(value)) : "—";
+  return value ? new Intl.DateTimeFormat(getLocale(), { dateStyle: "short", timeStyle: "short" }).format(new Date(value)) : "—";
 }
 
 export function Invitations() {
@@ -48,7 +49,7 @@ export function Invitations() {
   }
 
   useEffect(() => {
-    reload().catch(() => setError("Não foi possível carregar os convites."));
+    reload().catch(() => setError(t("invites.errLoad")));
     const timer = window.setInterval(() => setNow(Date.now()), 30_000);
     return () => window.clearInterval(timer);
   }, []);
@@ -66,12 +67,12 @@ export function Invitations() {
     setMessage("");
     try {
       await inviteUser(email, role);
-      setMessage(appEnvironment === "local" ? "Convite criado. A mensagem está no Mailpit local." : "Convite enviado.");
+      setMessage(appEnvironment === "local" ? t("invites.createdLocal") : t("invites.sent"));
       setEmail("");
       setRole("researcher");
       await reload();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Não foi possível criar o convite.");
+      setError(reason instanceof Error ? reason.message : t("invites.errCreate"));
     } finally {
       setCreating(false);
     }
@@ -84,10 +85,10 @@ export function Invitations() {
     try {
       if (action === "resend") await resendInvitation(item.id);
       else await revokeInvitation(item.id);
-      setMessage(action === "resend" ? "Novo convite enviado; o link anterior foi invalidado." : "Convite revogado e dados do destinatário removidos.");
+      setMessage(action === "resend" ? t("invites.resent") : t("invites.revoked"));
       await reload();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "A ação não pôde ser concluída.");
+      setError(reason instanceof Error ? reason.message : t("invites.errAction"));
     } finally {
       setActionId(null);
     }
@@ -96,32 +97,32 @@ export function Invitations() {
   return (
     <div>
       <Card className="mb-5">
-        <div className="mb-5 flex items-start gap-3"><div className="rounded-lg bg-primary-soft p-3 text-primary"><UserPlus className="h-5 w-5" /></div><div><h2 className="text-2xl font-bold">Novo convite</h2><p className="mt-1 text-muted">O papel fica vinculado ao convite e não pode ser alterado pelo destinatário.</p></div></div>
+        <div className="mb-5 flex items-start gap-3"><div className="rounded-lg bg-primary-soft p-3 text-primary"><UserPlus className="h-5 w-5" /></div><div><h2 className="text-2xl font-bold">{t("invites.newTitle")}</h2><p className="mt-1 text-muted">{t("invites.newHint")}</p></div></div>
         <form className="grid gap-4 lg:grid-cols-[2fr_1fr_auto] lg:items-end" onSubmit={createInvitation}>
-          <label className="grid gap-2 font-semibold">E-mail<input className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal" required type="email" placeholder="usuario@exemplo.com" value={email} onChange={(event) => setEmail(event.target.value)} /></label>
-          <label className="grid gap-2 font-semibold">Papel<select className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal" value={role} onChange={(event) => setRole(event.target.value as ProfileRole)}><option value="researcher">Pesquisador(a)</option><option value="coordinator">Coordenador(a)</option></select></label>
-          <Button type="submit" disabled={creating}>{creating ? "Enviando..." : "Enviar convite"}</Button>
+          <label className="grid gap-2 font-semibold">{t("invites.email")}<input className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal" required type="email" placeholder="usuario@exemplo.com" value={email} onChange={(event) => setEmail(event.target.value)} /></label>
+          <label className="grid gap-2 font-semibold">{t("invites.role")}<select className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal" value={role} onChange={(event) => setRole(event.target.value as ProfileRole)}><option value="researcher">{t("invites.roleResearcher")}</option><option value="coordinator">{t("invites.roleCoordinator")}</option></select></label>
+          <Button type="submit" disabled={creating}>{creating ? t("invites.sending") : t("invites.send")}</Button>
         </form>
-        {role === "coordinator" ? <p className="mt-4 rounded-lg border border-warning bg-warning-soft p-3 text-sm font-semibold text-warning-dark"><ShieldAlert className="mr-2 inline h-4 w-4" />Coordenadores podem administrar usuários, catálogos, convites e configurações.</p> : null}
-        <p className="mt-4 text-sm text-muted">Validade: 72 horas. Antes do aceite não existe perfil nem acesso aos dados protegidos. <Link className="font-semibold text-primary underline" to="/privacidade">Ver aviso de privacidade</Link>.</p>
-        {message ? <p className="mt-4 rounded-lg border border-success bg-success-soft p-3 font-semibold text-success-dark">{message}{appEnvironment === "local" ? <> <a className="underline" href="http://127.0.0.1:55324" target="_blank" rel="noreferrer">Abrir Mailpit</a></> : null}</p> : null}
+        {role === "coordinator" ? <p className="mt-4 rounded-lg border border-warning bg-warning-soft p-3 text-sm font-semibold text-warning-dark"><ShieldAlert className="mr-2 inline h-4 w-4" />{t("invites.coordinatorWarning")}</p> : null}
+        <p className="mt-4 text-sm text-muted">{t("invites.validity")} <Link className="font-semibold text-primary underline" to="/privacidade">{t("invites.privacyLink")}</Link>.</p>
+        {message ? <p className="mt-4 rounded-lg border border-success bg-success-soft p-3 font-semibold text-success-dark">{message}{appEnvironment === "local" ? <> <a className="underline" href="http://127.0.0.1:55324" target="_blank" rel="noreferrer">{t("invites.openMailpit")}</a></> : null}</p> : null}
         {error ? <p className="mt-4 rounded-lg border border-danger bg-danger-soft p-3 font-semibold text-danger">{error}</p> : null}
       </Card>
 
-      <div className="mb-4 flex flex-wrap gap-2" aria-label="Filtros de convites">
-        {([['all', 'Todos'], ['active', 'Ativos'], ['accepted', 'Aceitos'], ['expired', 'Expirados'], ['revoked', 'Revogados']] as Array<[Filter, string]>).map(([value, label]) => <Button key={value} className="min-h-9 px-3 py-2 text-sm" variant={filter === value ? "primary" : "secondary"} onClick={() => setFilter(value)}>{label}</Button>)}
+      <div className="mb-4 flex flex-wrap gap-2" aria-label={t("invites.filters")}>
+        {([["all", t("invites.filterAll")], ["active", t("invites.filterActive")], ["accepted", t("invites.filterAccepted")], ["expired", t("invites.filterExpired")], ["revoked", t("invites.filterRevoked")]] as Array<[Filter, string]>).map(([value, label]) => <Button key={value} className="min-h-9 px-3 py-2 text-sm" variant={filter === value ? "primary" : "secondary"} onClick={() => setFilter(value)}>{label}</Button>)}
       </div>
 
       <div className="grid gap-4">
-        {filtered.length === 0 ? <Card><p className="text-muted">Nenhum convite neste filtro.</p></Card> : filtered.map((item) => {
+        {filtered.length === 0 ? <Card><p className="text-muted">{t("invites.none")}</p></Card> : filtered.map((item) => {
           const active = item.stage === "sent" || item.stage === "opened";
           const resendAt = new Date(item.lastSentAt).getTime() + 5 * 60_000;
           return <Card key={item.id}>
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><StatusBadge {...stages[item.stage]} /><StatusBadge label={roleLabel(item.role)} variant={item.role === "coordinator" ? "warning" : "neutral"} /></div><h2 className="mt-3 break-all text-xl font-bold">{item.recipient}</h2><p className="mt-1 text-sm text-muted">Convidado por {item.invitedBy} · {item.sendCount} envio(s)</p>{active ? <p className="mt-3 flex items-center gap-2 font-semibold text-primary-dark"><Clock3 className="h-4 w-4" />{remainingLabel(item.expiresAt, now)}</p> : null}</div>
-              {active ? <div className="flex flex-wrap gap-2"><Button className="min-h-9 px-3 py-2 text-sm" variant="secondary" disabled={actionId === item.id || now < resendAt} title={now < resendAt ? `Disponível às ${dateTime(new Date(resendAt).toISOString())}` : undefined} onClick={() => runAction(item, "resend")}><RefreshCw className="mr-2 h-4 w-4" />Reenviar</Button><Button className="min-h-9 px-3 py-2 text-sm" variant="danger" disabled={actionId === item.id} onClick={() => runAction(item, "revoke")}><XCircle className="mr-2 h-4 w-4" />Revogar</Button></div> : null}
+              <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><StatusBadge {...stages[item.stage]} /><StatusBadge label={roleLabel(item.role)} variant={item.role === "coordinator" ? "warning" : "neutral"} /></div><h2 className="mt-3 break-all text-xl font-bold">{item.recipient}</h2><p className="mt-1 text-sm text-muted">{t("invites.invitedBy", { name: item.invitedBy, count: item.sendCount })}</p>{active ? <p className="mt-3 flex items-center gap-2 font-semibold text-primary-dark"><Clock3 className="h-4 w-4" />{remainingLabel(item.expiresAt, now)}</p> : null}</div>
+              {active ? <div className="flex flex-wrap gap-2"><Button className="min-h-9 px-3 py-2 text-sm" variant="secondary" disabled={actionId === item.id || now < resendAt} title={now < resendAt ? t("invites.availableAt", { time: dateTime(new Date(resendAt).toISOString()) }) : undefined} onClick={() => runAction(item, "resend")}><RefreshCw className="mr-2 h-4 w-4" />{t("invites.resend")}</Button><Button className="min-h-9 px-3 py-2 text-sm" variant="danger" disabled={actionId === item.id} onClick={() => runAction(item, "revoke")}><XCircle className="mr-2 h-4 w-4" />{t("invites.revoke")}</Button></div> : null}
             </div>
-            <dl className="mt-5 grid gap-3 border-t border-border pt-4 text-sm sm:grid-cols-2 lg:grid-cols-4"><div><dt className="font-semibold text-muted">Primeiro envio</dt><dd>{dateTime(item.createdAt)}</dd></div><div><dt className="font-semibold text-muted">Último envio</dt><dd>{dateTime(item.lastSentAt)}</dd></div><div><dt className="font-semibold text-muted">Link confirmado</dt><dd>{dateTime(item.openedAt)}</dd></div><div><dt className="font-semibold text-muted">Aceite concluído</dt><dd>{dateTime(item.acceptedAt)}</dd></div></dl>
+            <dl className="mt-5 grid gap-3 border-t border-border pt-4 text-sm sm:grid-cols-2 lg:grid-cols-4"><div><dt className="font-semibold text-muted">{t("invites.firstSent")}</dt><dd>{dateTime(item.createdAt)}</dd></div><div><dt className="font-semibold text-muted">{t("invites.lastSent")}</dt><dd>{dateTime(item.lastSentAt)}</dd></div><div><dt className="font-semibold text-muted">{t("invites.linkConfirmed")}</dt><dd>{dateTime(item.openedAt)}</dd></div><div><dt className="font-semibold text-muted">{t("invites.acceptedAt")}</dt><dd>{dateTime(item.acceptedAt)}</dd></div></dl>
           </Card>;
         })}
       </div>

@@ -15,12 +15,12 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 const variantClasses: Record<ButtonVariant, string> = {
-  primary: "bg-primary-dark text-white hover:bg-primary",
+  primary: "bg-primary-dark text-white hover:bg-primary dark:bg-primary dark:hover:bg-primary/85",
   secondary:
     "border border-primary bg-surface text-primary hover:bg-primary-soft",
-  success: "bg-success-dark text-white hover:bg-success",
-  warning: "bg-warning text-text hover:bg-warning-soft",
-  danger: "bg-danger text-white hover:bg-danger-dark",
+  success: "bg-success-dark text-white hover:bg-success dark:bg-success dark:hover:bg-success/85",
+  warning: "bg-warning text-[#102033] hover:bg-warning/80",
+  danger: "bg-danger text-white hover:bg-danger-dark dark:hover:bg-danger/85",
   ghost: "bg-transparent text-primary hover:bg-primary-soft",
 };
 

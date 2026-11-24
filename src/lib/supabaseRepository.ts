@@ -1,3 +1,4 @@
+import { getLocale, t } from "../i18n";
 import { supabase } from "./supabaseClient";
 import type { FeedbackKind, FeedbackReport, FeedbackStatus } from "./feedback";
 import type { MaintenanceRequest, MaintenanceRequestStatus, MaintenanceUrgency } from "./maintenanceRequests";
@@ -50,7 +51,7 @@ import {
 
 function client() {
   if (!supabase) {
-    throw new Error("Supabase nao esta configurado.");
+    throw new Error(t("auth.errNotConfigured"));
   }
 
   return supabase;
@@ -271,7 +272,7 @@ export async function listInvitations(): Promise<InvitationSummary[]> {
       role: invitation.role,
       stage,
       recipient: invitation.email ?? acceptedProfile?.email ?? acceptedProfile?.full_name ?? "Dados removidos",
-      invitedBy: byId.get(invitation.invited_by)?.full_name ?? "Coordenador não disponível",
+      invitedBy: byId.get(invitation.invited_by)?.full_name ?? t("invites.coordinatorUnavailable"),
       createdAt: invitation.created_at,
       openedAt: invitation.opened_at,
       acceptedAt: invitation.accepted_at,
@@ -293,7 +294,7 @@ export async function uploadMyAvatar(file: File) {
 
   const userId = userData.user?.id;
   if (!userId) {
-    throw new Error("Usuario nao autenticado.");
+    throw new Error(t("auth.errNotAuthenticated"));
   }
 
   const extension = file.name.split(".").pop()?.toLowerCase() || "png";
@@ -438,7 +439,7 @@ export async function updateIsMaintainer(profileId: string, value: boolean) {
 export async function listSkills(includeInactive = false) {
   let query = client()
     .from("skills")
-    .select("id, name, description, is_active")
+    .select("id, name, name_en, name_es, description, is_active")
     .order("name");
 
   if (!includeInactive) {
@@ -450,11 +451,11 @@ export async function listSkills(includeInactive = false) {
   return (data ?? []) as Skill[];
 }
 
-export async function createSkill(params: { name: string; description: string | null }) {
+export async function createSkill(params: { name: string; name_en?: string | null; name_es?: string | null; description: string | null }) {
   const { data, error } = await client()
     .from("skills")
-    .insert({ name: params.name.trim(), description: params.description, is_active: true })
-    .select("id, name, description, is_active")
+    .insert({ name: params.name.trim(), name_en: params.name_en ?? null, name_es: params.name_es ?? null, description: params.description, is_active: true })
+    .select("id, name, name_en, name_es, description, is_active")
     .single();
   throwIfError(error);
   return data as Skill;
@@ -462,17 +463,19 @@ export async function createSkill(params: { name: string; description: string | 
 
 export async function updateSkill(
   id: string,
-  params: { name: string; description: string | null; isActive: boolean },
+  params: { name: string; name_en?: string | null; name_es?: string | null; description: string | null; isActive: boolean },
 ) {
   const { data, error } = await client()
     .from("skills")
     .update({
       name: params.name.trim(),
+      name_en: params.name_en ?? null,
+      name_es: params.name_es ?? null,
       description: params.description,
       is_active: params.isActive,
     })
     .eq("id", id)
-    .select("id, name, description, is_active")
+    .select("id, name, name_en, name_es, description, is_active")
     .single();
   throwIfError(error);
   return data as Skill;
@@ -542,7 +545,7 @@ export async function deleteAvailabilitySlot(slotId: string) {
 }
 
 const equipmentSelect =
-  "id, name, model, location, status, notes, type_id, asset_tag, created_at, updated_at, type:equipment_types(id, name, uses_material, is_active)";
+  "id, name, model, location, status, notes, type_id, asset_tag, created_at, updated_at, type:equipment_types(id, name, name_en, name_es, uses_material, is_active)";
 
 export async function listEquipment() {
   const { data, error } = await client().from("equipment").select(equipmentSelect).order("name");
@@ -575,18 +578,18 @@ export async function updateEquipment(id: string, params: EquipmentInput) {
 export async function listEquipmentTypes() {
   const { data, error } = await client()
     .from("equipment_types")
-    .select("id, name, uses_material, is_active")
+    .select("id, name, name_en, name_es, uses_material, is_active")
     .eq("is_active", true)
     .order("name");
   throwIfError(error);
   return (data ?? []) as EquipmentType[];
 }
 
-export async function createEquipmentType(params: { name: string; uses_material: boolean }) {
+export async function createEquipmentType(params: { name: string; name_en?: string | null; name_es?: string | null; uses_material: boolean }) {
   const { data, error } = await client()
     .from("equipment_types")
     .insert(params)
-    .select("id, name, uses_material, is_active")
+    .select("id, name, name_en, name_es, uses_material, is_active")
     .single();
   throwIfError(error);
   return data as EquipmentType;
@@ -749,7 +752,7 @@ export async function listProjectConsumption(projectId: string) {
     current.total += Number(row.consumed_amount);
     totals.set(key, current);
   }
-  return [...totals.values()].sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  return [...totals.values()].sort((a, b) => a.name.localeCompare(b.name, getLocale()));
 }
 
 export async function listEquipmentMaterials() {
@@ -775,7 +778,7 @@ export async function listBookings() {
       id, equipment_id, profile_id, material_id, spool_id, consumed_amount, project_id, project_name, starts_at, ends_at,
       estimated_duration_minutes, status, notes, cancelled_at, cancelled_by,
       rejected_reason, rejected_at, rejected_by, approved_at, approved_by,
-      equipment:equipment!equipment_bookings_equipment_id_fkey(id, name, model, location, status, notes, type_id, asset_tag, created_at, updated_at, type:equipment_types(id, name, uses_material, is_active)),
+      equipment:equipment!equipment_bookings_equipment_id_fkey(id, name, model, location, status, notes, type_id, asset_tag, created_at, updated_at, type:equipment_types(id, name, name_en, name_es, uses_material, is_active)),
       material:materials!equipment_bookings_material_id_fkey(id, name, description, is_active),
       approved_by_profile:profiles!equipment_bookings_approved_by_fkey(full_name),
       rejected_by_profile:profiles!equipment_bookings_rejected_by_fkey(full_name),
@@ -1109,7 +1112,7 @@ function mapProject(row: ProjectRow): Project {
         full_name: member.profile?.full_name ?? "",
         avatar_url: member.profile?.avatar_url ?? null,
       }))
-      .sort((a, b) => a.full_name.localeCompare(b.full_name, "pt-BR")),
+      .sort((a, b) => a.full_name.localeCompare(b.full_name, getLocale())),
     funding: (row.funding ?? []).map((funding) => ({
       agency_id: funding.agency_id,
       agency_acronym: funding.agency?.acronym ?? "",
@@ -1235,7 +1238,7 @@ function mapTask(row: TaskRow): ProjectTask {
         full_name: assignee.profile?.full_name ?? "",
         avatar_url: assignee.profile?.avatar_url ?? null,
       }))
-      .sort((a, b) => a.full_name.localeCompare(b.full_name, "pt-BR")),
+      .sort((a, b) => a.full_name.localeCompare(b.full_name, getLocale())),
   };
 }
 
@@ -1371,7 +1374,7 @@ export async function uploadMaintenancePhotos(blobs: Blob[]) {
   const { data: userData, error: userError } = await client().auth.getUser();
   throwIfError(userError);
   const userId = userData.user?.id;
-  if (!userId) throw new Error("Usuario nao autenticado.");
+  if (!userId) throw new Error(t("auth.errNotAuthenticated"));
 
   const paths: string[] = [];
   for (const blob of blobs) {

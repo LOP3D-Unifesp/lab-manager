@@ -1,3 +1,4 @@
+import { t } from "../../i18n";
 import { Eye, EyeOff } from "lucide-react";
 import { InputHTMLAttributes, useState } from "react";
 
@@ -16,7 +17,7 @@ export function PasswordInput(props: PasswordInputProps) {
       <button
         type="button"
         onClick={() => setVisible((current) => !current)}
-        aria-label={visible ? "Ocultar senha" : "Mostrar senha"}
+        aria-label={visible ? t("password.hide") : t("password.show")}
         className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-muted transition hover:text-primary"
       >
         {visible ? (

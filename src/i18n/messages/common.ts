@@ -1,0 +1,23 @@
+import type { Entry } from "../catalog";
+
+export const common = {
+  "language.label": { pt: "Idioma", en: "Language", es: "Idioma" },
+  "theme.label": { pt: "Tema da interface", en: "Interface theme", es: "Tema de la interfaz" },
+  "theme.light": { pt: "Claro", en: "Light", es: "Claro" },
+  "theme.system": { pt: "Auto", en: "Auto", es: "Auto" },
+  "theme.dark": { pt: "Escuro", en: "Dark", es: "Oscuro" },
+  "theme.lightTitle": { pt: "Modo claro", en: "Light mode", es: "Modo claro" },
+  "theme.systemTitle": { pt: "Automático (segue o sistema)", en: "Automatic (follows system)", es: "Automático (sigue el sistema)" },
+  "theme.darkTitle": { pt: "Modo escuro", en: "Dark mode", es: "Modo oscuro" },
+  "common.close": { pt: "Fechar", en: "Close", es: "Cerrar" },
+  "common.cancel": { pt: "Cancelar", en: "Cancel", es: "Cancelar" },
+  "common.back": { pt: "Voltar", en: "Back", es: "Volver" },
+  "common.save": { pt: "Salvar", en: "Save", es: "Guardar" },
+  "common.saving": { pt: "Salvando...", en: "Saving...", es: "Guardando..." },
+  "common.signOut": { pt: "Sair", en: "Sign out", es: "Salir" },
+  "common.loading": { pt: "Carregando...", en: "Loading...", es: "Cargando..." },
+  "common.notInformed": { pt: "Não informado", en: "Not provided", es: "No informado" },
+  "common.pending": { pt: "{count} pendente(s)", en: "{count} pending", es: "{count} pendiente(s)" },
+  "role.coordinator": { pt: "Coordenador", en: "Coordinator", es: "Coordinador" },
+  "role.researcher": { pt: "Pesquisador", en: "Researcher", es: "Investigador" },
+} satisfies Record<string, Entry>;

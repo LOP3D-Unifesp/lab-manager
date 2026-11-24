@@ -1,5 +1,7 @@
+import { t } from "../../i18n";
 import type { FundingGrant } from "../../lib/domain";
 import { FundingGrantsEditor } from "./FundingGrantsEditor";
+import { inputClassName } from "../ui/formStyles";
 
 type WorkloadFieldProps = {
   isScholarshipHolder: boolean;
@@ -14,9 +16,6 @@ type WorkloadFieldProps = {
   className?: string;
 };
 
-const inputClassName =
-  "min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-4 text-base font-normal outline-none transition focus:border-primary";
-
 export function WorkloadField({
   isScholarshipHolder,
   onIsScholarshipHolderChange,
@@ -26,27 +25,27 @@ export function WorkloadField({
   manualHours,
   onManualHoursChange,
   disabled,
-  label = "Carga horaria semanal",
+  label = t("workload.label"),
   className = "",
 }: WorkloadFieldProps) {
   return (
     <div className={`grid gap-4 ${className}`}>
       <div className="grid gap-4 sm:grid-cols-2 sm:items-start">
         <label className="grid min-w-0 gap-2 text-base font-semibold text-text">
-          Bolsista ou voluntário?
+          {t("workload.holderQuestion")}
           <select
-            className={inputClassName}
+            className={`${inputClassName} w-full`}
             disabled={disabled}
             onChange={(event) => onIsScholarshipHolderChange(event.target.value === "holder")}
             value={isScholarshipHolder ? "holder" : "volunteer"}
           >
-            <option value="holder">Bolsista</option>
-            <option value="volunteer">Voluntário</option>
+            <option value="holder">{t("workload.holder")}</option>
+            <option value="volunteer">{t("workload.volunteer")}</option>
           </select>
           <p className="text-sm font-normal text-muted">
             {isScholarshipHolder
-              ? "A carga é a soma das horas das bolsas."
-              : "Sem bolsa: informe a carga manualmente."}
+              ? t("workload.sumOfGrants")
+              : t("workload.manual")}
           </p>
         </label>
 
@@ -64,7 +63,7 @@ export function WorkloadField({
           <label className="grid min-w-0 gap-2 text-base font-semibold text-text">
             {label}
             <input
-              className={inputClassName}
+              className={`${inputClassName} w-full`}
               disabled={disabled}
               inputMode="numeric"
               max={60}

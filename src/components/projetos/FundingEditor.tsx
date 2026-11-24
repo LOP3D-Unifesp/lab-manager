@@ -1,3 +1,4 @@
+import { t } from "../../i18n";
 import { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 
@@ -12,6 +13,7 @@ import {
 } from "../../lib/projects";
 import { createFundingAgency, type ProjectFundingInput } from "../../lib/supabaseRepository";
 import { Button } from "../ui/Button";
+import { inputClassName } from "../ui/formStyles";
 
 export type FundingFormItem = { category: FundingCategory; description: string; amount: string };
 export type FundingForm = {
@@ -42,14 +44,14 @@ export function fundingToForm(funding: ProjectFunding[]): FundingForm[] {
 export function fundingFormToInput(forms: FundingForm[]): ProjectFundingInput[] | string {
   const result: ProjectFundingInput[] = [];
   for (const form of forms) {
-    if (!form.agency_id) return "Escolha a agência de cada fomento.";
+    if (!form.agency_id) return t("fundingEditor.errAgency");
     if (form.starts_on && form.ends_on && form.ends_on < form.starts_on) {
-      return "A vigência do fomento termina antes de começar.";
+      return t("fundingEditor.errTerm");
     }
     const items: ProjectFundingInput["items"] = [];
     for (const item of form.items) {
       const amount = parseAmountInput(item.amount);
-      if (amount === null) return "Informe um valor válido (maior ou igual a zero) em cada rubrica.";
+      if (amount === null) return t("fundingEditor.errAmount");
       items.push({ category: item.category, description: item.description.trim() || null, amount });
     }
     result.push({
@@ -63,9 +65,6 @@ export function fundingFormToInput(forms: FundingForm[]): ProjectFundingInput[] 
   }
   return result;
 }
-
-const inputClassName =
-  "min-h-11 min-w-0 rounded-lg border border-border bg-surface px-4 text-base font-normal outline-none transition focus:border-primary";
 
 type FundingEditorProps = {
   value: FundingForm[];
@@ -98,7 +97,7 @@ export function FundingEditor({ agencies, disabled, onAgencyCreated, onChange, v
   async function cadastrarAgencia() {
     const acronym = novaSigla.trim();
     if (!acronym) {
-      setErroAgencia("Informe a sigla da agência.");
+      setErroAgencia(t("fundingEditor.errAcronym"));
       return;
     }
     try {
@@ -115,7 +114,7 @@ export function FundingEditor({ agencies, disabled, onAgencyCreated, onChange, v
 
   return (
     <div className="grid gap-4">
-      {value.length === 0 ? <p className="text-base text-muted">Projeto sem fomento.</p> : null}
+      {value.length === 0 ? <p className="text-base text-muted">{t("fundingEditor.noFunding")}</p> : null}
 
       {value.map((entry, index) => {
         const total = entry.items.reduce((sum, item) => sum + (parseAmountInput(item.amount) ?? 0), 0);
@@ -123,14 +122,14 @@ export function FundingEditor({ agencies, disabled, onAgencyCreated, onChange, v
           <div key={index} className="grid gap-3 rounded-lg border border-border bg-background p-4">
             <div className="grid items-start gap-3 sm:grid-cols-2">
               <label className="grid gap-2 text-sm font-semibold">
-                Agência
+                {t("fundingEditor.agency")}
                 <select
                   className={inputClassName}
                   disabled={disabled}
                   value={entry.agency_id}
                   onChange={(event) => atualizar(index, { agency_id: event.target.value })}
                 >
-                  <option value="">Selecione</option>
+                  <option value="">{t("fundingEditor.select")}</option>
                   {agencies.map((agency) => (
                     <option key={agency.id} value={agency.id}>
                       {agency.acronym}
@@ -140,7 +139,7 @@ export function FundingEditor({ agencies, disabled, onAgencyCreated, onChange, v
                 </select>
               </label>
               <label className="grid gap-2 text-sm font-semibold">
-                Número do processo
+                {t("fundingEditor.processNumber")}
                 <input
                   className={inputClassName}
                   disabled={disabled}
@@ -149,7 +148,7 @@ export function FundingEditor({ agencies, disabled, onAgencyCreated, onChange, v
                 />
               </label>
               <label className="grid gap-2 text-sm font-semibold sm:col-span-2">
-                Nome do auxílio ou edital
+                {t("fundingEditor.grantName")}
                 <input
                   className={inputClassName}
                   disabled={disabled}
@@ -158,7 +157,7 @@ export function FundingEditor({ agencies, disabled, onAgencyCreated, onChange, v
                 />
               </label>
               <label className="grid gap-2 text-sm font-semibold">
-                Início da vigência
+                {t("fundingEditor.start")}
                 <input
                   className={inputClassName}
                   disabled={disabled}
@@ -168,7 +167,7 @@ export function FundingEditor({ agencies, disabled, onAgencyCreated, onChange, v
                 />
               </label>
               <label className="grid gap-2 text-sm font-semibold">
-                Fim da vigência
+                {t("fundingEditor.end")}
                 <input
                   className={inputClassName}
                   disabled={disabled}
@@ -180,11 +179,11 @@ export function FundingEditor({ agencies, disabled, onAgencyCreated, onChange, v
             </div>
 
             <div className="grid gap-2">
-              <p className="text-sm font-semibold">Valor concedido por rubrica</p>
+              <p className="text-sm font-semibold">{t("fundingEditor.amountPerLine")}</p>
               {entry.items.map((item, itemIndex) => (
                 <div key={itemIndex} className="grid gap-2 sm:grid-cols-[180px_1fr_150px_auto] sm:items-center">
                   <select
-                    aria-label="Rubrica"
+                    aria-label={t("fundingEditor.line")}
                     className={inputClassName}
                     disabled={disabled}
                     value={item.category}
@@ -197,7 +196,7 @@ export function FundingEditor({ agencies, disabled, onAgencyCreated, onChange, v
                     ))}
                   </select>
                   <input
-                    aria-label="Descrição da rubrica"
+                    aria-label={t("fundingEditor.lineDescription")}
                     className={inputClassName}
                     disabled={disabled}
                     placeholder={fundingCategoryOptions.find((o) => o.value === item.category)?.hint}
@@ -205,7 +204,7 @@ export function FundingEditor({ agencies, disabled, onAgencyCreated, onChange, v
                     onChange={(event) => atualizarItem(index, itemIndex, { description: event.target.value })}
                   />
                   <input
-                    aria-label="Valor em reais"
+                    aria-label={t("fundingEditor.amountReais")}
                     className={inputClassName}
                     disabled={disabled}
                     inputMode="decimal"
@@ -215,8 +214,8 @@ export function FundingEditor({ agencies, disabled, onAgencyCreated, onChange, v
                   />
                   <button
                     type="button"
-                    title="Remover rubrica"
-                    aria-label="Remover rubrica"
+                    title={t("fundingEditor.removeLine")}
+                    aria-label={t("fundingEditor.removeLine")}
                     disabled={disabled}
                     className="inline-flex h-10 w-10 items-center justify-center rounded-md text-danger transition hover:bg-danger-soft"
                     onClick={() => atualizar(index, { items: entry.items.filter((_, j) => j !== itemIndex) })}
@@ -235,7 +234,7 @@ export function FundingEditor({ agencies, disabled, onAgencyCreated, onChange, v
                   }
                 >
                   <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
-                  Adicionar rubrica
+                  {t("fundingEditor.addLine")}
                 </Button>
                 <p className="text-sm font-semibold">Total: {formatCurrencyBRL(total)}</p>
               </div>
@@ -249,7 +248,7 @@ export function FundingEditor({ agencies, disabled, onAgencyCreated, onChange, v
                 onClick={() => onChange(value.filter((_, i) => i !== index))}
               >
                 <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
-                Remover fomento
+                {t("fundingEditor.removeFunding")}
               </Button>
             </div>
           </div>
@@ -269,7 +268,7 @@ export function FundingEditor({ agencies, disabled, onAgencyCreated, onChange, v
           }
         >
           <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
-          Adicionar fomento
+          {t("fundingEditor.addFunding")}
         </Button>
         <Button
           variant="ghost"
@@ -277,21 +276,21 @@ export function FundingEditor({ agencies, disabled, onAgencyCreated, onChange, v
           disabled={disabled}
           onClick={() => setMostrarNova((current) => !current)}
         >
-          + Nova agência
+          {t("fundingEditor.newAgency")}
         </Button>
       </div>
 
       {mostrarNova ? (
         <div className="grid gap-3 rounded-lg border border-border bg-background p-4 sm:grid-cols-[160px_1fr_auto] sm:items-end">
           <label className="grid gap-2 text-sm font-semibold">
-            Sigla
+            {t("fundingEditor.acronym")}
             <input className={inputClassName} value={novaSigla} onChange={(event) => setNovaSigla(event.target.value)} />
           </label>
           <label className="grid gap-2 text-sm font-semibold">
-            Nome (opcional)
+            {t("fundingEditor.agencyName")}
             <input className={inputClassName} value={novoNome} onChange={(event) => setNovoNome(event.target.value)} />
           </label>
-          <Button onClick={cadastrarAgencia}>Cadastrar</Button>
+          <Button onClick={cadastrarAgencia}>{t("fundingEditor.register")}</Button>
           {erroAgencia ? <p className="text-sm font-semibold text-danger sm:col-span-3">{erroAgencia}</p> : null}
         </div>
       ) : null}

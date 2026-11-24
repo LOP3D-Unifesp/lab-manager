@@ -1,11 +1,12 @@
+import { t } from "../i18n";
 import type { StatusVariant } from "../components/ui/StatusBadge";
 
 export type FeedbackKind = "suggestion" | "bug" | "other";
 
 export const feedbackKindOptions: Array<{ value: FeedbackKind; label: string; hint: string }> = [
-  { value: "bug", label: "Erro", hint: "Algo não funciona como deveria" },
-  { value: "suggestion", label: "Sugestão", hint: "Uma ideia ou melhoria" },
-  { value: "other", label: "Outro", hint: "Dúvida ou comentário" },
+  { value: "bug", get label() { return t("opt.feedbackKindOptions.bug"); }, get hint() { return t("opt.feedbackKindOptions.bug.hint"); } },
+  { value: "suggestion", get label() { return t("opt.feedbackKindOptions.suggestion"); }, get hint() { return t("opt.feedbackKindOptions.suggestion.hint"); } },
+  { value: "other", get label() { return t("opt.feedbackKindOptions.other"); }, get hint() { return t("opt.feedbackKindOptions.other.hint"); } },
 ];
 
 export function getFeedbackKindLabel(kind: FeedbackKind) {
@@ -21,11 +22,11 @@ export function getFeedbackKindVariant(kind: FeedbackKind): StatusVariant {
 export type FeedbackStatus = "new" | "seen" | "planned" | "done" | "dismissed";
 
 export const feedbackStatusOptions: Array<{ value: FeedbackStatus; label: string }> = [
-  { value: "new", label: "Nova" },
-  { value: "seen", label: "Vista" },
-  { value: "planned", label: "Planejada" },
-  { value: "done", label: "Resolvida" },
-  { value: "dismissed", label: "Descartada" },
+  { value: "new", get label() { return t("opt.feedbackStatusOptions.new"); } },
+  { value: "seen", get label() { return t("opt.feedbackStatusOptions.seen"); } },
+  { value: "planned", get label() { return t("opt.feedbackStatusOptions.planned"); } },
+  { value: "done", get label() { return t("opt.feedbackStatusOptions.done"); } },
+  { value: "dismissed", get label() { return t("opt.feedbackStatusOptions.dismissed"); } },
 ];
 
 export function getFeedbackStatusLabel(status: FeedbackStatus) {
@@ -58,8 +59,8 @@ export const FEEDBACK_MAX_LENGTH = 4000;
 // Devolve a mensagem de erro, ou null se o texto serve.
 export function validateFeedbackMessage(message: string) {
   const length = message.trim().length;
-  if (length < FEEDBACK_MIN_LENGTH) return "Conte o que aconteceu ou o que você sugere.";
-  if (length > FEEDBACK_MAX_LENGTH) return `A mensagem pode ter até ${FEEDBACK_MAX_LENGTH} caracteres.`;
+  if (length < FEEDBACK_MIN_LENGTH) return t("feedback.errShort");
+  if (length > FEEDBACK_MAX_LENGTH) return t("feedback.errLong", { max: FEEDBACK_MAX_LENGTH });
   return null;
 }
 
@@ -102,7 +103,7 @@ export function sortFeedback(reports: FeedbackReport[]) {
 
 export function getFeedbackErrorMessage(error: unknown) {
   const text = error instanceof Error ? error.message : String(error ?? "");
-  if (text.includes("feedback_reports_message_check")) return "A mensagem precisa ter entre 3 e 4000 caracteres.";
-  if (text.includes("row-level security")) return "Você não tem permissão para fazer essa alteração.";
-  return text || "Não foi possível enviar agora. Tente de novo.";
+  if (text.includes("feedback_reports_message_check")) return t("feedback.errCheck");
+  if (text.includes("row-level security")) return t("feedback.errRls");
+  return text || t("feedback.errFallback");
 }
