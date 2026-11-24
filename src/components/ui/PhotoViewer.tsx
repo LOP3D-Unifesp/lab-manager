@@ -1,3 +1,4 @@
+import { t } from "../../i18n";
 import { ChevronLeft, ChevronRight, RotateCcw, X, ZoomIn, ZoomOut } from "lucide-react";
 import { PointerEvent as ReactPointerEvent, useCallback, useEffect, useRef, useState } from "react";
 
@@ -141,20 +142,20 @@ export function PhotoViewer({ onClose, photos, startIndex }: PhotoViewerProps) {
     >
       <div className="flex items-center justify-between gap-3 px-4 py-3 text-white">
         <p className="text-sm font-semibold">
-          {photos.length > 1 ? `Foto ${index + 1} de ${photos.length} · ` : ""}
+          {photos.length > 1 ? t("photo.of", { n: index + 1, total: photos.length }) : ""}
           {Math.round(zoom * 100)}%
         </p>
         <div className="flex items-center gap-2">
-          <button type="button" className={iconButton} aria-label="Diminuir zoom" disabled={zoom <= 1} onClick={() => applyZoom(stepZoom(zoom, -1))}>
+          <button type="button" className={iconButton} aria-label={t("photo.zoomOut")} disabled={zoom <= 1} onClick={() => applyZoom(stepZoom(zoom, -1))}>
             <ZoomOut className="h-5 w-5" aria-hidden="true" />
           </button>
-          <button type="button" className={iconButton} aria-label="Aumentar zoom" disabled={zoom >= 6} onClick={() => applyZoom(stepZoom(zoom, 1))}>
+          <button type="button" className={iconButton} aria-label={t("photo.zoomIn")} disabled={zoom >= 6} onClick={() => applyZoom(stepZoom(zoom, 1))}>
             <ZoomIn className="h-5 w-5" aria-hidden="true" />
           </button>
           <button
             type="button"
             className={iconButton}
-            aria-label="Voltar ao tamanho original"
+            aria-label={t("photo.reset")}
             disabled={zoom === 1}
             onClick={() => {
               setZoom(1);
@@ -163,7 +164,7 @@ export function PhotoViewer({ onClose, photos, startIndex }: PhotoViewerProps) {
           >
             <RotateCcw className="h-5 w-5" aria-hidden="true" />
           </button>
-          <button type="button" autoFocus className={iconButton} aria-label="Fechar" onClick={onClose}>
+          <button type="button" autoFocus className={iconButton} aria-label={t("common.close")} onClick={onClose}>
             <X className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
@@ -203,7 +204,7 @@ export function PhotoViewer({ onClose, photos, startIndex }: PhotoViewerProps) {
         {index > 0 ? (
           <button
             type="button"
-            aria-label="Foto anterior"
+            aria-label={t("photo.prev")}
             className={`${iconButton} absolute left-3 top-1/2 -translate-y-1/2`}
             onPointerDown={(event) => event.stopPropagation()}
             onDoubleClick={(event) => event.stopPropagation()}
@@ -215,7 +216,7 @@ export function PhotoViewer({ onClose, photos, startIndex }: PhotoViewerProps) {
         {index < photos.length - 1 ? (
           <button
             type="button"
-            aria-label="Próxima foto"
+            aria-label={t("photo.next")}
             className={`${iconButton} absolute right-3 top-1/2 -translate-y-1/2`}
             onPointerDown={(event) => event.stopPropagation()}
             onDoubleClick={(event) => event.stopPropagation()}

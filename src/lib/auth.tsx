@@ -1,3 +1,4 @@
+import { t } from "../i18n";
 import {
   createContext,
   ReactNode,
@@ -148,7 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refreshInstallation,
       signIn: async (email: string, password: string) => {
         if (!supabase) {
-          throw new Error("Supabase não está configurado.");
+          throw new Error(t("auth.errNotConfigured"));
         }
 
         const { error } = await supabase.auth.signInWithPassword({

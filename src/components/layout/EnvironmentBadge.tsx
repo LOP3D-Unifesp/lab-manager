@@ -1,3 +1,4 @@
+import { t } from "../../i18n";
 import { appEnvironment } from "../../lib/supabaseClient";
 
 export function EnvironmentBadge() {
@@ -5,7 +6,7 @@ export function EnvironmentBadge() {
 
   return (
     <span className="inline-flex rounded-full border border-warning bg-warning-soft px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-warning-dark">
-      Local
+      {t("env.local")}
     </span>
   );
 }

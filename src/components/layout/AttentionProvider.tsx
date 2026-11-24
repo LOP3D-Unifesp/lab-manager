@@ -1,3 +1,4 @@
+import { getLocale, t } from "../../i18n";
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
 import { useAuth } from "../../lib/auth";
@@ -126,8 +127,8 @@ export function AttentionProvider({ children }: { children: ReactNode }) {
           // Sem tempo real, um aumento na contagem ainda gera um aviso (genérico) no computador.
           if (!realtimeOk.current && lastRequests.current !== null && requests.open > lastRequests.current) {
             showDesktopAlert({
-              title: "Novo chamado de manutenção",
-              body: "Abra a lista de chamados para ver os detalhes.",
+              title: t("alert.newRequestTitle"),
+              body: t("alert.newRequestBody"),
               path: "/equipamentos?vista=chamados",
               tag: "chamados-novos",
             });
@@ -170,8 +171,8 @@ export function AttentionProvider({ children }: { children: ReactNode }) {
           atualizar();
           if ((payload.new as { created_by?: string | null }).created_by !== profileId) {
             showDesktopAlert({
-              title: "Novo feedback",
-              body: "Alguém enviou uma sugestão ou erro.",
+              title: t("alert.newFeedbackTitle"),
+              body: t("alert.newFeedbackBody"),
               path: "/feedback",
               tag: "feedback-novo",
             });
@@ -201,8 +202,8 @@ export function AttentionProvider({ children }: { children: ReactNode }) {
           if (payload.eventType === "INSERT" && (payload.new as { requested_by?: string | null }).requested_by !== profileId) {
             const row = payload.new as { item?: string; urgency?: string };
             showDesktopAlert({
-              title: row.urgency === "urgent" ? "Pedido de compra urgente" : "Novo pedido de compra",
-              body: row.item ?? "Há um pedido aguardando aprovação.",
+              title: row.urgency === "urgent" ? t("alert.urgentPurchase") : t("alert.newPurchase"),
+              body: row.item ?? t("alert.purchaseWaiting"),
               path: "/compras",
               tag: "compra-nova",
             });

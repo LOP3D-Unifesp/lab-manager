@@ -1,3 +1,4 @@
+import { getLocale, t } from "../../i18n";
 import { Bell, BellOff, BellRing, CalendarCheck, CheckCircle2, MessageSquare, ShoppingCart, Wrench, XCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
@@ -60,35 +61,35 @@ export function NotificationBell({ align = "right" }: NotificationBellProps) {
       total: attention.maintenanceRequests,
       to: "/equipamentos?vista=chamados",
       icon: Wrench,
-      label: attention.maintenanceRequests === 1 ? "1 chamado de manutenção aberto" : `${attention.maintenanceRequests} chamados de manutenção abertos`,
-      detail: attention.urgentRequests > 0 ? (attention.urgentRequests === 1 ? "1 urgente" : `${attention.urgentRequests} urgentes`) : null,
+      label: t("bell.openRequests", { count: attention.maintenanceRequests }),
+      detail: attention.urgentRequests > 0 ? t("bell.urgent", { count: attention.urgentRequests }) : null,
     },
     {
       key: "compras",
       total: attention.purchases,
       to: "/compras",
       icon: ShoppingCart,
-      label: attention.purchases === 1 ? "1 pedido de compra aguardando aprovação" : `${attention.purchases} pedidos de compra aguardando aprovação`,
-      detail: attention.urgentPurchases > 0 ? (attention.urgentPurchases === 1 ? "1 urgente" : `${attention.urgentPurchases} urgentes`) : null,
+      label: t("bell.purchasesWaiting", { count: attention.purchases }),
+      detail: attention.urgentPurchases > 0 ? t("bell.urgent", { count: attention.urgentPurchases }) : null,
     },
     {
       key: "feedback",
       total: attention.feedback,
       to: "/feedback",
       icon: MessageSquare,
-      label: attention.feedback === 1 ? "1 feedback novo" : `${attention.feedback} feedbacks novos`,
+      label: t("bell.newFeedback", { count: attention.feedback }),
       detail: null,
     },
   ].filter((item) => item.total > 0);
 
-  const reservasTitulo = isCoordinator ? "Reservas aguardando aprovação" : "Suas reservas";
-  const emptyMessage = isCoordinator ? "Nenhuma reserva pendente." : "Nenhuma novidade nas suas reservas.";
+  const reservasTitulo = isCoordinator ? t("bell.bookingsAwaiting") : t("bell.yourBookings");
+  const emptyMessage = isCoordinator ? t("bell.noPendingBookings") : t("bell.noBookingNews");
   const listaCompletaPath = isCoordinator ? "/reservas" : "/reservas/minhas";
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const formatarDataHora = (valor: string) =>
-    new Intl.DateTimeFormat("pt-BR", {
+    new Intl.DateTimeFormat(getLocale(), {
       timeZone: timezone,
       day: "2-digit",
       month: "2-digit",
@@ -162,7 +163,7 @@ export function NotificationBell({ align = "right" }: NotificationBellProps) {
       <button
         type="button"
         aria-expanded={isOpen}
-        aria-label={count > 0 ? `Notificações (${count})` : "Notificações"}
+        aria-label={count > 0 ? t("bell.titleCount", { count }) : t("bell.title")}
         onClick={() => setIsOpen((current) => !current)}
         className={[
           "relative inline-flex h-11 w-11 items-center justify-center rounded-full border transition",
@@ -190,22 +191,22 @@ export function NotificationBell({ align = "right" }: NotificationBellProps) {
           ].join(" ")}
         >
           <div className="border-b border-border px-3 py-2.5">
-            <p className="text-base font-bold leading-tight text-text">Notificações</p>
+            <p className="text-base font-bold leading-tight text-text">{t("bell.title")}</p>
           </div>
 
           <div className="max-h-[min(26rem,70vh)] overflow-y-auto pb-1">
             {tudoEmDia ? (
               <div className="px-3 py-4">
-                <p className="text-sm font-semibold text-muted">Tudo em dia por aqui.</p>
+                <p className="text-sm font-semibold text-muted">{t("bell.allGood")}</p>
                 {error ? (
-                  <p className="mt-1 text-xs text-muted">Não foi possível atualizar as notificações agora.</p>
+                  <p className="mt-1 text-xs text-muted">{t("bell.errUpdate")}</p>
                 ) : null}
               </div>
             ) : null}
 
             {pendencias.length > 0 ? (
               <section>
-                <SectionTitle>Pendências</SectionTitle>
+                <SectionTitle>{t("bell.pending")}</SectionTitle>
                 <div className="grid gap-0.5 px-1.5">
                   {pendencias.map((item) => (
                     <Link
@@ -227,7 +228,7 @@ export function NotificationBell({ align = "right" }: NotificationBellProps) {
 
             {attention.purchaseUpdates.length > 0 ? (
               <section>
-                <SectionTitle>Seus pedidos de compra</SectionTitle>
+                <SectionTitle>{t("bell.myPurchases")}</SectionTitle>
                 <div className="grid gap-1 px-1.5">
                   {attention.purchaseUpdates.slice(0, 5).map((update) => (
                     <Link
@@ -241,11 +242,11 @@ export function NotificationBell({ align = "right" }: NotificationBellProps) {
                         <StatusBadge label={getPurchaseStatusLabel(update.status)} variant={getPurchaseStatusVariant(update.status)} />
                       </div>
                       {update.status === "rejected" && update.rejected_reason ? (
-                        <p className="mt-0.5 truncate text-xs text-danger-dark">Motivo: {update.rejected_reason}</p>
+                        <p className="mt-0.5 truncate text-xs text-danger-dark">{t("bell.reason", { reason: update.rejected_reason })}</p>
                       ) : null}
                       <p className="mt-0.5 text-xs text-muted">
                         {formatarDataHora(update.updated_at)}
-                        {novos.includes(update.id) ? " · novo" : ""}
+                        {novos.includes(update.id) ? t("bell.new") : ""}
                       </p>
                     </Link>
                   ))}
@@ -288,12 +289,12 @@ export function NotificationBell({ align = "right" }: NotificationBellProps) {
                         </p>
                         {autor ? (
                           <p className="mt-0.5 text-xs text-muted">
-                            {getBookingStatusLabel(notificacao.status)} por {autor}
+                            {t("bell.statusBy", { status: getBookingStatusLabel(notificacao.status), name: autor })}
                           </p>
                         ) : null}
                         {notificacao.status === "rejected" && notificacao.rejected_reason ? (
                           <p className="mt-0.5 truncate text-xs text-danger-dark">
-                            Motivo: {notificacao.rejected_reason}
+                            {t("bell.reason", { reason: notificacao.rejected_reason })}
                           </p>
                         ) : null}
                       </Link>
@@ -316,7 +317,7 @@ export function NotificationBell({ align = "right" }: NotificationBellProps) {
               className="flex min-h-11 items-center justify-center gap-2 rounded-md px-3 text-base font-semibold text-primary transition hover:bg-primary-soft"
             >
               <CalendarCheck className="h-4 w-4" aria-hidden="true" />
-              Ver todas as reservas
+              {t("bell.seeAll")}
             </Link>
             {desktopState !== "unsupported" ? (
               <div className="mt-1 border-t border-border px-3 py-2">
@@ -327,11 +328,11 @@ export function NotificationBell({ align = "right" }: NotificationBellProps) {
                     onClick={desativarAvisos}
                   >
                     <BellOff className="h-4 w-4 shrink-0" aria-hidden="true" />
-                    Avisos no computador: ligados. Desligar
+                    {t("bell.desktopOn")}
                   </button>
                 ) : desktopState === "blocked" ? (
                   <p className="text-xs text-muted">
-                    Os avisos no computador estão bloqueados. Libere nas permissões do site, no navegador.
+                    {t("bell.desktopBlocked")}
                   </p>
                 ) : (
                   <button
@@ -340,7 +341,7 @@ export function NotificationBell({ align = "right" }: NotificationBellProps) {
                     onClick={ativarAvisos}
                   >
                     <BellRing className="h-4 w-4 shrink-0" aria-hidden="true" />
-                    Receber avisos no computador
+                    {t("bell.desktopEnable")}
                   </button>
                 )}
               </div>

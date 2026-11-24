@@ -1,3 +1,5 @@
+import { t } from "../i18n";
+import { LanguageSelect } from "../components/ui/LanguageSelect";
 import { CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
 import { FormEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -26,7 +28,7 @@ export function InstallationWizard() {
       !acronym.trim() ||
       !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(privacyContactEmail.trim())
     ) {
-      setErrorMessage("Informe nome, sigla e um contato institucional de privacidade válido.");
+      setErrorMessage(t("install.errRequired"));
       return;
     }
     setStep(1);
@@ -48,7 +50,7 @@ export function InstallationWizard() {
       navigate("/", { replace: true });
     } catch (error) {
       setErrorMessage(
-        error instanceof Error ? error.message : "Não foi possível concluir a instalação.",
+        error instanceof Error ? error.message : t("install.errFinish"),
       );
     } finally {
       setSubmitting(false);
@@ -57,17 +59,18 @@ export function InstallationWizard() {
 
   return (
     <main className="min-h-screen bg-background px-5 py-8 text-text">
+      <div className="mx-auto mb-4 flex w-full max-w-4xl justify-end"><LanguageSelect /></div>
       <section className="mx-auto w-full max-w-4xl">
         <div className="mb-6">
-          <p className="text-sm font-bold uppercase tracking-wide text-primary">Instalação inicial</p>
-          <h1 className="mt-1 text-3xl font-bold">Configure seu laboratório</h1>
+          <p className="text-sm font-bold uppercase tracking-wide text-primary">{t("install.kicker")}</p>
+          <h1 className="mt-1 text-3xl font-bold">{t("install.title")}</h1>
           <p className="mt-2 text-muted">
-            Etapa {step + 1} de 2. Somente o primeiro coordenador pode concluir este processo.
+            {t("install.step", { step: step + 1 })}
           </p>
         </div>
 
-        <div className="mb-6 grid grid-cols-2 gap-2" aria-label="Progresso da instalação">
-          {["Identidade", "Revisão"].map((label, index) => (
+        <div className="mb-6 grid grid-cols-2 gap-2" aria-label={t("install.progress")}>
+          {[t("install.stepIdentity"), t("install.stepReview")].map((label, index) => (
             <div key={label} className="min-w-0">
               <div className={`h-2 rounded-full ${index <= step ? "bg-primary" : "bg-border"}`} />
               <p className="mt-2 truncate text-xs font-semibold text-muted">{label}</p>
@@ -80,13 +83,13 @@ export function InstallationWizard() {
             {step === 0 ? (
               <>
                 <div>
-                  <h2 className="text-2xl font-bold">Identidade do laboratório</h2>
+                  <h2 className="text-2xl font-bold">{t("install.identityTitle")}</h2>
                   <p className="mt-1 text-muted">
-                    Materiais e equipamentos poderão ser cadastrados depois, nas telas de administração.
+                    {t("install.identityHint")}
                   </p>
                 </div>
                 <label className="grid gap-2 font-semibold">
-                  Nome completo
+                  {t("install.fullName")}
                   <input
                     className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal"
                     value={name}
@@ -96,7 +99,7 @@ export function InstallationWizard() {
                 </label>
                 <div className="grid items-start gap-4 sm:grid-cols-2">
                   <label className="grid gap-2 font-semibold">
-                    Sigla
+                    {t("install.acronym")}
                     <input
                       className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal uppercase"
                       value={acronym}
@@ -106,12 +109,12 @@ export function InstallationWizard() {
                     />
                   </label>
                   <label className="grid gap-2 font-semibold">
-                    Fuso horário
+                    {t("install.timezone")}
                     <TimezoneSelect id="installation-timezone" value={timezone} onChange={setTimezone} />
                   </label>
                 </div>
                 <label className="grid gap-2 font-semibold">
-                  Contato institucional de privacidade
+                  {t("install.privacyContact")}
                   <input
                     className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal"
                     value={privacyContactEmail}
@@ -121,22 +124,22 @@ export function InstallationWizard() {
                     required
                   />
                   <span className="text-sm font-normal text-muted">
-                    Será exibido nos convites e no aviso público de privacidade.
+                    {t("install.privacyHint")}
                   </span>
                 </label>
               </>
             ) : (
               <>
                 <div>
-                  <h2 className="text-2xl font-bold">Revisão</h2>
+                  <h2 className="text-2xl font-bold">{t("install.reviewTitle")}</h2>
                   <p className="mt-1 text-muted">
                     A conclusão configura somente a identidade inicial do laboratório.
                   </p>
                 </div>
                 <dl className="grid gap-4 rounded-lg border border-border bg-background p-4 sm:grid-cols-2">
-                  <div><dt className="text-sm font-semibold text-muted">Laboratório</dt><dd className="mt-1 font-bold">{name} ({acronym.toUpperCase()})</dd></div>
-                  <div><dt className="text-sm font-semibold text-muted">Fuso horário</dt><dd className="mt-1 font-bold">{timezone}</dd></div>
-                  <div className="sm:col-span-2"><dt className="text-sm font-semibold text-muted">Contato de privacidade</dt><dd className="mt-1 font-bold">{privacyContactEmail}</dd></div>
+                  <div><dt className="text-sm font-semibold text-muted">{t("install.lab")}</dt><dd className="mt-1 font-bold">{name} ({acronym.toUpperCase()})</dd></div>
+                  <div><dt className="text-sm font-semibold text-muted">{t("install.timezone")}</dt><dd className="mt-1 font-bold">{timezone}</dd></div>
+                  <div className="sm:col-span-2"><dt className="text-sm font-semibold text-muted">{t("install.privacyShort")}</dt><dd className="mt-1 font-bold">{privacyContactEmail}</dd></div>
                 </dl>
               </>
             )}
@@ -153,16 +156,16 @@ export function InstallationWizard() {
                 disabled={step === 0 || submitting}
                 onClick={() => { setErrorMessage(""); setStep(0); }}
               >
-                <ChevronLeft className="mr-2 h-5 w-5" />Voltar
+                <ChevronLeft className="mr-2 h-5 w-5" />{t("install.back")}
               </Button>
               {step === 0 ? (
                 <Button key="continue" type="button" onClick={continueToReview}>
-                  Continuar<ChevronRight className="ml-2 h-5 w-5" />
+                  {t("install.continue")}<ChevronRight className="ml-2 h-5 w-5" />
                 </Button>
               ) : (
                 <Button key="finish" type="submit" variant="success" disabled={submitting}>
                   <CheckCircle2 className="mr-2 h-5 w-5" />
-                  {submitting ? "Concluindo..." : "Concluir instalação"}
+                  {submitting ? t("install.finishing") : t("install.finish")}
                 </Button>
               )}
             </div>
