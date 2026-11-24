@@ -1,3 +1,4 @@
+import { t } from "../../i18n";
 import { FormEvent, ReactNode, createContext, useCallback, useContext, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { CheckCircle2, MessageSquarePlus } from "lucide-react";
@@ -54,12 +55,12 @@ function FeedbackModal({ onClose, pagePath }: { onClose: () => void; pagePath: s
 
   if (enviado) {
     return (
-      <Modal title="Mensagem enviada" onClose={onClose}>
+      <Modal title={t("feedback.sentTitle")} onClose={onClose}>
         <div className="grid justify-items-center gap-3 py-4 text-center">
           <CheckCircle2 className="h-10 w-10 text-success-dark" aria-hidden="true" />
-          <p className="text-lg font-semibold text-text">Obrigado! Recebemos a sua mensagem.</p>
-          <p className="text-base text-muted">A coordenação vai ler e, se precisar, falar com você.</p>
-          <Button onClick={onClose}>Fechar</Button>
+          <p className="text-lg font-semibold text-text">{t("feedback.thanks")}</p>
+          <p className="text-base text-muted">{t("feedback.thanksHint")}</p>
+          <Button onClick={onClose}>{t("common.close")}</Button>
         </div>
       </Modal>
     );
@@ -67,13 +68,13 @@ function FeedbackModal({ onClose, pagePath }: { onClose: () => void; pagePath: s
 
   return (
     <Modal
-      title="Enviar feedback"
-      description="Encontrou um erro ou tem uma ideia? Conte aqui. Ajuda muito a melhorar o sistema."
+      title={t("feedback.sendTitle")}
+      description={t("feedback.sendHint")}
       onClose={onClose}
     >
       <form className="grid gap-4" onSubmit={enviar}>
         <fieldset className="grid gap-2">
-          <legend className="mb-1 text-base font-semibold text-text">Sobre o quê?</legend>
+          <legend className="mb-1 text-base font-semibold text-text">{t("feedback.about")}</legend>
           <div className="grid gap-2 sm:grid-cols-3">
             {feedbackKindOptions.map((option) => (
               <label
@@ -99,18 +100,18 @@ function FeedbackModal({ onClose, pagePath }: { onClose: () => void; pagePath: s
         </fieldset>
 
         <label className="grid gap-2 text-base font-semibold text-text">
-          Mensagem
+          {t("feedback.message")}
           <textarea
             autoFocus
             className="min-h-32 min-w-0 rounded-lg border border-border bg-background px-4 py-3 text-base font-normal text-text outline-none transition focus:border-primary"
             maxLength={FEEDBACK_MAX_LENGTH}
-            placeholder={kind === "bug" ? "O que você tentou fazer e o que aconteceu?" : "Conte a sua ideia ou dúvida."}
+            placeholder={kind === "bug" ? t("feedback.placeholderBug") : t("feedback.placeholderIdea")}
             required
             value={message}
             onChange={(e) => setMessage(e.target.value)}
           />
           <span className="text-sm font-normal text-muted">
-            Enviamos junto a página em que você está ({pagePath}) para facilitar. Não escreva senhas.
+            {t("feedback.pageNote", { path: pagePath })}
           </span>
         </label>
 
@@ -120,10 +121,10 @@ function FeedbackModal({ onClose, pagePath }: { onClose: () => void; pagePath: s
 
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Button variant="secondary" onClick={onClose}>
-            Cancelar
+            {t("common.cancel")}
           </Button>
           <Button type="submit" disabled={enviando}>
-            {enviando ? "Enviando..." : "Enviar"}
+            {enviando ? t("feedback.sending") : t("feedback.send")}
           </Button>
         </div>
       </form>
@@ -156,7 +157,7 @@ function FloatingFeedbackButton() {
       className="fixed bottom-6 right-6 z-30 hidden items-center gap-2 rounded-full border border-border bg-surface px-4 py-2.5 text-base font-semibold text-text shadow-soft transition hover:border-primary hover:text-primary lg:inline-flex"
     >
       <MessageSquarePlus className="h-5 w-5" aria-hidden="true" />
-      Feedback
+      {t("feedback.button")}
     </button>
   );
 }

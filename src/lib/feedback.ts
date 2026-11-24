@@ -59,8 +59,8 @@ export const FEEDBACK_MAX_LENGTH = 4000;
 // Devolve a mensagem de erro, ou null se o texto serve.
 export function validateFeedbackMessage(message: string) {
   const length = message.trim().length;
-  if (length < FEEDBACK_MIN_LENGTH) return "Conte o que aconteceu ou o que você sugere.";
-  if (length > FEEDBACK_MAX_LENGTH) return `A mensagem pode ter até ${FEEDBACK_MAX_LENGTH} caracteres.`;
+  if (length < FEEDBACK_MIN_LENGTH) return t("feedback.errShort");
+  if (length > FEEDBACK_MAX_LENGTH) return t("feedback.errLong", { max: FEEDBACK_MAX_LENGTH });
   return null;
 }
 
@@ -103,7 +103,7 @@ export function sortFeedback(reports: FeedbackReport[]) {
 
 export function getFeedbackErrorMessage(error: unknown) {
   const text = error instanceof Error ? error.message : String(error ?? "");
-  if (text.includes("feedback_reports_message_check")) return "A mensagem precisa ter entre 3 e 4000 caracteres.";
-  if (text.includes("row-level security")) return "Você não tem permissão para fazer essa alteração.";
-  return text || "Não foi possível enviar agora. Tente de novo.";
+  if (text.includes("feedback_reports_message_check")) return t("feedback.errCheck");
+  if (text.includes("row-level security")) return t("feedback.errRls");
+  return text || t("feedback.errFallback");
 }

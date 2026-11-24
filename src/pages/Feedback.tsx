@@ -1,3 +1,4 @@
+import { getLocale, t } from "../i18n";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { MessageSquare } from "lucide-react";
@@ -27,7 +28,7 @@ const selectClassName =
   "min-h-11 min-w-0 rounded-lg border border-border bg-surface px-4 text-base outline-none transition focus:border-primary";
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(
+  return new Intl.DateTimeFormat(getLocale(), { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(
     new Date(value),
   );
 }
@@ -61,7 +62,7 @@ function FeedbackCard({ onSaved, report }: { report: FeedbackReport; onSaved: (m
             <StatusBadge label={getFeedbackStatusLabel(report.status)} variant={getFeedbackStatusVariant(report.status)} />
           </div>
           <p className="text-sm text-muted">
-            {report.author_name ?? "Pessoa removida"} · {formatDate(report.created_at)}
+            {report.author_name ?? t("feedback.removedPerson")} · {formatDate(report.created_at)}
           </p>
         </div>
 
@@ -81,7 +82,7 @@ function FeedbackCard({ onSaved, report }: { report: FeedbackReport; onSaved: (m
 
         <div className="grid items-start gap-3 border-t border-border pt-3 sm:grid-cols-[200px_1fr_auto]">
           <label className="grid gap-1 text-sm font-semibold text-text">
-            Situação
+            {t("feedback.status")}
             <select className={selectClassName} value={status} onChange={(e) => setStatus(e.target.value as FeedbackStatus)}>
               {feedbackStatusOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -91,7 +92,7 @@ function FeedbackCard({ onSaved, report }: { report: FeedbackReport; onSaved: (m
             </select>
           </label>
           <label className="grid gap-1 text-sm font-semibold text-text">
-            Nota interna (só a coordenação vê)
+            {t("feedback.internalNote")}
             <textarea
               className="min-h-11 min-w-0 rounded-lg border border-border bg-background px-4 py-2.5 text-base font-normal text-text outline-none transition focus:border-primary"
               rows={2}
@@ -101,7 +102,7 @@ function FeedbackCard({ onSaved, report }: { report: FeedbackReport; onSaved: (m
           </label>
           <div className="sm:pt-6">
             <Button disabled={!alterado || salvando} onClick={salvar}>
-              {salvando ? "Salvando..." : "Salvar"}
+              {salvando ? t("common.saving") : t("common.save")}
             </Button>
           </div>
         </div>
@@ -140,24 +141,24 @@ export function Feedback() {
   return (
     <>
       <PageHeader
-        title="Feedback"
-        description="Sugestões e erros enviados pelas pessoas do laboratório. Mude a situação e deixe uma nota interna."
+        title={t("feedback.title")}
+        description={t("feedback.subtitle")}
       />
 
       <div className="mb-5 grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px_200px]">
         <input
           className={selectClassName}
-          placeholder="Buscar na mensagem, pessoa ou página"
+          placeholder={t("feedback.searchPlaceholder")}
           value={filtros.search}
           onChange={(e) => setFiltros((current) => ({ ...current, search: e.target.value }))}
         />
         <select
-          aria-label="Tipo"
+          aria-label={t("feedback.type")}
           className={selectClassName}
           value={filtros.kind}
           onChange={(e) => setFiltros((current) => ({ ...current, kind: e.target.value as FeedbackFilters["kind"] }))}
         >
-          <option value="all">Todos os tipos</option>
+          <option value="all">{t("feedback.allTypes")}</option>
           {feedbackKindOptions.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
@@ -165,13 +166,13 @@ export function Feedback() {
           ))}
         </select>
         <select
-          aria-label="Situação"
+          aria-label={t("feedback.status")}
           className={selectClassName}
           value={filtros.status}
           onChange={(e) => setFiltros((current) => ({ ...current, status: e.target.value as FeedbackFilters["status"] }))}
         >
-          <option value="pending">Pendentes</option>
-          <option value="all">Todas</option>
+          <option value="pending">{t("feedback.pending")}</option>
+          <option value="all">{t("feedback.allStatuses")}</option>
           {feedbackStatusOptions.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
@@ -181,22 +182,22 @@ export function Feedback() {
       </div>
 
       {novas > 0 ? (
-        <p className="mb-4 text-base font-semibold text-warning-dark">{novas === 1 ? "1 mensagem nova." : `${novas} mensagens novas.`}</p>
+        <p className="mb-4 text-base font-semibold text-warning-dark">{t("feedback.newCount", { count: novas })}</p>
       ) : null}
 
       {erro ? (
         <p className="mb-4 rounded-lg border border-danger bg-danger-soft p-3 text-base font-semibold text-danger">{erro}</p>
       ) : null}
 
-      {reports === null && !erro ? <p className="text-lg text-muted">Carregando...</p> : null}
+      {reports === null && !erro ? <p className="text-lg text-muted">{t("feedback.loading")}</p> : null}
 
       {reports !== null && visiveis.length === 0 ? (
         <Card>
           <div className="flex flex-col items-center gap-2 py-6 text-center">
             <MessageSquare className="h-8 w-8 text-muted" aria-hidden="true" />
-            <p className="text-lg font-semibold">{reports.length === 0 ? "Nenhuma mensagem ainda." : "Nada com esses filtros."}</p>
+            <p className="text-lg font-semibold">{reports.length === 0 ? t("feedback.none") : t("feedback.noneFiltered")}</p>
             {reports.length === 0 ? (
-              <p className="text-muted">As pessoas enviam pelo botão Feedback, no canto da tela ou no menu da conta.</p>
+              <p className="text-muted">{t("feedback.noneHint")}</p>
             ) : null}
           </div>
         </Card>
