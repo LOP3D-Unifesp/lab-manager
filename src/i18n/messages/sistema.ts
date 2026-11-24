@@ -22,6 +22,8 @@ export const sistema = {
   "bell.noPendingBookings": { pt: "Nenhuma reserva pendente.", en: "No pending bookings.", es: "Ninguna reserva pendiente." },
   "bell.noBookingNews": { pt: "Nenhuma novidade nas suas reservas.", en: "No news on your bookings.", es: "Ninguna novedad en tus reservas." },
   "bell.statusBy": { pt: "{status} por {name}", en: "{status} by {name}", es: "{status} por {name}" },
+  "bell.showMore": { pt: "Ver mais", en: "Show more", es: "Ver más" },
+  "bell.showLess": { pt: "Ver menos", en: "Show less", es: "Ver menos" },
   "bell.seeAll": { pt: "Ver todas as reservas", en: "See all bookings", es: "Ver todas las reservas" },
   "bell.desktopOn": { pt: "Avisos no computador: ligados. Desligar", en: "Desktop alerts: on. Turn off", es: "Avisos en el equipo: activados. Desactivar" },
   "bell.desktopBlocked": { pt: "Os avisos no computador estão bloqueados. Libere nas permissões do site, no navegador.", en: "Desktop alerts are blocked. Allow them in the site permissions of your browser.", es: "Los avisos en el equipo están bloqueados. Permítelos en los permisos del sitio, en el navegador." },
