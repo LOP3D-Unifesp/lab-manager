@@ -1,20 +1,22 @@
 import { Monitor, Moon, Sun } from "lucide-react";
 
+import { useT, type MessageKey } from "../../i18n";
 import { ThemePreference, useTheme } from "../../lib/theme";
 
-const options: { value: ThemePreference; label: string; short: string; Icon: typeof Sun }[] = [
-  { value: "light", label: "Modo claro", short: "Claro", Icon: Sun },
-  { value: "system", label: "Automático (segue o sistema)", short: "Auto", Icon: Monitor },
-  { value: "dark", label: "Modo escuro", short: "Escuro", Icon: Moon },
+const options: { value: ThemePreference; label: MessageKey; short: MessageKey; Icon: typeof Sun }[] = [
+  { value: "light", label: "theme.lightTitle", short: "theme.light", Icon: Sun },
+  { value: "system", label: "theme.systemTitle", short: "theme.system", Icon: Monitor },
+  { value: "dark", label: "theme.darkTitle", short: "theme.dark", Icon: Moon },
 ];
 
 export function ThemeToggle({ className = "" }: { className?: string }) {
   const { preference, setPreference } = useTheme();
+  const t = useT();
 
   return (
     <div
       role="radiogroup"
-      aria-label="Tema da interface"
+      aria-label={t("theme.label")}
       className={["flex rounded-lg border border-border bg-background p-0.5", className].join(" ")}
     >
       {options.map(({ value, label, short, Icon }) => {
@@ -25,8 +27,8 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
             type="button"
             role="radio"
             aria-checked={active}
-            aria-label={label}
-            title={label}
+            aria-label={t(label)}
+            title={t(label)}
             onClick={() => setPreference(value)}
             className={[
               "inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-md px-2.5 text-sm font-semibold transition",
@@ -34,7 +36,7 @@ export function ThemeToggle({ className = "" }: { className?: string }) {
             ].join(" ")}
           >
             <Icon className="h-4 w-4" aria-hidden="true" />
-            {short}
+            {t(short)}
           </button>
         );
       })}

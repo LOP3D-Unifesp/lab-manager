@@ -2,6 +2,8 @@ import { ReactNode, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
+import { useT } from "../../i18n";
+
 type ModalProps = {
   title: string;
   description?: string;
@@ -13,6 +15,8 @@ type ModalProps = {
 };
 
 export function Modal({ children, description, onClose, sheet = false, title, wide = false }: ModalProps) {
+  const t = useT();
+
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") onClose();
@@ -46,8 +50,8 @@ export function Modal({ children, description, onClose, sheet = false, title, wi
           </div>
           <button
             type="button"
-            title="Fechar"
-            aria-label="Fechar"
+            title={t("common.close")}
+            aria-label={t("common.close")}
             onClick={onClose}
             className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-muted transition hover:bg-background hover:text-text"
           >
