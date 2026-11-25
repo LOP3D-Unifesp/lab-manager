@@ -12,6 +12,10 @@ com duas contas (coordenadora e pesquisador):
 - [ ] **Bolsas de fomento (Meu perfil):** cartão próprio com botão "Salvar bolsas"; adicionar bolsa com projeto (membro e
   não membro, com "Pedir para entrar"), agência sem SUS, valor, início, fim, horas e nº do processo; recarregar e ver
   salvo; carga semanal somando só as bolsas vigentes.
+- [ ] **Tarefas (prioridade, lixeira, arquivar, filtros, aviso):** criar tarefa com prioridade Alta; lixeira no cartão com
+  confirmação (só criador e coordenador veem); arquivar e "Mostrar arquivadas" + desarquivar; filtros em Minhas tarefas
+  (Início); aviso no sino e push ao ser atribuída por outra pessoa (e nenhum ao se atribuir). Depende da migration
+  `20261004` (não aplicada em produção).
 - [ ] **Termo de outorga (PDF):** anexar, abrir, trocar e remover em bolsa já salva; só a dona e coordenadores abrem (testar com
   uma segunda conta de pesquisador, que não deve ver nem abrir); remover a bolsa apaga o arquivo. Depende da migration
   `20261003` (não aplicada em produção).

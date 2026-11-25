@@ -1,5 +1,5 @@
 import { useT } from "../i18n";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, Pencil, Plus } from "lucide-react";
 
@@ -10,7 +10,9 @@ import { ProjectSummaryView } from "../components/projetos/ProjectSummaryView";
 import { SpoolCard } from "../components/inventario/SpoolCard";
 import { MembersEditor } from "../components/projetos/MembersEditor";
 import { ProjectFormModal } from "../components/projetos/ProjectFormModal";
+import { TaskFilterBar } from "../components/projetos/TaskFilterBar";
 import { TaskModal } from "../components/projetos/TaskModal";
+import { useTaskBoard } from "../components/projetos/useTaskBoard";
 import { Avatar } from "../components/ui/Avatar";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
@@ -24,7 +26,9 @@ import {
   formatProjectPeriod,
   getFundingCategoryLabel,
   getFundingTotal,
-  getNextTaskPosition,
+  emptyTaskFilters,
+  filterTasks,
+  hasActiveTaskFilters,
   getProjectErrorMessage,
   getProjectFundingTotal,
   getProjectStatusLabel,
@@ -34,7 +38,7 @@ import {
   type Project,
   type ProjectDirectoryEntry,
   type ProjectTask,
-  type TaskPriority,
+  type TaskFilters,
   type TaskStatus,
 } from "../lib/projects";
 import {
@@ -47,7 +51,6 @@ import {
   listSpools,
   replaceProjectFunding,
   replaceProjectMembers,
-  updateProjectTask,
 } from "../lib/supabaseRepository";
 
 type Aba = "geral" | "kanban" | "insumos" | "membros" | "fomento";
@@ -78,14 +81,20 @@ export function ProjetoDetalhe() {
   const [agencies, setAgencies] = useState<FundingAgencyRecord[]>([]);
   const [membrosForm, setMembrosForm] = useState<string[]>([]);
   const [fomentoForm, setFomentoForm] = useState<FundingForm[]>([]);
-  const [tarefas, setTarefas] = useState<ProjectTask[]>([]);
+  const [filtrosTarefas, setFiltrosTarefas] = useState<TaskFilters>(emptyTaskFilters);
   const [rolos, setRolos] = useState<MaterialSpool[] | null>(null);
   const [consumo, setConsumo] = useState<Array<{ name: string; unit: MaterialUnit; total: number }>>([]);
   const [tarefaAberta, setTarefaAberta] = useState<{ task: ProjectTask | null; status: TaskStatus } | null>(null);
 
-  const carregarTarefas = useCallback(async () => {
-    setTarefas(await listProjectTasks(id));
-  }, [id]);
+  const carregadorTarefas = useCallback(() => listProjectTasks(id), [id]);
+  const quadro = useTaskBoard(carregadorTarefas);
+  const tarefas = quadro.tarefas ?? [];
+  const carregarTarefas = quadro.recarregar;
+  const tarefasVisiveis = useMemo(() => {
+    const now = new Date();
+    const hoje = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    return filterTasks(tarefas, filtrosTarefas, profile?.id ?? null, hoje);
+  }, [tarefas, filtrosTarefas, profile?.id]);
 
   const carregar = useCallback(async () => {
     const data = await getProject(id);
@@ -140,33 +149,6 @@ export function ProjetoDetalhe() {
       ativo = false;
     };
   }, [isCoordinator]);
-
-  async function mudarPrioridade(task: ProjectTask, priority: TaskPriority) {
-    if (task.priority === priority) return;
-    const anterior = tarefas;
-    setTarefas((current) => current.map((item) => (item.id === task.id ? { ...item, priority } : item)));
-    try {
-      setErro("");
-      await updateProjectTask(task.id, { priority });
-    } catch (error) {
-      setTarefas(anterior);
-      setErro(getTaskErrorMessage(error));
-    }
-  }
-
-  async function moverTarefa(task: ProjectTask, status: TaskStatus) {
-    if (task.status === status) return;
-    const position = getNextTaskPosition(tarefas, status);
-    const anterior = tarefas;
-    setTarefas((current) => current.map((item) => (item.id === task.id ? { ...item, status, position } : item)));
-    try {
-      setErro("");
-      await updateProjectTask(task.id, { status });
-    } catch (error) {
-      setTarefas(anterior);
-      setErro(getTaskErrorMessage(error));
-    }
-  }
 
   async function salvarMembros() {
     try {
@@ -311,10 +293,30 @@ export function ProjetoDetalhe() {
               {t("projects.newTask")}
             </Button>
           </div>
+          <TaskFilterBar filters={filtrosTarefas} onChange={setFiltrosTarefas} profileId={profile?.id ?? ""} />
+          {quadro.erro ? (
+            <p className="rounded-lg border border-danger bg-danger-soft p-3 text-base font-semibold text-danger">{quadro.erro}</p>
+          ) : null}
+          {hasActiveTaskFilters(filtrosTarefas) ? (
+            <div className="flex items-center justify-between gap-3 text-base text-muted">
+              <span>
+                {t("tasks.countOf", {
+                  shown: tarefasVisiveis.length,
+                  total: filtrosTarefas.showArchived ? tarefas.length : tarefas.filter((task) => !task.archived_at).length,
+                })}
+              </span>
+              <button type="button" className="font-semibold text-primary underline" onClick={() => setFiltrosTarefas(emptyTaskFilters)}>
+                {t("tasks.clearFilters")}
+              </button>
+            </div>
+          ) : null}
           <KanbanBoard
-            tasks={tarefas}
-            onMove={moverTarefa}
-            onPriorityChange={mudarPrioridade}
+            tasks={tarefasVisiveis}
+            canDelete={(task) => Boolean(isCoordinator) || task.created_by === profile?.id}
+            onArchive={quadro.arquivar}
+            onDelete={quadro.apagar}
+            onMove={quadro.mover}
+            onPriorityChange={quadro.mudarPrioridade}
             onOpen={(task) => setTarefaAberta({ task, status: task.status })}
           />
         </div>

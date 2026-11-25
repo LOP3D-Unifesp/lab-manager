@@ -26,6 +26,7 @@ const TEXTS = {
   purchase_updated: { pt: "Pedido de compra atualizado", en: "Purchase request updated", es: "Pedido de compra actualizado" },
   project_join_request: { pt: "Pedido para entrar em projeto", en: "Request to join a project", es: "Solicitud para unirse a un proyecto" },
   project_join_approved: { pt: "Você entrou no projeto", en: "You joined the project", es: "Entraste al proyecto" },
+  task_assigned: { pt: "Tarefa atribuída a você", en: "Task assigned to you", es: "Tarea asignada a ti" },
   project_join_rejected: { pt: "Pedido de entrada recusado", en: "Join request rejected", es: "Solicitud de ingreso rechazada" },
   generic: { pt: "Nova notificação", en: "New notification", es: "Nueva notificación" },
 };
@@ -53,7 +54,7 @@ function textKey(type, params) {
 function describe(data) {
   const params = data.params && typeof data.params === "object" ? data.params : {};
   const title = TEXTS[textKey(data.type, params)][language()];
-  const detail = [params.requester, params.project, params.equipment, params.item].filter((value) => typeof value === "string" && value);
+  const detail = [params.requester, params.task, params.project, params.equipment, params.item].filter((value) => typeof value === "string" && value);
   return { title, body: detail.join(" · ") };
 }
 

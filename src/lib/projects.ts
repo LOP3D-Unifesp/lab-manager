@@ -219,11 +219,12 @@ export function getTaskStatusLabel(status: TaskStatus) {
   return taskStatusOptions.find((option) => option.value === status)?.label ?? status;
 }
 
-export type TaskPriority = "low" | "normal" | "urgent";
+export type TaskPriority = "low" | "normal" | "high" | "urgent";
 
-// Mesmos níveis e rótulos dos pedidos de compra (Baixa, Normal, Urgente).
+// Quatro níveis, do mais ao menos importante. Baixa, Normal e Urgente têm os rótulos dos pedidos de compra.
 export const taskPriorityOptions: Array<{ value: TaskPriority; label: string }> = [
   { value: "urgent", get label() { return t("opt.purchaseUrgencyOptions.urgent"); } },
+  { value: "high", get label() { return t("opt.taskPriorityOptions.high"); } },
   { value: "normal", get label() { return t("opt.purchaseUrgencyOptions.normal"); } },
   { value: "low", get label() { return t("opt.purchaseUrgencyOptions.low"); } },
 ];
@@ -234,6 +235,7 @@ export function getTaskPriorityLabel(priority: TaskPriority) {
 
 export function getTaskPriorityVariant(priority: TaskPriority): StatusVariant {
   if (priority === "urgent") return "danger";
+  if (priority === "high") return "warning";
   if (priority === "low") return "neutral";
   return "info";
 }
@@ -250,6 +252,8 @@ export type ProjectTask = {
   due_on: string | null;
   created_by: string;
   assignees: ProjectMember[];
+  /** Quando foi arquivada (null = ativa). Arquivar guarda a tarefa fora do quadro sem apagá-la. */
+  archived_at: string | null;
 };
 
 export function groupTasksByStatus(tasks: ProjectTask[]) {
@@ -302,11 +306,21 @@ export type TaskFilters = {
   assignee: string; // "all", "me" ou id da pessoa
   priority: "all" | TaskPriority;
   overdueOnly: boolean;
+  /** Inclui as tarefas arquivadas (por padrão ficam escondidas). */
+  showArchived: boolean;
 };
+
+export const emptyTaskFilters: TaskFilters = { projectId: "all", assignee: "all", priority: "all", overdueOnly: false, showArchived: false };
+
+// Há algum filtro ligado (o "mostrar arquivadas" também conta, porque muda o que aparece).
+export function hasActiveTaskFilters(filters: TaskFilters) {
+  return filters.projectId !== "all" || filters.assignee !== "all" || filters.priority !== "all" || filters.overdueOnly || filters.showArchived;
+}
 
 // `today` no formato AAAA-MM-DD.
 export function filterTasks(tasks: ProjectTask[], filters: TaskFilters, meId: string | null, today: string) {
   return tasks.filter((task) => {
+    if (task.archived_at && !filters.showArchived) return false;
     if (filters.projectId !== "all" && task.project_id !== filters.projectId) return false;
     if (filters.priority !== "all" && task.priority !== filters.priority) return false;
     if (filters.assignee !== "all") {

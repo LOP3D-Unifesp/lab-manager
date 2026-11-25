@@ -2,11 +2,12 @@ import { useT } from "../../i18n";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 
-import { isProjectOpen, type Project, type ProjectTask } from "../../lib/projects";
+import { emptyTaskFilters, filterTasks, hasActiveTaskFilters, isProjectOpen, type Project, type ProjectTask, type TaskFilters } from "../../lib/projects";
 import { listMyTasks, listProjects } from "../../lib/supabaseRepository";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { KanbanBoard } from "./KanbanBoard";
+import { TaskFilterBar } from "./TaskFilterBar";
 import { TaskModal } from "./TaskModal";
 import { useTaskBoard } from "./useTaskBoard";
 
@@ -16,7 +17,8 @@ import { useTaskBoard } from "./useTaskBoard";
 export function MyTasksBoard({ isCoordinator, profileId }: { isCoordinator: boolean; profileId: string }) {
   const t = useT();
   const loader = useCallback(() => listMyTasks(profileId), [profileId]);
-  const { erro, mover, mudarPrioridade, recarregar, tarefas } = useTaskBoard(loader);
+  const { apagar, arquivar, erro, mover, mudarPrioridade, recarregar, tarefas } = useTaskBoard(loader);
+  const [filtros, setFiltros] = useState<TaskFilters>(emptyTaskFilters);
   const [projetos, setProjetos] = useState<Project[]>([]);
   const [modal, setModal] = useState<{ task: ProjectTask | null } | null>(null);
 
@@ -37,7 +39,20 @@ export function MyTasksBoard({ isCoordinator, profileId }: { isCoordinator: bool
     [projetos, profileId],
   );
 
+  const hoje = useMemo(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  }, []);
+  const visiveis = useMemo(() => filterTasks(tarefas ?? [], filtros, profileId, hoje), [tarefas, filtros, profileId, hoje]);
+  // Projetos com tarefa sua, para o seletor de projeto do filtro.
+  const projetosDasTarefas = useMemo(() => {
+    const ids = new Set((tarefas ?? []).map((task) => task.project_id));
+    return projetos.filter((projeto) => ids.has(projeto.id));
+  }, [tarefas, projetos]);
+
   if (!tarefas) return null;
+
+  const ativas = tarefas.filter((task) => !task.archived_at);
 
   return (
     <section>
@@ -62,8 +77,26 @@ export function MyTasksBoard({ isCoordinator, profileId }: { isCoordinator: bool
             {projetosAbertos.length === 0 ? t("tasks.mineNoProject") : t("tasks.mineEmpty")}
           </p>
         ) : (
-          <div className="mt-4">
-            <KanbanBoard tasks={tarefas} showProject onMove={mover} onPriorityChange={mudarPrioridade} onOpen={(task) => setModal({ task })} />
+          <div className="mt-4 grid gap-4">
+            <TaskFilterBar filters={filtros} onChange={setFiltros} profileId={profileId} projects={projetosDasTarefas} />
+            {hasActiveTaskFilters(filtros) ? (
+              <div className="flex items-center justify-between gap-3 text-base text-muted">
+                <span>{t("tasks.countOf", { shown: visiveis.length, total: filtros.showArchived ? tarefas.length : ativas.length })}</span>
+                <button type="button" className="font-semibold text-primary underline" onClick={() => setFiltros(emptyTaskFilters)}>
+                  {t("tasks.clearFilters")}
+                </button>
+              </div>
+            ) : null}
+            <KanbanBoard
+              tasks={visiveis}
+              showProject
+              canDelete={(task) => isCoordinator || task.created_by === profileId}
+              onArchive={arquivar}
+              onDelete={apagar}
+              onMove={mover}
+              onPriorityChange={mudarPrioridade}
+              onOpen={(task) => setModal({ task })}
+            />
           </div>
         )}
       </Card>

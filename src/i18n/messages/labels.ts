@@ -58,6 +58,7 @@ export const labels = {
   "opt.purchaseUrgencyOptions.low.hint": { pt: "Sem pressa", en: "No rush", es: "Sin prisa" },
   "opt.purchaseUrgencyOptions.normal": { pt: "Normal", en: "Normal", es: "Normal" },
   "opt.purchaseUrgencyOptions.normal.hint": { pt: "Para as próximas semanas", en: "For the coming weeks", es: "Para las próximas semanas" },
+  "opt.taskPriorityOptions.high": { pt: "Alta", en: "High", es: "Alta" },
   "opt.purchaseUrgencyOptions.urgent": { pt: "Urgente", en: "Urgent", es: "Urgente" },
   "opt.purchaseUrgencyOptions.urgent.hint": { pt: "Está parando o trabalho", en: "It is blocking work", es: "Está frenando el trabajo" },
   "opt.purchaseStatusOptions.requested": { pt: "Solicitado", en: "Requested", es: "Solicitado" },
