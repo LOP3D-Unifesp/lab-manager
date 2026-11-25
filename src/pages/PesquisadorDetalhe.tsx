@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ExternalLink, Mail, Pencil, Phone } from "lucide-react";
+import { ArrowLeft, ExternalLink, FileText, Mail, Pencil, Phone } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 
 import { ContractViewer } from "../components/profile/ContractViewer";
@@ -55,11 +55,18 @@ function Item({ label, children }: { label: string; children: React.ReactNode })
   );
 }
 
-// Perfil completo de uma pessoa do laboratório (para ler; quem edita o próprio perfil usa /perfil).
 function formatGrantDate(value: string) {
   return formatDateTime(new Date(`${value}T00:00:00`), { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
+// Bolsa vigente, já encerrada ou que ainda vai começar (datas "AAAA-MM-DD").
+function getGrantState(grant: { start_date: string | null; end_date: string | null }, today: string): "active" | "ended" | "upcoming" {
+  if (grant.end_date && grant.end_date < today) return "ended";
+  if (grant.start_date && grant.start_date > today) return "upcoming";
+  return "active";
+}
+
+// Perfil completo de uma pessoa do laboratório (para ler; quem edita o próprio perfil usa /perfil).
 export function PesquisadorDetalhe() {
   const t = useT();
   const { id } = useParams();
@@ -155,6 +162,7 @@ export function PesquisadorDetalhe() {
   const { directory, profile, projects, skills, slots } = data;
   const grants = profile.funding_grants;
   const grantHours = getTotalWeeklyGrantHours(grants);
+  const today = new Date().toLocaleDateString("sv-SE");
   const nationality = countryName(profile.nationality_country_code);
   const isMe = me?.id === profile.id;
 
@@ -190,15 +198,18 @@ export function PesquisadorDetalhe() {
 
           <h3 className="mb-3 mt-6 text-lg font-bold text-text">{t("researcher.contact")}</h3>
           <dl className="grid gap-4 sm:grid-cols-2">
-            <Item label={t("profile.email")}>
-              <a className="inline-flex items-center gap-1.5 text-primary hover:text-primary-dark" href={`mailto:${profile.email}`}>
-                <Mail className="h-4 w-4 shrink-0" aria-hidden="true" />
-                {profile.email}
-              </a>
-            </Item>
+            <div className="min-w-0 sm:col-span-2">
+              <dt className="text-sm font-semibold text-muted">{t("profile.email")}</dt>
+              <dd className="mt-0.5 font-bold text-text">
+                <a className="flex min-w-0 items-start gap-1.5 text-primary hover:text-primary-dark" href={`mailto:${profile.email}`}>
+                  <Mail className="mt-1 h-4 w-4 shrink-0" aria-hidden="true" />
+                  <span className="min-w-0 break-all">{profile.email}</span>
+                </a>
+              </dd>
+            </div>
             <Item label={t("profile.phone")}>
               {profile.phone ? (
-                <a className="inline-flex items-center gap-1.5 text-primary hover:text-primary-dark" href={`tel:${profile.phone}`}>
+                <a className="flex min-w-0 items-center gap-1.5 text-primary hover:text-primary-dark" href={`tel:${profile.phone}`}>
                   <Phone className="h-4 w-4 shrink-0" aria-hidden="true" />
                   {profile.phone}
                 </a>
@@ -243,57 +254,65 @@ export function PesquisadorDetalhe() {
           )}
         </Card>
 
-        <Card className="min-w-0 p-4 sm:p-5">
-          <h3 className="mb-3 text-lg font-bold text-text">{t("researcher.funding")}</h3>
-          <dl className="grid gap-4 sm:grid-cols-2">
-            <Item label={t("workload.label")}>
-              {profile.weekly_workload_hours ? t("researcher.hoursPerWeek", { hours: profile.weekly_workload_hours }) : t("common.notInformed")}
-            </Item>
-            <Item label={t("grants.title")}>
-              {grants.length > 0 ? (
-                <ul className="grid gap-1">
-                  {grants.map((grant, index) => {
-                    const projectName = directory.find((entry) => entry.id === grant.project_id)?.name;
-                    return (
-                      <li key={`${grant.agency}-${index}`}>
+        <Card className="min-w-0 p-4 sm:p-5 lg:col-span-2">
+          <div className="mb-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+            <h3 className="text-lg font-bold text-text">{t("researcher.funding")}</h3>
+            <p className="text-base text-muted">
+              {t("workload.label")}:{" "}
+              <span className="font-bold text-text">
+                {profile.weekly_workload_hours ? t("researcher.hoursPerWeek", { hours: profile.weekly_workload_hours }) : t("common.notInformed")}
+              </span>
+              {grants.length > 1 && grantHours > 0 ? <span className="text-sm"> · {t("researcher.grantTotal", { hours: grantHours })}</span> : null}
+            </p>
+          </div>
+
+          {grants.length > 0 ? (
+            <ul className="grid gap-3 md:grid-cols-2">
+              {grants.map((grant, index) => {
+                const project = directory.find((entry) => entry.id === grant.project_id);
+                const state = getGrantState(grant, today);
+                return (
+                  <li className="grid min-w-0 content-start gap-3 rounded-lg border border-border bg-background p-3 sm:p-4" key={grant.id ?? index}>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="min-w-0 break-words text-lg font-bold text-text">
                         {getFundingAgencyLabel(grant.agency, grant.agency_other)}
                         {grant.grant_name ? <span className="font-semibold text-muted"> · {grant.grant_name}</span> : null}
-                        {projectName ? <span className="font-semibold text-muted"> · {projectName}</span> : null}
-                        {grant.weekly_hours ? (
-                          <span className="font-semibold text-muted"> · {t("researcher.hoursPerWeek", { hours: grant.weekly_hours })}</span>
-                        ) : null}
-                        {grant.start_date && grant.end_date ? (
-                          <span className="block text-sm text-muted">
-                            {formatGrantDate(grant.start_date)} – {formatGrantDate(grant.end_date)}
-                            {grant.process_number ? ` · ${t("grants.processShort", { number: grant.process_number })}` : ""}
-                          </span>
-                        ) : grant.process_number ? (
-                          <span className="block text-sm text-muted">{t("grants.processShort", { number: grant.process_number })}</span>
-                        ) : null}
-                        {grant.id && contracts[grant.id] ? (
-                          <button
-                            className="mt-1 inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-primary-dark"
-                            onClick={() => setViewingContract(contracts[grant.id as string])}
-                            type="button"
-                          >
-                            <ExternalLink className="h-4 w-4" aria-hidden="true" />
-                            {t("grants.contractOpen")}
-                          </button>
-                        ) : null}
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : profile.weekly_workload_hours ? (
-                t("workload.volunteer")
-              ) : (
-                t("researchers.noGrant")
-              )}
-            </Item>
-          </dl>
-          {grants.length > 1 && grantHours > 0 ? (
-            <p className="mt-3 text-sm font-semibold text-muted">{t("researcher.grantTotal", { hours: grantHours })}</p>
-          ) : null}
+                      </p>
+                      <StatusBadge label={t(`grants.state.${state}` as Parameters<typeof t>[0])} variant={state === "active" ? "success" : "neutral"} />
+                    </div>
+                    <dl className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
+                      {project ? (
+                        <Item label={t("grants.project")}>
+                          <Link className="text-primary hover:text-primary-dark" to={`/projetos/${project.id}`}>
+                            {project.name}
+                          </Link>
+                        </Item>
+                      ) : null}
+                      {grant.weekly_hours ? <Item label={t("grants.weeklyHours")}>{t("researcher.hoursPerWeek", { hours: grant.weekly_hours })}</Item> : null}
+                      {grant.start_date || grant.end_date ? (
+                        <Item label={t("grants.period")}>
+                          {grant.start_date ? formatGrantDate(grant.start_date) : "…"} – {grant.end_date ? formatGrantDate(grant.end_date) : "…"}
+                        </Item>
+                      ) : null}
+                      {grant.process_number ? <Item label={t("grants.processNumber")}>{grant.process_number}</Item> : null}
+                    </dl>
+                    {grant.id && contracts[grant.id] ? (
+                      <button
+                        className="inline-flex w-fit items-center gap-1.5 text-sm font-semibold text-primary hover:text-primary-dark"
+                        onClick={() => setViewingContract(contracts[grant.id as string])}
+                        type="button"
+                      >
+                        <FileText className="h-4 w-4" aria-hidden="true" />
+                        {t("grants.contractOpen")}
+                      </button>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="text-base text-muted">{profile.weekly_workload_hours ? t("workload.volunteer") : t("researchers.noGrant")}</p>
+          )}
         </Card>
 
         <Card className="min-w-0 p-4 sm:p-5 lg:col-span-2">
