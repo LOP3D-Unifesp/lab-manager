@@ -215,17 +215,19 @@ export function Pesquisadores() {
                     <p className="mt-0.5 break-words text-sm text-muted">{pesquisador.vinculo}</p>
                   </div>
                 </div>
-                <div className="mt-auto flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-border pt-3">
-                  <div className="relative z-10 flex min-w-0 flex-1 basis-40 items-center gap-1">
+                <div className="mt-auto grid gap-2 border-t border-border pt-3">
+                  <div>
+                    <StatusBadge
+                      label={t(`presence.${pesquisador.status}` as Parameters<typeof t>[0])}
+                      variant={getStatusVariant(pesquisador.status)}
+                    />
+                  </div>
+                  <div className="relative z-10 flex min-w-0 items-center gap-1">
                     <span className="min-w-0 select-text truncate text-sm font-semibold text-muted" title={pesquisador.email}>
                       {pesquisador.email}
                     </span>
                     <CopyEmailButton email={pesquisador.email} />
                   </div>
-                  <StatusBadge
-                    label={t(`presence.${pesquisador.status}` as Parameters<typeof t>[0])}
-                    variant={getStatusVariant(pesquisador.status)}
-                  />
                 </div>
               </Card>
             );
