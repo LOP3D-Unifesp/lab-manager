@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(404);
+select plan(420);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -1186,6 +1186,34 @@ select is(
   'the task goes right before the chosen one and the column is renumbered'
 );
 
+select lives_ok(
+  $$ insert into public.project_tasks (id, project_id, title) values ('00000000-0000-0000-0000-0000000000d4', '00000000-0000-0000-0000-0000000000c1', 'Cronometrar') $$,
+  'a task is created in the todo column'
+);
+select ok((select timer_phase is null and timer_started_at is null from public.project_tasks where id = '00000000-0000-0000-0000-0000000000d4'), 'a todo task has no running timer');
+select lives_ok($$ update public.project_tasks set status = 'in_progress' where id = '00000000-0000-0000-0000-0000000000d4' $$, 'the task moves to in progress');
+select is((select timer_phase from public.project_tasks where id = '00000000-0000-0000-0000-0000000000d4'), 'work', 'entering in progress starts the work timer');
+select lives_ok($$ update public.project_tasks set timer_started_at = now() - interval '10 minutes' where id = '00000000-0000-0000-0000-0000000000d4' $$, 'the running timer is moved back 10 minutes');
+select lives_ok($$ update public.project_tasks set status = 'review' where id = '00000000-0000-0000-0000-0000000000d4' $$, 'the task moves to review');
+select ok(
+  (select work_seconds between 600 and 602 and timer_phase = 'review' and timer_started_at is not null from public.project_tasks where id = '00000000-0000-0000-0000-0000000000d4'),
+  'leaving in progress closes the work time and starts the review timer'
+);
+select lives_ok($$ update public.project_tasks set timer_started_at = now() - interval '5 minutes' where id = '00000000-0000-0000-0000-0000000000d4' $$, 'the review timer is moved back 5 minutes');
+select lives_ok($$ select public.set_task_timer('00000000-0000-0000-0000-0000000000d4', false) $$, 'a member pauses the timer');
+select ok(
+  (select review_seconds between 300 and 302 and timer_started_at is null from public.project_tasks where id = '00000000-0000-0000-0000-0000000000d4'),
+  'pausing keeps the review time and stops the clock'
+);
+select lives_ok($$ select public.set_task_timer('00000000-0000-0000-0000-0000000000d4', true) $$, 'a member resumes the timer');
+select ok((select timer_started_at is not null and timer_phase = 'review' from public.project_tasks where id = '00000000-0000-0000-0000-0000000000d4'), 'resuming runs the timer in the column phase');
+select lives_ok($$ update public.project_tasks set status = 'done' where id = '00000000-0000-0000-0000-0000000000d4' $$, 'the task is finished');
+select ok(
+  (select timer_started_at is null and timer_phase is null and work_seconds >= 600 and review_seconds >= 300 from public.project_tasks where id = '00000000-0000-0000-0000-0000000000d4'),
+  'finishing stops the timer and keeps work and review time'
+);
+select throws_ok($$ select public.set_task_timer('00000000-0000-0000-0000-0000000000d4', true) $$, 'P0001', 'timer_not_available', 'a finished task has no timer to resume');
+
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000103","email":"other@example.com","role":"authenticated"}', true);
 select is((select count(*) from public.project_tasks), 0::bigint, 'non-member cannot read tasks');
 select throws_ok(
@@ -1214,6 +1242,7 @@ select throws_ok(
   'P0001', 'project_access_required',
   'non-member cannot move a task to another project'
 );
+select throws_ok($$ select public.set_task_timer('00000000-0000-0000-0000-0000000000d4', false) $$, 'P0001', 'project_access_required', 'non-member cannot control the timer');
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
 select lives_ok(

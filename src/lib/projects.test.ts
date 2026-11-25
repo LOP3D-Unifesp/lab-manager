@@ -126,6 +126,10 @@ function task(overrides: Partial<ProjectTask>): ProjectTask {
     assignees: [],
     archived_at: null,
     checklist: [],
+    work_seconds: 0,
+    review_seconds: 0,
+    timer_phase: null,
+    timer_started_at: null,
     ...overrides,
   };
 }

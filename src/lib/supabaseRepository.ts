@@ -1238,6 +1238,10 @@ const taskSelect = [
   "due_on",
   "created_by",
   "archived_at",
+  "work_seconds",
+  "review_seconds",
+  "timer_phase",
+  "timer_started_at",
   "project:projects(name)",
   "checklist:project_task_checklist_items(id, title, done, position)",
   "assignees:project_task_assignees(profile_id, profile:profiles!project_task_assignees_profile_id_fkey(full_name, avatar_url))",
@@ -1331,6 +1335,12 @@ export async function moveProjectTask(taskId: string, status: TaskStatus, before
     p_status: status,
     ...(beforeId ? { p_before_task_id: beforeId } : {}),
   });
+  throwIfError(error);
+}
+
+// Pausa (false) ou retoma (true) o cronômetro da tarefa.
+export async function setTaskTimer(taskId: string, running: boolean) {
+  const { error } = await client().rpc("set_task_timer", { p_task_id: taskId, p_running: running });
   throwIfError(error);
 }
 

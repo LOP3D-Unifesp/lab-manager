@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getTaskErrorMessage, reorderTasks, type ProjectTask, type TaskPriority, type TaskStatus } from "../../lib/projects";
 import { supabase } from "../../lib/supabaseClient";
-import { archiveProjectTask, deleteProjectTask, moveProjectTask, setChecklistItemDone, updateProjectTask } from "../../lib/supabaseRepository";
+import { getTimerAfterStatusChange, toggleTaskTimer } from "../../lib/taskTimer";
+import { archiveProjectTask, deleteProjectTask, moveProjectTask, setChecklistItemDone, setTaskTimer, updateProjectTask } from "../../lib/supabaseRepository";
 
 // Mudanças em rajada (mover vários cartões, salvar checklist) viram um só recarregamento.
 const REFRESH_DEBOUNCE_MS = 500;
@@ -109,11 +110,27 @@ export function useTaskBoard(loader: () => Promise<ProjectTask[]>) {
     async (task: ProjectTask, status: TaskStatus, antesDe: string | null = null) => {
       if (!tarefas) return;
       await aplicar(
-        (lista) => reorderTasks(lista, task.id, status, antesDe),
+        (lista) => {
+          const agora = new Date();
+          // Mudar de coluna também liga/desliga o cronômetro (o banco faz o mesmo).
+          return reorderTasks(lista, task.id, status, antesDe).map((item) =>
+            item.id === task.id && item.status !== task.status ? { ...item, ...getTimerAfterStatusChange(task, status, agora) } : item,
+          );
+        },
         () => moveProjectTask(task.id, status, antesDe),
       );
     },
     [tarefas, aplicar],
+  );
+
+  const alternarCronometro = useCallback(
+    async (task: ProjectTask, correndo: boolean) => {
+      await aplicar(
+        (lista) => lista.map((item) => (item.id === task.id ? { ...item, ...toggleTaskTimer(item, correndo, new Date()) } : item)),
+        () => setTaskTimer(task.id, correndo),
+      );
+    },
+    [aplicar],
   );
 
   const marcarItem = useCallback(
@@ -161,5 +178,5 @@ export function useTaskBoard(loader: () => Promise<ProjectTask[]>) {
     [aplicar],
   );
 
-  return { tarefas, erro, setErro, recarregar, arrastar, marcarItem, mover, mudarPrioridade, arquivar, apagar };
+  return { tarefas, erro, setErro, recarregar, alternarCronometro, arrastar, marcarItem, mover, mudarPrioridade, arquivar, apagar };
 }

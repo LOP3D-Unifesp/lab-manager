@@ -318,6 +318,7 @@ export function ProjetoDetalhe() {
             onDragChange={quadro.arrastar}
             onMove={quadro.mover}
             onToggleChecklistItem={quadro.marcarItem}
+            onToggleTimer={quadro.alternarCronometro}
             onPriorityChange={quadro.mudarPrioridade}
             onOpen={(task) => setTarefaAberta({ task, status: task.status })}
           />
