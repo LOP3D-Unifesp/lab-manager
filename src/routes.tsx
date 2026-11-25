@@ -1,3 +1,4 @@
+import { Suspense, lazy } from "react";
 import { t } from "./i18n";
 import {
   createBrowserRouter,
@@ -9,7 +10,6 @@ import {
 import { App } from "./App";
 import { Administracao } from "./pages/Administracao";
 import { AgendaLaboratorio } from "./pages/AgendaLaboratorio";
-import { Analytics } from "./pages/Analytics";
 import { Dashboard } from "./pages/Dashboard";
 import { Feedback } from "./pages/Feedback";
 import { Notificacoes } from "./pages/Notificacoes";
@@ -34,6 +34,9 @@ import { AcceptInvitation } from "./pages/AcceptInvitation";
 import { Privacy } from "./pages/Privacy";
 import { UsuariosAtivos, UsuariosLayout } from "./pages/Usuarios";
 import { useAuth } from "./lib/auth";
+
+// Analytics carrega o Recharts; fica em um pedaço à parte para não pesar o resto do app.
+const Analytics = lazy(() => import("./pages/Analytics").then((module) => ({ default: module.Analytics })));
 
 function LoadingScreen() {
   return (
@@ -131,7 +134,11 @@ export const router = createBrowserRouter([
           { path: "pesquisadores/:id", element: <PesquisadorDetalhe /> },
           { path: "projetos", element: <Projetos /> },
           { path: "projetos/:id", element: <ProjetoDetalhe /> },
-          { path: "analytics", element: <Analytics /> },
+          { path: "analytics", element: (
+              <Suspense fallback={null}>
+                <Analytics />
+              </Suspense>
+            ) },
           { path: "habilidades", element: <Habilidades /> },
           { path: "agenda", element: <AgendaLaboratorio /> },
           { path: "equipamentos", element: <Equipamentos /> },
