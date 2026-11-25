@@ -115,9 +115,10 @@ export function KanbanBoard({ canDelete, onArchive, onDelete, onDragChange, onMo
     });
   }
 
-  // Colunas que se ajustam à largura: nunca ficam mais estreitas que 15rem (o quadro quebra em 4/3/2/1 colunas).
+  // As quatro colunas ficam sempre lado a lado (como no Trello): com espaço dividem a largura; em tela estreita cada uma
+  // mantém 16rem e o quadro rola na horizontal.
   return (
-    <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(min(15rem,100%),1fr))]">
+    <div className="grid auto-cols-[minmax(16rem,1fr)] grid-flow-col gap-4 overflow-x-auto pb-2 [scroll-snap-type:x_proximity]">
       {taskStatusOptions.map((column) => (
         <section
           key={column.value}
@@ -145,7 +146,7 @@ export function KanbanBoard({ canDelete, onArchive, onDelete, onDragChange, onMo
             soltar();
           }}
           className={[
-            "flex min-h-40 flex-col gap-3 rounded-lg border p-3 transition",
+            "flex min-h-40 flex-col gap-3 rounded-lg border p-3 transition [scroll-snap-align:start]",
             destino?.status === column.value ? "border-primary bg-primary-soft" : "border-border bg-background",
           ].join(" ")}
         >
