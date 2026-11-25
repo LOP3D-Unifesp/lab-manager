@@ -35,7 +35,7 @@ export function MyTasksBoard({ isCoordinator, profileId }: { isCoordinator: bool
   if (!tarefas) return null;
 
   return (
-    <section className="mt-6">
+    <section>
       <Card>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>

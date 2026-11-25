@@ -99,7 +99,7 @@ export function MyMaintenanceRequests() {
   if (toHandle.length === 0 && mine.length === 0) return null;
 
   return (
-    <section className="mt-6">
+    <section>
       <Card>
         <div className="flex items-start gap-3">
           <div className="rounded-lg bg-primary-soft p-2 text-primary">
