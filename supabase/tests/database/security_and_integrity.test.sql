@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(442);
+select plan(439);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -1260,25 +1260,12 @@ select ok(
   'a researcher report only has their own time'
 );
 
--- Ajustar o horário e pausa automática.
+-- Timer esquecido: a pessoa pausa o seu; a rotina cuida do resto.
 reset role;
 update public.project_task_time_entries set started_at = now() - interval '3 hours' where task_id = '00000000-0000-0000-0000-0000000000d5' and ended_at is null;
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
-select lives_ok(
-  $$ select public.adjust_time_entry((select id from public.project_task_time_entries where task_id = '00000000-0000-0000-0000-0000000000d5' and ended_at is null), now() - interval '1 hour') $$,
-  'the owner closes a forgotten timer at an earlier time'
-);
-select ok(
-  (select e.seconds between 7200 and 7202 and e.ended_at is not null and not e.auto_closed
-   from public.project_task_time_entries e where e.task_id = '00000000-0000-0000-0000-0000000000d5' and e.profile_id = '00000000-0000-0000-0000-000000000102' and e.ended_at is not null order by e.started_at limit 1),
-  'the adjusted entry has the corrected duration'
-);
-select throws_ok(
-  $$ select public.adjust_time_entry((select id from public.project_task_time_entries where task_id = '00000000-0000-0000-0000-0000000000d5' and profile_id = '00000000-0000-0000-0000-000000000102' limit 1), now() - interval '10 days') $$,
-  'P0001', 'invalid_time',
-  'an end before the start is rejected'
-);
+select lives_ok($$ select public.set_task_timer('00000000-0000-0000-0000-0000000000d5', false) $$, 'a person pauses their own timer left on for hours');
 -- Proteções contra timer esquecido (roda como administrador do banco, como a rotina agendada).
 reset role;
 insert into public.project_task_time_entries (task_id, project_id, profile_id, phase, started_at)
@@ -1344,11 +1331,6 @@ select throws_ok(
   'non-member cannot move a task to another project'
 );
 select throws_ok($$ select public.set_task_timer('00000000-0000-0000-0000-0000000000d4', false) $$, 'P0001', 'project_access_required', 'non-member cannot control the timer');
-select throws_ok(
-  $$ select public.adjust_time_entry((select id from public.project_task_time_entries limit 1), now()) $$,
-  'P0001', 'entry_not_found',
-  'non-member cannot see or adjust time entries'
-);
 select is((select count(*) from public.project_task_time_entries), 0::bigint, 'non-member cannot read time entries');
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);

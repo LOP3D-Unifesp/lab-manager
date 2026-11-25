@@ -32,8 +32,7 @@ import { Button } from "../ui/Button";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { Modal } from "../ui/Modal";
 import { RichTextEditor } from "../ui/RichTextEditor";
-import { useCurrentProfile } from "../../lib/currentUser";
-import { TimeEntriesEditor } from "./TimeEntriesEditor";
+import { TimeEntriesList } from "./TimeEntriesList";
 import { ChecklistEditor, type ChecklistDraftItem } from "./ChecklistEditor";
 import { inputClassName } from "../ui/formStyles";
 
@@ -94,13 +93,11 @@ export function TaskModal({
   const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
   const [trechos, setTrechos] = useState<TimeEntry[]>([]);
   const [totais, setTotais] = useState({ work: task?.work_seconds ?? 0, review: task?.review_seconds ?? 0 });
-  const { currentProfile } = useCurrentProfile();
 
   // Tempo por pessoa: lê os trechos de tempo e os totais da tarefa ao abrir (e de novo depois de um ajuste ou se
   // alguém ligar/pausar o timer enquanto o modal está aberto).
   const taskId = task?.id;
   const cronometro = task ? task.running.map((item) => item.profile_id).join(",") + `:${task.work_seconds}:${task.review_seconds}` : "";
-  const [versaoTempo, setVersaoTempo] = useState(0);
   useEffect(() => {
     if (!taskId) return;
     let ativo = true;
@@ -114,7 +111,7 @@ export function TaskModal({
     return () => {
       ativo = false;
     };
-  }, [taskId, cronometro, versaoTempo]);
+  }, [taskId, cronometro]);
 
   function escolherProjeto(id: string) {
     setChosenProjectId(id);
@@ -313,13 +310,7 @@ export function TaskModal({
         ) : null}
 
         {task ? (
-          <TimeEntriesEditor
-            entries={trechos}
-            profileId={currentProfile?.id}
-            isCoordinator={currentProfile?.role === "coordinator"}
-            now={agora}
-            onChanged={() => setVersaoTempo((valor) => valor + 1)}
-          />
+          <TimeEntriesList entries={trechos} now={agora} />
         ) : null}
 
         <fieldset className="grid gap-2">

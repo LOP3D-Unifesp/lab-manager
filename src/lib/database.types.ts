@@ -857,10 +857,7 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "adjust_time_entry":
-{ Args: { "p_ended_at": string,"p_entry_id": string }; Returns: undefined
-                           },
-"cancel_booking":
+            "cancel_booking":
 { Args: { "p_booking_id": string }; Returns: {
               "approved_at": string | null,
 "approved_by": string | null,
