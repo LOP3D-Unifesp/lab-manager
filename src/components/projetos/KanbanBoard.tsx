@@ -98,11 +98,21 @@ export function KanbanBoard({ canDelete, onArchive, onDelete, onDragChange, onMo
           aria-label={column.label}
           onDragOver={(event) => {
             event.preventDefault();
-            // Sobre o fundo da coluna (não sobre um cartão): entra no fim.
-            if (arrastando) setDestino({ status: column.value, antesDe: null });
-          }}
-          onDragLeave={(event) => {
-            if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDestino((atual) => (atual?.status === column.value ? null : atual));
+            if (!arrastando) return;
+            // Fora dos cartões: acima do primeiro (título da coluna) = entra no topo; abaixo do último = entra no fim;
+            // no espaço entre cartões mantém o destino que já estava marcado.
+            const artigos = event.currentTarget.querySelectorAll("article");
+            const primeiro = artigos[0];
+            const ultimo = artigos[artigos.length - 1];
+            const outros = groups[column.value].filter((item) => item.id !== arrastando);
+            if (primeiro && event.clientY < primeiro.getBoundingClientRect().top) {
+              const antesDe = outros[0]?.id ?? null;
+              setDestino((atual) => (atual?.status === column.value && atual.antesDe === antesDe ? atual : { status: column.value, antesDe }));
+            } else if (!ultimo || event.clientY > ultimo.getBoundingClientRect().bottom) {
+              setDestino((atual) => (atual?.status === column.value && atual.antesDe === null ? atual : { status: column.value, antesDe: null }));
+            } else {
+              setDestino((atual) => (atual?.status === column.value ? atual : { status: column.value, antesDe: null }));
+            }
           }}
           onDrop={(event) => {
             event.preventDefault();
@@ -139,9 +149,11 @@ export function KanbanBoard({ canDelete, onArchive, onDelete, onDragChange, onMo
                 }}
                 onDragEnd={terminarArrasto}
                 onDragOver={(event) => {
-                  if (!arrastando || arrastando === task.id) return;
+                  if (!arrastando) return;
                   event.preventDefault();
                   event.stopPropagation();
+                  // Sobre o próprio cartão arrastado: mantém o destino atual.
+                  if (arrastando === task.id) return;
                   // Metade de cima: entra antes deste cartão; metade de baixo: antes do próximo.
                   const caixa = event.currentTarget.getBoundingClientRect();
                   const emBaixo = event.clientY > caixa.top + caixa.height / 2;
