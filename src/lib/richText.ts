@@ -76,7 +76,7 @@ const TEXT_NODE = 3;
 const BLOCK_TAGS = new Set(["DIV", "P", "UL", "OL", "LI"]);
 
 function serializeInline(node: DomLike): string {
-  if (node.nodeType === TEXT_NODE) return (node.textContent ?? "").replace(/\u00a0/g, " ").replace(/\n/g, " ");
+  if (node.nodeType === TEXT_NODE) return (node.textContent ?? "").replace(/\u00a0/g, " ").replace(/\u200b/g, "").replace(/\n/g, " ");
   const inner = Array.from(node.childNodes).map(serializeInline).join("");
   switch (node.nodeName) {
     case "B":

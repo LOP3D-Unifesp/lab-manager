@@ -1,5 +1,4 @@
 import { useEffect, useRef } from "react";
-import { Bold, Italic, List, ListOrdered } from "lucide-react";
 
 import { useT } from "../../i18n";
 import { parseRichText, serializeRichText, type InlineNode } from "../../lib/richText";
@@ -10,9 +9,6 @@ type RichTextEditorProps = {
   value: string;
   onChange: (value: string) => void;
 };
-
-const toolButton =
-  "inline-flex h-9 w-9 items-center justify-center rounded-md text-text transition hover:bg-background focus:outline-none focus-visible:ring-2 focus-visible:ring-primary";
 
 function inlineToDom(nodes: InlineNode[], parent: Node) {
   for (const node of nodes) {
@@ -63,8 +59,55 @@ function fillEditor(root: HTMLElement, text: string) {
   });
 }
 
-// Campo de texto formatado: a pessoa escreve e já vê negrito, itálico e listas (sem aba de visualização), como no
-// Trello. O texto é guardado com marcas simples (**negrito**, - lista) e o conteúdo colado entra sempre como texto puro.
+const escapeHtml = (text: string) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+// Atalhos de escrita, como no Trello: **texto** vira negrito, *texto* itálico, `texto` código, "- " ou "* " no começo
+// da linha vira lista com marcadores e "1. " vira lista numerada. Roda a cada tecla digitada.
+function aplicarAtalhos(root: HTMLElement, evento: InputEvent) {
+  if (evento.inputType !== "insertText" || !evento.data) return;
+  const selecao = window.getSelection();
+  const no = selecao?.anchorNode;
+  if (!selecao || !selecao.isCollapsed || !no || no.nodeType !== Node.TEXT_NODE || !root.contains(no)) return;
+  const posicao = selecao.anchorOffset;
+  const antes = (no.textContent ?? "").slice(0, posicao);
+
+  const selecionar = (inicio: number) => {
+    const faixa = document.createRange();
+    faixa.setStart(no, inicio);
+    faixa.setEnd(no, posicao);
+    selecao.removeAllRanges();
+    selecao.addRange(faixa);
+  };
+
+  if (evento.data === " ") {
+    const marcador = /^([-*]|\d+\.)[  ]$/.exec(antes);
+    const dentroDeLista = Boolean(no.parentElement?.closest("li"));
+    if (marcador && !no.previousSibling && !dentroDeLista) {
+      selecionar(0);
+      document.execCommand("delete");
+      document.execCommand(/\d/.test(marcador[1]) ? "insertOrderedList" : "insertUnorderedList");
+    }
+    return;
+  }
+
+  const formatos: Array<{ gatilho: string; regex: RegExp; tag: string }> = [
+    { gatilho: "*", regex: /\*\*([^*]+)\*\*$/, tag: "strong" },
+    { gatilho: "*", regex: /(?<!\*)\*([^*\s](?:[^*]*[^*\s])?)\*$/, tag: "em" },
+    { gatilho: "`", regex: /`([^`]+)`$/, tag: "code" },
+  ];
+  for (const formato of formatos) {
+    if (evento.data !== formato.gatilho) continue;
+    const achou = formato.regex.exec(antes);
+    if (!achou || !achou[1].trim()) continue;
+    selecionar(posicao - achou[0].length);
+    // O espaço de largura zero deixa o cursor fora do trecho formatado, para o texto seguinte sair normal.
+    document.execCommand("insertHTML", false, `<${formato.tag}>${escapeHtml(achou[1])}</${formato.tag}>​`);
+    return;
+  }
+}
+
+// Campo de texto formatado que já mostra o resultado enquanto se escreve (sem barra nem aba de visualização).
+// O texto é guardado com marcas simples (**negrito**, - lista) e o conteúdo colado entra sempre como texto puro.
 export function RichTextEditor({ label, onChange, value }: RichTextEditorProps) {
   const t = useT();
   const areaRef = useRef<HTMLDivElement>(null);
@@ -79,39 +122,11 @@ export function RichTextEditor({ label, onChange, value }: RichTextEditorProps) 
     if (areaRef.current) onChange(serializeRichText(areaRef.current));
   }
 
-  function comando(nome: "bold" | "italic" | "insertUnorderedList" | "insertOrderedList") {
-    areaRef.current?.focus();
-    document.execCommand(nome);
-    sincronizar();
-  }
-
-  const botao = (nome: Parameters<typeof comando>[0], titulo: string, Icone: typeof Bold) => (
-    <button
-      type="button"
-      className={toolButton}
-      aria-label={titulo}
-      title={titulo}
-      // Não tira a seleção do texto ao clicar na barra.
-      onMouseDown={(event) => event.preventDefault()}
-      onClick={() => comando(nome)}
-    >
-      <Icone className="h-4 w-4" aria-hidden="true" />
-    </button>
-  );
-
   return (
     <div className="grid gap-2">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <span id="rich-editor-label" className="text-base font-semibold text-text">
-          {label}
-        </span>
-        <div className="flex items-center gap-1">
-          {botao("bold", t("richText.bold"), Bold)}
-          {botao("italic", t("richText.italic"), Italic)}
-          {botao("insertUnorderedList", t("richText.bullets"), List)}
-          {botao("insertOrderedList", t("richText.numbered"), ListOrdered)}
-        </div>
-      </div>
+      <span id="rich-editor-label" className="text-base font-semibold text-text">
+        {label}
+      </span>
       <div
         ref={areaRef}
         role="textbox"
@@ -120,7 +135,10 @@ export function RichTextEditor({ label, onChange, value }: RichTextEditorProps) 
         contentEditable
         suppressContentEditableWarning
         className={`${inputClassName} block min-h-28 whitespace-pre-wrap break-words py-3 [&_a]:text-primary [&_a]:underline [&_code]:rounded [&_code]:bg-background [&_code]:px-1 [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6`}
-        onInput={sincronizar}
+        onInput={(event) => {
+          if (areaRef.current) aplicarAtalhos(areaRef.current, event.nativeEvent as InputEvent);
+          sincronizar();
+        }}
         onBlur={sincronizar}
         onPaste={(event) => {
           // Cola só o texto, sem trazer a formatação de outros sites.
