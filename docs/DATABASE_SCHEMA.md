@@ -89,6 +89,7 @@ Status do MVP implementado:
 | `20261005_tasks_checklist_order_realtime` | `project_task_checklist_items` (checklist da tarefa); RPCs `set_task_checklist` e `move_project_task` (reordena e renumera a coluna); `project_tasks`, `project_task_assignees` e a checklist entram no Realtime. |
 | `20261006_task_order_across_projects` | A ordem dos cartões vale para a coluna inteira (todos os projetos juntos): `move_project_task` e o trigger de coluna passam a considerar todos os projetos, e as posições existentes são renumeradas; RPC `move_task_to_project` (troca o projeto da tarefa, mantendo responsáveis que são membros do novo e a checklist). |
 | `20261007_task_timer` | Cronômetro por tarefa: `project_tasks.work_seconds`, `review_seconds`, `timer_phase`, `timer_started_at`; trigger `track_task_time` (Em andamento liga o trabalho, Em revisão liga a revisão, A fazer/Finalizado/arquivar param) e RPC `set_task_timer` (pausar/retomar). |
+| `20261008_task_time_entries` | `project_task_time_entries`: um registro por trecho do cronômetro, com quem o ligou (`profile_id`), fase, início, fim e segundos; gatilho `track_time_entries` abre/fecha os registros quando `timer_started_at` muda; RPC `get_task_time_report` (tempo por pessoa e projeto no período; coordenador vê todos, os demais só o próprio). O tempo anterior à migration não tem pessoa. |
 
 Resumo dos objetos que mais mudam o entendimento do schema:
 

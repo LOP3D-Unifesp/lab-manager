@@ -1,3 +1,4 @@
+import type { TimeEntry, TimeReportRow } from "./taskTime";
 import { getLocale, t } from "../i18n";
 import { supabase } from "./supabaseClient";
 import type { AppNotification, NotificationGroup } from "./notifications";
@@ -1342,6 +1343,29 @@ export async function moveProjectTask(taskId: string, status: TaskStatus, before
 export async function setTaskTimer(taskId: string, running: boolean) {
   const { error } = await client().rpc("set_task_timer", { p_task_id: taskId, p_running: running });
   throwIfError(error);
+}
+
+// Trechos de tempo da tarefa, com quem os correu.
+export async function listTaskTimeEntries(taskId: string): Promise<TimeEntry[]> {
+  const { data, error } = await client()
+    .from("project_task_time_entries")
+    .select("id, profile_id, phase, started_at, ended_at, seconds, profile:profiles!project_task_time_entries_profile_fkey(full_name, avatar_url)")
+    .eq("task_id", taskId)
+    .order("started_at");
+  throwIfError(error);
+  type Row = Omit<TimeEntry, "full_name" | "avatar_url"> & { profile: { full_name: string; avatar_url: string | null } | null };
+  return ((data ?? []) as unknown as Row[]).map(({ profile, ...entry }) => ({
+    ...entry,
+    full_name: profile?.full_name ?? "",
+    avatar_url: profile?.avatar_url ?? null,
+  }));
+}
+
+// Tempo trabalhado por pessoa e projeto no período (coordenador: todos; demais: só o próprio).
+export async function getTaskTimeReport(from: Date, to: Date): Promise<TimeReportRow[]> {
+  const { data, error } = await client().rpc("get_task_time_report", { p_from: from.toISOString(), p_to: to.toISOString() });
+  throwIfError(error);
+  return (data ?? []) as TimeReportRow[];
 }
 
 // Passa a tarefa para outro projeto (mantém só os responsáveis que também são membros do novo).

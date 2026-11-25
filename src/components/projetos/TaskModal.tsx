@@ -1,9 +1,10 @@
 import { t } from "../../i18n";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import {
   createProjectTask,
+  listTaskTimeEntries,
   deleteProjectTask,
   moveTaskToProject,
   setTaskAssignees,
@@ -22,6 +23,7 @@ import {
   type TaskStatus,
 } from "../../lib/projects";
 import { formatClock, formatDuration, getTaskTimes } from "../../lib/taskTimer";
+import { getTimeByPerson, type TimeEntry } from "../../lib/taskTime";
 import { useNow } from "./TaskTimer";
 import { Avatar } from "../ui/Avatar";
 import { Button } from "../ui/Button";
@@ -86,6 +88,21 @@ export function TaskModal({
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
+  const [trechos, setTrechos] = useState<TimeEntry[]>([]);
+
+  // Tempo por pessoa: lê os trechos de tempo da tarefa ao abrir (e de novo se o cronômetro mudar).
+  const taskId = task?.id;
+  const cronometro = task?.timer_started_at ?? null;
+  useEffect(() => {
+    if (!taskId) return;
+    let ativo = true;
+    listTaskTimeEntries(taskId)
+      .then((lista) => ativo && setTrechos(lista))
+      .catch(() => undefined);
+    return () => {
+      ativo = false;
+    };
+  }, [taskId, cronometro]);
 
   function escolherProjeto(id: string) {
     setChosenProjectId(id);
@@ -152,6 +169,7 @@ export function TaskModal({
 
   const agora = useNow(Boolean(task?.timer_started_at));
   const tempos = task ? getTaskTimes(task, agora) : null;
+  const porPessoa = task ? getTimeByPerson(trechos, task, agora) : null;
   const mostrar = (segundos: number) => (tempos?.running ? formatClock(segundos) : formatDuration(segundos));
   const semProjetos = !lockedProjectId && projects.length === 0;
 
@@ -230,6 +248,35 @@ export function TaskModal({
               · {t("tasks.timeWork")} {mostrar(tempos.work)} · {t("tasks.timeReview")} {mostrar(tempos.review)}
             </span>
           </p>
+        ) : null}
+
+        {porPessoa && (porPessoa.people.length > 0 || porPessoa.unassigned.total > 0) ? (
+          <div className="grid gap-2">
+            <p className="text-base font-semibold text-text">{t("tasks.timeByPerson")}</p>
+            <ul className="grid gap-2">
+              {porPessoa.people.map((pessoa) => (
+                <li key={pessoa.profile_id} className="flex items-center gap-3 rounded-lg border border-border bg-surface px-3 py-2">
+                  <Avatar avatarUrl={pessoa.avatar_url} name={pessoa.full_name} className="h-8 w-8" />
+                  <span className="min-w-0 flex-1 truncate text-base font-semibold text-text">{pessoa.full_name}</span>
+                  <span className="shrink-0 text-right text-sm tabular-nums text-muted">
+                    <span className="font-semibold text-text">{mostrar(pessoa.total)}</span>
+                    {pessoa.review > 0 ? (
+                      <>
+                        {" "}
+                        · {t("tasks.timeWork")} {mostrar(pessoa.work)} · {t("tasks.timeReview")} {mostrar(pessoa.review)}
+                      </>
+                    ) : null}
+                  </span>
+                </li>
+              ))}
+              {porPessoa.unassigned.total > 0 ? (
+                <li className="flex items-center justify-between gap-3 rounded-lg border border-dashed border-border px-3 py-2 text-sm text-muted">
+                  <span>{t("tasks.timeUnassigned")}</span>
+                  <span className="tabular-nums">{formatDuration(porPessoa.unassigned.total)}</span>
+                </li>
+              ) : null}
+            </ul>
+          </div>
         ) : null}
 
         <fieldset className="grid gap-2">
