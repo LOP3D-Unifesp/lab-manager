@@ -11,7 +11,7 @@ Ele usa o mesmo coordenador de teste do ambiente local e deve conter **somente d
 ## Visão geral do fluxo
 
 ```text
-push na main ─► .github/workflows/deploy-pages.yml ─► build (modo remote) ─► GitHub Pages
+push na main ─► CI (frontend + banco) ─► passou? ─► .github/workflows/deploy-pages.yml ─► build (modo remote) ─► GitHub Pages
                                                          │
                                        VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY
                                                          ▼
@@ -20,8 +20,10 @@ push na main ─► .github/workflows/deploy-pages.yml ─► build (modo remote
 
 O workflow roda os testes, gera o build com `VITE_APP_ENV=remote` e `VITE_BASE_PATH=/lab-manager/`
 e copia `index.html` para `404.html`, o que faz links diretos como `/convite/aceitar` funcionarem no
-Pages (aplicação de página única). Ele dispara em todo push na `main` e também manualmente em
-*Actions → Deploy Pages → Run workflow*.
+Pages (aplicação de página única). Ele dispara **depois que o CI de um push na `main` termina com sucesso** (evento `workflow_run`), publicando o commit exato
+que o CI testou; se o CI ficar vermelho (inclusive o job `database`), o site não é publicado até corrigir. Também dá para
+publicar manualmente em *Actions → Deploy Pages → Run workflow* (emergência). A publicação leva uns 4 a 5 minutos a mais
+porque espera o job do banco.
 
 ## Configuração inicial (uma vez)
 

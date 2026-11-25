@@ -12,39 +12,23 @@ com duas contas (coordenadora e pesquisador):
 - [ ] **Bolsas de fomento (Meu perfil):** cartão próprio com botão "Salvar bolsas"; adicionar bolsa com projeto (membro e
   não membro, com "Pedir para entrar"), agência sem SUS, valor, início, fim, horas e nº do processo; recarregar e ver
   salvo; carga semanal somando só as bolsas vigentes.
-- [ ] **Tarefas (prioridade, lixeira, arquivar, filtros, aviso):** criar tarefa com prioridade Alta; lixeira no cartão com
-  confirmação (só criador e coordenador veem); arquivar e "Mostrar arquivadas" + desarquivar; filtros em Minhas tarefas
-  (Início); aviso no sino e push ao ser atribuída por outra pessoa (e nenhum ao se atribuir). Depende da migration
-  `20261004` (não aplicada em produção).
-- [ ] **Tarefas (checklist, ordem, ao vivo):** criar/editar checklist no modal (Enter adiciona, marcar, renomear, ↑/↓,
-  remover) e ver "2/5" no cartão; marcar itens no cartão; arrastar cartão para cima/baixo e entre colunas com a linha
-  indicando o destino; no celular, botões ↑/↓; com duas contas, mudança de uma aparecer na outra sem recarregar (e
-  sem pular durante um arrasto). Depende da migration `20261005` (não aplicada em produção).
-- [ ] **Tarefas (descrição formatada, ordem entre projetos, trocar projeto):** descrição com negrito/itálico/listas e aba
-  "Visualizar"; checklist logo abaixo da descrição; arrastar cartão acima de outro de projeto diferente; editar a tarefa e
-  trocar o projeto (responsáveis que não são do novo projeto saem; ninguém recebe aviso de novo). Depende da migration
-  `20261006` (não aplicada em produção).
-- [ ] **Tarefas (timer esquecido):** Administração > "Timers das tarefas" (aviso 4 h, pausa 8 h, tolerância 60 min); deixar
-  timer ligado e receber o aviso no sino/celular; timer que passa do fim do turno da pessoa (Meu perfil > disponibilidade)
-  para no fim do turno + tolerância; remover a pessoa do projeto ou desativá-la para os timers dela. Depende da migration
-  `20261011` (não aplicada em produção).
-- [ ] **Tarefas (timers por pessoa):** duas pessoas com o timer ligado na mesma tarefa ao mesmo tempo (cartão mostra quem
-  está trabalhando); cada uma pausa o seu; mover Em andamento <-> Em revisão mantém quem trabalha; A fazer/Finalizado
-  param todos; mover sem ser responsável não liga timer; "Trechos de tempo" no modal (só consulta, sem ajuste); pausa
-  automática aos 12 h (marcada no trecho). Timers que estavam correndo no deploy foram pausados. Depende da migration
-  `20261010` (não aplicada em produção).
-- [ ] **Tarefas (tempo até concluir):** finalizar uma tarefa mostra "Concluída em X" no cartão e "Criada em… · concluída
-  em…" no modal; reabrir limpa; Analytics com "Tempo médio até concluir" (minhas e, como coordenadora, do laboratório).
-  Depende da migration `20261009` (não aplicada em produção).
-- [ ] **Tarefas (tempo por pessoa):** pessoa A liga o cronômetro e pausa; pessoa B retoma e pausa; abrir a tarefa e ver os
-  dois em "Tempo por pessoa" (trabalho/revisão); Analytics: "Meu tempo nas tarefas" e, como coordenadora, tempo por pessoa e
-  por projeto no período. Depende da migration `20261008` (não aplicada em produção).
-- [ ] **Tarefas (cronômetro):** mover para Em andamento liga o tempo (contando ao vivo no cartão); Pausar/Retomar; mover
-  para Em revisão separa o tempo de revisão; Finalizado mostra "Tempo total"; arquivar pausa; aviso "rodando há Xh" depois de
-  8h. Depende da migration `20261007` (não aplicada em produção).
+- [ ] **Tarefas (reforma completa, PRs #76 a #91 — todas as migrations até `20261012` já estão em produção):** testar com
+  duas contas (coordenadora e pesquisador), em tela larga e estreita (360 px):
+  - Quadro: 4 colunas lado a lado (rolagem horizontal em tela estreita); arrastar cartão entre colunas e acima/abaixo
+    (inclusive de projetos diferentes); no celular, botões ↑/↓; mudança de uma conta aparecer na outra sem recarregar.
+  - Cartão: prioridade (Alta e Urgente em destaque), lixeira só para quem criou e coordenadores (com confirmação),
+    arquivar e "Mostrar arquivadas", checklist "2/5" com itens marcáveis, fotos sem repetir, "N trabalhando agora".
+  - Modal: descrição formatada (barra e atalhos, inclusive `*itálico*` e código), checklist abaixo da descrição, trocar o
+    projeto (responsáveis que não são do novo projeto saem, sem aviso repetido), "Tempo por pessoa" e "Trechos de tempo"
+    (só consulta).
+  - Início/Minhas tarefas: filtros; aviso no sino e push ao ser atribuída por outra pessoa (nenhum ao se atribuir).
+  - Cronômetro: cada pessoa liga/pausa o seu; mover Em andamento <-> Em revisão mantém quem trabalha; A fazer/Finalizado
+    param todos; mover sem ser responsável não liga timer; "Tempo total" e "Concluída em X" ao finalizar.
+  - Timer esquecido: Administração > "Timers das tarefas" (aviso 4 h, pausa 8 h, tolerância 60 min); aviso no
+    sino/celular; parada no fim do turno da pessoa (Meu perfil > disponibilidade); remover/desativar a pessoa para os timers.
+  - Analytics: "Meu tempo nas tarefas", "Tempo médio até concluir" e, como coordenadora, tempo por pessoa e por projeto.
 - [ ] **Termo de outorga (PDF):** anexar, abrir, trocar e remover em bolsa já salva; só a dona e coordenadores abrem (testar com
-  uma segunda conta de pesquisador, que não deve ver nem abrir); remover a bolsa apaga o arquivo. Depende da migration
-  `20261003` (não aplicada em produção).
+  uma segunda conta de pesquisador, que não deve ver nem abrir); remover a bolsa apaga o arquivo.
 - [ ] **Notificações:** sino (pendências, "Novidades", "Marcar tudo como lido"), página `/notificacoes` (filtros e
   "Carregar mais"), cartão "Notificações" em Meu perfil (desligar um assunto e conferir que o aviso para).
 - [ ] **Push com o app fechado:** ligar os avisos, fechar a aba e gerar um evento com outra conta; testar no Chrome
@@ -59,7 +43,7 @@ com duas contas (coordenadora e pesquisador):
 
 - [ ] **Início (nova):** saudação, "Agora" (próxima reserva e presença), atalhos, "Precisa da sua decisão" (coordenador, mantenedor e membro de projeto), Novidades, Minhas reservas, Meus pedidos de compra e Meus projetos; estados vazios, celular e tema escuro. Os números do laboratório hoje saíram daqui e estão em **Analytics**.
 - [ ] **Analytics:** abas "Meus números" (todos) e "Laboratório" (só coordenador), filtro de período (7/30/90 dias e 12 meses), gráficos no tema claro e escuro, celular, "Ver os dados em tabela" e estados sem dados. Conferir se as cores dos gráficos seguem o tema (usam `rgb(var(--c-...))`).
-- [ ] **Tarefas:** prioridade no cartão e no filtro; **Feedback** com fotos; **Logo e favicon** em Configurações.
+- [ ] **Feedback** com fotos; **Logo e favicon** em Configurações.
 
 ## Antes de abrir para os testadores
 
@@ -94,12 +78,34 @@ com duas contas (coordenadora e pesquisador):
 - **Login de teste público.** O coordenador de teste (`admin@lab.local`) usa a mesma senha do
   ambiente local, que está no README. Por isso o ambiente de teste na nuvem só pode conter dados
   fictícios. Antes de qualquer uso real, troque a senha ou crie um projeto separado.
+- **Deploy depois do CI.** O site só é publicado quando o CI da `main` passa (ver [DEPLOY.md](DEPLOY.md)); se o CI ficar
+  vermelho, corrija antes de esperar o site atualizar (ou publique manualmente em *Actions → Deploy Pages*).
+- **Timers e `pg_cron`.** A pausa automática e os avisos de timer esquecido rodam por uma rotina agendada
+  (`pause-stale-task-timers`, a cada 15 min). Se o projeto do Supabase for pausado ou o `pg_cron` for desativado, eles
+  param de rodar.
 - **Migrations manuais.** Aplicar migrations no Supabase hospedado é um passo manual. Automatizar isso no CI
   exigiria guardar um token de acesso como *Secret* do GitHub e é uma decisão em aberto.
 - **Projeto gratuito do Supabase pausa por inatividade.** Se o site de teste parar de responder,
   reative o projeto no painel.
 
 ## Decisões em aberto
+
+- **Timer em modo Pomodoro (em validação com a equipe; nada foi implementado).** A ideia: foco de 25 min, pausa de 5 e
+  pausa longa de 15 a cada 4 focos, com alarme sonoro e modal em qualquer tela do sistema e aviso do sistema (push) com
+  a página fechada. O timer pararia sozinho aos 25 min (o esquecimento custa no máximo 25 min). Desenho combinado:
+  - Opcional por pessoa em Meu perfil ("Pomodoro" ou "Timer livre", minutos configuráveis), uma sessão ativa por pessoa.
+  - Fim do foco: o trecho fecha exatamente aos 25:00; botões **Pausa**, **Pular pausa** (começa outro foco) e
+    **Encerrar**. Fim da pausa: **Começar próximo foco** ou **Encerrar**. Parar antes dos 25 min: **Ir para a pausa
+    agora** (conta o tempo trabalhado, pausa curta, não vale como pomodoro completo), **Pausar** ou **Encerrar**.
+  - Não incluir "continuei trabalhando" (somar o tempo depois dos 25 min): seria outro jeito de inflar o tempo.
+  - Banco: `profile_timer_settings`, `pomodoro_sessions` (fase, início, fim, ciclos), rotina no `pg_cron` a cada minuto
+    que avança as fases e gera a notificação/push (`pomodoro_work_done`, `pomodoro_break_done`), RPCs `pomodoro_choose` e
+    `advance_my_pomodoro`; reaproveita `private.close_time_entry/open_time_entry` e o push já existente.
+  - Front: `PomodoroProvider` global (contagem regressiva, alarme com Web Audio, título da aba piscando, modal), pílula
+    fixa com o tempo restante, cartão "Timer" em Meu perfil.
+  - Limite técnico: o navegador só abre modal e toca alarme com o sistema aberto; fora dele vale a notificação do sistema.
+  - Entrega prevista em PRs separados (banco primeiro, depois a interface). Decidir depois de ouvir a equipe,
+    principalmente quem opera máquina por horas (ensaios mecânicos).
 
 - **Avisar os outros membros do projeto nas compras.** Hoje só o coordenador (pedido novo) e quem fez o pedido
   (aprovado, recusado, comprado, entregue) recebem aviso. Falta decidir se todos os membros do projeto devem saber
