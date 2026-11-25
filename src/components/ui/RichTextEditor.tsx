@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { Bold, Italic, List, ListOrdered } from "lucide-react";
 
 import { useT } from "../../i18n";
 import { parseRichText, serializeRichText, type InlineNode } from "../../lib/richText";
@@ -9,6 +10,9 @@ type RichTextEditorProps = {
   value: string;
   onChange: (value: string) => void;
 };
+
+const toolButton =
+  "inline-flex h-9 w-9 items-center justify-center rounded-md text-text transition hover:bg-background focus:outline-none focus-visible:ring-2 focus-visible:ring-primary";
 
 function inlineToDom(nodes: InlineNode[], parent: Node) {
   for (const node of nodes) {
@@ -122,11 +126,49 @@ export function RichTextEditor({ label, onChange, value }: RichTextEditorProps) 
     if (areaRef.current) onChange(serializeRichText(areaRef.current));
   }
 
+  function comando(nome: "bold" | "italic" | "insertUnorderedList" | "insertOrderedList") {
+    areaRef.current?.focus();
+    document.execCommand(nome);
+    sincronizar();
+  }
+
+  const botao = (nome: Parameters<typeof comando>[0], titulo: string, Icone: typeof Bold) => (
+    <button
+      type="button"
+      className={toolButton}
+      aria-label={titulo}
+      title={titulo}
+      // Não tira a seleção do texto ao clicar na barra.
+      onMouseDown={(event) => event.preventDefault()}
+      onClick={() => comando(nome)}
+    >
+      <Icone className="h-4 w-4" aria-hidden="true" />
+    </button>
+  );
+
+  const exemplo = (codigo: string, resultado: React.ReactNode, comEspaco = false) => (
+    <li className="flex items-center gap-1.5 rounded-md bg-background px-2 py-1">
+      <code className="font-mono text-text">{codigo}</code>
+      {comEspaco ? <span>+ {t("richText.space")}</span> : null}
+      <span aria-hidden="true">→</span>
+      <span className="text-text">{resultado}</span>
+    </li>
+  );
+  const amostra = t("richText.sample");
+
   return (
     <div className="grid gap-2">
-      <span id="rich-editor-label" className="text-base font-semibold text-text">
-        {label}
-      </span>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span id="rich-editor-label" className="text-base font-semibold text-text">
+          {label}
+        </span>
+        <div className="flex items-center gap-1">
+          {botao("bold", t("richText.bold"), Bold)}
+          {botao("italic", t("richText.italic"), Italic)}
+          {botao("insertUnorderedList", t("richText.bullets"), List)}
+          {botao("insertOrderedList", t("richText.numbered"), ListOrdered)}
+        </div>
+      </div>
       <div
         ref={areaRef}
         role="textbox"
@@ -134,7 +176,7 @@ export function RichTextEditor({ label, onChange, value }: RichTextEditorProps) 
         aria-labelledby="rich-editor-label"
         contentEditable
         suppressContentEditableWarning
-        className={`${inputClassName} block min-h-28 whitespace-pre-wrap break-words py-3 [&_a]:text-primary [&_a]:underline [&_code]:rounded [&_code]:bg-background [&_code]:px-1 [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6`}
+        className={`${inputClassName} block min-h-28 whitespace-pre-wrap break-words py-3 [&_a]:text-primary [&_a]:underline [&_code]:rounded [&_code]:bg-background [&_code]:px-1 [&_em]:italic [&_em]:[font-synthesis:style] [&_i]:italic [&_i]:[font-synthesis:style] [&_ol]:list-decimal [&_ol]:pl-6 [&_ul]:list-disc [&_ul]:pl-6`}
         onInput={(event) => {
           if (areaRef.current) aplicarAtalhos(areaRef.current, event.nativeEvent as InputEvent);
           sincronizar();
@@ -146,7 +188,16 @@ export function RichTextEditor({ label, onChange, value }: RichTextEditorProps) 
           document.execCommand("insertText", false, event.clipboardData.getData("text/plain"));
         }}
       />
-      <p className="text-sm text-muted">{t("richText.hint")}</p>
+      <div className="grid gap-1.5 text-sm text-muted">
+        <span>{t("richText.shortcuts")}</span>
+        <ul className="flex flex-wrap gap-2">
+          {exemplo(`**${amostra}**`, <strong>{t("richText.exBold")}</strong>)}
+          {exemplo(`*${amostra}*`, <em className="[font-synthesis:style]">{t("richText.exItalic")}</em>)}
+          {exemplo(`\`${amostra}\``, <code className="rounded bg-surface px-1 font-mono">{t("richText.exCode")}</code>)}
+          {exemplo("-", <>• {t("richText.exList")}</>, true)}
+          {exemplo("1.", <>1. {t("richText.exNumbered")}</>, true)}
+        </ul>
+      </div>
     </div>
   );
 }
