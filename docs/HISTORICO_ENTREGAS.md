@@ -1,4 +1,4 @@
-# Histórico de entregas (PRs #47 a #62)
+# Histórico de entregas (PRs #47 a #91)
 
 O que foi entregue depois do MVP, em ordem. O que ainda falta está em [PENDENCIAS.md](PENDENCIAS.md); o desenho do
 banco, em [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) (seções 3.20 e 3.21) e [DATABASE_SECURITY.md](DATABASE_SECURITY.md).
@@ -34,9 +34,35 @@ banco, em [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) (seções 3.20 e 3.21) e [DAT
 | #61 | Seção "Projetos" no perfil do pesquisador. |
 | #62 | Esta documentação. |
 
+## Bolsas, perfis e projetos (PRs #63 a #75)
+
+| PR | Entrega |
+| --- | --- |
+| #71 | **Termo de outorga**: um PDF por bolsa (só a dona e os coordenadores veem), com visualizador na própria página. |
+| #72 a #75 | Bolsas de fomento reformuladas em Meu perfil, cards de Pesquisadores e de Projetos padronizados e responsivos, botão de copiar e-mail, selo de presença no mesmo lugar e máscara de valor (centavos) em bolsas e no fomento dos projetos. |
+
+## Tarefas: reforma completa (PRs #76 a #91)
+
+| PR | Entrega |
+| --- | --- |
+| #76 | Prioridade **Alta** (baixa, normal, alta, urgente), **lixeira com confirmação** (só quem criou e coordenadores), **arquivar** sem perder a tarefa, filtros em "Minhas tarefas" (Início) e **aviso ao receber uma tarefa**. Migration `20261004`. |
+| #77 | **Checklist** (subtarefas), **reordenar cartões** (arrastar, botões ↑/↓ no toque) e quadros **atualizados ao vivo** (Realtime). Migration `20261005`. |
+| #78 | Ordem valendo para a coluna inteira (projetos juntos), **trocar a tarefa de projeto** e correção de soltar acima do primeiro cartão. Migration `20261006`. |
+| #79 | Descrição com **edição direta e formatação** (barra, atalhos `**negrito**`, `*itálico*`, `-` e `1.` para listas, código). |
+| #80 | Correção do job `database` da CI (`database.types.ts` igual ao gerado). |
+| #81, #82 | **Cronômetro** nas tarefas (trabalho, revisão e total), com segundos andando ao vivo. Migration `20261007`. |
+| #83 | **Tempo por pessoa** (modal da tarefa) e relatório de tempo no Analytics (meu tempo; coordenador: por pessoa e por projeto). Migration `20261008`. |
+| #84 | **Tempo até concluir** a tarefa (criação até Finalizado), no cartão, no modal e no Analytics. Migration `20261009`. |
+| #85 | **Timers independentes por pessoa**: várias pessoas na mesma tarefa, ao mesmo tempo ou em horários diferentes. Migration `20261010`. |
+| #86 | **Proteções contra timer esquecido**: aviso (sino e push), pausa automática por limite de horas e no fim do turno de cada pessoa, parada ao sair do projeto; limites ajustáveis em Administração. Migration `20261011`. |
+| #87, #88 | Cartões de tarefa mais limpos (um só grupo de pessoas, ações ao passar o mouse, prioridade discreta) e "N trabalhando agora". |
+| #89 | Quadro com as 4 colunas lado a lado (rolagem horizontal em tela estreita) e modal ajustado a telas pequenas. |
+| #90 | **Deploy só depois do CI**: o site é publicado quando o CI da `main` (inclusive o job do banco) passa. |
+| #91 | Trechos de tempo **só para consulta**: ninguém ajusta um trecho registrado (evita adulterar o tempo). Migration `20261012`. |
+
 ## Como está no ar
 
-- Migrations `20260921` a `20261001` aplicadas no Supabase hospedado (produção).
+- Migrations `20260921` a `20261012` aplicadas no Supabase hospedado (produção).
 - Edge Function `send-push` publicada, com os segredos VAPID e do webhook; a variável `VITE_VAPID_PUBLIC_KEY` está nas
   variáveis de Actions do repositório (passo a passo em [DEPLOY.md](DEPLOY.md)).
 - Contas e papéis: o aviso de pedido de compra novo vai só para coordenadores; chamado novo, para coordenadores e
