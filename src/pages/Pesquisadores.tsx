@@ -1,6 +1,6 @@
 import { getLocale, useT } from "../i18n";
-import { useState } from "react";
-import { UserPlus } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Check, Copy, UserPlus } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { Avatar } from "../components/ui/Avatar";
@@ -24,6 +24,43 @@ function getStatusVariant(status: StatusPresenca) {
   };
 
   return variants[status];
+}
+
+// Copia o e-mail para a área de transferência e mostra um "ok" por 2 segundos.
+function CopyEmailButton({ email }: { email: string }) {
+  const t = useT();
+  const [copied, setCopied] = useState(false);
+  const timer = useRef<number>();
+
+  useEffect(() => () => window.clearTimeout(timer.current), []);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(email);
+    } catch {
+      // Sem permissão da área de transferência: nada a mostrar; o e-mail continua selecionável para o Ctrl+C.
+      return;
+    }
+    setCopied(true);
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => setCopied(false), 2000);
+  }
+
+  const label = copied ? t("researchers.emailCopied") : t("researchers.copyEmail");
+  return (
+    <button
+      aria-label={label}
+      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition hover:bg-primary-soft hover:text-primary"
+      onClick={copy}
+      title={label}
+      type="button"
+    >
+      {copied ? <Check className="h-4 w-4 text-success-dark" aria-hidden="true" /> : <Copy className="h-4 w-4" aria-hidden="true" />}
+      <span aria-live="polite" className="sr-only">
+        {copied ? label : ""}
+      </span>
+    </button>
+  );
 }
 
 export function Pesquisadores() {
@@ -153,35 +190,44 @@ export function Pesquisadores() {
           </p>
         </Card>
       ) : visualizacao === "cards" ? (
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {pesquisadoresOrdenados.map((pesquisador) => {
             const nomeCompleto = `${pesquisador.nome} ${pesquisador.sobrenome}`;
             return (
-              <Link
+              // O cartão inteiro leva ao perfil por um link esticado sobre o nome; o e-mail fica acima dele (z-10) para
+              // poder ser selecionado e copiado sem abrir o perfil.
+              <Card
+                className="group relative flex h-full min-w-0 flex-col gap-3 p-4 transition hover:border-primary hover:shadow-md sm:p-5"
                 key={pesquisador.id}
-                to={`/pesquisadores/${pesquisador.id}`}
-                aria-label={t("researchers.openProfile", { name: nomeCompleto })}
-                className="group block rounded-lg focus-visible:outline-offset-2"
               >
-                <Card className="h-full transition group-hover:border-primary group-hover:shadow-md">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex min-w-0 items-start gap-3">
-                      <Avatar avatarUrl={pesquisador.avatarUrl} name={nomeCompleto} className="h-12 w-12 shrink-0" />
-                      <div className="min-w-0">
-                        <h3 className="break-words text-xl font-bold text-text">{nomeCompleto}</h3>
-                        <p className="mt-1 text-base text-muted">
-                          {t("researchers.affiliationLine", { value: pesquisador.vinculo })}
-                        </p>
-                        <p className="mt-1 break-all text-sm font-semibold leading-5 text-muted">{pesquisador.email}</p>
-                      </div>
-                    </div>
-                    <StatusBadge
-                      label={t(`presence.${pesquisador.status}` as Parameters<typeof t>[0])}
-                      variant={getStatusVariant(pesquisador.status)}
-                    />
+                <div className="flex min-w-0 items-center gap-3">
+                  <Avatar avatarUrl={pesquisador.avatarUrl} name={nomeCompleto} className="h-14 w-14 shrink-0" />
+                  <div className="min-w-0">
+                    <h3 className="break-words text-lg font-bold leading-snug text-text">
+                      <Link
+                        aria-label={t("researchers.openProfile", { name: nomeCompleto })}
+                        className="after:absolute after:inset-0 after:rounded-lg focus-visible:outline-offset-2"
+                        to={`/pesquisadores/${pesquisador.id}`}
+                      >
+                        {nomeCompleto}
+                      </Link>
+                    </h3>
+                    <p className="mt-0.5 break-words text-sm text-muted">{pesquisador.vinculo}</p>
                   </div>
-                </Card>
-              </Link>
+                </div>
+                <div className="mt-auto flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-border pt-3">
+                  <div className="relative z-10 flex min-w-0 flex-1 basis-40 items-center gap-1">
+                    <span className="min-w-0 select-text truncate text-sm font-semibold text-muted" title={pesquisador.email}>
+                      {pesquisador.email}
+                    </span>
+                    <CopyEmailButton email={pesquisador.email} />
+                  </div>
+                  <StatusBadge
+                    label={t(`presence.${pesquisador.status}` as Parameters<typeof t>[0])}
+                    variant={getStatusVariant(pesquisador.status)}
+                  />
+                </div>
+              </Card>
             );
           })}
         </section>
