@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Pause, Play, Timer } from "lucide-react";
 
 import { useT } from "../../i18n";
@@ -6,12 +6,13 @@ import { useAuth } from "../../lib/auth";
 import { useCurrentProfile } from "../../lib/currentUser";
 import type { ProjectTask } from "../../lib/projects";
 import { elapsedSeconds, formatClock, formatDuration, getMyTimer, getTaskTimes } from "../../lib/taskTimer";
-import { Avatar } from "../ui/Avatar";
 
 type TaskTimerProps = {
   task: ProjectTask;
   /** Quando informado, mostra o botão de pausar/retomar o timer de quem está logado (só em Em andamento e Em revisão). */
   onToggle?: (task: ProjectTask, running: boolean) => void;
+  /** Texto extra na mesma linha quando a tarefa está parada (por exemplo, "Concluída em 3 dias"). */
+  trailing?: ReactNode;
 };
 
 // Relógio da tela: atualiza a cada segundo, mas só enquanto `ativo` (algum timer correndo).
@@ -28,7 +29,7 @@ export function useNow(ativo: boolean) {
 
 // Tempo da tarefa no cartão: soma de todos enquanto ela está em curso (com quem está trabalhando agora) e o total quando
 // termina. Cada pessoa liga e pausa o seu próprio timer.
-export function TaskTimer({ onToggle, task }: TaskTimerProps) {
+export function TaskTimer({ onToggle, task, trailing }: TaskTimerProps) {
   const t = useT();
   const { currentProfile } = useCurrentProfile();
   const { labSettings } = useAuth();
@@ -43,7 +44,7 @@ export function TaskTimer({ onToggle, task }: TaskTimerProps) {
   const longo = mine !== null && minhaDuracao >= (labSettings?.timer_reminder_hours ?? 4) * 3600;
 
   return (
-    <div className="grid gap-1 text-sm">
+    <div className={["grid gap-1 text-sm", emCurso ? "border-t border-border pt-2" : ""].join(" ")}>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <span className={["flex items-center gap-1.5 font-semibold", times.running ? "text-primary" : "text-muted"].join(" ")}>
           <Timer className="h-4 w-4" aria-hidden="true" />
@@ -57,6 +58,7 @@ export function TaskTimer({ onToggle, task }: TaskTimerProps) {
             </span>
           )}
         </span>
+        {!emCurso && trailing ? <span className="text-muted">· {trailing}</span> : null}
         {emCurso && times.review > 0 ? (
           <span className="text-muted">
             {t("tasks.timeReview")}: {formatDuration(times.review)}
@@ -75,20 +77,6 @@ export function TaskTimer({ onToggle, task }: TaskTimerProps) {
           </button>
         ) : null}
       </div>
-      {emCurso && task.running.length > 0 ? (
-        <div className="flex items-center gap-2 text-muted">
-          <div className="flex -space-x-1.5">
-            {task.running.map((timer) => (
-              <Avatar key={timer.profile_id} avatarUrl={timer.avatar_url} name={timer.full_name} className="h-5 w-5 ring-2 ring-surface" />
-            ))}
-          </div>
-          <span>
-            {task.running.length === 1
-              ? t("tasks.workingOne", { name: task.running[0].full_name.split(" ")[0] })
-              : t("tasks.workingMany", { count: task.running.length })}
-          </span>
-        </div>
-      ) : null}
       {longo ? <p className="font-semibold text-warning-dark">{t("tasks.timerLong", { time: formatDuration(minhaDuracao), hours: labSettings?.timer_max_hours ?? 8 })}</p> : null}
     </div>
   );

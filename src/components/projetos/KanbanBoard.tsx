@@ -26,6 +26,19 @@ function todayLocal() {
   return `${now.getFullYear()}-${month}-${day}`;
 }
 
+// Responsáveis e, além deles, quem estiver com o timer ligado; quem está trabalhando agora ganha destaque.
+function getTaskPeople(task: ProjectTask) {
+  const people = new Map<string, { profile_id: string; full_name: string; avatar_url: string | null; working: boolean }>();
+  for (const assignee of task.assignees) {
+    people.set(assignee.profile_id, { profile_id: assignee.profile_id, full_name: assignee.full_name, avatar_url: assignee.avatar_url, working: false });
+  }
+  for (const timer of task.running) {
+    const current = people.get(timer.profile_id);
+    people.set(timer.profile_id, { profile_id: timer.profile_id, full_name: timer.full_name, avatar_url: timer.avatar_url, ...current, working: true });
+  }
+  return [...people.values()];
+}
+
 function formatDueDate(value: string) {
   return new Intl.DateTimeFormat(getLocale(), { day: "2-digit", month: "2-digit", timeZone: "UTC" }).format(new Date(`${value}T00:00:00Z`));
 }
@@ -33,8 +46,16 @@ function formatDueDate(value: string) {
 const priorityClasses: Record<TaskPriority, string> = {
   urgent: "border-danger bg-danger-soft text-danger-dark",
   high: "border-warning bg-warning-soft text-warning-dark",
-  normal: "border-border bg-background text-text",
-  low: "border-border bg-background text-muted",
+  normal: "border-transparent bg-transparent text-muted hover:border-border",
+  low: "border-transparent bg-transparent text-muted hover:border-border",
+};
+
+// Faixa colorida na lateral do cartão só para o que pede atenção.
+const priorityAccent: Record<TaskPriority, string> = {
+  urgent: "border-l-[3px] border-l-danger",
+  high: "border-l-[3px] border-l-warning",
+  normal: "",
+  low: "",
 };
 
 type KanbanBoardProps = {
@@ -166,7 +187,8 @@ export function KanbanBoard({ canDelete, onArchive, onDelete, onDragChange, onMo
                   setDestino((atual) => (atual?.status === column.value && atual.antesDe === antesDe ? atual : { status: column.value, antesDe }));
                 }}
                 className={[
-                  "relative grid gap-2 rounded-lg border bg-surface p-3 shadow-sm",
+                  "group relative grid gap-2 rounded-lg border bg-surface p-3 shadow-sm transition hover:shadow-md",
+                  arquivada ? "" : priorityAccent[task.priority],
                   arquivada ? "opacity-70" : "cursor-grab",
                   arrastando === task.id ? "opacity-50" : "",
                   atrasada ? "border-danger" : "border-border",
@@ -183,7 +205,7 @@ export function KanbanBoard({ canDelete, onArchive, onDelete, onDragChange, onMo
                     {task.title}
                   </button>
                   {onArchive || podeApagar ? (
-                    <div className="-mr-1 -mt-1 flex shrink-0 items-center">
+                    <div className="-mr-1 -mt-1 flex shrink-0 items-center transition [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:focus-within:opacity-100 [@media(hover:hover)]:group-hover:opacity-100">
                       {onArchive ? (
                         <button
                           type="button"
@@ -214,20 +236,21 @@ export function KanbanBoard({ canDelete, onArchive, onDelete, onDragChange, onMo
                     {t("tasks.archivedBadge")}
                   </span>
                 ) : null}
-                {showProject && task.project_name ? (
-                  <span
-                    className="w-fit max-w-full truncate rounded-full border px-2 py-0.5 text-xs font-semibold"
-                    style={getProjectColor(task.project_id)}
-                  >
-                    {task.project_name}
-                  </span>
-                ) : null}
-                {task.due_on ? (
-                  <p className={["flex items-center gap-1 text-sm", atrasada ? "font-semibold text-danger" : "text-muted"].join(" ")}>
-                    <CalendarDays className="h-4 w-4" aria-hidden="true" />
-                    {atrasada ? t("tasks.late") : ""}
-                    {formatDueDate(task.due_on)}
-                  </p>
+                {(showProject && task.project_name) || task.due_on ? (
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    {showProject && task.project_name ? (
+                      <span className="w-fit max-w-full truncate rounded-full border px-2 py-0.5 text-xs font-semibold" style={getProjectColor(task.project_id)}>
+                        {task.project_name}
+                      </span>
+                    ) : null}
+                    {task.due_on ? (
+                      <p className={["flex items-center gap-1 text-sm", atrasada ? "font-semibold text-danger" : "text-muted"].join(" ")}>
+                        <CalendarDays className="h-4 w-4" aria-hidden="true" />
+                        {atrasada ? t("tasks.late") : ""}
+                        {formatDueDate(task.due_on)}
+                      </p>
+                    ) : null}
+                  </div>
                 ) : null}
                 {progresso.total > 0 ? (
                   <div className="grid gap-1">
@@ -266,25 +289,36 @@ export function KanbanBoard({ canDelete, onArchive, onDelete, onDragChange, onMo
                     ) : null}
                   </div>
                 ) : null}
-                <TaskTimer task={task} onToggle={onToggleTimer} />
-                {task.status === "done" && getLeadTimeSeconds(task) !== null ? (
-                  <p className="text-sm text-muted">{t("tasks.leadDone", { time: formatLeadTime(getLeadTimeSeconds(task) ?? 0) })}</p>
-                ) : null}
+                <TaskTimer
+                  task={task}
+                  onToggle={onToggleTimer}
+                  trailing={
+                    task.status === "done" && getLeadTimeSeconds(task) !== null ? t("tasks.leadDone", { time: formatLeadTime(getLeadTimeSeconds(task) ?? 0) }) : null
+                  }
+                />
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex -space-x-2">
-                    {task.assignees.map((assignee) => (
-                      <Avatar
-                        key={assignee.profile_id}
-                        avatarUrl={assignee.avatar_url}
-                        name={assignee.full_name}
-                        className="h-7 w-7 ring-2 ring-surface"
-                      />
+                    {getTaskPeople(task).map((person) => (
+                      <span
+                        key={person.profile_id}
+                        className="relative"
+                        title={person.working ? t("tasks.workingNow", { name: person.full_name }) : person.full_name}
+                      >
+                        <Avatar
+                          avatarUrl={person.avatar_url}
+                          name={person.full_name}
+                          className={["h-7 w-7 ring-2", person.working ? "ring-success" : "ring-surface"].join(" ")}
+                        />
+                        {person.working ? (
+                          <span aria-hidden="true" className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 animate-pulse rounded-full border-2 border-surface bg-success" />
+                        ) : null}
+                      </span>
                     ))}
                   </div>
                   {onPriorityChange ? (
                     <select
                       aria-label={t("tasks.setPriority", { title: task.title })}
-                      className={["min-h-9 min-w-0 max-w-full rounded-md border px-2 text-sm font-semibold", priorityClasses[task.priority]].join(" ")}
+                      className={["min-h-8 min-w-0 max-w-full rounded-md border px-2 text-xs font-semibold transition", priorityClasses[task.priority]].join(" ")}
                       value={task.priority}
                       onChange={(event) => onPriorityChange(task, event.target.value as TaskPriority)}
                     >
