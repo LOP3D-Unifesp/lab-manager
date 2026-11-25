@@ -113,7 +113,7 @@ export function KanbanBoard({ onMove, onOpen, onPriorityChange, showProject = fa
                     {formatDueDate(task.due_on)}
                   </p>
                 ) : null}
-                <div className="flex items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex -space-x-2">
                     {task.assignees.map((assignee) => (
                       <Avatar
@@ -128,7 +128,7 @@ export function KanbanBoard({ onMove, onOpen, onPriorityChange, showProject = fa
                     <select
                       aria-label={t("tasks.setPriority", { title: task.title })}
                       className={[
-                        "min-h-9 max-w-[9rem] rounded-md border px-2 text-sm font-semibold",
+                        "min-h-9 min-w-0 max-w-full rounded-md border px-2 text-sm font-semibold",
                         task.priority === "urgent"
                           ? "border-danger bg-danger-soft text-danger-dark"
                           : task.priority === "low"
