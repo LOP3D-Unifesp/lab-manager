@@ -1390,12 +1390,6 @@ export async function getTaskTotals(taskId: string) {
   return data as { work_seconds: number; review_seconds: number };
 }
 
-// Corrige (ou define) a hora em que um trecho de tempo terminou.
-export async function adjustTimeEntry(entryId: string, endedAt: Date) {
-  const { error } = await client().rpc("adjust_time_entry", { p_entry_id: entryId, p_ended_at: endedAt.toISOString() });
-  throwIfError(error);
-}
-
 // Tempo trabalhado por pessoa e projeto no período (coordenador: todos; demais: só o próprio).
 export async function getTaskTimeReport(from: Date, to: Date): Promise<TimeReportRow[]> {
   const { data, error } = await client().rpc("get_task_time_report", { p_from: from.toISOString(), p_to: to.toISOString() });

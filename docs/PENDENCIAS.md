@@ -30,7 +30,7 @@ com duas contas (coordenadora e pesquisador):
   `20261011` (não aplicada em produção).
 - [ ] **Tarefas (timers por pessoa):** duas pessoas com o timer ligado na mesma tarefa ao mesmo tempo (cartão mostra quem
   está trabalhando); cada uma pausa o seu; mover Em andamento <-> Em revisão mantém quem trabalha; A fazer/Finalizado
-  param todos; mover sem ser responsável não liga timer; "Trechos de tempo" no modal com Ajustar/Encerrar; pausa
+  param todos; mover sem ser responsável não liga timer; "Trechos de tempo" no modal (só consulta, sem ajuste); pausa
   automática aos 12 h (marcada no trecho). Timers que estavam correndo no deploy foram pausados. Depende da migration
   `20261010` (não aplicada em produção).
 - [ ] **Tarefas (tempo até concluir):** finalizar uma tarefa mostra "Concluída em X" no cartão e "Criada em… · concluída
