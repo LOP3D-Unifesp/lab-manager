@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ExternalLink, Mail, Pencil, Phone } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 
+import { ContractViewer } from "../components/profile/ContractViewer";
 import { ReadOnlyWeeklySchedule } from "../components/profile/ReadOnlyWeeklySchedule";
 import { Avatar } from "../components/ui/Avatar";
 import { Card } from "../components/ui/Card";
@@ -20,7 +21,6 @@ import { getStatusPresenca, getVinculoLabel, type StatusPresenca } from "../lib/
 import { getProjectStatusLabel, getProjectStatusVariant, type ProjectDirectoryEntry } from "../lib/projects";
 import {
   getGrantContracts,
-  getGrantContractUrl,
   getProfile,
   listAvailability,
   listProfileSkills,
@@ -68,6 +68,7 @@ export function PesquisadorDetalhe() {
   const [data, setData] = useState<Loaded | null | undefined>(undefined);
   const [error, setError] = useState("");
   // Termos de outorga ({ id da bolsa: caminho }): só a própria pessoa e os coordenadores podem ler.
+  const [viewingContract, setViewingContract] = useState<string | null>(null);
   const [contracts, setContracts] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -81,14 +82,6 @@ export function PesquisadorDetalhe() {
       ativo = false;
     };
   }, [id, me]);
-
-  async function openContract(path: string) {
-    try {
-      window.open(await getGrantContractUrl(path), "_blank", "noopener,noreferrer");
-    } catch {
-      setError(t("grants.errContract"));
-    }
-  }
 
   useEffect(() => {
     if (!id) {
@@ -280,7 +273,7 @@ export function PesquisadorDetalhe() {
                         {grant.id && contracts[grant.id] ? (
                           <button
                             className="mt-1 inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-primary-dark"
-                            onClick={() => openContract(contracts[grant.id as string])}
+                            onClick={() => setViewingContract(contracts[grant.id as string])}
                             type="button"
                           >
                             <ExternalLink className="h-4 w-4" aria-hidden="true" />
@@ -329,6 +322,7 @@ export function PesquisadorDetalhe() {
           <ReadOnlyWeeklySchedule slots={slots} />
         </Card>
       </div>
+      {viewingContract ? <ContractViewer onClose={() => setViewingContract(null)} path={viewingContract} /> : null}
     </>
   );
 }

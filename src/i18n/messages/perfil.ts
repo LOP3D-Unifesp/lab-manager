@@ -98,6 +98,7 @@ export const perfil = {
   "grants.processNumber": { pt: "Número do processo", en: "Process number", es: "Número del proceso" },
   "grants.processShort": { pt: "processo {number}", en: "process {number}", es: "proceso {number}" },
   "grants.contract": { pt: "Termo de outorga (PDF)", en: "Grant agreement (PDF)", es: "Término de otorgamiento (PDF)" },
+  "grants.contractOpenTab": { pt: "Abrir em outra aba", en: "Open in a new tab", es: "Abrir en otra pestaña" },
   "grants.contractNone": { pt: "Nenhum termo anexado.", en: "No agreement attached.", es: "Ningún término adjunto." },
   "grants.contractAttach": { pt: "Anexar termo", en: "Attach agreement", es: "Adjuntar término" },
   "grants.contractReplace": { pt: "Trocar termo", en: "Replace agreement", es: "Cambiar término" },

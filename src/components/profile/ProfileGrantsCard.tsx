@@ -7,7 +7,6 @@ import type { ProjectDirectoryEntry } from "../../lib/projects";
 import {
   deleteGrantContractFiles,
   getGrantContracts,
-  getGrantContractUrl,
   listProjectDirectory,
   removeGrantContract,
   replaceMyFundingGrants,
@@ -16,6 +15,7 @@ import {
 } from "../../lib/supabaseRepository";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
+import { ContractViewer } from "./ContractViewer";
 import { FundingGrantsEditor } from "./FundingGrantsEditor";
 
 type ProfileGrantsCardProps = {
@@ -35,6 +35,7 @@ export function ProfileGrantsCard({ onSaved, profileId, saved }: ProfileGrantsCa
   const [joiningProjectId, setJoiningProjectId] = useState<string | null>(null);
   const [contracts, setContracts] = useState<Record<string, string>>({});
   const [contractBusyId, setContractBusyId] = useState<string | null>(null);
+  const [viewingContract, setViewingContract] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -137,14 +138,6 @@ export function ProfileGrantsCard({ onSaved, profileId, saved }: ProfileGrantsCa
     }
   }
 
-  async function openContract(path: string) {
-    try {
-      window.open(await getGrantContractUrl(path), "_blank", "noopener,noreferrer");
-    } catch {
-      setError(t("grants.errContract"));
-    }
-  }
-
   async function save() {
     setError("");
     setSuccess("");
@@ -202,7 +195,7 @@ export function ProfileGrantsCard({ onSaved, profileId, saved }: ProfileGrantsCa
         contracts={contracts}
         dirty={dirty}
         disabled={saving}
-        onOpenContract={openContract}
+        onOpenContract={setViewingContract}
         onRemoveContract={removeContract}
         onUploadContract={uploadContract}
         joiningProjectId={joiningProjectId}
@@ -225,6 +218,7 @@ export function ProfileGrantsCard({ onSaved, profileId, saved }: ProfileGrantsCa
         </Button>
       </div>
     </Card>
+    {viewingContract ? <ContractViewer onClose={() => setViewingContract(null)} path={viewingContract} /> : null}
     </div>
   );
 }
