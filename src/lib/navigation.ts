@@ -1,4 +1,5 @@
 import {
+  BarChart3,
   CalendarCheck,
   CalendarDays,
   Boxes,
@@ -56,7 +57,7 @@ export function getSafeInternalRedirect(value: unknown) {
 
 export const navigationItems: NavigationItem[] = [
   {
-    desktopLabel: "Dashboard",
+    desktopLabel: "Início",
     desktopSection: "main",
     desktopOrder: 1,
     mobileLabel: "Início",
@@ -64,6 +65,16 @@ export const navigationItems: NavigationItem[] = [
     icon: Gauge,
     mobilePlacement: "primary",
     mobileOrder: 1,
+  },
+  {
+    desktopLabel: "Analytics",
+    desktopSection: "work",
+    desktopOrder: 5.5,
+    mobileLabel: "Analytics",
+    path: "/analytics",
+    icon: BarChart3,
+    mobilePlacement: "secondary",
+    mobileOrder: 1.5,
   },
   {
     desktopLabel: "Pesquisadores",

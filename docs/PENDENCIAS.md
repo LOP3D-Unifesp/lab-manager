@@ -19,7 +19,8 @@ com duas contas (coordenadora e pesquisador):
   botões de editar, cancelar ou aprovar; o filtro de projeto lista os projetos dos pedidos que ele enxerga.
 - [ ] **Projetos:** aba "Todos os projetos", pedir para entrar, cancelar o pedido, aprovar e recusar como membro e como
   coordenador, e conferir os avisos.
-- [ ] **Dashboard:** "Minhas tarefas" para pesquisador sem projeto (mensagem) e com projeto (criar tarefa).
+- [ ] **Dashboard:** "Minhas tarefas" para pesquisador sem projeto (mensagem) e com projeto (criar tarefa).
+- [ ] **Início (nova):** saudação, "Agora" (próxima reserva e presença), atalhos, "Precisa da sua decisão" (coordenador, mantenedor e membro de projeto), Novidades, Minhas reservas, Meus pedidos de compra e Meus projetos; estados vazios, celular e tema escuro. Os números do laboratório hoje saíram daqui e estão em **Analytics**.
 - [ ] **Tarefas:** prioridade no cartão e no filtro; **Feedback** com fotos; **Logo e favicon** em Configurações.
 
 ## Antes de abrir para os testadores

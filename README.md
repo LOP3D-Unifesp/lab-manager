@@ -31,7 +31,7 @@ O projeto centraliza informações operacionais do laboratório para que pesquis
 **Projetos**
 
 - Projetos com membros, fomentos (agência, processo, vigência e valor por rubrica) e quadro de tarefas.
-- Em **Projetos**, quadro geral de tarefas; no Dashboard, **Minhas tarefas**.
+- Em **Projetos**, quadro geral de tarefas; na **Início**, **Minhas tarefas**.
 
 **Equipamentos, inventário e reservas**
 
@@ -190,7 +190,8 @@ Nuvem (exigem `.env.admin.local`, veja [docs/DEPLOY.md](docs/DEPLOY.md)):
 
 | Rota | Tela | Acesso |
 |---|---|---|
-| `/` | Dashboard | todos |
+| `/` | Início (centro de comando pessoal) | todos |
+| `/analytics` | Analytics (números do laboratório) | todos |
 | `/pesquisadores` | Pesquisadores | todos |
 | `/habilidades` | Habilidades | todos |
 | `/agenda` | Agenda do Laboratório | todos |
