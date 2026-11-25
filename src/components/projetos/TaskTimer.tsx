@@ -3,7 +3,7 @@ import { Pause, Play, Timer } from "lucide-react";
 
 import { useT } from "../../i18n";
 import type { ProjectTask } from "../../lib/projects";
-import { LONG_RUNNING_SECONDS, formatDuration, getTaskTimes } from "../../lib/taskTimer";
+import { LONG_RUNNING_SECONDS, formatClock, formatDuration, getTaskTimes } from "../../lib/taskTimer";
 
 type TaskTimerProps = {
   task: ProjectTask;
@@ -12,18 +12,22 @@ type TaskTimerProps = {
 };
 
 // Tempo da tarefa no cartão: trabalho e revisão separados enquanto ela está em curso, e o total quando termina.
-export function TaskTimer({ onToggle, task }: TaskTimerProps) {
-  const t = useT();
+// Relógio da tela: atualiza a cada segundo, mas só enquanto `ativo` (um cronômetro correndo).
+export function useNow(ativo: boolean) {
   const [now, setNow] = useState(() => new Date());
-  const running = task.timer_started_at !== null;
-
-  // Só conta o tempo na tela (a cada segundo) enquanto o cronômetro está correndo.
   useEffect(() => {
     setNow(new Date());
-    if (!running) return;
+    if (!ativo) return;
     const timer = window.setInterval(() => setNow(new Date()), 1000);
     return () => window.clearInterval(timer);
-  }, [running]);
+  }, [ativo]);
+  return now;
+}
+
+export function TaskTimer({ onToggle, task }: TaskTimerProps) {
+  const t = useT();
+  const running = task.timer_started_at !== null;
+  const now = useNow(running);
 
   const times = getTaskTimes(task, now);
   const emCurso = (task.status === "in_progress" || task.status === "review") && task.archived_at === null;
@@ -37,7 +41,7 @@ export function TaskTimer({ onToggle, task }: TaskTimerProps) {
         <span className={["flex items-center gap-1.5 font-semibold", running ? "text-primary" : "text-muted"].join(" ")}>
           <Timer className="h-4 w-4" aria-hidden="true" />
           {emCurso ? (
-            <span title={t("tasks.timeWork")}>{formatDuration(times.work)}</span>
+            <span title={t("tasks.timeWork")} className="tabular-nums">{formatClock(times.work)}</span>
           ) : (
             <span title={`${t("tasks.timeWork")}: ${formatDuration(times.work)} · ${t("tasks.timeReview")}: ${formatDuration(times.review)}`}>
               {t("tasks.timeTotal")}: {formatDuration(times.total)}

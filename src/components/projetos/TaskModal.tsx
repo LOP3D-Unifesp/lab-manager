@@ -21,7 +21,8 @@ import {
   type TaskPriority,
   type TaskStatus,
 } from "../../lib/projects";
-import { formatDuration, getTaskTimes } from "../../lib/taskTimer";
+import { formatClock, formatDuration, getTaskTimes } from "../../lib/taskTimer";
+import { useNow } from "./TaskTimer";
 import { Avatar } from "../ui/Avatar";
 import { Button } from "../ui/Button";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
@@ -149,7 +150,9 @@ export function TaskModal({
     }
   }
 
-  const tempos = task ? getTaskTimes(task, new Date()) : null;
+  const agora = useNow(Boolean(task?.timer_started_at));
+  const tempos = task ? getTaskTimes(task, agora) : null;
+  const mostrar = (segundos: number) => (tempos?.running ? formatClock(segundos) : formatDuration(segundos));
   const semProjetos = !lockedProjectId && projects.length === 0;
 
   return (
@@ -221,10 +224,10 @@ export function TaskModal({
 
         {task && tempos && tempos.total > 0 ? (
           <p className="rounded-lg border border-border bg-background p-3 text-base text-text">
-            <span className="font-semibold">{t("tasks.timeTotal")}: {formatDuration(tempos.total)}</span>
+            <span className="font-semibold"><span className="tabular-nums">{t("tasks.timeTotal")}: {mostrar(tempos.total)}</span></span>
             <span className="text-muted">
               {" "}
-              · {t("tasks.timeWork")} {formatDuration(tempos.work)} · {t("tasks.timeReview")} {formatDuration(tempos.review)}
+              · {t("tasks.timeWork")} {mostrar(tempos.work)} · {t("tasks.timeReview")} {mostrar(tempos.review)}
             </span>
           </p>
         ) : null}
