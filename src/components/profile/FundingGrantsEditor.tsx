@@ -2,9 +2,11 @@ import { ExternalLink, FileText, Paperclip, Plus, Trash2 } from "lucide-react";
 import { useRef, type ReactNode } from "react";
 
 import { t } from "../../i18n";
+import { formatMoneyField, parseMaskedMoney } from "../../lib/purchases";
 import { emptyGrant, fundingAgencyOptions, type FundingAgency, type FundingGrant } from "../../lib/domain";
 import type { ProjectDirectoryEntry } from "../../lib/projects";
 import { Button } from "../ui/Button";
+import { MoneyInput } from "../ui/MoneyInput";
 import { inputClassName } from "../ui/formStyles";
 
 type FundingGrantsEditorProps = {
@@ -204,15 +206,11 @@ export function FundingGrantsEditor({
 
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <Field label={t("grants.monthlyValue")}>
-                  <input
+                  <MoneyInput
                     className={inputClassName}
                     disabled={disabled}
-                    inputMode="decimal"
-                    min={0}
-                    onChange={(event) => updateGrant(index, { monthly_value: event.target.value ? Number(event.target.value) : null })}
-                    step="0.01"
-                    type="number"
-                    value={grant.monthly_value ?? ""}
+                    onChange={(text) => updateGrant(index, { monthly_value: parseMaskedMoney(text) })}
+                    value={grant.monthly_value === null ? "" : formatMoneyField(grant.monthly_value)}
                   />
                 </Field>
                 <Field label={t("grants.weeklyHours")}>

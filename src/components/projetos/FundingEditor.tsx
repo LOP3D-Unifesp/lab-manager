@@ -12,7 +12,9 @@ import {
   type ProjectFunding,
 } from "../../lib/projects";
 import { createFundingAgency, type ProjectFundingInput } from "../../lib/supabaseRepository";
+import { formatMoneyField } from "../../lib/purchases";
 import { Button } from "../ui/Button";
+import { MoneyInput } from "../ui/MoneyInput";
 import { inputClassName } from "../ui/formStyles";
 
 export type FundingFormItem = { category: FundingCategory; description: string; amount: string };
@@ -35,7 +37,7 @@ export function fundingToForm(funding: ProjectFunding[]): FundingForm[] {
     items: entry.items.map((item) => ({
       category: item.category,
       description: item.description ?? "",
-      amount: String(item.amount),
+      amount: formatMoneyField(item.amount),
     })),
   }));
 }
@@ -203,14 +205,12 @@ export function FundingEditor({ agencies, disabled, onAgencyCreated, onChange, v
                     value={item.description}
                     onChange={(event) => atualizarItem(index, itemIndex, { description: event.target.value })}
                   />
-                  <input
+                  <MoneyInput
                     aria-label={t("fundingEditor.amountReais")}
                     className={inputClassName}
                     disabled={disabled}
-                    inputMode="decimal"
-                    placeholder="R$ 0,00"
                     value={item.amount}
-                    onChange={(event) => atualizarItem(index, itemIndex, { amount: event.target.value })}
+                    onChange={(amount) => atualizarItem(index, itemIndex, { amount })}
                   />
                   <button
                     type="button"
