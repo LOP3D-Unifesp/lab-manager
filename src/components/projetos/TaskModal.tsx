@@ -6,6 +6,7 @@ import {
   createProjectTask,
   deleteProjectTask,
   setTaskAssignees,
+  setTaskChecklist,
   updateProjectTask,
 } from "../../lib/supabaseRepository";
 import {
@@ -22,6 +23,7 @@ import { Avatar } from "../ui/Avatar";
 import { Button } from "../ui/Button";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { Modal } from "../ui/Modal";
+import { ChecklistEditor, type ChecklistDraftItem } from "./ChecklistEditor";
 import { inputClassName } from "../ui/formStyles";
 
 type TaskModalProps = {
@@ -68,6 +70,8 @@ export function TaskModal({
     const initialMembers = fixedMembers ?? (projects.length === 1 ? projects[0].members : []);
     return defaultAssigneeIds.filter((id) => initialMembers.some((member) => member.profile_id === id));
   });
+  const itensIniciais = (task?.checklist ?? []).map(({ id, title, done }) => ({ id, title, done }));
+  const [checklist, setChecklist] = useState<ChecklistDraftItem[]>(itensIniciais);
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
@@ -109,6 +113,8 @@ export function TaskModal({
         taskId = await createProjectTask(projectId, { ...base, status });
       }
       await setTaskAssignees(taskId, responsaveis);
+      const itens = checklist.map((item) => ({ ...item, title: item.title.trim() })).filter((item) => item.title);
+      if (JSON.stringify(itens) !== JSON.stringify(itensIniciais)) await setTaskChecklist(taskId, itens);
       onSaved();
     } catch (error) {
       setErro(getTaskErrorMessage(error));
@@ -239,6 +245,8 @@ export function TaskModal({
             </div>
           )}
         </fieldset>
+
+        <ChecklistEditor items={checklist} onChange={setChecklist} />
 
         {erro ? (
           <p className="rounded-lg border border-danger bg-danger-soft p-3 text-base font-semibold text-danger">{erro}</p>

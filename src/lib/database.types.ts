@@ -681,6 +681,26 @@ isOneToOne: false
       referencedColumns: ["id","project_id"]
     }
                   ]
+                },"project_task_checklist_items": {
+                  Row: {
+                    "created_at": string,"done": boolean,"id": string,"position": number,"project_id": string,"task_id": string,"title": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"done"?: boolean,"id"?: string,"position"?: number,"project_id": string,"task_id": string,"title": string
+                  }
+                  Update: {
+                    "created_at"?: string,"done"?: boolean,"id"?: string,"position"?: number,"project_id"?: string,"task_id"?: string,"title"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "project_task_checklist_items_task_fkey"
+      columns: ["task_id","project_id"]
+isOneToOne: false
+      referencedRelation: "project_tasks"
+      referencedColumns: ["id","project_id"]
+    }
+                  ]
                 },"project_tasks": {
                   Row: {
                     "archived_at": string | null,"created_at": string,"created_by": string,"description": string | null,"due_on": string | null,"id": string,"position": number,"priority": Database["public"]['Enums']["task_priority"],"project_id": string,"status": Database["public"]['Enums']["task_status"],"title": string,"updated_at": string
@@ -1279,6 +1299,12 @@ isOneToOne: false
       } },
 "set_task_assignees":
 { Args: { "p_profile_ids": (string)[],"p_task_id": string }; Returns: undefined
+                           },
+"set_task_checklist":
+{ Args: { "p_items": Json,"p_task_id": string }; Returns: undefined
+                           },
+"move_project_task":
+{ Args: { "p_before_task_id"?: string,"p_status": Database["public"]['Enums']["task_status"],"p_task_id": string }; Returns: undefined
                            },
 "start_equipment_maintenance":
 { Args: { "p_cancel_bookings"?: boolean,"p_equipment_id": string,"p_expected_return_on"?: string,"p_notes"?: string,"p_reason": string }; Returns: {

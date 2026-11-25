@@ -86,6 +86,7 @@ Status do MVP implementado:
 | `20261002_funding_grant_project_dates` | `profile_funding_grants.project_id`, `start_date`, `end_date`, `process_number`; `sus` vira `fap`; RPC `replace_profile_funding_grants` com os campos novos, recusa `sus` e atualiza a carga semanal. |
 | `20261003_funding_grant_contract_file` | `profile_funding_grants.contract_path`; bucket privado `grant-contracts` (PDF, 10 MB; dona e coordenadores leem e apagam); `contract_path` sai da leitura de `authenticated` (leitura por coluna); RPCs `get_grant_contracts` e `set_grant_contract`; `replace_profile_funding_grants` preserva o caminho. |
 | `20261004_tasks_priority_archive_notify` | `task_priority` ganha `high` (Alta); `project_tasks.archived_at`; notificacao `task_assigned` (trigger em `project_task_assignees`, sem avisar quem se atribui a si mesmo). |
+| `20261005_tasks_checklist_order_realtime` | `project_task_checklist_items` (checklist da tarefa); RPCs `set_task_checklist` e `move_project_task` (reordena e renumera a coluna); `project_tasks`, `project_task_assignees` e a checklist entram no Realtime. |
 
 Resumo dos objetos que mais mudam o entendimento do schema:
 
@@ -1007,6 +1008,10 @@ Kanban de tarefas:
   garante que so membros do projeto sejam responsaveis, e sair do projeto remove a pessoa das tarefas.
 - Acesso: membros e coordenadores leem, criam e movem tarefas do projeto; so o criador ou um
   coordenador exclui. Os responsaveis mudam pela RPC `set_task_assignees`.
+- `project_task_checklist_items`: subtarefas (`title`, `done`, `position`) com FK composta para a tarefa. Membros
+  leem e marcam `done` direto; criar, renomear, ordenar e remover passam por `set_task_checklist` (substitui a lista).
+- Ordem: `move_project_task(p_task_id, p_status, p_before_task_id)` poe a tarefa na coluna antes de outra (ou no fim) e
+  renumera a coluna do projeto (1..n). Os quadros assinam o Realtime das tres tabelas e recarregam a lista.
 - O Dashboard mostra "Minhas tarefas": so as atribuidas a quem esta logado, de todos os projetos.
 
 Impressoes: toda reserva nova pertence a um projeto. As RPCs `create_printer_booking` e

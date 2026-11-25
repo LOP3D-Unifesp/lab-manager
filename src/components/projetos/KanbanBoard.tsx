@@ -1,8 +1,9 @@
 import { getLocale, useT } from "../../i18n";
 import { useState } from "react";
-import { Archive, ArchiveRestore, CalendarDays, Trash2 } from "lucide-react";
+import { Archive, ArchiveRestore, CalendarDays, ChevronDown, ChevronUp, ListChecks, Trash2 } from "lucide-react";
 
 import {
+  getChecklistProgress,
   getProjectColor,
   getTaskStatusLabel,
   taskPriorityOptions,
@@ -36,7 +37,12 @@ const priorityClasses: Record<TaskPriority, string> = {
 
 type KanbanBoardProps = {
   tasks: ProjectTask[];
-  onMove: (task: ProjectTask, status: TaskStatus) => void;
+  /** `antesDe`: cartão à frente do qual a tarefa entra na coluna (null/ausente = no fim). */
+  onMove: (task: ProjectTask, status: TaskStatus, antesDe?: string | null) => void;
+  /** Avisa quando um arrasto começa/termina (o quadro ao vivo espera o arrasto acabar para recarregar). */
+  onDragChange?: (arrastando: boolean) => void;
+  /** Quando informado, os itens da checklist podem ser marcados direto no cartão. */
+  onToggleChecklistItem?: (task: ProjectTask, itemId: string, done: boolean) => void;
   /** Quando informado, o cartão ganha um seletor de prioridade. */
   onPriorityChange?: (task: ProjectTask, priority: TaskPriority) => void;
   onOpen?: (task: ProjectTask) => void;
@@ -48,19 +54,40 @@ type KanbanBoardProps = {
   showProject?: boolean;
 };
 
-export function KanbanBoard({ canDelete, onArchive, onDelete, onMove, onOpen, onPriorityChange, showProject = false, tasks }: KanbanBoardProps) {
+export function KanbanBoard({ canDelete, onArchive, onDelete, onDragChange, onMove, onOpen, onPriorityChange, onToggleChecklistItem, showProject = false, tasks }: KanbanBoardProps) {
   const t = useT();
   const groups = groupTasksByStatus(tasks);
   const today = todayLocal();
   const [arrastando, setArrastando] = useState<string | null>(null);
-  const [colunaAlvo, setColunaAlvo] = useState<TaskStatus | null>(null);
+  // Onde o cartão cairia: coluna e cartão à frente do qual entra (null = fim da coluna).
+  const [destino, setDestino] = useState<{ status: TaskStatus; antesDe: string | null } | null>(null);
+  const [checklistsAbertas, setChecklistsAbertas] = useState<Set<string>>(new Set());
   const [apagando, setApagando] = useState<ProjectTask | null>(null);
 
-  function soltar(status: TaskStatus) {
-    const task = tasks.find((item) => item.id === arrastando);
+  function terminarArrasto() {
     setArrastando(null);
-    setColunaAlvo(null);
-    if (task && task.status !== status) onMove(task, status);
+    setDestino(null);
+    onDragChange?.(false);
+  }
+
+  function soltar() {
+    const task = tasks.find((item) => item.id === arrastando);
+    const alvo = destino;
+    terminarArrasto();
+    if (!task || !alvo || alvo.antesDe === task.id) return;
+    const coluna = groups[alvo.status];
+    const indice = coluna.findIndex((item) => item.id === task.id);
+    // Soltar no mesmo lugar (logo antes do cartão que já vem depois) não muda nada.
+    if (task.status === alvo.status && indice !== -1 && (coluna[indice + 1]?.id ?? null) === alvo.antesDe) return;
+    onMove(task, alvo.status, alvo.antesDe);
+  }
+
+  function alternarChecklist(id: string) {
+    setChecklistsAbertas((atual) => {
+      const novo = new Set(atual);
+      if (!novo.delete(id)) novo.add(id);
+      return novo;
+    });
   }
 
   return (
@@ -71,13 +98,19 @@ export function KanbanBoard({ canDelete, onArchive, onDelete, onMove, onOpen, on
           aria-label={column.label}
           onDragOver={(event) => {
             event.preventDefault();
-            setColunaAlvo(column.value);
+            // Sobre o fundo da coluna (não sobre um cartão): entra no fim.
+            if (arrastando) setDestino({ status: column.value, antesDe: null });
           }}
-          onDragLeave={() => setColunaAlvo((current) => (current === column.value ? null : current))}
-          onDrop={() => soltar(column.value)}
+          onDragLeave={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDestino((atual) => (atual?.status === column.value ? null : atual));
+          }}
+          onDrop={(event) => {
+            event.preventDefault();
+            soltar();
+          }}
           className={[
             "flex min-h-40 flex-col gap-3 rounded-lg border p-3 transition",
-            colunaAlvo === column.value ? "border-primary bg-primary-soft" : "border-border bg-background",
+            destino?.status === column.value ? "border-primary bg-primary-soft" : "border-border bg-background",
           ].join(" ")}
         >
           <header className="flex items-center justify-between">
@@ -87,7 +120,12 @@ export function KanbanBoard({ canDelete, onArchive, onDelete, onMove, onOpen, on
             </span>
           </header>
 
-          {groups[column.value].map((task) => {
+          {groups[column.value].map((task, indice) => {
+            const coluna = groups[column.value];
+            const marcaAntes = destino?.status === column.value && destino.antesDe === task.id;
+            const marcaFim = destino?.status === column.value && destino.antesDe === null && indice === coluna.length - 1 && arrastando !== task.id;
+            const progresso = getChecklistProgress(task.checklist);
+            const aberta = checklistsAbertas.has(task.id);
             const arquivada = task.archived_at !== null;
             const atrasada = !arquivada && isTaskOverdue(task, today);
             const podeApagar = Boolean(onDelete && canDelete?.(task));
@@ -95,18 +133,31 @@ export function KanbanBoard({ canDelete, onArchive, onDelete, onMove, onOpen, on
               <article
                 key={task.id}
                 draggable={!arquivada}
-                onDragStart={() => setArrastando(task.id)}
-                onDragEnd={() => {
-                  setArrastando(null);
-                  setColunaAlvo(null);
+                onDragStart={() => {
+                  setArrastando(task.id);
+                  onDragChange?.(true);
+                }}
+                onDragEnd={terminarArrasto}
+                onDragOver={(event) => {
+                  if (!arrastando || arrastando === task.id) return;
+                  event.preventDefault();
+                  event.stopPropagation();
+                  // Metade de cima: entra antes deste cartão; metade de baixo: antes do próximo.
+                  const caixa = event.currentTarget.getBoundingClientRect();
+                  const emBaixo = event.clientY > caixa.top + caixa.height / 2;
+                  const proximo = coluna.slice(indice + 1).find((item) => item.id !== arrastando);
+                  const antesDe = emBaixo ? (proximo?.id ?? null) : task.id;
+                  setDestino((atual) => (atual?.status === column.value && atual.antesDe === antesDe ? atual : { status: column.value, antesDe }));
                 }}
                 className={[
-                  "grid gap-2 rounded-lg border bg-surface p-3 shadow-sm",
+                  "relative grid gap-2 rounded-lg border bg-surface p-3 shadow-sm",
                   arquivada ? "opacity-70" : "cursor-grab",
                   arrastando === task.id ? "opacity-50" : "",
                   atrasada ? "border-danger" : "border-border",
                 ].join(" ")}
               >
+                {marcaAntes ? <span aria-hidden="true" className="pointer-events-none absolute -top-2 left-0 right-0 h-1 rounded-full bg-primary" /> : null}
+                {marcaFim ? <span aria-hidden="true" className="pointer-events-none absolute -bottom-2 left-0 right-0 h-1 rounded-full bg-primary" /> : null}
                 <div className="flex items-start justify-between gap-2">
                   <button
                     type="button"
@@ -162,6 +213,43 @@ export function KanbanBoard({ canDelete, onArchive, onDelete, onMove, onOpen, on
                     {formatDueDate(task.due_on)}
                   </p>
                 ) : null}
+                {progresso.total > 0 ? (
+                  <div className="grid gap-1">
+                    <button
+                      type="button"
+                      aria-expanded={aberta}
+                      aria-label={t("tasks.checklistToggle", { title: task.title })}
+                      className="flex items-center gap-2 text-sm text-muted hover:text-text"
+                      onClick={() => alternarChecklist(task.id)}
+                    >
+                      <ListChecks className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      <span className={progresso.done === progresso.total ? "font-semibold text-success-dark" : ""}>
+                        {progresso.done}/{progresso.total}
+                      </span>
+                      <span className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-border" aria-hidden="true">
+                        <span className="block h-full rounded-full bg-primary" style={{ width: `${progresso.percent}%` }} />
+                      </span>
+                    </button>
+                    {aberta ? (
+                      <ul className="grid gap-1">
+                        {task.checklist.map((item) => (
+                          <li key={item.id}>
+                            <label className="flex items-start gap-2 text-sm text-text">
+                              <input
+                                type="checkbox"
+                                className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
+                                checked={item.done}
+                                disabled={!onToggleChecklistItem}
+                                onChange={(event) => onToggleChecklistItem?.(task, item.id, event.target.checked)}
+                              />
+                              <span className={["min-w-0 break-words", item.done ? "text-muted line-through" : ""].join(" ")}>{item.title}</span>
+                            </label>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </div>
+                ) : null}
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex -space-x-2">
                     {task.assignees.map((assignee) => (
@@ -190,6 +278,29 @@ export function KanbanBoard({ canDelete, onArchive, onDelete, onMove, onOpen, on
                 </div>
                 {/* No toque não existe arrastar de verdade: celular e tablet trocam a coluna por este seletor
                     (no computador, a coluna muda arrastando o cartão ou em Editar). */}
+                {arquivada ? null : (
+                  <div className="hidden items-center gap-2 text-sm text-muted [@media(pointer:coarse)]:flex">
+                    <span className="shrink-0">{t("tasks.orderLabel")}</span>
+                    <button
+                      type="button"
+                      aria-label={t("tasks.moveUp", { title: task.title })}
+                      disabled={indice === 0}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-background disabled:opacity-40"
+                      onClick={() => onMove(task, task.status, coluna[indice - 1]?.id ?? null)}
+                    >
+                      <ChevronUp className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={t("tasks.moveDown", { title: task.title })}
+                      disabled={indice === coluna.length - 1}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-background disabled:opacity-40"
+                      onClick={() => onMove(task, task.status, coluna[indice + 2]?.id ?? null)}
+                    >
+                      <ChevronDown className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  </div>
+                )}
                 {arquivada ? null : (
                   <label className={onPriorityChange ? "hidden items-center gap-2 text-sm text-muted [@media(pointer:coarse)]:flex" : "flex items-center gap-2 text-sm text-muted"}>
                     <span className="shrink-0">{t("tasks.moveLabel")}</span>

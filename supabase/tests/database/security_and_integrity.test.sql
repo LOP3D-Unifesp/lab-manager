@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(392);
+select plan(403);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -1161,6 +1161,31 @@ select is(
   'a task entering a column goes to its end'
 );
 
+select lives_ok(
+  $$ select public.set_task_checklist('00000000-0000-0000-0000-0000000000d1', '[{"id":"00000000-0000-0000-0000-0000000000a1","title":"Medir","done":false},{"id":"00000000-0000-0000-0000-0000000000a2","title":"Imprimir","done":false}]'::jsonb) $$,
+  'a member writes the checklist of a task'
+);
+select is((select count(*)::int from public.project_task_checklist_items where task_id = '00000000-0000-0000-0000-0000000000d1'), 2, 'the checklist items are stored');
+select lives_ok(
+  $$ update public.project_task_checklist_items set done = true where id = '00000000-0000-0000-0000-0000000000a1' $$,
+  'a member ticks a checklist item'
+);
+select ok((select done from public.project_task_checklist_items where id = '00000000-0000-0000-0000-0000000000a1'), 'the ticked item stays done');
+select lives_ok(
+  $$ select public.set_task_checklist('00000000-0000-0000-0000-0000000000d1', '[{"id":"00000000-0000-0000-0000-0000000000a2","title":"Imprimir","done":false}]'::jsonb) $$,
+  'a member removes a checklist item by leaving it out'
+);
+select is((select count(*)::int from public.project_task_checklist_items where task_id = '00000000-0000-0000-0000-0000000000d1'), 1, 'the removed item is gone');
+select lives_ok(
+  $$ select public.move_project_task('00000000-0000-0000-0000-0000000000d3', 'review', '00000000-0000-0000-0000-0000000000d1') $$,
+  'a member reorders a task inside a column'
+);
+select is(
+  (select array_agg(id::text order by position) from public.project_tasks where project_id = '00000000-0000-0000-0000-0000000000c1' and status = 'review'),
+  array['00000000-0000-0000-0000-0000000000d3', '00000000-0000-0000-0000-0000000000d1'],
+  'the task goes right before the chosen one and the column is renumbered'
+);
+
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000103","email":"other@example.com","role":"authenticated"}', true);
 select is((select count(*) from public.project_tasks), 0::bigint, 'non-member cannot read tasks');
 select throws_ok(
@@ -1172,6 +1197,17 @@ select throws_ok(
   $$ select public.set_task_assignees('00000000-0000-0000-0000-0000000000d1', array['00000000-0000-0000-0000-000000000102']::uuid[]) $$,
   'P0001', 'project_access_required',
   'non-member cannot assign task members'
+);
+select is((select count(*) from public.project_task_checklist_items), 0::bigint, 'non-member cannot read checklist items');
+select throws_ok(
+  $$ select public.set_task_checklist('00000000-0000-0000-0000-0000000000d1', '[]'::jsonb) $$,
+  'P0001', 'project_access_required',
+  'non-member cannot change a checklist'
+);
+select throws_ok(
+  $$ select public.move_project_task('00000000-0000-0000-0000-0000000000d1', 'done', null) $$,
+  'P0001', 'project_access_required',
+  'non-member cannot move tasks'
 );
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);

@@ -16,6 +16,10 @@ com duas contas (coordenadora e pesquisador):
   confirmação (só criador e coordenador veem); arquivar e "Mostrar arquivadas" + desarquivar; filtros em Minhas tarefas
   (Início); aviso no sino e push ao ser atribuída por outra pessoa (e nenhum ao se atribuir). Depende da migration
   `20261004` (não aplicada em produção).
+- [ ] **Tarefas (checklist, ordem, ao vivo):** criar/editar checklist no modal (Enter adiciona, marcar, renomear, ↑/↓,
+  remover) e ver "2/5" no cartão; marcar itens no cartão; arrastar cartão para cima/baixo e entre colunas com a linha
+  indicando o destino; no celular, botões ↑/↓; com duas contas, mudança de uma aparecer na outra sem recarregar (e
+  sem pular durante um arrasto). Depende da migration `20261005` (não aplicada em produção).
 - [ ] **Termo de outorga (PDF):** anexar, abrir, trocar e remover em bolsa já salva; só a dona e coordenadores abrem (testar com
   uma segunda conta de pesquisador, que não deve ver nem abrir); remover a bolsa apaga o arquivo. Depende da migration
   `20261003` (não aplicada em produção).
@@ -29,7 +33,8 @@ com duas contas (coordenadora e pesquisador):
   botões de editar, cancelar ou aprovar; o filtro de projeto lista os projetos dos pedidos que ele enxerga.
 - [ ] **Projetos:** aba "Todos os projetos", pedir para entrar, cancelar o pedido, aprovar e recusar como membro e como
   coordenador, e conferir os avisos.
-- [ ] **Dashboard:** "Minhas tarefas" para pesquisador sem projeto (mensagem) e com projeto (criar tarefa).
+- [ ] **Dashboard:** "Minhas tarefas" para pesquisador sem projeto (mensagem) e com projeto (criar tarefa).
+
 - [ ] **Início (nova):** saudação, "Agora" (próxima reserva e presença), atalhos, "Precisa da sua decisão" (coordenador, mantenedor e membro de projeto), Novidades, Minhas reservas, Meus pedidos de compra e Meus projetos; estados vazios, celular e tema escuro. Os números do laboratório hoje saíram daqui e estão em **Analytics**.
 - [ ] **Analytics:** abas "Meus números" (todos) e "Laboratório" (só coordenador), filtro de período (7/30/90 dias e 12 meses), gráficos no tema claro e escuro, celular, "Ver os dados em tabela" e estados sem dados. Conferir se as cores dos gráficos seguem o tema (usam `rgb(var(--c-...))`).
 - [ ] **Tarefas:** prioridade no cartão e no filtro; **Feedback** com fotos; **Logo e favicon** em Configurações.
