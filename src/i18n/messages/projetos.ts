@@ -77,6 +77,7 @@ export const projetos = {
   "tasks.checklistToggle": { pt: "Mostrar ou esconder a checklist de \"{title}\"", en: "Show or hide the checklist of \"{title}\"", es: "Mostrar u ocultar la checklist de \"{title}\"" },
   "richText.bold": { pt: "Negrito (Ctrl+B)", en: "Bold (Ctrl+B)", es: "Negrita (Ctrl+B)" },
   "richText.italic": { pt: "Itálico (Ctrl+I)", en: "Italic (Ctrl+I)", es: "Cursiva (Ctrl+I)" },
+  "richText.code": { pt: "Código (selecione o texto)", en: "Code (select the text)", es: "Código (selecciona el texto)" },
   "richText.bullets": { pt: "Lista com marcadores", en: "Bulleted list", es: "Lista con viñetas" },
   "richText.numbered": { pt: "Lista numerada", en: "Numbered list", es: "Lista numerada" },
   "richText.shortcuts": { pt: "Atalhos ao escrever:", en: "Typing shortcuts:", es: "Atajos al escribir:" },

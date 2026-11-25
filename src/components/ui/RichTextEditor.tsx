@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Bold, Italic, List, ListOrdered } from "lucide-react";
+import { Bold, Code, Italic, List, ListOrdered } from "lucide-react";
 
 import { useT } from "../../i18n";
 import { parseRichText, serializeRichText, type InlineNode } from "../../lib/richText";
@@ -126,9 +126,27 @@ export function RichTextEditor({ label, onChange, value }: RichTextEditorProps) 
     if (areaRef.current) onChange(serializeRichText(areaRef.current));
   }
 
-  function comando(nome: "bold" | "italic" | "insertUnorderedList" | "insertOrderedList") {
+  // O navegador não tem comando pronto para código: marca o trecho selecionado (ou tira a marca se já estiver nela).
+  function alternarCodigo() {
+    const selecao = window.getSelection();
+    const no = selecao?.anchorNode;
+    if (!selecao || !no || !areaRef.current?.contains(no)) return;
+    const elemento = no.nodeType === Node.TEXT_NODE ? no.parentElement : (no as HTMLElement);
+    const codigo = elemento?.closest("code");
+    if (codigo && areaRef.current.contains(codigo)) {
+      selecao.selectAllChildren(codigo);
+      const texto = codigo.textContent ?? "";
+      document.execCommand("insertHTML", false, `${escapeHtml(texto)}`);
+      codigo.parentElement?.querySelectorAll("code:empty").forEach((vazio) => vazio.remove());
+    } else if (!selecao.isCollapsed) {
+      document.execCommand("insertHTML", false, `<code>${escapeHtml(selecao.toString())}</code>​`);
+    }
+  }
+
+  function comando(nome: "bold" | "italic" | "insertUnorderedList" | "insertOrderedList" | "code") {
     areaRef.current?.focus();
-    document.execCommand(nome);
+    if (nome === "code") alternarCodigo();
+    else document.execCommand(nome);
     sincronizar();
   }
 
@@ -165,6 +183,7 @@ export function RichTextEditor({ label, onChange, value }: RichTextEditorProps) 
         <div className="flex items-center gap-1">
           {botao("bold", t("richText.bold"), Bold)}
           {botao("italic", t("richText.italic"), Italic)}
+          {botao("code", t("richText.code"), Code)}
           {botao("insertUnorderedList", t("richText.bullets"), List)}
           {botao("insertOrderedList", t("richText.numbered"), ListOrdered)}
         </div>
