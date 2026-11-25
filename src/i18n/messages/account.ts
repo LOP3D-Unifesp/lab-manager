@@ -3,7 +3,7 @@ import type { Entry } from "../catalog";
 export const account = {
   "account.openMenu": { pt: "Abrir menu da conta", en: "Open account menu", es: "Abrir menú de la cuenta" },
   "account.profile": { pt: "Meu perfil", en: "My profile", es: "Mi perfil" },
-  "account.sendFeedback": { pt: "Enviar feedback", en: "Send feedback", es: "Enviar comentarios" },
+  "account.sendFeedback": { pt: "Enviar sugestão", en: "Send a suggestion", es: "Enviar sugerencia" },
   "account.theme": { pt: "Tema", en: "Theme", es: "Tema" },
   "sidebar.fallbackSubtitle": { pt: "Gestão interna do laboratório.", en: "Internal lab management.", es: "Gestión interna del laboratorio." },
   "login.title": { pt: "Entrar", en: "Sign in", es: "Iniciar sesión" },

@@ -23,6 +23,9 @@
   --c-accent: 236 0 140;
   --c-accent-dark: 190 0 112;
   --c-accent-soft: 253 232 244;
+  /* Fundo rosa com texto por cima (botão Sugestões): contraste de 4,5:1 ou mais nos dois temas. */
+  --c-accent-solid: 190 0 112;
+  --c-on-accent: 255 255 255;
   color-scheme: light;
   font-family: "Montserrat Variable", system-ui, sans-serif;
   color: rgb(var(--c-text));
@@ -54,6 +57,8 @@
   --c-accent: 255 77 168;
   --c-accent-dark: 255 140 200;
   --c-accent-soft: 61 12 40;
+  --c-accent-solid: 255 77 168;
+  --c-on-accent: 11 18 32;
   color-scheme: dark;
 }
 

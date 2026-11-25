@@ -1,7 +1,7 @@
 import { t } from "../../i18n";
 import { FormEvent, ReactNode, createContext, useCallback, useContext, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { CheckCircle2, MessageSquarePlus } from "lucide-react";
+import { CheckCircle2, Lightbulb } from "lucide-react";
 
 import {
   FEEDBACK_MAX_LENGTH,
@@ -154,16 +154,17 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// No desktop fica discreto no canto; no celular a entrada é o menu da conta, para não brigar com a barra de baixo.
+// No desktop é uma pílula rosa fixa no canto, para ser vista; no celular a entrada é o menu da conta e a Inicial,
+// para não brigar com a barra de baixo.
 function FloatingFeedbackButton() {
   const { openFeedback } = useFeedback();
   return (
     <button
       type="button"
       onClick={openFeedback}
-      className="fixed bottom-6 right-6 z-30 hidden items-center gap-2 rounded-full border border-border bg-surface px-4 py-2.5 text-base font-semibold text-text shadow-soft transition hover:border-primary hover:text-primary lg:inline-flex"
+      className="fixed bottom-6 right-6 z-30 hidden items-center gap-2 rounded-full bg-accent-solid px-5 py-3 text-base font-bold text-on-accent shadow-lg transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-solid lg:inline-flex"
     >
-      <MessageSquarePlus className="h-5 w-5" aria-hidden="true" />
+      <Lightbulb className="h-5 w-5" aria-hidden="true" />
       {t("feedback.button")}
     </button>
   );

@@ -69,6 +69,8 @@ Os tokens vivem em `src/index.css` como canais RGB (`--c-primary`, `--c-accent`,
 
 No tema escuro, os tokens do magenta ficam mais claros (`accent` `#ff4db3`, `accent-dark` `#ff8cc8`) para manter o contraste.
 
+**Exceção: botão Sugestões.** É a única peça magenta grande e permanente (pílula fixa no canto, para as pessoas o encontrarem). Usa os tokens `accent-solid` e `on-accent`, que garantem texto legível sobre o rosa nos dois temas (claro: `#be0070` com texto branco; escuro: `#ff4db3` com texto escuro).
+
 ### Marca provisória
 
 Ainda não há identidade profissional. Enquanto isso, `src/components/ui/BrandMark.tsx` reúne a marca provisória: `BrandMark` (o acrônimo em Dosis, com o "&" em magenta), `BrandStripe` (faixa com as quatro cores) e `BRAND_COLORS` (cores exatas da marca, iguais nos dois temas). Aparecem no login e nas telas públicas (convite, privacidade, instalação). Quando existir uma identidade definitiva, basta trocar esse arquivo.
@@ -191,7 +193,7 @@ No desktop, usar sidebar fixa, agrupada por finalidade, com um título discreto 
 - **Trabalho:** Agenda do Laboratório, Reservas, Minhas reservas (pesquisador), Projetos
 - **Recursos:** Equipamentos, Inventário, Compras
 - **Pessoas:** Pesquisadores, Habilidades
-- **Gestão** (coordenador): Usuários, Histórico de reservas, Feedback, Configurações
+- **Gestão** (coordenador): Usuários, Histórico de reservas, Sugestões, Configurações
 
 O Meu perfil fica no menu da conta, no rodapé da barra. A ordem e os grupos vêm de `src/lib/navigation.ts` (`desktopSection`, `desktopOrder` e `navigationSectionLabels`); o grupo só aparece quando a pessoa vê pelo menos um item dele.
 

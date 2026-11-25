@@ -9,7 +9,7 @@ const TEXTS = {
   request_new: { pt: "Novo chamado de manutenção", en: "New maintenance request", es: "Nueva solicitud de mantenimiento" },
   request_urgent: { pt: "Chamado urgente", en: "Urgent maintenance request", es: "Solicitud urgente de mantenimiento" },
   request_resolved: { pt: "Chamado resolvido", en: "Maintenance request resolved", es: "Solicitud de mantenimiento resuelta" },
-  feedback_new: { pt: "Novo feedback", en: "New feedback", es: "Nuevo comentario" },
+  feedback_new: { pt: "Nova sugestão", en: "New suggestion", es: "Nueva sugerencia" },
   purchase_new: { pt: "Novo pedido de compra", en: "New purchase request", es: "Nuevo pedido de compra" },
   purchase_urgent: { pt: "Pedido de compra urgente", en: "Urgent purchase request", es: "Pedido de compra urgente" },
   purchase_approved: { pt: "Pedido aprovado", en: "Request approved", es: "Pedido aprobado" },
