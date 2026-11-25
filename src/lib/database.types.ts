@@ -461,14 +461,14 @@ isOneToOne: false
                   ]
                 },"profile_funding_grants": {
                   Row: {
-                    "agency": Database["public"]['Enums']["funding_agency"],"agency_other": string | null,"contract_path": string | null,"created_at": string,"grant_name": string | null,"id": string,"monthly_value": number | null,"process_number": string | null,"profile_id": string,"project_id": string | null,"start_date": string | null,"end_date": string | null,"weekly_hours": number | null
+                    "agency": Database["public"]['Enums']["funding_agency"],"agency_other": string | null,"contract_path": string | null,"created_at": string,"end_date": string | null,"grant_name": string | null,"id": string,"monthly_value": number | null,"process_number": string | null,"profile_id": string,"project_id": string | null,"start_date": string | null,"weekly_hours": number | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "agency": Database["public"]['Enums']["funding_agency"],"agency_other"?: string | null,"contract_path"?: string | null,"created_at"?: string,"grant_name"?: string | null,"id"?: string,"monthly_value"?: number | null,"process_number"?: string | null,"profile_id": string,"project_id"?: string | null,"start_date"?: string | null,"end_date"?: string | null,"weekly_hours"?: number | null
+                    "agency": Database["public"]['Enums']["funding_agency"],"agency_other"?: string | null,"contract_path"?: string | null,"created_at"?: string,"end_date"?: string | null,"grant_name"?: string | null,"id"?: string,"monthly_value"?: number | null,"process_number"?: string | null,"profile_id": string,"project_id"?: string | null,"start_date"?: string | null,"weekly_hours"?: number | null
                   }
                   Update: {
-                    "agency"?: Database["public"]['Enums']["funding_agency"],"agency_other"?: string | null,"contract_path"?: string | null,"created_at"?: string,"grant_name"?: string | null,"id"?: string,"monthly_value"?: number | null,"process_number"?: string | null,"profile_id"?: string,"project_id"?: string | null,"start_date"?: string | null,"end_date"?: string | null,"weekly_hours"?: number | null
+                    "agency"?: Database["public"]['Enums']["funding_agency"],"agency_other"?: string | null,"contract_path"?: string | null,"created_at"?: string,"end_date"?: string | null,"grant_name"?: string | null,"id"?: string,"monthly_value"?: number | null,"process_number"?: string | null,"profile_id"?: string,"project_id"?: string | null,"start_date"?: string | null,"weekly_hours"?: number | null
                   }
                   Relationships: [
                     {
@@ -476,6 +476,12 @@ isOneToOne: false
       columns: ["profile_id"]
 isOneToOne: false
       referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "profile_funding_grants_project_id_fkey"
+      columns: ["project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
       referencedColumns: ["id"]
     }
                   ]
@@ -991,6 +997,11 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"get_grant_contracts":
+{ Args: { "p_profile_id": string }; Returns: {
+              "contract_path": string,"grant_id": string
+            }[]
+                           },
 "get_public_lab_identity":
 { Args: Record<PropertyKey, never>; Returns: {
               "acronym": string,"favicon_url": string,"invitation_ttl_hours": number,"logo_dark_url": string,"logo_light_url": string,"name": string,"privacy_contact_email": string
@@ -1005,6 +1016,12 @@ isOneToOne: false
 { Args: { "p_project_id"?: string }; Returns: {
               "description": string,"ends_on": string,"id": string,"is_member": boolean,"members": Json,"my_request_id": string,"my_request_status": Database["public"]['Enums']["project_join_status"],"name": string,"pending_count": number,"starts_on": string,"status": Database["public"]['Enums']["project_status"]
             }[]
+                           },
+"move_project_task":
+{ Args: { "p_before_task_id"?: string,"p_status": Database["public"]['Enums']["task_status"],"p_task_id": string }; Returns: undefined
+                           },
+"move_task_to_project":
+{ Args: { "p_project_id": string,"p_task_id": string }; Returns: undefined
                            },
 "record_booking_usage":
 { Args: { "p_amount": number,"p_booking_id": string }; Returns: {
@@ -1104,29 +1121,20 @@ isOneToOne: false
         isOneToOne: false
         isSetofReturn: true
       } },
-"get_grant_contracts":
-{ Args: { "p_profile_id": string }; Returns: {
-              "contract_path": string,
-"grant_id": string
-            }[]
-                          },
-"set_grant_contract":
-{ Args: { "p_grant_id": string,"p_path": string | null }; Returns: string | null
-                           },
 "replace_profile_funding_grants":
 { Args: { "p_grants": Json,"p_profile_id": string }; Returns: {
               "agency": Database["public"]['Enums']["funding_agency"],
 "agency_other": string | null,
 "contract_path": string | null,
 "created_at": string,
+"end_date": string | null,
 "grant_name": string | null,
 "id": string,
 "monthly_value": number | null,
-"profile_id": string,
 "process_number": string | null,
+"profile_id": string,
 "project_id": string | null,
 "start_date": string | null,
-"end_date": string | null,
 "weekly_hours": number | null
             }[]
                           SetofOptions: {
@@ -1193,6 +1201,9 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
+"set_grant_contract":
+{ Args: { "p_grant_id": string,"p_path": string }; Returns: string
+                           },
 "set_lab_logo":
 { Args: { "p_url": string,"p_variant": string }; Returns: {
               "acronym": string | null,
@@ -1302,12 +1313,6 @@ isOneToOne: false
                            },
 "set_task_checklist":
 { Args: { "p_items": Json,"p_task_id": string }; Returns: undefined
-                           },
-"move_task_to_project":
-{ Args: { "p_project_id": string,"p_task_id": string }; Returns: undefined
-                           },
-"move_project_task":
-{ Args: { "p_before_task_id"?: string,"p_status": Database["public"]['Enums']["task_status"],"p_task_id": string }; Returns: undefined
                            },
 "start_equipment_maintenance":
 { Args: { "p_cancel_bookings"?: boolean,"p_equipment_id": string,"p_expected_return_on"?: string,"p_notes"?: string,"p_reason": string }; Returns: {

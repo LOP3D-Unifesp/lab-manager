@@ -183,7 +183,7 @@ export async function uploadGrantContract(profileId: string, grantId: string, fi
 }
 
 export async function removeGrantContract(grantId: string) {
-  const { data, error } = await client().rpc("set_grant_contract", { p_grant_id: grantId, p_path: null });
+  const { data, error } = await client().rpc("set_grant_contract", { p_grant_id: grantId, p_path: null as unknown as string }); // o gerador de tipos não marca o argumento como anulável
   throwIfError(error);
   await removeContractFile((data as string | null) ?? null);
 }
