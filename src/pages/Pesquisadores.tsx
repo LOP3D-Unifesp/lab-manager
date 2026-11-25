@@ -1,6 +1,6 @@
 import { getLocale, useT } from "../i18n";
 import { useState } from "react";
-import { UserPlus } from "lucide-react";
+import { Mail, UserPlus } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { Avatar } from "../components/ui/Avatar";
@@ -153,7 +153,7 @@ export function Pesquisadores() {
           </p>
         </Card>
       ) : visualizacao === "cards" ? (
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {pesquisadoresOrdenados.map((pesquisador) => {
             const nomeCompleto = `${pesquisador.nome} ${pesquisador.sobrenome}`;
             return (
@@ -161,20 +161,21 @@ export function Pesquisadores() {
                 key={pesquisador.id}
                 to={`/pesquisadores/${pesquisador.id}`}
                 aria-label={t("researchers.openProfile", { name: nomeCompleto })}
-                className="group block rounded-lg focus-visible:outline-offset-2"
+                className="group block min-w-0 rounded-lg focus-visible:outline-offset-2"
               >
-                <Card className="h-full transition group-hover:border-primary group-hover:shadow-md">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex min-w-0 items-start gap-3">
-                      <Avatar avatarUrl={pesquisador.avatarUrl} name={nomeCompleto} className="h-12 w-12 shrink-0" />
-                      <div className="min-w-0">
-                        <h3 className="break-words text-xl font-bold text-text">{nomeCompleto}</h3>
-                        <p className="mt-1 text-base text-muted">
-                          {t("researchers.affiliationLine", { value: pesquisador.vinculo })}
-                        </p>
-                        <p className="mt-1 break-all text-sm font-semibold leading-5 text-muted">{pesquisador.email}</p>
-                      </div>
+                <Card className="flex h-full min-w-0 flex-col gap-3 p-4 transition group-hover:border-primary group-hover:shadow-md sm:p-5">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <Avatar avatarUrl={pesquisador.avatarUrl} name={nomeCompleto} className="h-14 w-14 shrink-0" />
+                    <div className="min-w-0">
+                      <h3 className="break-words text-lg font-bold leading-snug text-text">{nomeCompleto}</h3>
+                      <p className="mt-0.5 break-words text-sm text-muted">{pesquisador.vinculo}</p>
                     </div>
+                  </div>
+                  <div className="mt-auto flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-border pt-3">
+                    <p className="flex min-w-0 flex-1 basis-40 items-center gap-1.5 text-sm font-semibold text-muted" title={pesquisador.email}>
+                      <Mail className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      <span className="truncate">{pesquisador.email}</span>
+                    </p>
                     <StatusBadge
                       label={t(`presence.${pesquisador.status}` as Parameters<typeof t>[0])}
                       variant={getStatusVariant(pesquisador.status)}
