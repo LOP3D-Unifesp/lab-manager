@@ -24,6 +24,9 @@ com duas contas (coordenadora e pesquisador):
   "Visualizar"; checklist logo abaixo da descrição; arrastar cartão acima de outro de projeto diferente; editar a tarefa e
   trocar o projeto (responsáveis que não são do novo projeto saem; ninguém recebe aviso de novo). Depende da migration
   `20261006` (não aplicada em produção).
+- [ ] **Tarefas (cronômetro):** mover para Em andamento liga o tempo (contando ao vivo no cartão); Pausar/Retomar; mover
+  para Em revisão separa o tempo de revisão; Finalizado mostra "Tempo total"; arquivar pausa; aviso "rodando há Xh" depois de
+  8h. Depende da migration `20261007` (não aplicada em produção).
 - [ ] **Termo de outorga (PDF):** anexar, abrir, trocar e remover em bolsa já salva; só a dona e coordenadores abrem (testar com
   uma segunda conta de pesquisador, que não deve ver nem abrir); remover a bolsa apaga o arquivo. Depende da migration
   `20261003` (não aplicada em produção).

@@ -17,7 +17,7 @@ import { useTaskBoard } from "./useTaskBoard";
 export function MyTasksBoard({ isCoordinator, profileId }: { isCoordinator: boolean; profileId: string }) {
   const t = useT();
   const loader = useCallback(() => listMyTasks(profileId), [profileId]);
-  const { apagar, arquivar, arrastar, erro, marcarItem, mover, mudarPrioridade, recarregar, tarefas } = useTaskBoard(loader);
+  const { alternarCronometro, apagar, arquivar, arrastar, erro, marcarItem, mover, mudarPrioridade, recarregar, tarefas } = useTaskBoard(loader);
   const [filtros, setFiltros] = useState<TaskFilters>(emptyTaskFilters);
   const [projetos, setProjetos] = useState<Project[]>([]);
   const [modal, setModal] = useState<{ task: ProjectTask | null } | null>(null);
@@ -96,6 +96,7 @@ export function MyTasksBoard({ isCoordinator, profileId }: { isCoordinator: bool
               onDragChange={arrastar}
             onMove={mover}
             onToggleChecklistItem={marcarItem}
+            onToggleTimer={alternarCronometro}
               onPriorityChange={mudarPrioridade}
               onOpen={(task) => setModal({ task })}
             />

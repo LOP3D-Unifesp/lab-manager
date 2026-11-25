@@ -256,6 +256,11 @@ export type ProjectTask = {
   archived_at: string | null;
   /** Subtarefas da checklist, na ordem em que a pessoa as organizou. */
   checklist: ChecklistItem[];
+  /** Cronômetro: segundos já fechados de trabalho e de revisão; `timer_started_at` não nulo = correndo. */
+  work_seconds: number;
+  review_seconds: number;
+  timer_phase: "work" | "review" | null;
+  timer_started_at: string | null;
 };
 
 export type ChecklistItem = { id: string; title: string; done: boolean; position: number };
@@ -300,6 +305,7 @@ export function getTaskErrorMessage(error: unknown) {
   if (text.includes("assignee_must_be_project_member")) return t("taskError.assignee_must_be_project_member");
   if (text.includes("project_access_required")) return t("taskError.project_access_required");
   if (text.includes("task_not_found")) return t("taskError.task_not_found");
+  if (text.includes("timer_not_available")) return t("taskError.timer_not_available");
   if (text.includes("project_tasks_title_check")) return t("taskError.title_check");
   if (text.includes("row-level security")) return t("taskError.rls");
   return getProjectErrorMessage(error);

@@ -21,6 +21,7 @@ import {
   type TaskPriority,
   type TaskStatus,
 } from "../../lib/projects";
+import { formatDuration, getTaskTimes } from "../../lib/taskTimer";
 import { Avatar } from "../ui/Avatar";
 import { Button } from "../ui/Button";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
@@ -148,6 +149,7 @@ export function TaskModal({
     }
   }
 
+  const tempos = task ? getTaskTimes(task, new Date()) : null;
   const semProjetos = !lockedProjectId && projects.length === 0;
 
   return (
@@ -216,6 +218,16 @@ export function TaskModal({
             </select>
           </label>
         </div>
+
+        {task && tempos && tempos.total > 0 ? (
+          <p className="rounded-lg border border-border bg-background p-3 text-base text-text">
+            <span className="font-semibold">{t("tasks.timeTotal")}: {formatDuration(tempos.total)}</span>
+            <span className="text-muted">
+              {" "}
+              · {t("tasks.timeWork")} {formatDuration(tempos.work)} · {t("tasks.timeReview")} {formatDuration(tempos.review)}
+            </span>
+          </p>
+        ) : null}
 
         <fieldset className="grid gap-2">
           <legend className="mb-1 text-base font-semibold text-text">{t("taskModal.assignees")}</legend>

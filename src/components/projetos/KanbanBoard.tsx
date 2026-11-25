@@ -16,6 +16,7 @@ import {
 } from "../../lib/projects";
 import { Avatar } from "../ui/Avatar";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
+import { TaskTimer } from "./TaskTimer";
 
 function todayLocal() {
   const now = new Date();
@@ -41,6 +42,8 @@ type KanbanBoardProps = {
   onMove: (task: ProjectTask, status: TaskStatus, antesDe?: string | null) => void;
   /** Avisa quando um arrasto começa/termina (o quadro ao vivo espera o arrasto acabar para recarregar). */
   onDragChange?: (arrastando: boolean) => void;
+  /** Quando informado, o cartão ganha o botão de pausar/retomar o cronômetro. */
+  onToggleTimer?: (task: ProjectTask, running: boolean) => void;
   /** Quando informado, os itens da checklist podem ser marcados direto no cartão. */
   onToggleChecklistItem?: (task: ProjectTask, itemId: string, done: boolean) => void;
   /** Quando informado, o cartão ganha um seletor de prioridade. */
@@ -54,7 +57,7 @@ type KanbanBoardProps = {
   showProject?: boolean;
 };
 
-export function KanbanBoard({ canDelete, onArchive, onDelete, onDragChange, onMove, onOpen, onPriorityChange, onToggleChecklistItem, showProject = false, tasks }: KanbanBoardProps) {
+export function KanbanBoard({ canDelete, onArchive, onDelete, onDragChange, onMove, onOpen, onPriorityChange, onToggleChecklistItem, onToggleTimer, showProject = false, tasks }: KanbanBoardProps) {
   const t = useT();
   const groups = groupTasksByStatus(tasks);
   const today = todayLocal();
@@ -262,6 +265,7 @@ export function KanbanBoard({ canDelete, onArchive, onDelete, onDragChange, onMo
                     ) : null}
                   </div>
                 ) : null}
+                <TaskTimer task={task} onToggle={onToggleTimer} />
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex -space-x-2">
                     {task.assignees.map((assignee) => (
