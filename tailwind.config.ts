@@ -26,6 +26,8 @@ export default {
         accent: "rgb(var(--c-accent) / <alpha-value>)",
         "accent-dark": "rgb(var(--c-accent-dark) / <alpha-value>)",
         "accent-soft": "rgb(var(--c-accent-soft) / <alpha-value>)",
+        "accent-solid": "rgb(var(--c-accent-solid) / <alpha-value>)",
+        "on-accent": "rgb(var(--c-on-accent) / <alpha-value>)",
       },
       fontFamily: {
         sans: ["Montserrat Variable", "system-ui", "sans-serif"],

@@ -180,11 +180,11 @@ export const navigationItems: NavigationItem[] = [
     mobileRole: "coordinator",
   },
   {
-    desktopLabel: "Feedback",
+    desktopLabel: "Sugestões",
     desktopSection: "admin",
     desktopOrder: 12,
     desktopRole: "coordinator",
-    mobileLabel: "Feedback",
+    mobileLabel: "Sugestões",
     path: "/feedback",
     icon: MessageSquare,
     mobilePlacement: "secondary",

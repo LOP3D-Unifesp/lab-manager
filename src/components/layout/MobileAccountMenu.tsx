@@ -1,4 +1,4 @@
-import { LogOut, MessageSquarePlus, User } from "lucide-react";
+import { Lightbulb, LogOut, User } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -107,9 +107,9 @@ export function MobileAccountMenu() {
                 setIsOpen(false);
                 openFeedback();
               }}
-              className="flex min-h-11 items-center gap-3 rounded-md px-3 text-left text-base font-semibold text-text transition hover:bg-background hover:text-primary"
+              className="flex min-h-11 items-center gap-3 rounded-md bg-accent-soft px-3 text-left text-base font-bold text-accent-dark transition hover:brightness-95"
             >
-              <MessageSquarePlus className="h-4 w-4 text-primary" aria-hidden="true" />
+              <Lightbulb className="h-4 w-4" aria-hidden="true" />
               {t("account.sendFeedback")}
             </button>
             <button
