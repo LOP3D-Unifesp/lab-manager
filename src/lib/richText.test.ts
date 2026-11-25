@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { applyRichFormat, parseInline, parseRichText } from "./richText";
+import { parseInline, parseRichText, serializeRichText, type DomLike } from "./richText";
 
 describe("texto formatado", () => {
   it("reconhece negrito, itálico, código e links", () => {
@@ -32,16 +32,24 @@ describe("texto formatado", () => {
     expect(blocks[2].type === "list" && blocks[2].ordered && blocks[2].items).toHaveLength(2);
   });
 
-  it("aplica e remove negrito na seleção", () => {
-    const on = applyRichFormat("olá mundo", 4, 9, "bold");
-    expect(on.value).toBe("olá **mundo**");
-    expect(applyRichFormat(on.value, on.start, on.end, "bold").value).toBe("olá mundo");
-  });
-
-  it("transforma as linhas selecionadas em lista e volta", () => {
-    const list = applyRichFormat("a\nb\nc", 0, 5, "bullet");
-    expect(list.value).toBe("- a\n- b\n- c");
-    expect(applyRichFormat(list.value, list.start, list.end, "bullet").value).toBe("a\nb\nc");
-    expect(applyRichFormat("a\nb", 0, 3, "numbered").value).toBe("1. a\n2. b");
+  it("volta o conteúdo do editor para texto com marcas", () => {
+    const text = (value: string): DomLike => ({ nodeName: "#text", nodeType: 3, textContent: value, childNodes: [] });
+    const el = (name: string, ...children: DomLike[]): DomLike => ({
+      nodeName: name,
+      nodeType: 1,
+      textContent: null,
+      childNodes: children,
+      getAttribute: (attr) => (attr === "href" ? "https://x.com" : null),
+    });
+    const root = el(
+      "DIV",
+      text("Oi "),
+      el("B", text("negrito")),
+      el("DIV", text("linha "), el("I", text("itálica"))),
+      el("DIV", el("BR")),
+      el("UL", el("LI", text("um")), el("LI", el("A", text("site")))),
+      el("OL", el("LI", text("a")), el("LI", text("b"))),
+    );
+    expect(serializeRichText(root)).toBe("Oi **negrito**\nlinha *itálica*\n\n- um\n- [site](https://x.com)\n1. a\n2. b");
   });
 });
