@@ -101,7 +101,7 @@ export function Dashboard() {
       <MyTasksBoard isCoordinator={isCoordinator} profileId={currentProfile.id} />
       <MyMaintenanceRequests />
 
-      <div className="grid items-start gap-5 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
         <NewsCard />
         <EquipmentCard counts={countEquipmentByStatus(equipment)} />
         <MyBookingsCard bookings={myBookings} />
