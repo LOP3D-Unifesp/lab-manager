@@ -1,7 +1,11 @@
 name: Deploy Pages
 
+# O site só é publicado depois que o CI da main inteiro passou (inclusive o job do banco). O deploy manual
+# (workflow_dispatch) continua disponível para emergências.
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
   workflow_dispatch:
 
@@ -16,9 +20,14 @@ concurrency:
 
 jobs:
   build:
+    # Só se o CI foi de um push na main e terminou com sucesso.
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-latest
     steps:
+      # Publica exatamente o commit que o CI testou (a main pode já ter andado).
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
