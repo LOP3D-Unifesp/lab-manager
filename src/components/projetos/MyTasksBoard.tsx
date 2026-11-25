@@ -30,7 +30,12 @@ export function MyTasksBoard({ isCoordinator, profileId }: { isCoordinator: bool
     };
   }, []);
 
-  const projetosAbertos = useMemo(() => projetos.filter((projeto) => isProjectOpen(projeto.status)), [projetos]);
+  // Só dá para criar aqui uma tarefa em projeto de que a pessoa participa: a tarefa nova vem atribuída a ela, e uma
+  // tarefa sem responsável (coordenador criando em projeto alheio) não apareceria em "Minhas tarefas".
+  const projetosAbertos = useMemo(
+    () => projetos.filter((projeto) => isProjectOpen(projeto.status) && projeto.members.some((member) => member.profile_id === profileId)),
+    [projetos, profileId],
+  );
 
   if (!tarefas) return null;
 

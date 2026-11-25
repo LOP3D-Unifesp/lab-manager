@@ -95,17 +95,14 @@ export function Dashboard() {
       <QuickActions />
       <DecisionCard items={decisions} />
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <div className="grid min-w-0 content-start gap-5">
-          <MyTasksBoard isCoordinator={isCoordinator} profileId={currentProfile.id} />
-          <MyMaintenanceRequests />
-        </div>
-        <div className="grid min-w-0 content-start gap-5">
-          <NewsCard />
-          <MyBookingsCard bookings={myBookings} />
-          <MyPurchasesCard purchases={myPurchases} />
-          <MyProjectsCard directory={directory} />
-        </div>
+      <MyTasksBoard isCoordinator={isCoordinator} profileId={currentProfile.id} />
+      <MyMaintenanceRequests />
+
+      <div className="grid items-start gap-5 md:grid-cols-2 xl:grid-cols-3">
+        <NewsCard />
+        <MyBookingsCard bookings={myBookings} />
+        <MyPurchasesCard purchases={myPurchases} />
+        <MyProjectsCard directory={directory} />
       </div>
     </div>
   );
