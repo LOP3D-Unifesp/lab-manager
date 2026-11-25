@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(436);
+select plan(442);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -1279,19 +1279,41 @@ select throws_ok(
   'P0001', 'invalid_time',
   'an end before the start is rejected'
 );
-select lives_ok($$ select public.set_task_timer('00000000-0000-0000-0000-0000000000d5', true) $$, 'the owner starts a new timer');
+-- Proteções contra timer esquecido (roda como administrador do banco, como a rotina agendada).
 reset role;
-update public.project_task_time_entries set started_at = now() - interval '13 hours' where task_id = '00000000-0000-0000-0000-0000000000d5' and ended_at is null;
-set local role authenticated;
-select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
-reset role;
-select is(private.pause_stale_timers(), 1, 'the automatic pause closes a timer left running for more than 12 hours');
-set local role authenticated;
-select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
+insert into public.project_task_time_entries (task_id, project_id, profile_id, phase, started_at)
+values ('00000000-0000-0000-0000-0000000000d5', '00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-000000000101', 'work', now() - interval '13 hours');
+select is(private.pause_stale_timers(), 1, 'a timer left running past the limit is closed by the routine');
 select ok(
-  (select e.seconds = 43200 and e.auto_closed from public.project_task_time_entries e where e.task_id = '00000000-0000-0000-0000-0000000000d5' and e.profile_id = '00000000-0000-0000-0000-000000000102' and e.auto_closed),
-  'the automatic pause counts exactly 12 hours'
+  (select seconds = 28800 and auto_closed from public.project_task_time_entries where task_id = '00000000-0000-0000-0000-0000000000d5' and profile_id = '00000000-0000-0000-0000-000000000101' and auto_closed),
+  'the limit counts exactly the configured hours (8 by default)'
 );
+
+delete from public.availability_slots where profile_id = '00000000-0000-0000-0000-000000000102';
+insert into public.availability_slots (profile_id, weekday, starts_at, ends_at, work_mode) values ('00000000-0000-0000-0000-000000000102', 1, '08:00', '10:00', 'onsite');
+insert into public.project_task_time_entries (task_id, project_id, profile_id, phase, started_at)
+values ('00000000-0000-0000-0000-0000000000d5', '00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-000000000102', 'work',
+  (((date_trunc('week', now() at time zone (select timezone from public.lab_settings)) - interval '7 days')::date + time '08:30') at time zone (select timezone from public.lab_settings)));
+select is(private.pause_stale_timers(), 1, 'a timer left on after the shift of the person is closed at the end of the shift plus the grace period');
+select ok(
+  (select seconds = 9000 and auto_closed from public.project_task_time_entries where task_id = '00000000-0000-0000-0000-0000000000d5' and profile_id = '00000000-0000-0000-0000-000000000102' and auto_closed),
+  'the end of the day counts until 11:00 (shift ends at 10:00 plus 60 minutes)'
+);
+
+insert into public.project_task_time_entries (task_id, project_id, profile_id, phase, started_at)
+values ('00000000-0000-0000-0000-0000000000d5', '00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-000000000101', 'work', now() - interval '5 hours');
+select is(private.pause_stale_timers(), 0, 'a timer on for a few hours is not closed');
+select is((select count(*)::int from public.notifications where type = 'task_timer_reminder' and recipient_id = '00000000-0000-0000-0000-000000000101'), 1, 'the person is reminded when the reminder time is reached');
+select private.pause_stale_timers();
+select is((select count(*)::int from public.notifications where type = 'task_timer_reminder' and recipient_id = '00000000-0000-0000-0000-000000000101'), 1, 'the reminder is sent only once per entry');
+
+insert into public.project_task_time_entries (task_id, project_id, profile_id, phase) values ('00000000-0000-0000-0000-0000000000d5', '00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-000000000102', 'work');
+update public.profiles set is_active = false where id = '00000000-0000-0000-0000-000000000102';
+select ok(not exists (select 1 from public.project_task_time_entries where profile_id = '00000000-0000-0000-0000-000000000102' and ended_at is null), 'deactivating a person stops their timers');
+update public.profiles set is_active = true where id = '00000000-0000-0000-0000-000000000102';
+insert into public.project_task_time_entries (task_id, project_id, profile_id, phase) values ('00000000-0000-0000-0000-0000000000d5', '00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-000000000102', 'work');
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000103","email":"other@example.com","role":"authenticated"}', true);
 select is((select count(*) from public.project_tasks), 0::bigint, 'non-member cannot read tasks');
@@ -1335,6 +1357,7 @@ select lives_ok(
   'coordinator removes the member from the project'
 );
 select is((select count(*) from public.project_task_assignees where project_id = '00000000-0000-0000-0000-0000000000c1'), 0::bigint, 'removing a member removes them from the tasks');
+select ok(not exists (select 1 from public.project_task_time_entries where profile_id = '00000000-0000-0000-0000-000000000102' and ended_at is null), 'removing a member from the project stops their timers');
 
 -- Inventory: spools, spool choice in bookings and consumption.
 reset role;

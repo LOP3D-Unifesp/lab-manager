@@ -86,7 +86,7 @@ export const projetos = {
   "tasks.timerPause": { pt: "Pausar o meu timer em \"{title}\"", en: "Pause my timer on \"{title}\"", es: "Pausar mi temporizador en \"{title}\"" },
   "tasks.timerResume": { pt: "Ligar o meu timer em \"{title}\"", en: "Start my timer on \"{title}\"", es: "Encender mi temporizador en \"{title}\"" },
   "tasks.timerStartShort": { pt: "Começar", en: "Start", es: "Empezar" },
-  "tasks.timerLong": { pt: "Seu timer está ligado há {time} (pausa sozinho em {hours} h)", en: "Your timer has been on for {time} (it pauses by itself at {hours} h)", es: "Tu temporizador lleva {time} encendido (se pausa solo a las {hours} h)" },
+  "tasks.timerLong": { pt: "Seu timer está ligado há {time}. Se esquecer, ele para sozinho em {hours} h ou no fim do seu expediente.", en: "Your timer has been on for {time}. If you forget it, it stops by itself after {hours} h or at the end of your schedule.", es: "Tu temporizador lleva {time} encendido. Si lo olvidas, se detiene solo a las {hours} h o al terminar tu horario." },
   "tasks.workingOne": { pt: "{name} trabalhando", en: "{name} working", es: "{name} trabajando" },
   "tasks.workingMany": { pt: "{count} pessoas trabalhando", en: "{count} people working", es: "{count} personas trabajando" },
   "tasks.entriesTitle": { pt: "Trechos de tempo ({count}) — ver e ajustar", en: "Time entries ({count}) — view and adjust", es: "Tramos de tiempo ({count}) — ver y ajustar" },

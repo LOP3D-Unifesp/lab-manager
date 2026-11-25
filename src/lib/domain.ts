@@ -289,6 +289,9 @@ export type LabSettings = {
   timezone: string;
   workspace_capacity: number;
   operating_weekdays: number[];
+  timer_reminder_hours: number;
+  timer_max_hours: number;
+  timer_grace_minutes: number;
   lunch_starts_at: string;
   lunch_ends_at: string;
   dinner_starts_at: string;

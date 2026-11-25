@@ -61,6 +61,15 @@ describe("notificação de tarefa atribuída", () => {
     expect(describeNotification({ type: "task_assigned", params: { task: "Calibrar a mesa" } }).title).toBe("Uma tarefa foi atribuída a você");
     expect(getNotificationGroup("task_assigned")).toBe("projects");
   });
+
+  it("lembra do timer ligado há horas, com a tarefa e o projeto", () => {
+    expect(describeNotification({ type: "task_timer_reminder", params: { task: "Ensaio de tração", project: "Lab 3D", hours: 4 } })).toEqual({
+      title: "Seu timer está ligado há 4 h — ainda está trabalhando?",
+      detail: "Ensaio de tração · Lab 3D",
+      reason: null,
+    });
+    expect(getNotificationGroup("task_timer_reminder")).toBe("projects");
+  });
 });
 
 describe("grupos de notificação", () => {

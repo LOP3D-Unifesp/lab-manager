@@ -24,6 +24,10 @@ com duas contas (coordenadora e pesquisador):
   "Visualizar"; checklist logo abaixo da descrição; arrastar cartão acima de outro de projeto diferente; editar a tarefa e
   trocar o projeto (responsáveis que não são do novo projeto saem; ninguém recebe aviso de novo). Depende da migration
   `20261006` (não aplicada em produção).
+- [ ] **Tarefas (timer esquecido):** Administração > "Timers das tarefas" (aviso 4 h, pausa 8 h, tolerância 60 min); deixar
+  timer ligado e receber o aviso no sino/celular; timer que passa do fim do turno da pessoa (Meu perfil > disponibilidade)
+  para no fim do turno + tolerância; remover a pessoa do projeto ou desativá-la para os timers dela. Depende da migration
+  `20261011` (não aplicada em produção).
 - [ ] **Tarefas (timers por pessoa):** duas pessoas com o timer ligado na mesma tarefa ao mesmo tempo (cartão mostra quem
   está trabalhando); cada uma pausa o seu; mover Em andamento <-> Em revisão mantém quem trabalha; A fazer/Finalizado
   param todos; mover sem ser responsável não liga timer; "Trechos de tempo" no modal com Ajustar/Encerrar; pausa

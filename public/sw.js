@@ -27,6 +27,7 @@ const TEXTS = {
   project_join_request: { pt: "Pedido para entrar em projeto", en: "Request to join a project", es: "Solicitud para unirse a un proyecto" },
   project_join_approved: { pt: "Você entrou no projeto", en: "You joined the project", es: "Entraste al proyecto" },
   task_assigned: { pt: "Tarefa atribuída a você", en: "Task assigned to you", es: "Tarea asignada a ti" },
+  task_timer_reminder: { pt: "Seu timer ainda está ligado", en: "Your timer is still on", es: "Tu temporizador sigue encendido" },
   project_join_rejected: { pt: "Pedido de entrada recusado", en: "Join request rejected", es: "Solicitud de ingreso rechazada" },
   generic: { pt: "Nova notificação", en: "New notification", es: "Nueva notificación" },
 };
