@@ -9,6 +9,7 @@ import {
 import { App } from "./App";
 import { Administracao } from "./pages/Administracao";
 import { AgendaLaboratorio } from "./pages/AgendaLaboratorio";
+import { Analytics } from "./pages/Analytics";
 import { Dashboard } from "./pages/Dashboard";
 import { Feedback } from "./pages/Feedback";
 import { Notificacoes } from "./pages/Notificacoes";
@@ -130,6 +131,7 @@ export const router = createBrowserRouter([
           { path: "pesquisadores/:id", element: <PesquisadorDetalhe /> },
           { path: "projetos", element: <Projetos /> },
           { path: "projetos/:id", element: <ProjetoDetalhe /> },
+          { path: "analytics", element: <Analytics /> },
           { path: "habilidades", element: <Habilidades /> },
           { path: "agenda", element: <AgendaLaboratorio /> },
           { path: "equipamentos", element: <Equipamentos /> },

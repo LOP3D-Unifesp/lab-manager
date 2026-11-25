@@ -105,7 +105,7 @@ Funcionalidades:
 - o pesquisador vê apenas os projetos de que participa;
 - kanban de tarefas em cada projeto (A fazer, Em andamento, Em revisão, Concluído), com prazo e um ou
   mais responsáveis, que precisam ser membros do projeto; membros criam e movem tarefas;
-- no Dashboard, "Minhas tarefas" mostra só as tarefas atribuídas à pessoa, de todos os projetos, e permite criar e editar tarefas sem sair da página (a tarefa nova já vem atribuída a quem criou);
+- na Início, "Minhas tarefas" mostra só as tarefas atribuídas à pessoa, de todos os projetos, e permite criar e editar tarefas sem sair da página (a tarefa nova já vem atribuída a quem criou);
 - em Projetos, a vista "Quadro de tarefas" reúne as tarefas de todos os projetos que a pessoa vê (coordenador: todos), com filtros por projeto, responsável e atrasadas;
 - toda nova impressão fica vinculada a um projeto; reservas anteriores mantêm o nome em texto livre.
 
@@ -140,7 +140,7 @@ Funcionalidades:
 - o chamado aceita até 3 fotos (tirar na hora, com a câmera do celular ou a webcam do computador, ou anexar), que ficam visíveis na fila e abrem num visualizador em tela cheia, com zoom (botões, roda do mouse, duplo clique ou pinça), arrasto e navegação entre as fotos;
 - chamado **urgente** deixa o equipamento **Parado** na hora (novas reservas deixam de ser aceitas, as futuras não são canceladas); ele só entra em manutenção quando um responsável usa **Iniciar manutenção**, e volta a Ativa se o chamado for cancelado ou resolvido sem isso;
 - **Baixar fotos** reúne as fotos do chamado num arquivo .zip;
-- o Dashboard tem o bloco **Chamados de manutenção**, logo abaixo de "Minhas tarefas": **Para atender** (responsáveis: chamados abertos e os que assumiram) e **Que eu abri** (qualquer pessoa: os seus que seguem ativos); some quando não há nada;
+- a Início tem o bloco **Chamados de manutenção**, logo abaixo de "Minhas tarefas": **Para atender** (responsáveis: chamados abertos e os que assumiram) e **Que eu abri** (qualquer pessoa: os seus que seguem ativos); some quando não há nada;
 - o card do equipamento mostra a situação numa caixa padronizada (título e um detalhe curto, igual para **Parado** e **Em manutenção**) e, abaixo, quem abriu cada chamado ativo (nome, data e início da descrição, até 2 chamados), sem repetir o que já está na caixa;
 - coordenadores e responsáveis pela manutenção usam **Pedir peça** num chamado ativo: abre o pedido de compra já preenchido (estoque geral, rubrica custeio, a urgência do chamado e as observações com o equipamento e o problema) e o pedido fica ligado ao chamado; o chamado mostra a peça e a situação dela (solicitado, aprovado, comprado, entregue) e a página Compras indica para qual manutenção é;
 - o chamado tem a situação **Aguardando peça**: ele vai para lá sozinho quando uma peça pedida a partir dele é **comprada** e volta para o ponto em que estava quando a peça é **entregue** (ou a compra é desfeita); o responsável também usa **Aguardar peça** e **Retomar manutenção** à mão. Continua contando como chamado ativo e o equipamento não muda de situação;

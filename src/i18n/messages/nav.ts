@@ -10,7 +10,7 @@ export const nav = {
   "nav.mobileSecondary": { pt: "Abrir navegação secundária", en: "Open secondary navigation", es: "Abrir navegación secundaria" },
   "nav.more": { pt: "Mais", en: "More", es: "Más" },
   "nav.home": { pt: "Ir para o início", en: "Go to home", es: "Ir al inicio" },
-  "nav.desktop./": { pt: "Dashboard", en: "Dashboard", es: "Panel" },
+  "nav.desktop./": { pt: "Início", en: "Home", es: "Inicio" },
   "nav.mobile./": { pt: "Início", en: "Home", es: "Inicio" },
   "nav.desktop./pesquisadores": { pt: "Pesquisadores", en: "Researchers", es: "Investigadores" },
   "nav.mobile./pesquisadores": { pt: "Pessoas", en: "People", es: "Personas" },
@@ -40,4 +40,6 @@ export const nav = {
   "nav.mobile./administracao": { pt: "Configurações", en: "Settings", es: "Configuración" },
   "nav.desktop./reservas/historico": { pt: "Histórico de reservas", en: "Booking history", es: "Historial de reservas" },
   "nav.mobile./reservas/historico": { pt: "Histórico", en: "History", es: "Historial" },
+  "nav.desktop./analytics": { pt: "Analytics", en: "Analytics", es: "Analítica" },
+  "nav.mobile./analytics": { pt: "Analytics", en: "Analytics", es: "Analítica" },
 } satisfies Record<string, Entry>;
