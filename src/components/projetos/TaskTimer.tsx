@@ -59,6 +59,12 @@ export function TaskTimer({ onToggle, task, trailing }: TaskTimerProps) {
           )}
         </span>
         {!emCurso && trailing ? <span className="text-muted">· {trailing}</span> : null}
+        {emCurso && times.count > 0 ? (
+          <span className="flex items-center gap-1.5 font-semibold text-success-dark">
+            <span aria-hidden="true" className="h-2 w-2 animate-pulse rounded-full bg-success" />
+            {t("tasks.workingCount", { count: times.count })}
+          </span>
+        ) : null}
         {emCurso && times.review > 0 ? (
           <span className="text-muted">
             {t("tasks.timeReview")}: {formatDuration(times.review)}

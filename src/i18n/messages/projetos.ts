@@ -87,6 +87,7 @@ export const projetos = {
   "tasks.timerResume": { pt: "Ligar o meu timer em \"{title}\"", en: "Start my timer on \"{title}\"", es: "Encender mi temporizador en \"{title}\"" },
   "tasks.timerStartShort": { pt: "Começar", en: "Start", es: "Empezar" },
   "tasks.timerLong": { pt: "Seu timer está ligado há {time}. Se esquecer, ele para sozinho em {hours} h ou no fim do seu expediente.", en: "Your timer has been on for {time}. If you forget it, it stops by itself after {hours} h or at the end of your schedule.", es: "Tu temporizador lleva {time} encendido. Si lo olvidas, se detiene solo a las {hours} h o al terminar tu horario." },
+  "tasks.workingCount": { pt: "{count} trabalhando agora", en: "{count} working now", es: "{count} trabajando ahora" },
   "tasks.workingNow": { pt: "{name} — trabalhando agora", en: "{name} — working now", es: "{name} — trabajando ahora" },
   "tasks.entriesTitle": { pt: "Trechos de tempo ({count}) — ver e ajustar", en: "Time entries ({count}) — view and adjust", es: "Tramos de tiempo ({count}) — ver y ajustar" },
   "tasks.entryRunning": { pt: "em andamento", en: "running", es: "en curso" },
