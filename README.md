@@ -191,7 +191,7 @@ Nuvem (exigem `.env.admin.local`, veja [docs/DEPLOY.md](docs/DEPLOY.md)):
 | Rota | Tela | Acesso |
 |---|---|---|
 | `/` | Início (centro de comando pessoal) | todos |
-| `/analytics` | Analytics (números do laboratório) | todos |
+| `/analytics` | Analytics: "Meus números" (todos) e "Laboratório" (coordenador), com gráficos por período | todos |
 | `/pesquisadores` | Pesquisadores | todos |
 | `/habilidades` | Habilidades | todos |
 | `/agenda` | Agenda do Laboratório | todos |

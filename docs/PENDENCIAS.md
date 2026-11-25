@@ -21,6 +21,7 @@ com duas contas (coordenadora e pesquisador):
   coordenador, e conferir os avisos.
 - [ ] **Dashboard:** "Minhas tarefas" para pesquisador sem projeto (mensagem) e com projeto (criar tarefa).
 - [ ] **Início (nova):** saudação, "Agora" (próxima reserva e presença), atalhos, "Precisa da sua decisão" (coordenador, mantenedor e membro de projeto), Novidades, Minhas reservas, Meus pedidos de compra e Meus projetos; estados vazios, celular e tema escuro. Os números do laboratório hoje saíram daqui e estão em **Analytics**.
+- [ ] **Analytics:** abas "Meus números" (todos) e "Laboratório" (só coordenador), filtro de período (7/30/90 dias e 12 meses), gráficos no tema claro e escuro, celular, "Ver os dados em tabela" e estados sem dados. Conferir se as cores dos gráficos seguem o tema (usam `rgb(var(--c-...))`).
 - [ ] **Tarefas:** prioridade no cartão e no filtro; **Feedback** com fotos; **Logo e favicon** em Configurações.
 
 ## Antes de abrir para os testadores
