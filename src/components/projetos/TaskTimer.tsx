@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { Pause, Play, Timer } from "lucide-react";
 
 import { useT } from "../../i18n";
+import { useAuth } from "../../lib/auth";
 import { useCurrentProfile } from "../../lib/currentUser";
 import type { ProjectTask } from "../../lib/projects";
-import { AUTO_PAUSE_HOURS, LONG_RUNNING_SECONDS, elapsedSeconds, formatClock, formatDuration, getMyTimer, getTaskTimes } from "../../lib/taskTimer";
+import { elapsedSeconds, formatClock, formatDuration, getMyTimer, getTaskTimes } from "../../lib/taskTimer";
 import { Avatar } from "../ui/Avatar";
 
 type TaskTimerProps = {
@@ -30,6 +31,7 @@ export function useNow(ativo: boolean) {
 export function TaskTimer({ onToggle, task }: TaskTimerProps) {
   const t = useT();
   const { currentProfile } = useCurrentProfile();
+  const { labSettings } = useAuth();
   const now = useNow(task.running.length > 0);
   const times = getTaskTimes(task, now);
   const mine = getMyTimer(task, currentProfile?.id);
@@ -37,7 +39,8 @@ export function TaskTimer({ onToggle, task }: TaskTimerProps) {
   if (times.total === 0 && !emCurso) return null;
 
   const minhaDuracao = mine ? elapsedSeconds(mine.started_at, now) : 0;
-  const longo = mine !== null && minhaDuracao >= LONG_RUNNING_SECONDS;
+  // Avisa a própria pessoa quando o timer dela passa do tempo de aviso do laboratório (o banco também notifica e pausa sozinho).
+  const longo = mine !== null && minhaDuracao >= (labSettings?.timer_reminder_hours ?? 4) * 3600;
 
   return (
     <div className="grid gap-1 text-sm">
@@ -86,7 +89,7 @@ export function TaskTimer({ onToggle, task }: TaskTimerProps) {
           </span>
         </div>
       ) : null}
-      {longo ? <p className="font-semibold text-warning-dark">{t("tasks.timerLong", { time: formatDuration(minhaDuracao), hours: AUTO_PAUSE_HOURS })}</p> : null}
+      {longo ? <p className="font-semibold text-warning-dark">{t("tasks.timerLong", { time: formatDuration(minhaDuracao), hours: labSettings?.timer_max_hours ?? 8 })}</p> : null}
     </div>
   );
 }

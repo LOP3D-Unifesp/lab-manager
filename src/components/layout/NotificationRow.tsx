@@ -1,4 +1,4 @@
-import { CalendarCheck, CheckCircle2, ListChecks, MessageSquare, ShoppingCart, UserCheck, UserPlus, Wrench, XCircle, type LucideIcon } from "lucide-react";
+import { CalendarCheck, CheckCircle2, ListChecks, MessageSquare, ShoppingCart, Timer, UserCheck, UserPlus, Wrench, XCircle, type LucideIcon } from "lucide-react";
 
 import { getLocale, t } from "../../i18n";
 import { describeNotification, type AppNotification, type NotificationType } from "../../lib/notifications";
@@ -19,6 +19,7 @@ const ICONS: Record<NotificationType, LucideIcon> = {
   project_join_request: UserPlus,
   project_join_decision: UserCheck,
   task_assigned: ListChecks,
+  task_timer_reminder: Timer,
 };
 
 type NotificationRowProps = {

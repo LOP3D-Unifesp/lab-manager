@@ -1,6 +1,6 @@
 import { t } from "../i18n";
 import { FormEvent, useEffect, useState } from "react";
-import { Building2, Clock3, ImageIcon, Pencil, Plus, Power, Utensils, X } from "lucide-react";
+import { Building2, Clock3, ImageIcon, Pencil, Plus, Power, Timer, Utensils, X } from "lucide-react";
 
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
@@ -9,7 +9,7 @@ import { StatusBadge } from "../components/ui/StatusBadge";
 import { TimezoneSelect } from "../components/ui/TimezoneSelect";
 import { useAuth } from "../lib/auth";
 import { formatSchedulePeriod, type LabSchedulePeriod } from "../lib/domain";
-import { listLabSchedulePeriods, removeLabLogo, saveLabSchedulePeriod, updateLabBreaks, updateLabSettings, uploadLabLogo, validateLabLogoFile, type LogoVariant } from "../lib/supabaseRepository";
+import { listLabSchedulePeriods, removeLabLogo, saveLabSchedulePeriod, updateLabBreaks, updateLabSettings, updateTimerSettings, uploadLabLogo, validateLabLogoFile, type LogoVariant } from "../lib/supabaseRepository";
 
 type MealBreakId = "lunch" | "dinner";
 
@@ -29,6 +29,12 @@ export function Administracao() {
   const [privacyContactEmail, setPrivacyContactEmail] = useState("");
   const [capacity, setCapacity] = useState(10);
   const [operatingWeekdays, setOperatingWeekdays] = useState<number[]>([1, 2, 3, 4, 5]);
+  const [timerReminder, setTimerReminder] = useState(4);
+  const [timerMax, setTimerMax] = useState(8);
+  const [timerGrace, setTimerGrace] = useState(60);
+  const [timerMessage, setTimerMessage] = useState("");
+  const [timerError, setTimerError] = useState("");
+  const [timerSaving, setTimerSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -53,6 +59,7 @@ export function Administracao() {
     setLabName(labSettings.name ?? ""); setLabAcronym(labSettings.acronym ?? "");
     setLabTimezone(labSettings.timezone); setPrivacyContactEmail(labSettings.privacy_contact_email ?? "");
     setCapacity(labSettings.workspace_capacity); setOperatingWeekdays(labSettings.operating_weekdays);
+    setTimerReminder(labSettings.timer_reminder_hours ?? 4); setTimerMax(labSettings.timer_max_hours ?? 8); setTimerGrace(labSettings.timer_grace_minutes ?? 60);
   }, [labSettings]);
 
   function clearLogoPreview(variant: LogoVariant) {
@@ -140,6 +147,15 @@ export function Administracao() {
       await refreshInstallation(); setMessage(t("admin.settingsSaved"));
     } catch (reason) { setError(reason instanceof Error ? reason.message : t("admin.errSave")); }
     finally { setSaving(false); }
+  }
+
+  async function saveTimerSettings(event: FormEvent) {
+    event.preventDefault(); setTimerSaving(true); setTimerError(""); setTimerMessage("");
+    try {
+      await updateTimerSettings({ reminderHours: timerReminder, maxHours: timerMax, graceMinutes: timerGrace });
+      await refreshInstallation(); setTimerMessage(t("admin.timerSaved"));
+    } catch (reason) { setTimerError(reason instanceof Error && reason.message.includes("invalid_timer_settings") ? t("admin.timerInvalid") : t("admin.errSave")); }
+    finally { setTimerSaving(false); }
   }
 
   function scheduleErrorMessage(reason: unknown, fallback: string) {
@@ -299,6 +315,18 @@ export function Administracao() {
           <label className="grid gap-2 font-semibold">{t("admin.capacity")}<input className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal" min={1} required type="number" value={capacity} onChange={(e) => setCapacity(Number(e.target.value))} /><span className="text-sm font-normal text-muted">{t("admin.capacityHint")}</span></label>
           <fieldset className="md:col-span-2 xl:col-span-3"><legend className="mb-2 font-semibold">{t("admin.operatingDays")}</legend><div className="flex flex-wrap gap-2">{weekdays.map((day) => <label className="flex min-h-11 items-center gap-2 rounded-lg border border-border bg-background px-3" key={day.value}><input checked={operatingWeekdays.includes(day.value)} type="checkbox" onChange={(e) => setOperatingWeekdays((current) => e.target.checked ? [...current, day.value] : current.filter((value) => value !== day.value))} />{day.label}</label>)}</div></fieldset>
           <div className="md:col-span-2 xl:col-span-3"><Button disabled={saving || operatingWeekdays.length === 0} type="submit">{saving ? t("common.saving") : t("admin.saveSettings")}</Button></div>
+        </form>
+      </Card>
+
+      <Card className="mb-5">
+        <div className="mb-5 flex items-start gap-3"><div className="rounded-lg bg-primary-soft p-3 text-primary"><Timer className="h-5 w-5" /></div><div><h2 className="text-2xl font-bold">{t("admin.timerTitle")}</h2><p className="mt-1 text-muted">{t("admin.timerHint")}</p></div></div>
+        {timerMessage ? <p className="mb-4 rounded-lg border border-success bg-success-soft p-3 font-semibold text-success-dark">{timerMessage}</p> : null}
+        {timerError ? <p className="mb-4 rounded-lg border border-danger bg-danger-soft p-3 font-semibold text-danger">{timerError}</p> : null}
+        <form className="grid items-start gap-4 md:grid-cols-3" onSubmit={saveTimerSettings}>
+          <label className="grid gap-2 font-semibold">{t("admin.timerReminder")}<input className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal" max={24} min={1} required type="number" value={timerReminder} onChange={(e) => setTimerReminder(Number(e.target.value))} /><span className="text-sm font-normal text-muted">{t("admin.timerReminderHint")}</span></label>
+          <label className="grid gap-2 font-semibold">{t("admin.timerMax")}<input className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal" max={24} min={1} required type="number" value={timerMax} onChange={(e) => setTimerMax(Number(e.target.value))} /><span className="text-sm font-normal text-muted">{t("admin.timerMaxHint")}</span></label>
+          <label className="grid gap-2 font-semibold">{t("admin.timerGrace")}<input className="min-h-11 rounded-lg border border-border bg-background px-4 font-normal" max={240} min={0} required type="number" value={timerGrace} onChange={(e) => setTimerGrace(Number(e.target.value))} /><span className="text-sm font-normal text-muted">{t("admin.timerGraceHint")}</span></label>
+          <div className="md:col-span-3"><Button disabled={timerSaving} type="submit">{timerSaving ? t("common.saving") : t("admin.timerSave")}</Button></div>
         </form>
       </Card>
 

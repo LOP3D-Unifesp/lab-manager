@@ -291,14 +291,14 @@ isOneToOne: false
                   ]
                 },"lab_settings": {
                   Row: {
-                    "acronym": string | null,"created_at": string,"created_by": string | null,"dinner_ends_at": string,"dinner_starts_at": string,"favicon_url": string | null,"id": boolean,"logo_dark_url": string | null,"logo_light_url": string | null,"lunch_ends_at": string,"lunch_starts_at": string,"name": string | null,"operating_weekdays": (number)[],"privacy_contact_email": string | null,"setup_completed_at": string | null,"timezone": string,"updated_at": string,"updated_by": string | null,"workspace_capacity": number
+                    "acronym": string | null,"created_at": string,"created_by": string | null,"dinner_ends_at": string,"dinner_starts_at": string,"favicon_url": string | null,"id": boolean,"logo_dark_url": string | null,"logo_light_url": string | null,"lunch_ends_at": string,"lunch_starts_at": string,"name": string | null,"operating_weekdays": (number)[],"privacy_contact_email": string | null,"setup_completed_at": string | null,"timer_grace_minutes": number,"timer_max_hours": number,"timer_reminder_hours": number,"timezone": string,"updated_at": string,"updated_by": string | null,"workspace_capacity": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "acronym"?: string | null,"created_at"?: string,"created_by"?: string | null,"dinner_ends_at"?: string,"dinner_starts_at"?: string,"favicon_url"?: string | null,"id"?: boolean,"logo_dark_url"?: string | null,"logo_light_url"?: string | null,"lunch_ends_at"?: string,"lunch_starts_at"?: string,"name"?: string | null,"operating_weekdays"?: (number)[],"privacy_contact_email"?: string | null,"setup_completed_at"?: string | null,"timezone"?: string,"updated_at"?: string,"updated_by"?: string | null,"workspace_capacity"?: number
+                    "acronym"?: string | null,"created_at"?: string,"created_by"?: string | null,"dinner_ends_at"?: string,"dinner_starts_at"?: string,"favicon_url"?: string | null,"id"?: boolean,"logo_dark_url"?: string | null,"logo_light_url"?: string | null,"lunch_ends_at"?: string,"lunch_starts_at"?: string,"name"?: string | null,"operating_weekdays"?: (number)[],"privacy_contact_email"?: string | null,"setup_completed_at"?: string | null,"timer_grace_minutes"?: number,"timer_max_hours"?: number,"timer_reminder_hours"?: number,"timezone"?: string,"updated_at"?: string,"updated_by"?: string | null,"workspace_capacity"?: number
                   }
                   Update: {
-                    "acronym"?: string | null,"created_at"?: string,"created_by"?: string | null,"dinner_ends_at"?: string,"dinner_starts_at"?: string,"favicon_url"?: string | null,"id"?: boolean,"logo_dark_url"?: string | null,"logo_light_url"?: string | null,"lunch_ends_at"?: string,"lunch_starts_at"?: string,"name"?: string | null,"operating_weekdays"?: (number)[],"privacy_contact_email"?: string | null,"setup_completed_at"?: string | null,"timezone"?: string,"updated_at"?: string,"updated_by"?: string | null,"workspace_capacity"?: number
+                    "acronym"?: string | null,"created_at"?: string,"created_by"?: string | null,"dinner_ends_at"?: string,"dinner_starts_at"?: string,"favicon_url"?: string | null,"id"?: boolean,"logo_dark_url"?: string | null,"logo_light_url"?: string | null,"lunch_ends_at"?: string,"lunch_starts_at"?: string,"name"?: string | null,"operating_weekdays"?: (number)[],"privacy_contact_email"?: string | null,"setup_completed_at"?: string | null,"timer_grace_minutes"?: number,"timer_max_hours"?: number,"timer_reminder_hours"?: number,"timezone"?: string,"updated_at"?: string,"updated_by"?: string | null,"workspace_capacity"?: number
                   }
                   Relationships: [
                     {
@@ -709,14 +709,14 @@ isOneToOne: false
                   ]
                 },"project_task_time_entries": {
                   Row: {
-                    "auto_closed": boolean,"ended_at": string | null,"id": string,"phase": string,"profile_id": string,"project_id": string,"seconds": number | null,"started_at": string,"task_id": string
+                    "auto_closed": boolean,"ended_at": string | null,"id": string,"phase": string,"profile_id": string,"project_id": string,"reminded_at": string | null,"seconds": number | null,"started_at": string,"task_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "auto_closed"?: boolean,"ended_at"?: string | null,"id"?: string,"phase": string,"profile_id": string,"project_id": string,"seconds"?: number | null,"started_at"?: string,"task_id": string
+                    "auto_closed"?: boolean,"ended_at"?: string | null,"id"?: string,"phase": string,"profile_id": string,"project_id": string,"reminded_at"?: string | null,"seconds"?: number | null,"started_at"?: string,"task_id": string
                   }
                   Update: {
-                    "auto_closed"?: boolean,"ended_at"?: string | null,"id"?: string,"phase"?: string,"profile_id"?: string,"project_id"?: string,"seconds"?: number | null,"started_at"?: string,"task_id"?: string
+                    "auto_closed"?: boolean,"ended_at"?: string | null,"id"?: string,"phase"?: string,"profile_id"?: string,"project_id"?: string,"reminded_at"?: string | null,"seconds"?: number | null,"started_at"?: string,"task_id"?: string
                   }
                   Relationships: [
                     {
@@ -911,6 +911,9 @@ isOneToOne: false
 "operating_weekdays": (number)[],
 "privacy_contact_email": string | null,
 "setup_completed_at": string | null,
+"timer_grace_minutes": number,
+"timer_max_hours": number,
+"timer_reminder_hours": number,
 "timezone": string,
 "updated_at": string,
 "updated_by": string | null,
@@ -1255,6 +1258,9 @@ isOneToOne: false
 "operating_weekdays": (number)[],
 "privacy_contact_email": string | null,
 "setup_completed_at": string | null,
+"timer_grace_minutes": number,
+"timer_max_hours": number,
+"timer_reminder_hours": number,
 "timezone": string,
 "updated_at": string,
 "updated_by": string | null,
@@ -1420,6 +1426,9 @@ isOneToOne: false
 "operating_weekdays": (number)[],
 "privacy_contact_email": string | null,
 "setup_completed_at": string | null,
+"timer_grace_minutes": number,
+"timer_max_hours": number,
+"timer_reminder_hours": number,
 "timezone": string,
 "updated_at": string,
 "updated_by": string | null,
@@ -1448,6 +1457,9 @@ isOneToOne: false
 "operating_weekdays": (number)[],
 "privacy_contact_email": string | null,
 "setup_completed_at": string | null,
+"timer_grace_minutes": number,
+"timer_max_hours": number,
+"timer_reminder_hours": number,
 "timezone": string,
 "updated_at": string,
 "updated_by": string | null,
@@ -1476,6 +1488,9 @@ isOneToOne: false
 "operating_weekdays": (number)[],
 "privacy_contact_email": string | null,
 "setup_completed_at": string | null,
+"timer_grace_minutes": number,
+"timer_max_hours": number,
+"timer_reminder_hours": number,
 "timezone": string,
 "updated_at": string,
 "updated_by": string | null,
@@ -1541,7 +1556,10 @@ isOneToOne: false
         to: "purchase_requests"
         isOneToOne: true
         isSetofReturn: false
-      } }
+      } },
+"update_timer_settings":
+{ Args: { "p_grace_minutes": number,"p_max_hours": number,"p_reminder_hours": number }; Returns: undefined
+                           }
           }
           Enums: {
             "academic_affiliation": "ic"|"extension"|"intern"|"tcc"|"masters"|"phd"|"postdoc"|"visitor"|"technician"|"faculty"|"other","booking_status": "pending"|"approved"|"in_progress"|"completed"|"cancelled"|"failed"|"rejected","equipment_status": "active"|"maintenance"|"unavailable"|"disabled"|"stopped","feedback_kind": "suggestion"|"bug"|"other","feedback_status": "new"|"seen"|"planned"|"done"|"dismissed","funding_agency": "cnpq"|"fapesp"|"capes"|"sus"|"fap"|"other","invitation_status": "pending"|"accepted"|"expired"|"revoked","maintenance_request_status": "open"|"in_progress"|"resolved"|"cancelled"|"waiting_part","maintenance_urgency": "low"|"normal"|"urgent","material_category": "filament"|"resin"|"powder"|"other","project_funding_category": "capital"|"custeio"|"bolsas"|"reserva_tecnica"|"outros"|"passagens"|"diarias","project_join_status": "pending"|"approved"|"rejected"|"cancelled","project_status": "planning"|"active"|"paused"|"completed"|"archived","purchase_status": "requested"|"approved"|"rejected"|"purchased"|"delivered"|"cancelled","purchase_urgency": "low"|"normal"|"urgent","spool_status": "sealed"|"in_use"|"empty"|"discarded","task_priority": "low"|"normal"|"high"|"urgent","task_status": "todo"|"in_progress"|"review"|"done","user_role": "coordinator"|"researcher"

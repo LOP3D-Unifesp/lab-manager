@@ -18,10 +18,6 @@ export type TaskTimerFields = {
   running: RunningTimer[];
 };
 
-// Depois de tanto tempo ligado sem parar, o cartão avisa; o banco pausa sozinho aos 12 h.
-export const LONG_RUNNING_SECONDS = 8 * 3600;
-export const AUTO_PAUSE_HOURS = 12;
-
 export function elapsedSeconds(startedAt: string, now: Date) {
   return Math.max(0, Math.floor((now.getTime() - new Date(startedAt).getTime()) / 1000));
 }

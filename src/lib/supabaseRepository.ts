@@ -440,7 +440,7 @@ export async function removeLabLogo(variant: LogoVariant) {
 
 // Colunas de `lab_settings` lidas pelo app (usada aqui e em src/lib/auth.tsx, para não divergirem).
 export const LAB_SETTINGS_COLUMNS =
-  "id, name, acronym, timezone, workspace_capacity, operating_weekdays, lunch_starts_at, lunch_ends_at, dinner_starts_at, dinner_ends_at, privacy_contact_email, logo_light_url, logo_dark_url, favicon_url, setup_completed_at, created_by, updated_by, created_at, updated_at";
+  "id, name, acronym, timezone, workspace_capacity, operating_weekdays, timer_reminder_hours, timer_max_hours, timer_grace_minutes, lunch_starts_at, lunch_ends_at, dinner_starts_at, dinner_ends_at, privacy_contact_email, logo_light_url, logo_dark_url, favicon_url, setup_completed_at, created_by, updated_by, created_at, updated_at";
 
 export async function getInstallationState(): Promise<InstallationState> {
   const { data, error } = await client()
@@ -490,6 +490,16 @@ export async function updateLabSettings(params: {
 
   throwIfError(error);
   return data as LabSettings;
+}
+
+// Limites do timer de tarefas (só o coordenador altera): aviso, limite de horas seguidas e tolerância do fim do expediente.
+export async function updateTimerSettings(params: { reminderHours: number; maxHours: number; graceMinutes: number }) {
+  const { error } = await client().rpc("update_timer_settings", {
+    p_reminder_hours: params.reminderHours,
+    p_max_hours: params.maxHours,
+    p_grace_minutes: params.graceMinutes,
+  });
+  throwIfError(error);
 }
 
 export async function listLabSchedulePeriods(includeInactive = false) {
