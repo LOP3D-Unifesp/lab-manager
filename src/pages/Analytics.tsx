@@ -5,6 +5,7 @@ import { useSearchParams } from "react-router-dom";
 import { ChartCard, DonutChart, RankingChart, TimeBarChart, type ChartDatum } from "../components/analytics/Charts";
 import { LabTodayOverview } from "../components/inicio/LabTodayOverview";
 import { PageHeader } from "../components/ui/PageHeader";
+import { averageLeadTime, formatLeadTime } from "../lib/taskLeadTime";
 import { TimeReportSection } from "../components/analytics/TimeReportSection";
 import { StatCard } from "../components/ui/StatCard";
 import { formatDateTime, useT } from "../i18n";
@@ -34,6 +35,7 @@ import {
   listEquipment,
   listMaintenanceEpisodes,
   listMyTasks,
+  listVisibleTasks,
   listPurchaseRequests,
   listSpools,
 } from "../lib/supabaseRepository";
@@ -118,6 +120,7 @@ export function Analytics() {
   const [bookings, setBookings] = useState<EquipmentBooking[]>([]);
   const [purchases, setPurchases] = useState<PurchaseRequest[]>([]);
   const [tasks, setTasks] = useState<ProjectTask[]>([]);
+  const [labTasks, setLabTasks] = useState<ProjectTask[]>([]);
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [episodes, setEpisodes] = useState<MaintenanceEpisode[]>([]);
   const [spools, setSpools] = useState<MaterialSpool[]>([]);
@@ -130,17 +133,19 @@ export function Analytics() {
       listBookings(),
       listPurchaseRequests(),
       listMyTasks(profileId),
+      isCoordinator ? listVisibleTasks() : Promise.resolve([] as ProjectTask[]),
       isCoordinator ? listEquipment() : Promise.resolve([] as Equipment[]),
       isCoordinator ? listMaintenanceEpisodes() : Promise.resolve([] as MaintenanceEpisode[]),
       isCoordinator ? listSpools() : Promise.resolve([] as MaterialSpool[]),
     ])
-      .then(([bookingsData, purchasesData, tasksData, equipmentData, episodesData, spoolsData]) => {
+      .then(([bookingsData, purchasesData, tasksData, labTasksData, equipmentData, episodesData, spoolsData]) => {
         if (!ativo) return;
         setErro("");
         setBookings(bookingsData);
         setPurchases(purchasesData);
         // Tarefas arquivadas ficam fora dos números.
         setTasks(tasksData.filter((task) => !task.archived_at));
+        setLabTasks(labTasksData.filter((task) => !task.archived_at));
         setEquipment(equipmentData);
         setEpisodes(episodesData);
         setSpools(spoolsData);
@@ -172,6 +177,8 @@ export function Analytics() {
   const myUsage = filterUsageInPeriod(myBookings, range);
   const myPurchases = purchases.filter((purchase) => purchase.requested_by === currentProfile.id);
   const myPurchaseTotals = purchaseTotals(myPurchases);
+  const myLead = averageLeadTime(tasks, range);
+  const labLead = averageLeadTime(labTasks, range);
   const openTasks = tasks.filter((task) => task.status !== "done");
   const overdueTasks = tasks.filter((task) => isTaskOverdue(task, today));
   const taskStatuses: TaskStatus[] = ["todo", "in_progress", "review", "done"];
@@ -256,6 +263,9 @@ export function Analytics() {
             />
           </section>
           {profileId ? <TimeReportSection from={range.from} to={range.to} profileId={profileId} scope="mine" /> : null}
+          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <StatCard title={t("analytics.leadTime")} value={myLead === null ? "-" : formatLeadTime(myLead)} description={t("analytics.leadTimeHint")} icon={CalendarCheck} />
+          </section>
           <UsageSection bookings={myBookings} now={now} period={period} />
           <div className="grid gap-5 lg:grid-cols-2">
             <ChartCard
@@ -293,6 +303,9 @@ export function Analytics() {
           </section>
           <UsageSection bookings={bookings} now={now} period={period} />
           {profileId ? <TimeReportSection from={range.from} to={range.to} profileId={profileId} scope="lab" /> : null}
+          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <StatCard title={t("analytics.leadTime")} value={labLead === null ? "-" : formatLeadTime(labLead)} description={t("analytics.leadTimeHint")} icon={CalendarCheck} />
+          </section>
           <div className="grid gap-5 lg:grid-cols-2">
             <ChartCard
               title={t("analytics.byPerson")}

@@ -1239,6 +1239,8 @@ const taskSelect = [
   "due_on",
   "created_by",
   "archived_at",
+  "created_at",
+  "completed_at",
   "work_seconds",
   "review_seconds",
   "timer_phase",

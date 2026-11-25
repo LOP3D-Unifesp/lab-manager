@@ -126,6 +126,8 @@ function task(overrides: Partial<ProjectTask>): ProjectTask {
     assignees: [],
     archived_at: null,
     checklist: [],
+    created_at: "2026-01-01T00:00:00Z",
+    completed_at: null,
     work_seconds: 0,
     review_seconds: 0,
     timer_phase: null,

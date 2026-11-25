@@ -735,14 +735,14 @@ isOneToOne: false
                   ]
                 },"project_tasks": {
                   Row: {
-                    "archived_at": string | null,"created_at": string,"created_by": string,"description": string | null,"due_on": string | null,"id": string,"position": number,"priority": Database["public"]['Enums']["task_priority"],"project_id": string,"review_seconds": number,"status": Database["public"]['Enums']["task_status"],"timer_phase": string | null,"timer_started_at": string | null,"title": string,"updated_at": string,"work_seconds": number
+                    "archived_at": string | null,"completed_at": string | null,"created_at": string,"created_by": string,"description": string | null,"due_on": string | null,"id": string,"position": number,"priority": Database["public"]['Enums']["task_priority"],"project_id": string,"review_seconds": number,"status": Database["public"]['Enums']["task_status"],"timer_phase": string | null,"timer_started_at": string | null,"title": string,"updated_at": string,"work_seconds": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "archived_at"?: string | null,"created_at"?: string,"created_by"?: string,"description"?: string | null,"due_on"?: string | null,"id"?: string,"position"?: number,"priority"?: Database["public"]['Enums']["task_priority"],"project_id": string,"review_seconds"?: number,"status"?: Database["public"]['Enums']["task_status"],"timer_phase"?: string | null,"timer_started_at"?: string | null,"title": string,"updated_at"?: string,"work_seconds"?: number
+                    "archived_at"?: string | null,"completed_at"?: string | null,"created_at"?: string,"created_by"?: string,"description"?: string | null,"due_on"?: string | null,"id"?: string,"position"?: number,"priority"?: Database["public"]['Enums']["task_priority"],"project_id": string,"review_seconds"?: number,"status"?: Database["public"]['Enums']["task_status"],"timer_phase"?: string | null,"timer_started_at"?: string | null,"title": string,"updated_at"?: string,"work_seconds"?: number
                   }
                   Update: {
-                    "archived_at"?: string | null,"created_at"?: string,"created_by"?: string,"description"?: string | null,"due_on"?: string | null,"id"?: string,"position"?: number,"priority"?: Database["public"]['Enums']["task_priority"],"project_id"?: string,"review_seconds"?: number,"status"?: Database["public"]['Enums']["task_status"],"timer_phase"?: string | null,"timer_started_at"?: string | null,"title"?: string,"updated_at"?: string,"work_seconds"?: number
+                    "archived_at"?: string | null,"completed_at"?: string | null,"created_at"?: string,"created_by"?: string,"description"?: string | null,"due_on"?: string | null,"id"?: string,"position"?: number,"priority"?: Database["public"]['Enums']["task_priority"],"project_id"?: string,"review_seconds"?: number,"status"?: Database["public"]['Enums']["task_status"],"timer_phase"?: string | null,"timer_started_at"?: string | null,"title"?: string,"updated_at"?: string,"work_seconds"?: number
                   }
                   Relationships: [
                     {
