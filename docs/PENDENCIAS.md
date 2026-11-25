@@ -9,6 +9,9 @@ MVP, em [HISTORICO_ENTREGAS.md](HISTORICO_ENTREGAS.md).
 O assistente não consegue entrar no app; as telas abaixo passaram em `tsc`, testes e build, mas precisam de olho humano
 com duas contas (coordenadora e pesquisador):
 
+- [ ] **Bolsas de fomento (Meu perfil):** cartão próprio com botão "Salvar bolsas"; adicionar bolsa com projeto (membro e
+  não membro, com "Pedir para entrar"), agência sem SUS, valor, início, fim, horas e nº do processo; recarregar e ver
+  salvo; carga semanal somando só as bolsas vigentes. Depende da migration `20261002` (não aplicada em produção).
 - [ ] **Notificações:** sino (pendências, "Novidades", "Marcar tudo como lido"), página `/notificacoes` (filtros e
   "Carregar mais"), cartão "Notificações" em Meu perfil (desligar um assunto e conferir que o aviso para).
 - [ ] **Push com o app fechado:** ligar os avisos, fechar a aba e gerar um evento com outra conta; testar no Chrome

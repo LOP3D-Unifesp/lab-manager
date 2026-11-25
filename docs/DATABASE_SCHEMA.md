@@ -83,6 +83,7 @@ Status do MVP implementado:
 | `20260929_purchases_visible_to_all` | Leitura de `purchase_requests` para qualquer usuario ativo e `get_purchase_project_names` (secao 3.19). |
 | `20260930_notification_recipients` | Quem recebe aviso de compra e de chamado; tipo `request_status` (secao 3.20). |
 | `20261001_project_join_requests` | Pedidos de entrada em projetos e resumo de projetos para todos (secao 3.21). |
+| `20261002_funding_grant_project_dates` | `profile_funding_grants.project_id`, `start_date`, `end_date`, `process_number`; `sus` vira `fap`; RPC `replace_profile_funding_grants` com os campos novos, recusa `sus` e atualiza a carga semanal. |
 
 Resumo dos objetos que mais mudam o entendimento do schema:
 
@@ -119,8 +120,11 @@ Resumo dos objetos que mais mudam o entendimento do schema:
   (`INVITATION_TTL_HOURS` nas Edge Functions e o valor devolvido por `get_public_lab_identity`), nao
   uma coluna de `lab_settings`.
 - **Bolsas (`profile_funding_grants`):** `id`, `profile_id` (cascade), `agency` (`funding_agency`),
-  `agency_other`, `grant_name`, `weekly_hours`, `monthly_value` e `created_at`. `agency_other` e
-  obrigatorio so para `other`. Leitura por qualquer usuario ativo; escrita pelo dono ou coordenador,
+  `agency_other`, `grant_name`, `weekly_hours`, `monthly_value`, `project_id` (FK `projects`, `on delete
+  set null`), `start_date`, `end_date` (fim >= inicio), `process_number` (opcional) e `created_at`.
+  `agency_other` e obrigatorio so para `other`. SUS deixou de ser agencia (as bolsas do projeto SUS sao
+  pagas pela FAP): o valor continua no enum, os dados antigos viraram `fap` e a RPC recusa `sus`.
+  A RPC tambem grava `profiles.weekly_workload_hours` com a soma das horas das bolsas vigentes. Leitura por qualquer usuario ativo; escrita pelo dono ou coordenador,
   via `replace_profile_funding_grants(p_profile_id, p_grants)`.
 - **Perfil:** alem dos campos de 3.1, `profiles` tem `weekly_workload_hours` (1 a 60), `lattes_url`,
   `requires_booking_approval` e `avatar_url`. Um trigger impede que o proprio usuario altere seu

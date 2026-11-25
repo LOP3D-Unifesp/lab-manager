@@ -20,7 +20,11 @@ import {
   equipmentUsesMaterial,
   getRoleLabel,
   getSlotColorClassName,
+  emptyGrant,
+  fundingAgencyOptions,
   getEffectiveWeeklyHours,
+  isGrantActive,
+  validateGrant,
   getTotalWeeklyGrantHours,
   getWorkModeLabel,
   formatSchedulePeriod,
@@ -39,9 +43,14 @@ import {
   validarLattes,
   type MaintenanceBlock,
   type EquipmentBooking,
+  type FundingGrant,
   type LabScheduleBreakItem,
   type LabSchedulePeriodItem,
 } from "./domain";
+
+function grant(overrides: Partial<FundingGrant> = {}): FundingGrant {
+  return { ...emptyGrant(), ...overrides };
+}
 
 function booking(status: EquipmentBooking["status"], overrides: Partial<EquipmentBooking> = {}): EquipmentBooking {
   return {
@@ -185,29 +194,58 @@ describe("regras de dominio", () => {
     expect(getFundingAgencyLabel(null)).toBeNull();
   });
 
-  it("soma a carga horaria semanal de todas as bolsas cadastradas", () => {
-    expect(
-      getTotalWeeklyGrantHours([
-        { agency: "cnpq", agency_other: null, grant_name: null, weekly_hours: 12, monthly_value: null },
-        { agency: "fapesp", agency_other: null, grant_name: null, weekly_hours: 8, monthly_value: null },
-      ]),
-    ).toBe(20);
-    expect(
-      getTotalWeeklyGrantHours([
-        { agency: "cnpq", agency_other: null, grant_name: null, weekly_hours: null, monthly_value: null },
-      ]),
-    ).toBe(0);
-    expect(getTotalWeeklyGrantHours([])).toBe(0);
+  it("tira o SUS das agências (as bolsas são pagas pela FAP) e mostra o SUS antigo como FAP", () => {
+    expect(fundingAgencyOptions.map((option) => option.value)).not.toContain("sus");
+    expect(getFundingAgencyLabel("sus")).toBe("FAP");
   });
 
-  it("usa a soma das bolsas para bolsistas e a carga manual para voluntarios", () => {
-    const grants = [
-      { agency: "cnpq" as const, agency_other: null, grant_name: null, weekly_hours: 20, monthly_value: null },
-    ];
-    expect(getEffectiveWeeklyHours(true, grants, "12")).toBe(20);
-    expect(getEffectiveWeeklyHours(false, grants, "12")).toBe(12);
-    expect(getEffectiveWeeklyHours(false, grants, "")).toBe(0);
-    expect(getEffectiveWeeklyHours(false, [], "abc")).toBe(0);
+  it("soma a carga horária semanal só das bolsas vigentes", () => {
+    const today = "2026-11-25";
+    expect(
+      getTotalWeeklyGrantHours(
+        [
+          grant({ weekly_hours: 12, start_date: "2026-01-01", end_date: "2026-12-31" }),
+          grant({ agency: "fapesp", weekly_hours: 8 }),
+          grant({ weekly_hours: 20, start_date: "2025-01-01", end_date: "2025-12-31" }),
+          grant({ weekly_hours: 6, start_date: "2027-01-01", end_date: "2027-12-31" }),
+        ],
+        today,
+      ),
+    ).toBe(20);
+    expect(getTotalWeeklyGrantHours([grant({ weekly_hours: null })], today)).toBe(0);
+    expect(getTotalWeeklyGrantHours([], today)).toBe(0);
+  });
+
+  it("sabe se a bolsa está vigente na data", () => {
+    expect(isGrantActive({ start_date: "2026-11-25", end_date: "2026-11-25" }, "2026-11-25")).toBe(true);
+    expect(isGrantActive({ start_date: "2026-11-26", end_date: null }, "2026-11-25")).toBe(false);
+    expect(isGrantActive({ start_date: null, end_date: "2026-11-24" }, "2026-11-25")).toBe(false);
+    expect(isGrantActive({ start_date: null, end_date: null }, "2026-11-25")).toBe(true);
+  });
+
+  it("usa a soma das bolsas vigentes e, sem elas, a carga informada à mão", () => {
+    const today = "2026-11-25";
+    const grants = [grant({ weekly_hours: 20 })];
+    expect(getEffectiveWeeklyHours(grants, "12", today)).toBe(20);
+    expect(getEffectiveWeeklyHours([], "12", today)).toBe(12);
+    expect(getEffectiveWeeklyHours([], "", today)).toBe(0);
+    expect(getEffectiveWeeklyHours([], "abc", today)).toBe(0);
+    expect(getEffectiveWeeklyHours([grant({ weekly_hours: 20, end_date: "2026-01-01" })], "10", today)).toBe(10);
+  });
+
+  it("valida os campos que a bolsa exige; só o número do processo é opcional", () => {
+    const ok = grant({ project_id: "p1", monthly_value: 700, start_date: "2026-03-01", end_date: "2027-02-28", weekly_hours: 20 });
+    expect(validateGrant(ok)).toBeNull();
+    expect(validateGrant({ ...ok, process_number: "2025/12345-6" })).toBeNull();
+    expect(validateGrant({ ...ok, project_id: null })).toBe("project");
+    expect(validateGrant({ ...ok, monthly_value: null })).toBe("monthlyValue");
+    expect(validateGrant({ ...ok, monthly_value: -1 })).toBe("monthlyValue");
+    expect(validateGrant({ ...ok, start_date: null })).toBe("startDate");
+    expect(validateGrant({ ...ok, end_date: null })).toBe("endDate");
+    expect(validateGrant({ ...ok, end_date: "2026-02-01" })).toBe("dateOrder");
+    expect(validateGrant({ ...ok, weekly_hours: null })).toBe("weeklyHours");
+    expect(validateGrant({ ...ok, weekly_hours: 61 })).toBe("weeklyHours");
+    expect(validateGrant({ ...ok, agency: "other", agency_other: " " })).toBe("agency");
   });
 
   it.each(["pending", "approved", "in_progress"] as const)(

@@ -1,14 +1,9 @@
 import { t } from "../../i18n";
-import type { FundingGrant } from "../../lib/domain";
-import { FundingGrantsEditor } from "./FundingGrantsEditor";
 import { inputClassName } from "../ui/formStyles";
 
 type WorkloadFieldProps = {
-  isScholarshipHolder: boolean;
-  onIsScholarshipHolderChange: (value: boolean) => void;
-  grants: FundingGrant[];
-  onGrantsChange: (grants: FundingGrant[]) => void;
-  totalGrantHours: number;
+  /** Soma das horas das bolsas vigentes; quando é maior que zero, a carga vem das bolsas. */
+  grantHours: number;
   manualHours: string;
   onManualHoursChange: (value: string) => void;
   disabled?: boolean;
@@ -16,70 +11,42 @@ type WorkloadFieldProps = {
   className?: string;
 };
 
+// Carga horária semanal: de quem tem bolsa vigente é a soma das horas das bolsas (cadastradas no cartão de bolsas);
+// de quem não tem é informada à mão.
 export function WorkloadField({
-  isScholarshipHolder,
-  onIsScholarshipHolderChange,
-  grants,
-  onGrantsChange,
-  totalGrantHours,
+  grantHours,
   manualHours,
   onManualHoursChange,
   disabled,
   label = t("workload.label"),
   className = "",
 }: WorkloadFieldProps) {
+  const fromGrants = grantHours > 0;
+
   return (
-    <div className={`grid gap-4 ${className}`}>
-      <div className="grid gap-4 sm:grid-cols-2 sm:items-start">
-        <label className="grid min-w-0 gap-2 text-base font-semibold text-text">
-          {t("workload.holderQuestion")}
-          <select
-            className={`${inputClassName} w-full`}
-            disabled={disabled}
-            onChange={(event) => onIsScholarshipHolderChange(event.target.value === "holder")}
-            value={isScholarshipHolder ? "holder" : "volunteer"}
-          >
-            <option value="holder">{t("workload.holder")}</option>
-            <option value="volunteer">{t("workload.volunteer")}</option>
-          </select>
-          <p className="text-sm font-normal text-muted">
-            {isScholarshipHolder
-              ? t("workload.sumOfGrants")
-              : t("workload.manual")}
-          </p>
-        </label>
-
-        {isScholarshipHolder ? (
-          <label className="grid min-w-0 gap-2 text-base font-semibold text-text">
-            {label}
-            <input
-              className="min-h-11 cursor-not-allowed rounded-lg border border-border bg-primary-soft px-4 text-base font-semibold text-text outline-none"
-              disabled
-              readOnly
-              value={`${totalGrantHours}h`}
-            />
-          </label>
-        ) : (
-          <label className="grid min-w-0 gap-2 text-base font-semibold text-text">
-            {label}
-            <input
-              className={`${inputClassName} w-full`}
-              disabled={disabled}
-              inputMode="numeric"
-              max={60}
-              min={1}
-              onChange={(event) => onManualHoursChange(event.target.value)}
-              placeholder="Ex.: 12"
-              type="number"
-              value={manualHours}
-            />
-          </label>
-        )}
-      </div>
-
-      {isScholarshipHolder ? (
-        <FundingGrantsEditor value={grants} onChange={onGrantsChange} disabled={disabled} />
-      ) : null}
-    </div>
+    <label className={`grid min-w-0 gap-2 text-base font-semibold text-text ${className}`}>
+      {label}
+      {fromGrants ? (
+        <input
+          className="min-h-11 cursor-not-allowed rounded-lg border border-border bg-primary-soft px-4 text-base font-semibold text-text outline-none"
+          disabled
+          readOnly
+          value={`${grantHours}h`}
+        />
+      ) : (
+        <input
+          className={`${inputClassName} w-full`}
+          disabled={disabled}
+          inputMode="numeric"
+          max={60}
+          min={1}
+          onChange={(event) => onManualHoursChange(event.target.value)}
+          placeholder="Ex.: 12"
+          type="number"
+          value={manualHours}
+        />
+      )}
+      <span className="text-sm font-normal text-muted">{fromGrants ? t("workload.sumOfGrants") : t("workload.manual")}</span>
+    </label>
   );
 }

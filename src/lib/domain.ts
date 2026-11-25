@@ -22,14 +22,17 @@ export type FundingAgency =
   | "fap"
   | "other";
 
+// SUS não é mais agência: as bolsas do projeto SUS são pagas pela FAP. O valor "sus" fica no tipo só por
+// compatibilidade com o enum do banco e com dados antigos.
 export const fundingAgencyOptions: Array<{ value: FundingAgency; label: string }> = [
   { value: "cnpq", label: "CNPq" },
   { value: "fapesp", label: "FAPESP" },
   { value: "capes", label: "CAPES" },
-  { value: "sus", label: "SUS" },
   { value: "fap", label: "FAP" },
   { value: "other", label: "Outro" },
 ];
+
+const legacyAgencyLabels: Partial<Record<FundingAgency, string>> = { sus: "FAP" };
 
 export function getFundingAgencyLabel(
   agency: FundingAgency | null,
@@ -37,7 +40,7 @@ export function getFundingAgencyLabel(
 ) {
   if (!agency) return null;
   if (agency === "other") return other?.trim() || t("grants.otherAgency");
-  return fundingAgencyOptions.find((option) => option.value === agency)?.label ?? agency;
+  return fundingAgencyOptions.find((option) => option.value === agency)?.label ?? legacyAgencyLabels[agency] ?? agency;
 }
 
 export type FundingGrant = {
@@ -46,7 +49,46 @@ export type FundingGrant = {
   grant_name: string | null;
   weekly_hours: number | null;
   monthly_value: number | null;
+  project_id: string | null;
+  /** "AAAA-MM-DD" */
+  start_date: string | null;
+  /** "AAAA-MM-DD" */
+  end_date: string | null;
+  process_number: string | null;
 };
+
+export function emptyGrant(): FundingGrant {
+  return {
+    agency: "cnpq",
+    agency_other: null,
+    grant_name: null,
+    weekly_hours: null,
+    monthly_value: null,
+    project_id: null,
+    start_date: null,
+    end_date: null,
+    process_number: null,
+  };
+}
+
+export type GrantIssue = "agency" | "project" | "monthlyValue" | "startDate" | "endDate" | "dateOrder" | "weeklyHours";
+
+// Campos que a tela exige numa bolsa; o número do processo é opcional. Devolve o primeiro problema, ou null.
+export function validateGrant(grant: FundingGrant): GrantIssue | null {
+  if (grant.agency === "other" && !grant.agency_other?.trim()) return "agency";
+  if (!grant.project_id) return "project";
+  if (grant.monthly_value === null || !Number.isFinite(grant.monthly_value) || grant.monthly_value < 0) return "monthlyValue";
+  if (!grant.start_date) return "startDate";
+  if (!grant.end_date) return "endDate";
+  if (grant.end_date < grant.start_date) return "dateOrder";
+  if (grant.weekly_hours === null || !Number.isInteger(grant.weekly_hours) || grant.weekly_hours < 1 || grant.weekly_hours > 60) return "weeklyHours";
+  return null;
+}
+
+// Bolsa vigente na data (AAAA-MM-DD); sem data de início ou de fim conta como aberta desse lado.
+export function isGrantActive(grant: Pick<FundingGrant, "start_date" | "end_date">, today: string) {
+  return (!grant.start_date || grant.start_date <= today) && (!grant.end_date || grant.end_date >= today);
+}
 
 export function hasFundingGrant(profile: { funding_grants: FundingGrant[] }) {
   return profile.funding_grants.length > 0;
@@ -56,17 +98,21 @@ export function getFundingGrantLabels(profile: { funding_grants: FundingGrant[] 
   return profile.funding_grants.map((grant) => getFundingAgencyLabel(grant.agency, grant.agency_other) ?? "");
 }
 
-export function getTotalWeeklyGrantHours(grants: FundingGrant[]) {
-  return grants.reduce((total, grant) => total + (grant.weekly_hours ?? 0), 0);
+// Soma das horas das bolsas vigentes hoje (data local, AAAA-MM-DD).
+export function getTotalWeeklyGrantHours(grants: FundingGrant[], today: string = toLocalIsoDate(new Date())) {
+  return grants.filter((grant) => isGrantActive(grant, today)).reduce((total, grant) => total + (grant.weekly_hours ?? 0), 0);
 }
 
-export function getEffectiveWeeklyHours(
-  isScholarshipHolder: boolean,
-  grants: FundingGrant[],
-  manualHours: string,
-) {
-  if (isScholarshipHolder) {
-    return getTotalWeeklyGrantHours(grants);
+function toLocalIsoDate(date: Date) {
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+// Quem tem bolsa vigente usa a soma das horas das bolsas; os demais informam a carga à mão.
+export function getEffectiveWeeklyHours(grants: FundingGrant[], manualHours: string, today?: string) {
+  const grantHours = getTotalWeeklyGrantHours(grants, today);
+  if (grantHours > 0) {
+    return Math.min(grantHours, 60);
   }
 
   const parsed = Number(manualHours);
