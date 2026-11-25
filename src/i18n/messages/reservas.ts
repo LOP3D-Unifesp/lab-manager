@@ -2,7 +2,7 @@ import type { Entry } from "../catalog";
 
 export const reservas = {
   "bookings.title": { pt: "Reservas", en: "Bookings", es: "Reservas" },
-  "bookings.subtitle": { pt: "Reservas e manutenções com validação transacional no banco.", en: "Bookings and maintenance, validated transactionally in the database.", es: "Reservas y mantenimientos con validación transaccional en la base de datos." },
+  "bookings.subtitle": { pt: "Reserve um equipamento num horário livre, acompanhe as reservas do laboratório e registre paradas para manutenção.", en: "Book equipment in a free slot, follow the lab's bookings and record maintenance stops.", es: "Reserva un equipo en un horario libre, sigue las reservas del laboratorio y registra paradas por mantenimiento." },
   "bookings.history": { pt: "Histórico", en: "History", es: "Historial" },
   "bookings.mine": { pt: "Minhas reservas", en: "My bookings", es: "Mis reservas" },
   "bookings.create": { pt: "Criar reserva", en: "Create booking", es: "Crear reserva" },

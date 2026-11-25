@@ -2,7 +2,7 @@ import type { Entry } from "../catalog";
 
 export const perfil = {
   "profile.title": { pt: "Meu perfil", en: "My profile", es: "Mi perfil" },
-  "profile.subtitle": { pt: "Atualize seus dados usados pelo laboratório.", en: "Update your details used by the lab.", es: "Actualiza tus datos usados por el laboratorio." },
+  "profile.subtitle": { pt: "Seus dados, sua agenda semanal e os avisos que você quer receber.", en: "Your details, your weekly schedule and the alerts you want to receive.", es: "Tus datos, tu agenda semanal y los avisos que quieres recibir." },
   "profile.userData": { pt: "Dados do usuário", en: "User details", es: "Datos del usuario" },
   "profile.userDataHint": { pt: "O email e o papel são controlados pela administração.", en: "Email and role are managed by the administration.", es: "El correo y el rol son gestionados por la administración." },
   "profile.uploading": { pt: "Enviando...", en: "Uploading...", es: "Subiendo..." },

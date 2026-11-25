@@ -44,7 +44,7 @@ export const pessoas = {
   "researchers.errDirectSignup": { pt: "Cadastro direto desativado. Use o fluxo de convites.", en: "Direct sign-up is disabled. Use the invitation flow.", es: "Registro directo desactivado. Usa el flujo de invitaciones." },
   "researchers.errDirectDeactivate": { pt: "Inativação direta desativada. Use a administração de usuários.", en: "Direct deactivation is disabled. Use user administration.", es: "Inactivación directa desactivada. Usa la administración de usuarios." },
   "skills.title": { pt: "Habilidades", en: "Skills", es: "Habilidades" },
-  "skills.subtitle": { pt: "Competências técnicas cadastradas no Supabase.", en: "Technical skills registered in Supabase.", es: "Competencias técnicas registradas en Supabase." },
+  "skills.subtitle": { pt: "Habilidades técnicas do laboratório e quem tem cada uma.", en: "Technical skills of the lab and who has each one.", es: "Habilidades técnicas del laboratorio y quién tiene cada una." },
   "skills.new": { pt: "Nova habilidade", en: "New skill", es: "Nueva habilidad" },
   "skills.edit": { pt: "Editar habilidade", en: "Edit skill", es: "Editar habilidad" },
   "skills.peopleCount_one": { pt: "{count} pessoa", en: "{count} person", es: "{count} persona" },
