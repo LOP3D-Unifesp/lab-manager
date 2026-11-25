@@ -94,6 +94,7 @@ export const perfil = {
   "grants.weeklyHours": { pt: "Horas semanais", en: "Weekly hours", es: "Horas semanales" },
   "grants.startDate": { pt: "Início", en: "Start", es: "Inicio" },
   "grants.endDate": { pt: "Fim", en: "End", es: "Fin" },
+  "grants.name": { pt: "Nome da bolsa", en: "Grant name", es: "Nombre de la beca" },
   "grants.processNumber": { pt: "Número do processo", en: "Process number", es: "Número del proceso" },
   "grants.processShort": { pt: "processo {number}", en: "process {number}", es: "proceso {number}" },
   "grants.save": { pt: "Salvar bolsas", en: "Save grants", es: "Guardar becas" },

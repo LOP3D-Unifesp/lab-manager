@@ -234,6 +234,7 @@ export function PesquisadorDetalhe() {
                     return (
                       <li key={`${grant.agency}-${index}`}>
                         {getFundingAgencyLabel(grant.agency, grant.agency_other)}
+                        {grant.grant_name ? <span className="font-semibold text-muted"> · {grant.grant_name}</span> : null}
                         {projectName ? <span className="font-semibold text-muted"> · {projectName}</span> : null}
                         {grant.weekly_hours ? (
                           <span className="font-semibold text-muted"> · {t("researcher.hoursPerWeek", { hours: grant.weekly_hours })}</span>
