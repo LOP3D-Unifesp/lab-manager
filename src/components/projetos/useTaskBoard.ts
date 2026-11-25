@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { getTaskErrorMessage, reorderTasks, resolveBeforeTaskId, type ProjectTask, type TaskPriority, type TaskStatus } from "../../lib/projects";
+import { getTaskErrorMessage, reorderTasks, type ProjectTask, type TaskPriority, type TaskStatus } from "../../lib/projects";
 import { supabase } from "../../lib/supabaseClient";
 import { archiveProjectTask, deleteProjectTask, moveProjectTask, setChecklistItemDone, updateProjectTask } from "../../lib/supabaseRepository";
 
@@ -108,10 +108,9 @@ export function useTaskBoard(loader: () => Promise<ProjectTask[]>) {
   const mover = useCallback(
     async (task: ProjectTask, status: TaskStatus, antesDe: string | null = null) => {
       if (!tarefas) return;
-      const antes = resolveBeforeTaskId(tarefas, task, status, antesDe);
       await aplicar(
-        (lista) => reorderTasks(lista, task.id, status, antes),
-        () => moveProjectTask(task.id, status, antes),
+        (lista) => reorderTasks(lista, task.id, status, antesDe),
+        () => moveProjectTask(task.id, status, antesDe),
       );
     },
     [tarefas, aplicar],

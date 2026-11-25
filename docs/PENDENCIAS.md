@@ -20,6 +20,10 @@ com duas contas (coordenadora e pesquisador):
   remover) e ver "2/5" no cartão; marcar itens no cartão; arrastar cartão para cima/baixo e entre colunas com a linha
   indicando o destino; no celular, botões ↑/↓; com duas contas, mudança de uma aparecer na outra sem recarregar (e
   sem pular durante um arrasto). Depende da migration `20261005` (não aplicada em produção).
+- [ ] **Tarefas (descrição formatada, ordem entre projetos, trocar projeto):** descrição com negrito/itálico/listas e aba
+  "Visualizar"; checklist logo abaixo da descrição; arrastar cartão acima de outro de projeto diferente; editar a tarefa e
+  trocar o projeto (responsáveis que não são do novo projeto saem; ninguém recebe aviso de novo). Depende da migration
+  `20261006` (não aplicada em produção).
 - [ ] **Termo de outorga (PDF):** anexar, abrir, trocar e remover em bolsa já salva; só a dona e coordenadores abrem (testar com
   uma segunda conta de pesquisador, que não deve ver nem abrir); remover a bolsa apaga o arquivo. Depende da migration
   `20261003` (não aplicada em produção).

@@ -87,6 +87,7 @@ Status do MVP implementado:
 | `20261003_funding_grant_contract_file` | `profile_funding_grants.contract_path`; bucket privado `grant-contracts` (PDF, 10 MB; dona e coordenadores leem e apagam); `contract_path` sai da leitura de `authenticated` (leitura por coluna); RPCs `get_grant_contracts` e `set_grant_contract`; `replace_profile_funding_grants` preserva o caminho. |
 | `20261004_tasks_priority_archive_notify` | `task_priority` ganha `high` (Alta); `project_tasks.archived_at`; notificacao `task_assigned` (trigger em `project_task_assignees`, sem avisar quem se atribui a si mesmo). |
 | `20261005_tasks_checklist_order_realtime` | `project_task_checklist_items` (checklist da tarefa); RPCs `set_task_checklist` e `move_project_task` (reordena e renumera a coluna); `project_tasks`, `project_task_assignees` e a checklist entram no Realtime. |
+| `20261006_task_order_across_projects` | A ordem dos cartões vale para a coluna inteira (todos os projetos juntos): `move_project_task` e o trigger de coluna passam a considerar todos os projetos, e as posições existentes são renumeradas; RPC `move_task_to_project` (troca o projeto da tarefa, mantendo responsáveis que são membros do novo e a checklist). |
 
 Resumo dos objetos que mais mudam o entendimento do schema:
 
