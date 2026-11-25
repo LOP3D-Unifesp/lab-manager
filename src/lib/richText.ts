@@ -59,41 +59,77 @@ export function parseRichText(text: string): Block[] {
   return blocks.filter((block) => block.type !== "paragraph" || block.lines.length > 0);
 }
 
-export type RichFormat = "bold" | "italic" | "bullet" | "numbered";
+// ---------------------------------------------------------------------------
+// Editor direto (contentEditable): o que a pessoa vê vira de volta o texto com marcas (**negrito**, - lista...).
+// Funciona sobre uma interface mínima de nó, que o DOM do navegador já cumpre (e que dá para simular nos testes).
+// ---------------------------------------------------------------------------
 
-// Aplica a formatação da barra de ferramentas ao trecho selecionado e devolve o novo texto e a nova seleção.
-export function applyRichFormat(value: string, start: number, end: number, format: RichFormat) {
-  if (format === "bold" || format === "italic") {
-    const mark = format === "bold" ? "**" : "*";
-    const selected = value.slice(start, end);
-    const wrapped = value.slice(start - mark.length, start) === mark && value.slice(end, end + mark.length) === mark;
-    if (wrapped) {
-      // Já está marcado: tira a marca.
-      return {
-        value: value.slice(0, start - mark.length) + selected + value.slice(end + mark.length),
-        start: start - mark.length,
-        end: end - mark.length,
-      };
+export type DomLike = {
+  nodeName: string;
+  nodeType: number;
+  textContent: string | null;
+  childNodes: ArrayLike<DomLike>;
+  getAttribute?: (name: string) => string | null;
+};
+
+const TEXT_NODE = 3;
+const BLOCK_TAGS = new Set(["DIV", "P", "UL", "OL", "LI"]);
+
+function serializeInline(node: DomLike): string {
+  if (node.nodeType === TEXT_NODE) return (node.textContent ?? "").replace(/\u00a0/g, " ").replace(/\u200b/g, "").replace(/\n/g, " ");
+  const inner = Array.from(node.childNodes).map(serializeInline).join("");
+  switch (node.nodeName) {
+    case "B":
+    case "STRONG":
+      return inner.trim() ? `**${inner}**` : inner;
+    case "I":
+    case "EM":
+      return inner.trim() ? `*${inner}*` : inner;
+    case "CODE":
+      return inner ? `\`${inner}\`` : inner;
+    case "A": {
+      const href = node.getAttribute?.("href") ?? "";
+      return /^https?:\/\//.test(href) && inner ? `[${inner}](${href})` : inner;
     }
-    return {
-      value: value.slice(0, start) + mark + selected + mark + value.slice(end),
-      start: start + mark.length,
-      end: end + mark.length,
-    };
+    case "BR":
+      return "\n";
+    default:
+      return inner;
   }
+}
 
-  // Listas: age nas linhas inteiras que a seleção toca.
-  const lineStart = value.lastIndexOf("\n", start - 1) + 1;
-  const nextBreak = value.indexOf("\n", end);
-  const lineEnd = nextBreak === -1 ? value.length : nextBreak;
-  const lines = value.slice(lineStart, lineEnd).split("\n");
-  const pattern = format === "bullet" ? BULLET : NUMBERED;
-  const allMarked = lines.every((line) => pattern.test(line));
-  const changed = lines.map((line, index) => {
-    const plain = line.replace(BULLET, "$1").replace(NUMBERED, "$1");
-    if (allMarked) return plain;
-    return (format === "bullet" ? "- " : `${index + 1}. `) + plain;
-  });
-  const block = changed.join("\n");
-  return { value: value.slice(0, lineStart) + block + value.slice(lineEnd), start: lineStart, end: lineStart + block.length };
+function collectLines(parent: DomLike, lines: string[]) {
+  let current = "";
+  const flush = () => {
+    lines.push(...current.split("\n"));
+    current = "";
+  };
+  for (const child of Array.from(parent.childNodes)) {
+    if (child.nodeType !== TEXT_NODE && BLOCK_TAGS.has(child.nodeName)) {
+      if (current !== "") flush();
+      if (child.nodeName === "UL" || child.nodeName === "OL") {
+        const ordered = child.nodeName === "OL";
+        Array.from(child.childNodes)
+          .filter((item) => item.nodeName === "LI")
+          .forEach((item, index) => {
+            const text = serializeInline(item).replace(/\n+$/, "").replace(/\n/g, " ");
+            lines.push(`${ordered ? `${index + 1}.` : "-"} ${text}`);
+          });
+      } else if (Array.from(child.childNodes).some((inner) => inner.nodeType !== TEXT_NODE && BLOCK_TAGS.has(inner.nodeName))) {
+        collectLines(child, lines);
+      } else {
+        // <div>texto</div> = uma linha; <div><br></div> = linha em branco.
+        lines.push(...serializeInline(child).replace(/\n$/, "").split("\n"));
+      }
+    } else {
+      current += serializeInline(child);
+    }
+  }
+  if (current !== "") flush();
+}
+
+export function serializeRichText(root: DomLike): string {
+  const lines: string[] = [];
+  collectLines(root, lines);
+  return lines.join("\n").replace(/\n+$/, "");
 }
