@@ -34,6 +34,15 @@ export function formatDuration(totalSeconds: number) {
   return `${seconds}s`;
 }
 
+// Relógio com segundos (H:MM:SS), para o tempo que está correndo ser visível mexendo.
+export function formatClock(totalSeconds: number) {
+  const seconds = Math.max(0, Math.floor(totalSeconds));
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
 // Pausar (false) ou retomar (true): mesma conta do banco (`set_task_timer`).
 export function toggleTaskTimer(task: TaskTimerFields, running: boolean, now: Date): Partial<TaskTimerFields> {
   if (task.status !== "in_progress" && task.status !== "review") return {};

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatDuration, getTaskTimes, getTimerAfterStatusChange, toggleTaskTimer, type TaskTimerFields } from "./taskTimer";
+import { formatClock, formatDuration, getTaskTimes, getTimerAfterStatusChange, toggleTaskTimer, type TaskTimerFields } from "./taskTimer";
 
 const NOW = new Date("2026-11-25T12:00:00Z");
 
@@ -25,6 +25,12 @@ describe("cronômetro das tarefas", () => {
     expect(formatDuration(600)).toBe("10min");
     expect(formatDuration(3900)).toBe("1h 05min");
     expect(formatDuration(-5)).toBe("0s");
+  });
+
+  it("formata o relógio com segundos", () => {
+    expect(formatClock(0)).toBe("0:00:00");
+    expect(formatClock(252)).toBe("0:04:12");
+    expect(formatClock(3725)).toBe("1:02:05");
   });
 
   it("pausa guardando o tempo e retoma na fase da coluna", () => {
