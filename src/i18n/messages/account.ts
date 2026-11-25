@@ -7,7 +7,7 @@ export const account = {
   "account.theme": { pt: "Tema", en: "Theme", es: "Tema" },
   "sidebar.fallbackSubtitle": { pt: "Gestão interna do laboratório.", en: "Internal lab management.", es: "Gestión interna del laboratorio." },
   "login.title": { pt: "Entrar", en: "Sign in", es: "Iniciar sesión" },
-  "login.subtitle": { pt: "Use seu email e senha do Supabase.", en: "Use your Supabase email and password.", es: "Usa tu correo y contraseña de Supabase." },
+  "login.subtitle": { pt: "Entre com o seu e-mail e a senha.", en: "Sign in with your email and password.", es: "Entra con tu correo y contraseña." },
   "login.email": { pt: "Email", en: "Email", es: "Correo electrónico" },
   "login.password": { pt: "Senha", en: "Password", es: "Contraseña" },
   "login.invalidCredentials": { pt: "Email ou senha inválidos.", en: "Invalid email or password.", es: "Correo o contraseña inválidos." },

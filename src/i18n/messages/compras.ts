@@ -2,7 +2,7 @@ import type { Entry } from "../catalog";
 
 export const compras = {
   "purchases.title": { pt: "Compras", en: "Purchases", es: "Compras" },
-  "purchases.subtitle": { pt: "Pedidos de compra dos projetos: o coordenador aprova, compra e confirma a entrega.", en: "Project purchase requests: the coordinator approves, buys and confirms delivery.", es: "Pedidos de compra de los proyectos: el coordinador aprueba, compra y confirma la entrega." },
+  "purchases.subtitle": { pt: "Pedidos de compra do laboratório: qualquer pessoa pode pedir; o coordenador aprova, compra e confirma a entrega.", en: "The lab's purchase requests: anyone can ask; the coordinator approves, buys and confirms delivery.", es: "Pedidos de compra del laboratorio: cualquier persona puede pedir; el coordinador aprueba, compra y confirma la entrega." },
   "purchases.new": { pt: "Novo pedido", en: "New request", es: "Nuevo pedido" },
   "purchases.generalStock": { pt: "Estoque geral", en: "General stock", es: "Stock general" },
   "purchases.generalStockLab": { pt: "Estoque geral do laboratório", en: "Lab general stock", es: "Stock general del laboratorio" },

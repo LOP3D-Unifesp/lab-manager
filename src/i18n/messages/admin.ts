@@ -2,7 +2,7 @@ import type { Entry } from "../catalog";
 
 export const admin = {
   "admin.title": { pt: "Configurações", en: "Settings", es: "Configuración" },
-  "admin.subtitle": { pt: "Configure a identidade e o funcionamento do laboratório.", en: "Configure the lab's identity and operation.", es: "Configura la identidad y el funcionamiento del laboratorio." },
+  "admin.subtitle": { pt: "Nome e logo do laboratório, turnos de funcionamento e intervalos.", en: "The lab's name and logo, operating shifts and breaks.", es: "Nombre y logo del laboratorio, turnos de funcionamiento e intervalos." },
   "admin.labTitle": { pt: "Laboratório", en: "Laboratory", es: "Laboratorio" },
   "admin.labHint": { pt: "Identidade, privacidade, fuso e capacidade presencial.", en: "Identity, privacy, time zone and on-site capacity.", es: "Identidad, privacidad, zona horaria y capacidad presencial." },
   "admin.name": { pt: "Nome", en: "Name", es: "Nombre" },
