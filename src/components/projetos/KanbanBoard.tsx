@@ -115,8 +115,9 @@ export function KanbanBoard({ canDelete, onArchive, onDelete, onDragChange, onMo
     });
   }
 
+  // Colunas que se ajustam à largura: nunca ficam mais estreitas que 15rem (o quadro quebra em 4/3/2/1 colunas).
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(min(15rem,100%),1fr))]">
       {taskStatusOptions.map((column) => (
         <section
           key={column.value}
@@ -199,7 +200,7 @@ export function KanbanBoard({ canDelete, onArchive, onDelete, onDragChange, onMo
                 <div className="flex items-start justify-between gap-2">
                   <button
                     type="button"
-                    className="min-w-0 break-words text-left text-base font-semibold text-text hover:text-primary"
+                    className="min-w-0 text-left text-base font-semibold text-text [overflow-wrap:anywhere] hover:text-primary"
                     onClick={() => onOpen?.(task)}
                   >
                     {task.title}
@@ -318,7 +319,7 @@ export function KanbanBoard({ canDelete, onArchive, onDelete, onDragChange, onMo
                   {onPriorityChange ? (
                     <select
                       aria-label={t("tasks.setPriority", { title: task.title })}
-                      className={["min-h-8 min-w-0 max-w-full rounded-md border px-2 text-xs font-semibold transition", priorityClasses[task.priority]].join(" ")}
+                      className={["min-h-8 w-auto min-w-0 max-w-[8.5rem] shrink rounded-md border px-2 text-xs font-semibold transition", priorityClasses[task.priority]].join(" ")}
                       value={task.priority}
                       onChange={(event) => onPriorityChange(task, event.target.value as TaskPriority)}
                     >
