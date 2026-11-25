@@ -288,10 +288,10 @@ export function TaskModal({
             <p className="text-base font-semibold text-text">{t("tasks.timeByPerson")}</p>
             <ul className="grid gap-2">
               {porPessoa.people.map((pessoa) => (
-                <li key={pessoa.profile_id} className="flex items-center gap-3 rounded-lg border border-border bg-surface px-3 py-2">
-                  <Avatar avatarUrl={pessoa.avatar_url} name={pessoa.full_name} className="h-8 w-8" />
-                  <span className="min-w-0 flex-1 truncate text-base font-semibold text-text">{pessoa.full_name}</span>
-                  <span className="shrink-0 text-right text-sm tabular-nums text-muted">
+                <li key={pessoa.profile_id} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-border bg-surface px-3 py-2">
+                  <Avatar avatarUrl={pessoa.avatar_url} name={pessoa.full_name} className="h-8 w-8 shrink-0" />
+                  <span className="min-w-[8rem] flex-1 truncate text-base font-semibold text-text">{pessoa.full_name}</span>
+                  <span className="w-full text-sm tabular-nums text-muted sm:w-auto sm:text-right">
                     <span className="font-semibold text-text">{mostrar(pessoa.total)}</span>
                     {pessoa.review > 0 ? (
                       <>
@@ -303,7 +303,7 @@ export function TaskModal({
                 </li>
               ))}
               {porPessoa.unassigned.total > 0 ? (
-                <li className="flex items-center justify-between gap-3 rounded-lg border border-dashed border-border px-3 py-2 text-sm text-muted">
+                <li className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-lg border border-dashed border-border px-3 py-2 text-sm text-muted">
                   <span>{t("tasks.timeUnassigned")}</span>
                   <span className="tabular-nums">{formatDuration(porPessoa.unassigned.total)}</span>
                 </li>

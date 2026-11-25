@@ -115,8 +115,10 @@ export function KanbanBoard({ canDelete, onArchive, onDelete, onDragChange, onMo
     });
   }
 
+  // As quatro colunas ficam sempre lado a lado (como no Trello): com espaço dividem a largura; em tela estreita cada uma
+  // mantém 16rem e o quadro rola na horizontal.
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <div className="grid auto-cols-[minmax(16rem,1fr)] grid-flow-col gap-4 overflow-x-auto pb-2 [scroll-snap-type:x_proximity]">
       {taskStatusOptions.map((column) => (
         <section
           key={column.value}
@@ -144,7 +146,7 @@ export function KanbanBoard({ canDelete, onArchive, onDelete, onDragChange, onMo
             soltar();
           }}
           className={[
-            "flex min-h-40 flex-col gap-3 rounded-lg border p-3 transition",
+            "flex min-h-40 flex-col gap-3 rounded-lg border p-3 transition [scroll-snap-align:start]",
             destino?.status === column.value ? "border-primary bg-primary-soft" : "border-border bg-background",
           ].join(" ")}
         >
@@ -199,7 +201,7 @@ export function KanbanBoard({ canDelete, onArchive, onDelete, onDragChange, onMo
                 <div className="flex items-start justify-between gap-2">
                   <button
                     type="button"
-                    className="min-w-0 break-words text-left text-base font-semibold text-text hover:text-primary"
+                    className="min-w-0 text-left text-base font-semibold text-text [overflow-wrap:anywhere] hover:text-primary"
                     onClick={() => onOpen?.(task)}
                   >
                     {task.title}
@@ -318,7 +320,7 @@ export function KanbanBoard({ canDelete, onArchive, onDelete, onDragChange, onMo
                   {onPriorityChange ? (
                     <select
                       aria-label={t("tasks.setPriority", { title: task.title })}
-                      className={["min-h-8 min-w-0 max-w-full rounded-md border px-2 text-xs font-semibold transition", priorityClasses[task.priority]].join(" ")}
+                      className={["min-h-8 w-auto min-w-0 max-w-[8.5rem] shrink rounded-md border px-2 text-xs font-semibold transition", priorityClasses[task.priority]].join(" ")}
                       value={task.priority}
                       onChange={(event) => onPriorityChange(task, event.target.value as TaskPriority)}
                     >
