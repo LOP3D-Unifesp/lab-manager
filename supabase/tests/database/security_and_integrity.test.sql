@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(377);
+select plan(382);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -278,6 +278,42 @@ select results_eq(
   $$ select grant_name, weekly_hours, monthly_value from public.profile_funding_grants where profile_id = '00000000-0000-0000-0000-000000000101' $$,
   $$ values ('IC FAPESP'::text, 20::integer, 700.50::numeric(10,2)) $$,
   'contract details (name, hours, value) are persisted'
+);
+select throws_ok(
+  $$ select public.replace_profile_funding_grants(
+    '00000000-0000-0000-0000-000000000101',
+    '[{"agency":"sus","agency_other":null}]'::jsonb
+  ) $$,
+  'P0001', 'invalid_grants',
+  'SUS is no longer accepted as a funding agency'
+);
+select throws_ok(
+  $$ select public.replace_profile_funding_grants(
+    '00000000-0000-0000-0000-000000000101',
+    '[{"agency":"fap","agency_other":null,"start_date":"2026-06-01","end_date":"2026-01-01"}]'::jsonb
+  ) $$,
+  'P0001', 'invalid_grants',
+  'grant end date before its start date is rejected'
+);
+select throws_ok(
+  $$ select public.replace_profile_funding_grants(
+    '00000000-0000-0000-0000-000000000101',
+    '[{"agency":"fap","agency_other":null,"project_id":"00000000-0000-0000-0000-00000000dead"}]'::jsonb
+  ) $$,
+  'P0001', 'invalid_grants',
+  'grant for a project that does not exist is rejected'
+);
+select lives_ok(
+  $$ select public.replace_profile_funding_grants(
+    '00000000-0000-0000-0000-000000000101',
+    '[{"agency":"fap","agency_other":null,"weekly_hours":20,"monthly_value":700,"start_date":"2020-01-01","end_date":"2099-12-31","process_number":"2025/12345-6"}]'::jsonb
+  ) $$,
+  'coordinator registers a grant with period and process number'
+);
+select results_eq(
+  $$ select process_number, start_date, end_date from public.profile_funding_grants where profile_id = '00000000-0000-0000-0000-000000000101' $$,
+  $$ values ('2025/12345-6'::text, '2020-01-01'::date, '2099-12-31'::date) $$,
+  'grant period and process number are persisted'
 );
 select lives_ok(
   $$ select public.update_lab_settings('Laboratório Atualizado', 'LA', 'America/Recife', 'dados@example.com') $$,

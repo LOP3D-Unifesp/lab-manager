@@ -461,14 +461,14 @@ isOneToOne: false
                   ]
                 },"profile_funding_grants": {
                   Row: {
-                    "agency": Database["public"]['Enums']["funding_agency"],"agency_other": string | null,"created_at": string,"grant_name": string | null,"id": string,"monthly_value": number | null,"profile_id": string,"weekly_hours": number | null
+                    "agency": Database["public"]['Enums']["funding_agency"],"agency_other": string | null,"created_at": string,"grant_name": string | null,"id": string,"monthly_value": number | null,"process_number": string | null,"profile_id": string,"project_id": string | null,"start_date": string | null,"end_date": string | null,"weekly_hours": number | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "agency": Database["public"]['Enums']["funding_agency"],"agency_other"?: string | null,"created_at"?: string,"grant_name"?: string | null,"id"?: string,"monthly_value"?: number | null,"profile_id": string,"weekly_hours"?: number | null
+                    "agency": Database["public"]['Enums']["funding_agency"],"agency_other"?: string | null,"created_at"?: string,"grant_name"?: string | null,"id"?: string,"monthly_value"?: number | null,"process_number"?: string | null,"profile_id": string,"project_id"?: string | null,"start_date"?: string | null,"end_date"?: string | null,"weekly_hours"?: number | null
                   }
                   Update: {
-                    "agency"?: Database["public"]['Enums']["funding_agency"],"agency_other"?: string | null,"created_at"?: string,"grant_name"?: string | null,"id"?: string,"monthly_value"?: number | null,"profile_id"?: string,"weekly_hours"?: number | null
+                    "agency"?: Database["public"]['Enums']["funding_agency"],"agency_other"?: string | null,"created_at"?: string,"grant_name"?: string | null,"id"?: string,"monthly_value"?: number | null,"process_number"?: string | null,"profile_id"?: string,"project_id"?: string | null,"start_date"?: string | null,"end_date"?: string | null,"weekly_hours"?: number | null
                   }
                   Relationships: [
                     {
@@ -1093,6 +1093,10 @@ isOneToOne: false
 "id": string,
 "monthly_value": number | null,
 "profile_id": string,
+"process_number": string | null,
+"project_id": string | null,
+"start_date": string | null,
+"end_date": string | null,
 "weekly_hours": number | null
             }[]
                           SetofOptions: {

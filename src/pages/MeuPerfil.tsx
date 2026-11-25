@@ -2,6 +2,7 @@ import { t } from "../i18n";
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { CalendarDays, Save, UserRoundCog, Utensils } from "lucide-react";
 
+import { ProfileGrantsCard } from "../components/profile/ProfileGrantsCard";
 import { NotificationPreferences } from "../components/profile/NotificationPreferences";
 import { WorkloadField } from "../components/profile/WorkloadField";
 import { Avatar } from "../components/ui/Avatar";
@@ -22,7 +23,6 @@ import {
   normalizarTextoOpcional,
   validarLattes,
   type AcademicAffiliation,
-  type FundingGrant,
   type PeriodoId,
   type WorkMode,
 } from "../lib/domain";
@@ -80,11 +80,10 @@ export function MeuPerfil() {
     AcademicAffiliation | ""
   >("");
   const [birthDate, setBirthDate] = useState("");
-  const [fundingGrants, setFundingGrants] = useState<FundingGrant[]>([]);
-  const [isScholarshipHolder, setIsScholarshipHolder] = useState(true);
   const [manualWorkload, setManualWorkload] = useState("");
-  const totalGrantHours = getTotalWeeklyGrantHours(fundingGrants);
-  const totalWeeklyHours = getEffectiveWeeklyHours(isScholarshipHolder, fundingGrants, manualWorkload);
+  const grants = profile?.funding_grants ?? [];
+  const grantHours = getTotalWeeklyGrantHours(grants);
+  const totalWeeklyHours = getEffectiveWeeklyHours(grants, manualWorkload);
   const [lattesUrl, setLattesUrl] = useState("");
   const [cpf, setCpf] = useState("");
   const [rg, setRg] = useState("");
@@ -161,12 +160,7 @@ export function MeuPerfil() {
     setFullName(profile.full_name);
     setAcademicAffiliation(profile.academic_affiliation ?? "");
     setBirthDate(profile.birth_date ?? "");
-    setFundingGrants(profile.funding_grants);
-    const holder = profile.funding_grants.length > 0 || profile.weekly_workload_hours === null;
-    setIsScholarshipHolder(holder);
-    setManualWorkload(
-      !holder && profile.weekly_workload_hours !== null ? String(profile.weekly_workload_hours) : "",
-    );
+    setManualWorkload(profile.weekly_workload_hours !== null ? String(profile.weekly_workload_hours) : "");
     setLattesUrl(profile.lattes_url ?? "");
     setCpf(profile.cpf ?? "");
     setRg(profile.rg ?? "");
@@ -364,14 +358,6 @@ export function MeuPerfil() {
       return;
     }
 
-    if (
-      isScholarshipHolder &&
-      fundingGrants.some((grant) => grant.agency === "other" && !grant.agency_other?.trim())
-    ) {
-      setErrorMessage(t("profile.errOtherAgency"));
-      return;
-    }
-
     setSubmitting(true);
 
     try {
@@ -379,7 +365,6 @@ export function MeuPerfil() {
         fullName: nomeNormalizado,
         academicAffiliation: academicAffiliation || null,
         birthDate: birthDateNormalizada,
-        fundingGrants: isScholarshipHolder ? fundingGrants : [],
         weeklyWorkloadHours: cargaHoraria,
         lattesUrl: lattesNormalizado,
         cpf: cpfNormalizado,
@@ -542,17 +527,9 @@ export function MeuPerfil() {
               <WorkloadField
                 className="md:col-span-2"
                 disabled={submitting}
-                grants={fundingGrants}
-                isScholarshipHolder={isScholarshipHolder}
+                grantHours={grantHours}
                 manualHours={manualWorkload}
-                onGrantsChange={setFundingGrants}
-                onIsScholarshipHolderChange={(value) => {
-                  setIsScholarshipHolder(value);
-                  setSuccessMessage("");
-                  setErrorMessage("");
-                }}
                 onManualHoursChange={setManualWorkload}
-                totalGrantHours={totalGrantHours}
               />
 
               <label className="grid gap-2 text-base font-semibold text-text md:col-span-2">
@@ -603,6 +580,8 @@ export function MeuPerfil() {
             </dl>
           </Card>
         </section>
+
+        <ProfileGrantsCard onSaved={refreshProfile} profileId={profile.id} saved={grants} />
 
         <section className="grid min-w-0 gap-5 lg:grid-cols-2">
           <Card className="min-w-0 p-4 sm:p-5">

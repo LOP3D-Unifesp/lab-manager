@@ -7,7 +7,7 @@ import { Avatar } from "../components/ui/Avatar";
 import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
 import { StatusBadge } from "../components/ui/StatusBadge";
-import { getLocale, localizedName, useT } from "../i18n";
+import { formatDateTime, getLocale, localizedName, useT } from "../i18n";
 import { useAuth } from "../lib/auth";
 import {
   getFundingAgencyLabel,
@@ -27,7 +27,7 @@ const presenceVariants: Record<StatusPresenca, "success" | "info" | "warning" | 
   Ausente: "neutral",
 };
 
-type Loaded = { profile: PublicProfile; slots: AvailabilitySlot[]; skills: string[]; projects: ProjectDirectoryEntry[] };
+type Loaded = { profile: PublicProfile; slots: AvailabilitySlot[]; skills: string[]; projects: ProjectDirectoryEntry[]; directory: ProjectDirectoryEntry[] };
 
 function countryName(code: string | null) {
   if (!code) return null;
@@ -48,6 +48,10 @@ function Item({ label, children }: { label: string; children: React.ReactNode })
 }
 
 // Perfil completo de uma pessoa do laboratório (para ler; quem edita o próprio perfil usa /perfil).
+function formatGrantDate(value: string) {
+  return formatDateTime(new Date(`${value}T00:00:00`), { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
 export function PesquisadorDetalhe() {
   const t = useT();
   const { id } = useParams();
@@ -75,6 +79,7 @@ export function PesquisadorDetalhe() {
         skills: skills.filter((skill) => mine.has(skill.id)).map((skill) => localizedName(skill)),
         // Projetos em que a pessoa participa (o resumo é visível para todos).
         projects: directory.filter((entry) => entry.members.some((member) => member.profile_id === id)),
+        directory,
       };
     })()
       .then((loaded) => ativo && setData(loaded))
@@ -124,7 +129,7 @@ export function PesquisadorDetalhe() {
     );
   }
 
-  const { profile, projects, skills, slots } = data;
+  const { directory, profile, projects, skills, slots } = data;
   const grants = profile.funding_grants;
   const grantHours = getTotalWeeklyGrantHours(grants);
   const nationality = countryName(profile.nationality_country_code);
@@ -224,14 +229,26 @@ export function PesquisadorDetalhe() {
             <Item label={t("grants.title")}>
               {grants.length > 0 ? (
                 <ul className="grid gap-1">
-                  {grants.map((grant, index) => (
-                    <li key={`${grant.agency}-${index}`}>
-                      {getFundingAgencyLabel(grant.agency, grant.agency_other)}
-                      {grant.weekly_hours ? (
-                        <span className="font-semibold text-muted"> · {t("researcher.hoursPerWeek", { hours: grant.weekly_hours })}</span>
-                      ) : null}
-                    </li>
-                  ))}
+                  {grants.map((grant, index) => {
+                    const projectName = directory.find((entry) => entry.id === grant.project_id)?.name;
+                    return (
+                      <li key={`${grant.agency}-${index}`}>
+                        {getFundingAgencyLabel(grant.agency, grant.agency_other)}
+                        {projectName ? <span className="font-semibold text-muted"> · {projectName}</span> : null}
+                        {grant.weekly_hours ? (
+                          <span className="font-semibold text-muted"> · {t("researcher.hoursPerWeek", { hours: grant.weekly_hours })}</span>
+                        ) : null}
+                        {grant.start_date && grant.end_date ? (
+                          <span className="block text-sm text-muted">
+                            {formatGrantDate(grant.start_date)} – {formatGrantDate(grant.end_date)}
+                            {grant.process_number ? ` · ${t("grants.processShort", { number: grant.process_number })}` : ""}
+                          </span>
+                        ) : grant.process_number ? (
+                          <span className="block text-sm text-muted">{t("grants.processShort", { number: grant.process_number })}</span>
+                        ) : null}
+                      </li>
+                    );
+                  })}
                 </ul>
               ) : profile.weekly_workload_hours ? (
                 t("workload.volunteer")

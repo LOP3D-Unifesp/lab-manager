@@ -11,9 +11,6 @@ import { useAuth } from "../lib/auth";
 import { createMyProfile, setMyPassword } from "../lib/supabaseRepository";
 import {
   AcademicAffiliation,
-  getEffectiveWeeklyHours,
-  getTotalWeeklyGrantHours,
-  type FundingGrant,
 } from "../lib/domain";
 
 const academicAffiliationOptions: Array<{
@@ -69,11 +66,9 @@ export function ProfileRequired() {
     AcademicAffiliation | ""
   >("");
   const [birthDate, setBirthDate] = useState("");
-  const [fundingGrants, setFundingGrants] = useState<FundingGrant[]>([]);
-  const [isScholarshipHolder, setIsScholarshipHolder] = useState(true);
   const [manualWorkload, setManualWorkload] = useState("");
-  const totalGrantHours = getTotalWeeklyGrantHours(fundingGrants);
-  const totalWeeklyHours = getEffectiveWeeklyHours(isScholarshipHolder, fundingGrants, manualWorkload);
+  const manualHours = Number(manualWorkload);
+  const totalWeeklyHours = manualWorkload.trim() !== "" && Number.isFinite(manualHours) ? manualHours : 0;
   const [lattesUrl, setLattesUrl] = useState("");
   const [cpf, setCpf] = useState("");
   const [rg, setRg] = useState("");
@@ -129,15 +124,6 @@ export function ProfileRequired() {
     }
 
     if (
-      isScholarshipHolder &&
-      fundingGrants.some((grant) => grant.agency === "other" && !grant.agency_other?.trim())
-    ) {
-      setErrorMessage(t("profile.errOtherAgency"));
-      setSubmitting(false);
-      return;
-    }
-
-    if (
       totalWeeklyHours > 0 &&
       (!Number.isInteger(totalWeeklyHours) || totalWeeklyHours < 1 || totalWeeklyHours > 60)
     ) {
@@ -151,7 +137,6 @@ export function ProfileRequired() {
         fullName: fullName.trim(),
         academicAffiliation: academicAffiliation || null,
         birthDate: normalizeOptionalText(birthDate),
-        fundingGrants: isScholarshipHolder ? fundingGrants : [],
         weeklyWorkloadHours: totalWeeklyHours > 0 ? totalWeeklyHours : null,
         lattesUrl: normalizeOptionalText(lattesUrl),
         cpf: normalizeCpf(cpf),
@@ -323,14 +308,10 @@ export function ProfileRequired() {
 
             <WorkloadField
               disabled={submitting}
-              grants={fundingGrants}
-              isScholarshipHolder={isScholarshipHolder}
+              grantHours={0}
               label={t("signup.weeklyHours")}
               manualHours={manualWorkload}
-              onGrantsChange={setFundingGrants}
-              onIsScholarshipHolderChange={setIsScholarshipHolder}
               onManualHoursChange={setManualWorkload}
-              totalGrantHours={totalGrantHours}
             />
 
             <div className="grid items-start gap-4 md:grid-cols-3">

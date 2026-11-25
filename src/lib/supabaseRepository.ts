@@ -82,7 +82,7 @@ export const publicProfileSelect = [
   "email",
   "role",
   "academic_affiliation",
-  "funding_grants:profile_funding_grants(agency, agency_other, grant_name, weekly_hours, monthly_value)",
+  "funding_grants:profile_funding_grants(agency, agency_other, grant_name, weekly_hours, monthly_value, project_id, start_date, end_date, process_number)",
   "weekly_workload_hours",
   "lattes_url",
   "nationality_country_code",
@@ -100,7 +100,6 @@ export type ProfileInput = {
   fullName: string;
   academicAffiliation: AcademicAffiliation | null;
   birthDate: string | null;
-  fundingGrants: FundingGrant[];
   weeklyWorkloadHours: number | null;
   lattesUrl: string | null;
   cpf: string | null;
@@ -118,26 +117,29 @@ export type ProfileInput = {
   bio: string | null;
 };
 
-async function replaceMyFundingGrants(profileId: string, grants: FundingGrant[]) {
-  const { data, error } = await client().rpc("replace_profile_funding_grants", {
-    p_profile_id: profileId,
-    p_grants: grants.map((grant) => ({
-      agency: grant.agency,
-      agency_other: grant.agency === "other" ? grant.agency_other : null,
-      grant_name: grant.grant_name,
-      weekly_hours: grant.weekly_hours,
-      monthly_value: grant.monthly_value,
-    })),
-  });
-  throwIfError(error);
-
-  return ((data ?? []) as FundingGrant[]).map((grant) => ({
+function mapGrant(grant: FundingGrant): FundingGrant {
+  return {
     agency: grant.agency,
     agency_other: grant.agency_other,
     grant_name: grant.grant_name,
     weekly_hours: grant.weekly_hours,
     monthly_value: grant.monthly_value,
-  }));
+    project_id: grant.project_id,
+    start_date: grant.start_date,
+    end_date: grant.end_date,
+    process_number: grant.process_number,
+  };
+}
+
+// Grava de uma vez todas as bolsas da pessoa (a RPC troca o conjunto inteiro) e devolve o que ficou salvo.
+export async function replaceMyFundingGrants(profileId: string, grants: FundingGrant[]) {
+  const { data, error } = await client().rpc("replace_profile_funding_grants", {
+    p_profile_id: profileId,
+    p_grants: grants.map((grant) => ({ ...mapGrant(grant), agency_other: grant.agency === "other" ? grant.agency_other : null })),
+  });
+  throwIfError(error);
+
+  return ((data ?? []) as FundingGrant[]).map(mapGrant);
 }
 
 function profileRpcArgs(params: ProfileInput) {
@@ -190,8 +192,9 @@ export async function updateMyProfile(params: ProfileInput) {
     PublicProfile,
     "first_name" | "last_name" | "funding_grants"
   >;
-  const funding_grants = await replaceMyFundingGrants(profileRow.id, params.fundingGrants);
-  return mapPublicProfile({ ...profileRow, funding_grants });
+  // As bolsas têm o próprio cartão e o próprio botão Salvar; aqui só se relê o que já está salvo.
+  const saved = await getProfile(profileRow.id);
+  return mapPublicProfile({ ...profileRow, funding_grants: saved?.funding_grants ?? [] });
 }
 
 export async function createMyProfile(params: ProfileInput) {
@@ -201,8 +204,7 @@ export async function createMyProfile(params: ProfileInput) {
     PublicProfile,
     "first_name" | "last_name" | "funding_grants"
   >;
-  const funding_grants = await replaceMyFundingGrants(profileRow.id, params.fundingGrants);
-  return mapPublicProfile({ ...profileRow, funding_grants });
+  return mapPublicProfile({ ...profileRow, funding_grants: [] });
 }
 
 export async function inviteUser(email: string, role: ProfileRole) {
@@ -851,7 +853,7 @@ export async function listBookings() {
       approved_by_profile:profiles!equipment_bookings_approved_by_fkey(full_name),
       rejected_by_profile:profiles!equipment_bookings_rejected_by_fkey(full_name),
       cancelled_by_profile:profiles!equipment_bookings_cancelled_by_fkey(full_name),
-      profile:profiles!equipment_bookings_profile_id_fkey(id, full_name, email, role, academic_affiliation, funding_grants:profile_funding_grants(agency, agency_other, grant_name, weekly_hours, monthly_value), weekly_workload_hours, lattes_url, nationality_country_code, phone, bio, is_active, requires_booking_approval, is_maintainer, avatar_url, created_at, updated_at)
+      profile:profiles!equipment_bookings_profile_id_fkey(id, full_name, email, role, academic_affiliation, funding_grants:profile_funding_grants(agency, agency_other, grant_name, weekly_hours, monthly_value, project_id, start_date, end_date, process_number), weekly_workload_hours, lattes_url, nationality_country_code, phone, bio, is_active, requires_booking_approval, is_maintainer, avatar_url, created_at, updated_at)
     `)
     .order("starts_at");
   throwIfError(error);
