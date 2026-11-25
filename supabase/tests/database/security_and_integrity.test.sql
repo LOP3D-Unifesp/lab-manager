@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(382);
+select plan(387);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -314,6 +314,42 @@ select results_eq(
   $$ select process_number, start_date, end_date from public.profile_funding_grants where profile_id = '00000000-0000-0000-0000-000000000101' $$,
   $$ values ('2025/12345-6'::text, '2020-01-01'::date, '2099-12-31'::date) $$,
   'grant period and process number are persisted'
+);
+select throws_ok(
+  $$ select public.replace_profile_funding_grants(
+    '00000000-0000-0000-0000-000000000101',
+    '[{"agency":"fap","agency_other":null,"contract_path":"00000000-0000-0000-0000-000000000103/termo.pdf"}]'::jsonb
+  ) $$,
+  'P0001', 'invalid_grants',
+  'contract file outside the grant owner folder is rejected'
+);
+select lives_ok(
+  $$ select public.replace_profile_funding_grants(
+    '00000000-0000-0000-0000-000000000101',
+    '[{"agency":"fap","agency_other":null,"contract_path":"00000000-0000-0000-0000-000000000101/termo.pdf"}]'::jsonb
+  ) $$,
+  'grant keeps its contract file path when saved'
+);
+select results_eq(
+  $$ select contract_path from public.get_grant_contracts('00000000-0000-0000-0000-000000000101') $$,
+  $$ values ('00000000-0000-0000-0000-000000000101/termo.pdf'::text) $$,
+  'owner reads their grant contract path'
+);
+select throws_ok(
+  $$ select public.set_grant_contract(
+    (select id from public.profile_funding_grants where profile_id = '00000000-0000-0000-0000-000000000101' limit 1),
+    '00000000-0000-0000-0000-000000000103/outro.pdf'
+  ) $$,
+  'P0001', 'invalid_contract_path',
+  'contract path must be inside the grant owner folder'
+);
+select is(
+  public.set_grant_contract(
+    (select id from public.profile_funding_grants where profile_id = '00000000-0000-0000-0000-000000000101' limit 1),
+    null
+  ),
+  '00000000-0000-0000-0000-000000000101/termo.pdf'::text,
+  'removing the contract returns the old path so the file can be deleted'
 );
 select lives_ok(
   $$ select public.update_lab_settings('Laboratório Atualizado', 'LA', 'America/Recife', 'dados@example.com') $$,

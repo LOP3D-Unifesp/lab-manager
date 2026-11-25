@@ -24,6 +24,7 @@ import {
   fundingAgencyOptions,
   getEffectiveWeeklyHours,
   isGrantActive,
+  validateContractFile,
   validateGrant,
   getTotalWeeklyGrantHours,
   getWorkModeLabel,
@@ -231,6 +232,16 @@ describe("regras de dominio", () => {
     expect(getEffectiveWeeklyHours([], "", today)).toBe(0);
     expect(getEffectiveWeeklyHours([], "abc", today)).toBe(0);
     expect(getEffectiveWeeklyHours([grant({ weekly_hours: 20, end_date: "2026-01-01" })], "10", today)).toBe(10);
+  });
+
+  it("aceita como termo só PDF de até 10 MB", () => {
+    const mb = 1024 * 1024;
+    expect(validateContractFile({ type: "application/pdf", name: "termo.pdf", size: 2 * mb })).toBeNull();
+    expect(validateContractFile({ type: "", name: "Termo.PDF", size: mb })).toBeNull();
+    expect(validateContractFile({ type: "application/pdf", name: "termo.pdf", size: 10 * mb })).toBeNull();
+    expect(validateContractFile({ type: "application/pdf", name: "termo.pdf", size: 10 * mb + 1 })).toBe("size");
+    expect(validateContractFile({ type: "image/png", name: "termo.png", size: mb })).toBe("type");
+    expect(validateContractFile({ type: "", name: "termo.docx", size: mb })).toBe("type");
   });
 
   it("valida os campos que a bolsa exige; só o número do processo é opcional", () => {

@@ -54,7 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       supabase
         .from("profiles")
         .select(
-          "id, full_name, email, role, academic_affiliation, funding_grants:profile_funding_grants(agency, agency_other, grant_name, weekly_hours, monthly_value, project_id, start_date, end_date, process_number), weekly_workload_hours, lattes_url, nationality_country_code, phone, bio, is_active, requires_booking_approval, is_maintainer, avatar_url, created_at, updated_at",
+          "id, full_name, email, role, academic_affiliation, funding_grants:profile_funding_grants(id, agency, agency_other, grant_name, weekly_hours, monthly_value, project_id, start_date, end_date, process_number), weekly_workload_hours, lattes_url, nationality_country_code, phone, bio, is_active, requires_booking_approval, is_maintainer, avatar_url, created_at, updated_at",
         )
         .eq("id", session.user.id)
         .eq("is_active", true)
