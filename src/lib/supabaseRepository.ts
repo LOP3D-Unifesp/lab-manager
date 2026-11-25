@@ -1237,6 +1237,7 @@ const taskSelect = [
   "position",
   "due_on",
   "created_by",
+  "archived_at",
   "project:projects(name)",
   "assignees:project_task_assignees(profile_id, profile:profiles!project_task_assignees_profile_id_fkey(full_name, avatar_url))",
 ].join(", ");
@@ -1304,6 +1305,15 @@ export async function createProjectTask(projectId: string, params: TaskInput) {
 
 export async function updateProjectTask(id: string, params: Partial<TaskInput>) {
   const { error } = await client().from("project_tasks").update(params).eq("id", id);
+  throwIfError(error);
+}
+
+// Arquiva (ou desarquiva) a tarefa: ela sai do quadro mas continua guardada.
+export async function archiveProjectTask(id: string, archived: boolean) {
+  const { error } = await client()
+    .from("project_tasks")
+    .update({ archived_at: archived ? new Date().toISOString() : null })
+    .eq("id", id);
   throwIfError(error);
 }
 

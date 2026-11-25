@@ -38,6 +38,8 @@ export const sistema = {
   "notif.request.cancelled": { pt: "Chamado cancelado", en: "Maintenance request cancelled", es: "Solicitud de mantenimiento cancelada" },
   "notif.purchaseCancelled": { pt: "Pedido cancelado", en: "Request cancelled", es: "Pedido cancelado" },
   "notif.purchaseReopened": { pt: "Pedido voltou para análise", en: "Request back under review", es: "Pedido de vuelta en análisis" },
+  "notif.taskAssigned": { pt: "Uma tarefa foi atribuída a você", en: "A task was assigned to you", es: "Se te asignó una tarea" },
+  "notif.taskAssignedBy": { pt: "{name} atribuiu uma tarefa a você", en: "{name} assigned a task to you", es: "{name} te asignó una tarea" },
   "notif.projectJoinRequest": { pt: "Pedido para entrar em projeto", en: "Request to join a project", es: "Solicitud para unirse a un proyecto" },
   "notif.projectJoinApproved": { pt: "Você entrou no projeto", en: "You joined the project", es: "Entraste al proyecto" },
   "notif.projectJoinRejected": { pt: "Pedido de entrada recusado", en: "Join request rejected", es: "Solicitud de ingreso rechazada" },

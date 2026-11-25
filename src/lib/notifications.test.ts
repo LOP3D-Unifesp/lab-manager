@@ -51,6 +51,18 @@ describe("notificações de projeto", () => {
   });
 });
 
+describe("notificação de tarefa atribuída", () => {
+  it("diz quem atribuiu e mostra a tarefa e o projeto", () => {
+    expect(describeNotification({ type: "task_assigned", params: { task: "Calibrar a mesa", project: "Lab 3D", by: "Ana" } })).toEqual({
+      title: "Ana atribuiu uma tarefa a você",
+      detail: "Calibrar a mesa · Lab 3D",
+      reason: null,
+    });
+    expect(describeNotification({ type: "task_assigned", params: { task: "Calibrar a mesa" } }).title).toBe("Uma tarefa foi atribuída a você");
+    expect(getNotificationGroup("task_assigned")).toBe("projects");
+  });
+});
+
 describe("grupos de notificação", () => {
   it("agrupa cada tipo no assunto certo", () => {
     expect(getNotificationGroup("booking_pending")).toBe("bookings");

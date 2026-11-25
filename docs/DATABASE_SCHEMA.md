@@ -75,7 +75,7 @@ Status do MVP implementado:
 | `20260921_translated_names` | `name_en` e `name_es` em tipos de equipamento, habilidades e catalogos, para mostrar os nomes na lingua da pessoa. |
 | `20260922_lab_logo` | Logos (claro e escuro) do laboratorio em `lab_settings` e bucket publico `lab-logo`. |
 | `20260923_lab_favicon` | `lab_settings.favicon_url`: icone da aba do navegador. |
-| `20260924_task_priority` | `task_priority` (`low`, `normal`, `urgent`) e `project_tasks.priority` (padrao `normal`; so informa e filtra, nao reordena). |
+| `20260924_task_priority` | `task_priority` (`low`, `normal`, `high` desde a 20261004, `urgent`) e `project_tasks.priority` (padrao `normal`; so informa e filtra, nao reordena). |
 | `20260925_feedback_photos` | `feedback_reports.photo_paths` (ate 3 fotos) e bucket privado `feedback-photos` (autor e coordenadores leem). |
 | `20260926_notifications` | Notificacoes guardadas no banco: `notifications`, gatilhos por evento e Realtime (secao 3.20). |
 | `20260927_push_subscriptions` | Avisos com o app fechado: `push_subscriptions`, `register_push_subscription`, `private.push_config` e gatilho que chama a Edge Function `send-push` (secao 3.20). |
@@ -85,6 +85,7 @@ Status do MVP implementado:
 | `20261001_project_join_requests` | Pedidos de entrada em projetos e resumo de projetos para todos (secao 3.21). |
 | `20261002_funding_grant_project_dates` | `profile_funding_grants.project_id`, `start_date`, `end_date`, `process_number`; `sus` vira `fap`; RPC `replace_profile_funding_grants` com os campos novos, recusa `sus` e atualiza a carga semanal. |
 | `20261003_funding_grant_contract_file` | `profile_funding_grants.contract_path`; bucket privado `grant-contracts` (PDF, 10 MB; dona e coordenadores leem e apagam); `contract_path` sai da leitura de `authenticated` (leitura por coluna); RPCs `get_grant_contracts` e `set_grant_contract`; `replace_profile_funding_grants` preserva o caminho. |
+| `20261004_tasks_priority_archive_notify` | `task_priority` ganha `high` (Alta); `project_tasks.archived_at`; notificacao `task_assigned` (trigger em `project_task_assignees`, sem avisar quem se atribui a si mesmo). |
 
 Resumo dos objetos que mais mudam o entendimento do schema:
 
@@ -999,7 +1000,8 @@ em `projects` e `funding_agencies` so por coordenador; membros e fomento so pela
 Kanban de tarefas:
 
 - `project_tasks`: `project_id`, `title`, `description`, `status` (`task_status`: `todo`, `in_progress`,
-  `review`, `done`), `position`, `due_on`, `created_by`. O trigger `append_task_to_column` coloca a
+  `review`, `done`), `priority`, `position`, `due_on`, `created_by`, `archived_at` (arquivada = fora do quadro,
+  mas guardada). O trigger `append_task_to_column` coloca a
   tarefa no fim da coluna quando ela e criada ou muda de coluna.
 - `project_task_assignees`: varios responsaveis por tarefa. Uma FK composta com `project_members`
   garante que so membros do projeto sejam responsaveis, e sair do projeto remove a pessoa das tarefas.

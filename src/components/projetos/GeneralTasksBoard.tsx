@@ -3,9 +3,10 @@ import { useCallback, useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 
 import {
+  emptyTaskFilters,
   filterTasks,
   getTaskAssigneeOptions,
-  taskPriorityOptions,
+  hasActiveTaskFilters,
   isProjectOpen,
   sortProjects,
   type Project,
@@ -16,11 +17,9 @@ import { listVisibleTasks } from "../../lib/supabaseRepository";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { KanbanBoard } from "./KanbanBoard";
+import { TaskFilterBar } from "./TaskFilterBar";
 import { TaskModal } from "./TaskModal";
 import { useTaskBoard } from "./useTaskBoard";
-
-const selectClassName =
-  "min-h-11 min-w-0 rounded-lg border border-border bg-surface px-4 text-base outline-none transition focus:border-primary";
 
 function todayLocal() {
   const now = new Date();
@@ -38,79 +37,22 @@ type GeneralTasksBoardProps = {
 // Quadro com as tarefas de todos os projetos que a pessoa vê (coordenador: todos), com filtros.
 export function GeneralTasksBoard({ isCoordinator, profileId, projects }: GeneralTasksBoardProps) {
   const loader = useCallback(() => listVisibleTasks(), []);
-  const { erro, mover, mudarPrioridade, recarregar, tarefas } = useTaskBoard(loader);
-  const [filtros, setFiltros] = useState<TaskFilters>({ projectId: "all", assignee: "all", priority: "all", overdueOnly: false });
+  const { apagar, arquivar, erro, mover, mudarPrioridade, recarregar, tarefas } = useTaskBoard(loader);
+  const [filtros, setFiltros] = useState<TaskFilters>(emptyTaskFilters);
   const [modal, setModal] = useState<{ task: ProjectTask | null } | null>(null);
 
   const projetosOrdenados = useMemo(() => sortProjects(projects), [projects]);
   const projetosAbertos = useMemo(() => projetosOrdenados.filter((projeto) => isProjectOpen(projeto.status)), [projetosOrdenados]);
   const responsaveis = useMemo(() => getTaskAssigneeOptions(tarefas ?? []), [tarefas]);
-  const visiveis = useMemo(
-    () => filterTasks(tarefas ?? [], filtros, profileId, todayLocal()),
-    [tarefas, filtros, profileId],
-  );
-  const filtrando = filtros.projectId !== "all" || filtros.assignee !== "all" || filtros.overdueOnly;
+  const visiveis = useMemo(() => filterTasks(tarefas ?? [], filtros, profileId, todayLocal()), [tarefas, filtros, profileId]);
+  const ativas = useMemo(() => (tarefas ?? []).filter((task) => !task.archived_at), [tarefas]);
+  const canDelete = (task: ProjectTask) => isCoordinator || task.created_by === profileId;
 
   return (
     <div className="grid gap-4">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] lg:flex-1">
-          <select
-            aria-label={t("tasks.filterProject")}
-            className={selectClassName}
-            value={filtros.projectId}
-            onChange={(event) => setFiltros((current) => ({ ...current, projectId: event.target.value }))}
-          >
-            <option value="all">{t("tasks.allProjects")}</option>
-            {projetosOrdenados.map((projeto) => (
-              <option key={projeto.id} value={projeto.id}>
-                {projeto.name}
-              </option>
-            ))}
-          </select>
-          <select
-            aria-label={t("tasks.filterAssignee")}
-            className={selectClassName}
-            value={filtros.assignee}
-            onChange={(event) => setFiltros((current) => ({ ...current, assignee: event.target.value }))}
-          >
-            <option value="all">{t("tasks.allAssignees")}</option>
-            <option value="me">{t("tasks.onlyMine")}</option>
-            {responsaveis
-              .filter((pessoa) => pessoa.profile_id !== profileId)
-              .map((pessoa) => (
-                <option key={pessoa.profile_id} value={pessoa.profile_id}>
-                  {pessoa.full_name}
-                </option>
-              ))}
-          </select>
-          <select
-            aria-label={t("tasks.filterPriority")}
-            className={selectClassName}
-            value={filtros.priority}
-            onChange={(event) => setFiltros((current) => ({ ...current, priority: event.target.value as TaskFilters["priority"] }))}
-          >
-            <option value="all">{t("tasks.allPriorities")}</option>
-            {taskPriorityOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <label
-            className={[
-              "flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border px-4 text-base font-semibold transition",
-              filtros.overdueOnly ? "border-danger bg-danger-soft text-danger-dark" : "border-border bg-surface text-text",
-            ].join(" ")}
-          >
-            <input
-              checked={filtros.overdueOnly}
-              className="h-4 w-4 accent-primary"
-              type="checkbox"
-              onChange={(event) => setFiltros((current) => ({ ...current, overdueOnly: event.target.checked }))}
-            />
-            {t("tasks.onlyLate")}
-          </label>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div className="lg:flex-1">
+          <TaskFilterBar assignees={responsaveis} filters={filtros} onChange={setFiltros} profileId={profileId} projects={projetosOrdenados} />
         </div>
         {projetosAbertos.length > 0 ? (
           <Button onClick={() => setModal({ task: null })}>
@@ -139,21 +81,24 @@ export function GeneralTasksBoard({ isCoordinator, profileId, projects }: Genera
 
       {tarefas !== null && tarefas.length > 0 ? (
         <>
-          {filtrando ? (
+          {hasActiveTaskFilters(filtros) ? (
             <div className="flex items-center justify-between gap-3 text-base text-muted">
-              <span>
-                {visiveis.length} de {tarefas.length} tarefa(s)
-              </span>
-              <button
-                type="button"
-                className="font-semibold text-primary underline"
-                onClick={() => setFiltros({ projectId: "all", assignee: "all", priority: "all", overdueOnly: false })}
-              >
+              <span>{t("tasks.countOf", { shown: visiveis.length, total: filtros.showArchived ? tarefas.length : ativas.length })}</span>
+              <button type="button" className="font-semibold text-primary underline" onClick={() => setFiltros(emptyTaskFilters)}>
                 {t("tasks.clearFilters")}
               </button>
             </div>
           ) : null}
-          <KanbanBoard tasks={visiveis} showProject onMove={mover} onPriorityChange={mudarPrioridade} onOpen={(task) => setModal({ task })} />
+          <KanbanBoard
+            tasks={visiveis}
+            showProject
+            canDelete={canDelete}
+            onArchive={arquivar}
+            onDelete={apagar}
+            onMove={mover}
+            onPriorityChange={mudarPrioridade}
+            onOpen={(task) => setModal({ task })}
+          />
         </>
       ) : null}
 

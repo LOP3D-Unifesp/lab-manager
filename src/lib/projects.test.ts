@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import {
   filterProjects,
+  emptyTaskFilters,
   filterTasks,
+  getTaskPriorityLabel,
+  getTaskPriorityVariant,
+  hasActiveTaskFilters,
+  taskPriorityOptions,
   getProjectColor,
   getTaskAssigneeOptions,
   formatProjectPeriod,
@@ -118,6 +123,7 @@ function task(overrides: Partial<ProjectTask>): ProjectTask {
     due_on: null,
     created_by: "u",
     assignees: [],
+    archived_at: null,
     ...overrides,
   };
 }
@@ -159,7 +165,7 @@ describe("quadro geral de tarefas", () => {
     task({ id: "3", project_id: "p2", assignees: [bia], due_on: "2026-05-01", status: "done" }),
     task({ id: "4", project_id: "p2", assignees: [] }),
   ];
-  const all = { projectId: "all", assignee: "all", priority: "all" as const, overdueOnly: false };
+  const all = emptyTaskFilters;
   const ids = (list: ProjectTask[]) => list.map((t) => t.id);
 
   it("filtra por prioridade", () => {
@@ -171,6 +177,23 @@ describe("quadro geral de tarefas", () => {
     expect(ids(filterTasks(withPriority, { ...all, priority: "urgent" }, "ana", "2026-05-02"))).toEqual(["u"]);
     expect(ids(filterTasks(withPriority, { ...all, priority: "low" }, "ana", "2026-05-02"))).toEqual(["l"]);
     expect(ids(filterTasks(withPriority, all, "ana", "2026-05-02"))).toEqual(["u", "n", "l"]);
+  });
+
+  it("tem quatro prioridades, da mais para a menos importante, e filtra pela Alta", () => {
+    expect(taskPriorityOptions.map((option) => option.value)).toEqual(["urgent", "high", "normal", "low"]);
+    expect(getTaskPriorityVariant("high")).toBe("warning");
+    expect(getTaskPriorityLabel("high")).not.toBe("high");
+    const withHigh = [task({ id: "h", priority: "high" }), task({ id: "n", priority: "normal" })];
+    expect(ids(filterTasks(withHigh, { ...all, priority: "high" }, "ana", "2026-05-02"))).toEqual(["h"]);
+  });
+
+  it("esconde as tarefas arquivadas, a menos que se peça para mostrá-las", () => {
+    const list = [task({ id: "a" }), task({ id: "b", archived_at: "2026-05-01T10:00:00Z" })];
+    expect(ids(filterTasks(list, all, "ana", "2026-05-02"))).toEqual(["a"]);
+    expect(ids(filterTasks(list, { ...all, showArchived: true }, "ana", "2026-05-02"))).toEqual(["a", "b"]);
+    expect(hasActiveTaskFilters(all)).toBe(false);
+    expect(hasActiveTaskFilters({ ...all, showArchived: true })).toBe(true);
+    expect(hasActiveTaskFilters({ ...all, overdueOnly: true })).toBe(true);
   });
 
   it("filtra por projeto, responsável e atrasadas", () => {

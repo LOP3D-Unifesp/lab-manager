@@ -13,7 +13,8 @@ export type NotificationType =
   | "purchase_new"
   | "purchase_status"
   | "project_join_request"
-  | "project_join_decision";
+  | "project_join_decision"
+  | "task_assigned";
 
 export type AppNotification = {
   id: string;
@@ -42,6 +43,7 @@ const GROUP_BY_TYPE: Record<NotificationType, NotificationGroup> = {
   purchase_status: "purchases",
   project_join_request: "projects",
   project_join_decision: "projects",
+  task_assigned: "projects",
 };
 
 export function getNotificationGroup(type: NotificationType): NotificationGroup {
@@ -100,6 +102,12 @@ export function describeNotification(notification: Pick<AppNotification, "type" 
       return {
         title: t("notif.projectJoinRequest"),
         detail: [text(params, "requester"), text(params, "project")].filter(Boolean).join(" · ") || null,
+        reason: null,
+      };
+    case "task_assigned":
+      return {
+        title: text(params, "by") ? t("notif.taskAssignedBy", { name: text(params, "by") as string }) : t("notif.taskAssigned"),
+        detail: [text(params, "task"), text(params, "project")].filter(Boolean).join(" · ") || null,
         reason: null,
       };
     case "project_join_decision":

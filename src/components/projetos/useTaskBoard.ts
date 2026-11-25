@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { getNextTaskPosition, getTaskErrorMessage, type ProjectTask, type TaskPriority, type TaskStatus } from "../../lib/projects";
-import { updateProjectTask } from "../../lib/supabaseRepository";
+import { archiveProjectTask, deleteProjectTask, updateProjectTask } from "../../lib/supabaseRepository";
 
-// Carrega as tarefas de um quadro e cuida de mover cards entre colunas (otimista, com desfazer em erro).
-// `loader` precisa ser estável (useCallback), porque dispara um novo carregamento quando muda.
+// Carrega as tarefas de um quadro e cuida de mover cards entre colunas, mudar prioridade, arquivar e apagar
+// (tudo otimista, com desfazer em erro). `loader` precisa ser estável (useCallback), porque dispara um novo
+// carregamento quando muda.
 export function useTaskBoard(loader: () => Promise<ProjectTask[]>) {
   const [tarefas, setTarefas] = useState<ProjectTask[] | null>(null);
   const [erro, setErro] = useState("");
@@ -32,6 +33,23 @@ export function useTaskBoard(loader: () => Promise<ProjectTask[]>) {
     };
   }, [loader]);
 
+  // Aplica a mudança na tela já, grava no banco e, se falhar, volta ao que estava.
+  const aplicar = useCallback(
+    async (mudar: (lista: ProjectTask[]) => ProjectTask[], gravar: () => Promise<void>) => {
+      if (!tarefas) return;
+      const anterior = tarefas;
+      setTarefas(mudar(tarefas));
+      try {
+        setErro("");
+        await gravar();
+      } catch (error) {
+        setTarefas(anterior);
+        setErro(getTaskErrorMessage(error));
+      }
+    },
+    [tarefas],
+  );
+
   const mover = useCallback(
     async (task: ProjectTask, status: TaskStatus) => {
       if (!tarefas || task.status === status) return;
@@ -39,34 +57,45 @@ export function useTaskBoard(loader: () => Promise<ProjectTask[]>) {
         tarefas.filter((item) => item.project_id === task.project_id),
         status,
       );
-      const anterior = tarefas;
-      setTarefas(tarefas.map((item) => (item.id === task.id ? { ...item, status, position } : item)));
-      try {
-        setErro("");
-        await updateProjectTask(task.id, { status });
-      } catch (error) {
-        setTarefas(anterior);
-        setErro(getTaskErrorMessage(error));
-      }
+      await aplicar(
+        (lista) => lista.map((item) => (item.id === task.id ? { ...item, status, position } : item)),
+        () => updateProjectTask(task.id, { status }),
+      );
     },
-    [tarefas],
+    [tarefas, aplicar],
   );
 
   const mudarPrioridade = useCallback(
     async (task: ProjectTask, priority: TaskPriority) => {
-      if (!tarefas || task.priority === priority) return;
-      const anterior = tarefas;
-      setTarefas(tarefas.map((item) => (item.id === task.id ? { ...item, priority } : item)));
-      try {
-        setErro("");
-        await updateProjectTask(task.id, { priority });
-      } catch (error) {
-        setTarefas(anterior);
-        setErro(getTaskErrorMessage(error));
-      }
+      if (task.priority === priority) return;
+      await aplicar(
+        (lista) => lista.map((item) => (item.id === task.id ? { ...item, priority } : item)),
+        () => updateProjectTask(task.id, { priority }),
+      );
     },
-    [tarefas],
+    [aplicar],
   );
 
-  return { tarefas, erro, setErro, recarregar, mover, mudarPrioridade };
+  const arquivar = useCallback(
+    async (task: ProjectTask, archived: boolean) => {
+      const archived_at = archived ? new Date().toISOString() : null;
+      await aplicar(
+        (lista) => lista.map((item) => (item.id === task.id ? { ...item, archived_at } : item)),
+        () => archiveProjectTask(task.id, archived),
+      );
+    },
+    [aplicar],
+  );
+
+  const apagar = useCallback(
+    async (task: ProjectTask) => {
+      await aplicar(
+        (lista) => lista.filter((item) => item.id !== task.id),
+        () => deleteProjectTask(task.id),
+      );
+    },
+    [aplicar],
+  );
+
+  return { tarefas, erro, setErro, recarregar, mover, mudarPrioridade, arquivar, apagar };
 }

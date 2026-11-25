@@ -138,7 +138,8 @@ export function Analytics() {
         setErro("");
         setBookings(bookingsData);
         setPurchases(purchasesData);
-        setTasks(tasksData);
+        // Tarefas arquivadas ficam fora dos números.
+        setTasks(tasksData.filter((task) => !task.archived_at));
         setEquipment(equipmentData);
         setEpisodes(episodesData);
         setSpools(spoolsData);

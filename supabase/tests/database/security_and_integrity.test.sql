@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(387);
+select plan(392);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -1129,6 +1129,28 @@ select lives_ok(
   'the creator deletes their own task'
 );
 select is((select count(*) from public.project_tasks where id = '00000000-0000-0000-0000-0000000000d2'), 0::bigint, 'the deleted task is gone');
+select lives_ok(
+  $$ update public.project_tasks set priority = 'high' where id = '00000000-0000-0000-0000-0000000000d1' $$,
+  'a member sets the high priority'
+);
+select is(
+  (select priority::text from public.project_tasks where id = '00000000-0000-0000-0000-0000000000d1'),
+  'high',
+  'the high priority is stored'
+);
+select lives_ok(
+  $$ update public.project_tasks set archived_at = now() where id = '00000000-0000-0000-0000-0000000000d1' $$,
+  'a member archives a task created by someone else'
+);
+select ok(
+  (select archived_at is not null from public.project_tasks where id = '00000000-0000-0000-0000-0000000000d1'),
+  'the archived task is kept'
+);
+select is(
+  (select count(*)::int from public.notifications where type = 'task_assigned' and recipient_id = '00000000-0000-0000-0000-000000000102'),
+  1,
+  'being assigned a task by someone else creates a notification'
+);
 select lives_ok(
   $$ insert into public.project_tasks (id, project_id, title, status) values ('00000000-0000-0000-0000-0000000000d3', '00000000-0000-0000-0000-0000000000c1', 'Imprimir peça', 'review') $$,
   'a task can be created directly in a column'

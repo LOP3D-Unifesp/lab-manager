@@ -20,6 +20,7 @@ import {
 } from "../../lib/projects";
 import { Avatar } from "../ui/Avatar";
 import { Button } from "../ui/Button";
+import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { Modal } from "../ui/Modal";
 import { inputClassName } from "../ui/formStyles";
 
@@ -69,6 +70,7 @@ export function TaskModal({
   });
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
+  const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
 
   function escolherProjeto(id: string) {
     setChosenProjectId(id);
@@ -116,7 +118,8 @@ export function TaskModal({
   }
 
   async function excluir() {
-    if (!task || !window.confirm(t("taskModal.deleteConfirm"))) return;
+    if (!task) return;
+    setConfirmandoExclusao(false);
     try {
       setSalvando(true);
       await deleteProjectTask(task.id);
@@ -244,7 +247,7 @@ export function TaskModal({
         <div className="mt-2 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             {task && canDelete ? (
-              <Button variant="danger" disabled={salvando} onClick={excluir}>
+              <Button variant="danger" disabled={salvando} onClick={() => setConfirmandoExclusao(true)}>
                 {t("taskModal.delete")}
               </Button>
             ) : null}
@@ -259,6 +262,12 @@ export function TaskModal({
           </div>
         </div>
       </form>
+      {confirmandoExclusao && task ? (
+        <ConfirmDialog confirmLabel={t("tasks.deleteConfirmButton")} busy={salvando} onCancel={() => setConfirmandoExclusao(false)} onConfirm={excluir} title={t("tasks.deleteTitle")}>
+          <p className="font-semibold">{task.title}</p>
+          <p className="mt-2 text-muted">{t("tasks.deleteWarning")}</p>
+        </ConfirmDialog>
+      ) : null}
     </Modal>
   );
 }
