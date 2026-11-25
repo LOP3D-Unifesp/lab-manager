@@ -1303,6 +1303,9 @@ isOneToOne: false
 "set_task_checklist":
 { Args: { "p_items": Json,"p_task_id": string }; Returns: undefined
                            },
+"move_task_to_project":
+{ Args: { "p_project_id": string,"p_task_id": string }; Returns: undefined
+                           },
 "move_project_task":
 { Args: { "p_before_task_id"?: string,"p_status": Database["public"]['Enums']["task_status"],"p_task_id": string }; Returns: undefined
                            },

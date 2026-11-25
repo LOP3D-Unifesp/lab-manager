@@ -5,12 +5,14 @@ import { Link } from "react-router-dom";
 import {
   createProjectTask,
   deleteProjectTask,
+  moveTaskToProject,
   setTaskAssignees,
   setTaskChecklist,
   updateProjectTask,
 } from "../../lib/supabaseRepository";
 import {
   getTaskErrorMessage,
+  isProjectOpen,
   taskPriorityOptions,
   taskStatusOptions,
   type Project,
@@ -23,6 +25,7 @@ import { Avatar } from "../ui/Avatar";
 import { Button } from "../ui/Button";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { Modal } from "../ui/Modal";
+import { RichTextEditor } from "../ui/RichTextEditor";
 import { ChecklistEditor, type ChecklistDraftItem } from "./ChecklistEditor";
 import { inputClassName } from "../ui/formStyles";
 
@@ -54,8 +57,14 @@ export function TaskModal({
   showProjectLink = false,
   task,
 }: TaskModalProps) {
-  const lockedProjectId = task?.project_id ?? fixedProjectId ?? null;
-  const [chosenProjectId, setChosenProjectId] = useState(lockedProjectId ?? (projects.length === 1 ? projects[0].id : ""));
+  // Com a lista de projetos (quadro geral e Dashboard) dá para trocar o projeto de uma tarefa já criada; na página do
+  // projeto (sem lista) ele fica fixo.
+  const podeTrocarProjeto = Boolean(task) && projects.length > 0 && !fixedMembers;
+  const lockedProjectId = podeTrocarProjeto ? null : (task?.project_id ?? fixedProjectId ?? null);
+  const [chosenProjectId, setChosenProjectId] = useState(
+    lockedProjectId ?? (task ? task.project_id : projects.length === 1 ? projects[0].id : ""),
+  );
+  const projetosEscolha = task ? projects.filter((item) => isProjectOpen(item.status) || item.id === task.project_id) : projects;
   const projectId = lockedProjectId ?? chosenProjectId;
   const project = projects.find((item) => item.id === projectId);
   const members = fixedMembers ?? project?.members ?? [];
@@ -79,7 +88,9 @@ export function TaskModal({
   function escolherProjeto(id: string) {
     setChosenProjectId(id);
     const novoMembros = projects.find((item) => item.id === id)?.members ?? [];
-    setResponsaveis(defaultAssigneeIds.filter((memberId) => novoMembros.some((member) => member.profile_id === memberId)));
+    // Tarefa nova: sugere os responsáveis padrão; tarefa existente: mantém quem também é membro do novo projeto.
+    const base = task ? responsaveis : defaultAssigneeIds;
+    setResponsaveis(base.filter((memberId) => novoMembros.some((member) => member.profile_id === memberId)));
   }
 
   function alternar(profileId: string) {
@@ -106,6 +117,7 @@ export function TaskModal({
       const base = { title: trimmed, description: description.trim() || null, due_on: dueOn || null, priority };
       let taskId: string;
       if (task) {
+        if (projectId !== task.project_id) await moveTaskToProject(task.id, projectId);
         // Ao mudar de coluna, o banco coloca a tarefa no fim da nova coluna.
         await updateProjectTask(task.id, { ...base, status });
         taskId = task.id;
@@ -163,7 +175,7 @@ export function TaskModal({
               <option value="" disabled>
                 {semProjetos ? t("taskModal.noOpenProject") : t("taskModal.select")}
               </option>
-              {projects.map((item) => (
+              {projetosEscolha.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name}
                 </option>
@@ -176,14 +188,8 @@ export function TaskModal({
           {t("taskModal.title")}
           <input className={inputClassName} required value={title} onChange={(e) => setTitle(e.target.value)} />
         </label>
-        <label className="grid gap-2 text-base font-semibold text-text">
-          {t("taskModal.description")}
-          <textarea
-            className={`${inputClassName} min-h-24 py-3`}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
-        </label>
+        <RichTextEditor label={t("taskModal.description")} value={description} onChange={setDescription} />
+        <ChecklistEditor items={checklist} onChange={setChecklist} />
         <div className="grid items-start gap-4 sm:grid-cols-3">
           <label className="grid gap-2 text-base font-semibold text-text">
             {t("taskModal.column")}
@@ -245,8 +251,6 @@ export function TaskModal({
             </div>
           )}
         </fieldset>
-
-        <ChecklistEditor items={checklist} onChange={setChecklist} />
 
         {erro ? (
           <p className="rounded-lg border border-danger bg-danger-soft p-3 text-base font-semibold text-danger">{erro}</p>

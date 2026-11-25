@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(403);
+select plan(404);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -1208,6 +1208,11 @@ select throws_ok(
   $$ select public.move_project_task('00000000-0000-0000-0000-0000000000d1', 'done', null) $$,
   'P0001', 'project_access_required',
   'non-member cannot move tasks'
+);
+select throws_ok(
+  $$ select public.move_task_to_project('00000000-0000-0000-0000-0000000000d1', '00000000-0000-0000-0000-0000000000c1') $$,
+  'P0001', 'project_access_required',
+  'non-member cannot move a task to another project'
 );
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);

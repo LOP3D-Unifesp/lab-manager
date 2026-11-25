@@ -16,7 +16,6 @@ import {
   getProjectFundingTotal,
   getChecklistProgress,
   reorderTasks,
-  resolveBeforeTaskId,
   groupTasksByStatus,
   isTaskOverdue,
   isProjectOpen,
@@ -159,16 +158,14 @@ describe("tarefas do kanban", () => {
     expect(groupTasksByStatus(beforeThree).done.map((t) => t.id)).toEqual(["1", "3"]);
   });
 
-  it("só considera cartões do mesmo projeto ao decidir o 'antes de'", () => {
+  it("ordena a coluna com cartões de projetos diferentes", () => {
     const mixed = [
       task({ id: "a", project_id: "p1", status: "todo", position: 1 }),
-      task({ id: "b", project_id: "p2", status: "todo", position: 1, title: "Z" }),
-      task({ id: "c", project_id: "p1", status: "todo", position: 2 }),
+      task({ id: "b", project_id: "p2", status: "todo", position: 2 }),
+      task({ id: "c", project_id: "p1", status: "todo", position: 3 }),
     ];
-    const moved = mixed[2];
-    expect(resolveBeforeTaskId(mixed, moved, "todo", "b")).toBe(null);
-    expect(resolveBeforeTaskId(mixed, moved, "todo", "a")).toBe("a");
-    expect(resolveBeforeTaskId(mixed, moved, "todo", null)).toBe(null);
+    const result = reorderTasks(mixed, "c", "todo", "a");
+    expect(groupTasksByStatus(result).todo.map((t) => t.id)).toEqual(["c", "a", "b"]);
   });
 
   it("calcula o progresso da checklist", () => {

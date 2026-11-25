@@ -1334,6 +1334,12 @@ export async function moveProjectTask(taskId: string, status: TaskStatus, before
   throwIfError(error);
 }
 
+// Passa a tarefa para outro projeto (mantém só os responsáveis que também são membros do novo).
+export async function moveTaskToProject(taskId: string, projectId: string) {
+  const { error } = await client().rpc("move_task_to_project", { p_task_id: taskId, p_project_id: projectId });
+  throwIfError(error);
+}
+
 // Substitui a checklist da tarefa; a ordem do array vira a ordem dos itens.
 export async function setTaskChecklist(taskId: string, items: Array<{ id: string; title: string; done: boolean }>) {
   const { error } = await client().rpc("set_task_checklist", { p_task_id: taskId, p_items: items });
