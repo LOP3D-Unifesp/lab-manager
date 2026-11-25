@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getTaskErrorMessage, reorderTasks, type ProjectTask, type TaskPriority, type TaskStatus } from "../../lib/projects";
+import { useCurrentProfile } from "../../lib/currentUser";
 import { supabase } from "../../lib/supabaseClient";
 import { getTimerAfterStatusChange, toggleTaskTimer } from "../../lib/taskTimer";
 import { archiveProjectTask, deleteProjectTask, moveProjectTask, setChecklistItemDone, setTaskTimer, updateProjectTask } from "../../lib/supabaseRepository";
@@ -12,6 +13,7 @@ const REFRESH_DEBOUNCE_MS = 500;
 // (tudo otimista, com desfazer em erro). `loader` precisa ser estável (useCallback), porque dispara um novo
 // carregamento quando muda.
 export function useTaskBoard(loader: () => Promise<ProjectTask[]>) {
+  const { currentProfile } = useCurrentProfile();
   const [tarefas, setTarefas] = useState<ProjectTask[] | null>(null);
   const [erro, setErro] = useState("");
 
@@ -72,6 +74,7 @@ export function useTaskBoard(loader: () => Promise<ProjectTask[]>) {
       .on("postgres_changes", { event: "*", schema: "public", table: "project_tasks" }, agendar)
       .on("postgres_changes", { event: "*", schema: "public", table: "project_task_assignees" }, agendar)
       .on("postgres_changes", { event: "*", schema: "public", table: "project_task_checklist_items" }, agendar)
+      .on("postgres_changes", { event: "*", schema: "public", table: "project_task_time_entries" }, agendar)
       .subscribe();
     return () => {
       window.clearTimeout(debounce);
@@ -125,12 +128,14 @@ export function useTaskBoard(loader: () => Promise<ProjectTask[]>) {
 
   const alternarCronometro = useCallback(
     async (task: ProjectTask, correndo: boolean) => {
+      if (!currentProfile) return;
+      const eu = { profile_id: currentProfile.id, full_name: currentProfile.full_name, avatar_url: currentProfile.avatar_url ?? null };
       await aplicar(
-        (lista) => lista.map((item) => (item.id === task.id ? { ...item, ...toggleTaskTimer(item, correndo, new Date()) } : item)),
+        (lista) => lista.map((item) => (item.id === task.id ? { ...item, ...toggleTaskTimer(item, correndo, new Date(), eu) } : item)),
         () => setTaskTimer(task.id, correndo),
       );
     },
-    [aplicar],
+    [aplicar, currentProfile],
   );
 
   const marcarItem = useCallback(

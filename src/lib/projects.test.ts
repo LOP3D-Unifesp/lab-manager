@@ -130,8 +130,7 @@ function task(overrides: Partial<ProjectTask>): ProjectTask {
     completed_at: null,
     work_seconds: 0,
     review_seconds: 0,
-    timer_phase: null,
-    timer_started_at: null,
+    running: [],
     ...overrides,
   };
 }

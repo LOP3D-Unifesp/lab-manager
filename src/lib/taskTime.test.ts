@@ -14,6 +14,7 @@ function entry(overrides: Partial<TimeEntry>): TimeEntry {
     started_at: "2026-11-25T10:00:00Z",
     ended_at: "2026-11-25T10:10:00Z",
     seconds: 600,
+    auto_closed: false,
     ...overrides,
   };
 }

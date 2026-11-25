@@ -1,3 +1,4 @@
+import type { RunningTimer } from "./taskTimer";
 import { getLocale, t } from "../i18n";
 import type { StatusVariant } from "../components/ui/StatusBadge";
 
@@ -259,11 +260,10 @@ export type ProjectTask = {
   created_at: string;
   /** Quando entrou em Finalizado (null enquanto não concluída; reabrir limpa). */
   completed_at: string | null;
-  /** Cronômetro: segundos já fechados de trabalho e de revisão; `timer_started_at` não nulo = correndo. */
+  /** Cronômetro: segundos já fechados (de todos) de trabalho e de revisão, e quem está com o timer ligado agora. */
   work_seconds: number;
   review_seconds: number;
-  timer_phase: "work" | "review" | null;
-  timer_started_at: string | null;
+  running: RunningTimer[];
 };
 
 export type ChecklistItem = { id: string; title: string; done: boolean; position: number };
@@ -309,6 +309,8 @@ export function getTaskErrorMessage(error: unknown) {
   if (text.includes("project_access_required")) return t("taskError.project_access_required");
   if (text.includes("task_not_found")) return t("taskError.task_not_found");
   if (text.includes("timer_not_available")) return t("taskError.timer_not_available");
+  if (text.includes("invalid_time")) return t("taskError.invalid_time");
+  if (text.includes("entry_not_found")) return t("taskError.entry_not_found");
   if (text.includes("project_tasks_title_check")) return t("taskError.title_check");
   if (text.includes("row-level security")) return t("taskError.rls");
   return getProjectErrorMessage(error);
