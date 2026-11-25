@@ -1,7 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import { getNextTaskPosition, getTaskErrorMessage, type ProjectTask, type TaskPriority, type TaskStatus } from "../../lib/projects";
-import { archiveProjectTask, deleteProjectTask, updateProjectTask } from "../../lib/supabaseRepository";
+import { getTaskErrorMessage, reorderTasks, resolveBeforeTaskId, type ProjectTask, type TaskPriority, type TaskStatus } from "../../lib/projects";
+import { supabase } from "../../lib/supabaseClient";
+import { archiveProjectTask, deleteProjectTask, moveProjectTask, setChecklistItemDone, updateProjectTask } from "../../lib/supabaseRepository";
+
+// Mudanças em rajada (mover vários cartões, salvar checklist) viram um só recarregamento.
+const REFRESH_DEBOUNCE_MS = 500;
 
 // Carrega as tarefas de um quadro e cuida de mover cards entre colunas, mudar prioridade, arquivar e apagar
 // (tudo otimista, com desfazer em erro). `loader` precisa ser estável (useCallback), porque dispara um novo
@@ -33,6 +37,56 @@ export function useTaskBoard(loader: () => Promise<ProjectTask[]>) {
     };
   }, [loader]);
 
+  // Quadro ao vivo: quando outra pessoa mexe nas tarefas, recarrega a lista. Durante um arrasto o recarregamento
+  // espera o cartão ser solto, para ele não pular debaixo do mouse.
+  const arrastandoRef = useRef(false);
+  const pendenteRef = useRef(false);
+  const atualizarAoVivoRef = useRef<() => void>(() => undefined);
+  atualizarAoVivoRef.current = () => {
+    loader()
+      .then((data) => setTarefas(data))
+      .catch(() => undefined);
+  };
+
+  useEffect(() => {
+    const client = supabase;
+    if (!client) return;
+    let debounce = 0;
+    const agendar = () => {
+      window.clearTimeout(debounce);
+      debounce = window.setTimeout(() => {
+        if (arrastandoRef.current) {
+          pendenteRef.current = true;
+          return;
+        }
+        atualizarAoVivoRef.current();
+      }, REFRESH_DEBOUNCE_MS);
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") agendar();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    const channel = client
+      .channel(`task_board_${Math.random().toString(36).slice(2)}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "project_tasks" }, agendar)
+      .on("postgres_changes", { event: "*", schema: "public", table: "project_task_assignees" }, agendar)
+      .on("postgres_changes", { event: "*", schema: "public", table: "project_task_checklist_items" }, agendar)
+      .subscribe();
+    return () => {
+      window.clearTimeout(debounce);
+      document.removeEventListener("visibilitychange", onVisible);
+      void client.removeChannel(channel);
+    };
+  }, []);
+
+  const arrastar = useCallback((arrastando: boolean) => {
+    arrastandoRef.current = arrastando;
+    if (!arrastando && pendenteRef.current) {
+      pendenteRef.current = false;
+      atualizarAoVivoRef.current();
+    }
+  }, []);
+
   // Aplica a mudança na tela já, grava no banco e, se falhar, volta ao que estava.
   const aplicar = useCallback(
     async (mudar: (lista: ProjectTask[]) => ProjectTask[], gravar: () => Promise<void>) => {
@@ -50,19 +104,30 @@ export function useTaskBoard(loader: () => Promise<ProjectTask[]>) {
     [tarefas],
   );
 
+  // `antesDe`: id do cartão à frente do qual a tarefa entra (null = fim da coluna).
   const mover = useCallback(
-    async (task: ProjectTask, status: TaskStatus) => {
-      if (!tarefas || task.status === status) return;
-      const position = getNextTaskPosition(
-        tarefas.filter((item) => item.project_id === task.project_id),
-        status,
-      );
+    async (task: ProjectTask, status: TaskStatus, antesDe: string | null = null) => {
+      if (!tarefas) return;
+      const antes = resolveBeforeTaskId(tarefas, task, status, antesDe);
       await aplicar(
-        (lista) => lista.map((item) => (item.id === task.id ? { ...item, status, position } : item)),
-        () => updateProjectTask(task.id, { status }),
+        (lista) => reorderTasks(lista, task.id, status, antes),
+        () => moveProjectTask(task.id, status, antes),
       );
     },
     [tarefas, aplicar],
+  );
+
+  const marcarItem = useCallback(
+    async (task: ProjectTask, itemId: string, done: boolean) => {
+      await aplicar(
+        (lista) =>
+          lista.map((item) =>
+            item.id === task.id ? { ...item, checklist: item.checklist.map((entry) => (entry.id === itemId ? { ...entry, done } : entry)) } : item,
+          ),
+        () => setChecklistItemDone(itemId, done),
+      );
+    },
+    [aplicar],
   );
 
   const mudarPrioridade = useCallback(
@@ -97,5 +162,5 @@ export function useTaskBoard(loader: () => Promise<ProjectTask[]>) {
     [aplicar],
   );
 
-  return { tarefas, erro, setErro, recarregar, mover, mudarPrioridade, arquivar, apagar };
+  return { tarefas, erro, setErro, recarregar, arrastar, marcarItem, mover, mudarPrioridade, arquivar, apagar };
 }

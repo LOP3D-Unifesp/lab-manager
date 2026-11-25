@@ -14,7 +14,9 @@ import {
   getFundingTotal,
   getProjectErrorMessage,
   getProjectFundingTotal,
-  getNextTaskPosition,
+  getChecklistProgress,
+  reorderTasks,
+  resolveBeforeTaskId,
   groupTasksByStatus,
   isTaskOverdue,
   isProjectOpen,
@@ -124,6 +126,7 @@ function task(overrides: Partial<ProjectTask>): ProjectTask {
     created_by: "u",
     assignees: [],
     archived_at: null,
+    checklist: [],
     ...overrides,
   };
 }
@@ -142,10 +145,35 @@ describe("tarefas do kanban", () => {
     expect(groups.review).toEqual([]);
   });
 
-  it("calcula a posição para o fim da coluna", () => {
-    expect(getNextTaskPosition(tasks, "todo")).toBe(3);
-    expect(getNextTaskPosition(tasks, "done")).toBe(6);
-    expect(getNextTaskPosition(tasks, "review")).toBe(1);
+  it("reordena dentro da coluna e renumera", () => {
+    const result = reorderTasks(tasks, "1", "todo", "2");
+    expect(groupTasksByStatus(result).todo.map((t) => t.id)).toEqual(["1", "2"]);
+    expect(groupTasksByStatus(result).todo.map((t) => t.position)).toEqual([1, 2]);
+  });
+
+  it("move para o fim de outra coluna e para antes de um cartão", () => {
+    const toDone = reorderTasks(tasks, "1", "done", null);
+    expect(groupTasksByStatus(toDone).done.map((t) => t.id)).toEqual(["3", "1"]);
+    expect(groupTasksByStatus(toDone).todo.map((t) => t.id)).toEqual(["2"]);
+    const beforeThree = reorderTasks(tasks, "1", "done", "3");
+    expect(groupTasksByStatus(beforeThree).done.map((t) => t.id)).toEqual(["1", "3"]);
+  });
+
+  it("só considera cartões do mesmo projeto ao decidir o 'antes de'", () => {
+    const mixed = [
+      task({ id: "a", project_id: "p1", status: "todo", position: 1 }),
+      task({ id: "b", project_id: "p2", status: "todo", position: 1, title: "Z" }),
+      task({ id: "c", project_id: "p1", status: "todo", position: 2 }),
+    ];
+    const moved = mixed[2];
+    expect(resolveBeforeTaskId(mixed, moved, "todo", "b")).toBe(null);
+    expect(resolveBeforeTaskId(mixed, moved, "todo", "a")).toBe("a");
+    expect(resolveBeforeTaskId(mixed, moved, "todo", null)).toBe(null);
+  });
+
+  it("calcula o progresso da checklist", () => {
+    expect(getChecklistProgress([])).toEqual({ done: 0, total: 0, percent: 0 });
+    expect(getChecklistProgress([{ done: true }, { done: false }, { done: true }])).toEqual({ done: 2, total: 3, percent: 67 });
   });
 
   it("marca como atrasada só tarefa não concluída com prazo vencido", () => {

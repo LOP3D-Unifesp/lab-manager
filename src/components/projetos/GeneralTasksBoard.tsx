@@ -37,7 +37,7 @@ type GeneralTasksBoardProps = {
 // Quadro com as tarefas de todos os projetos que a pessoa vê (coordenador: todos), com filtros.
 export function GeneralTasksBoard({ isCoordinator, profileId, projects }: GeneralTasksBoardProps) {
   const loader = useCallback(() => listVisibleTasks(), []);
-  const { apagar, arquivar, erro, mover, mudarPrioridade, recarregar, tarefas } = useTaskBoard(loader);
+  const { apagar, arquivar, arrastar, erro, marcarItem, mover, mudarPrioridade, recarregar, tarefas } = useTaskBoard(loader);
   const [filtros, setFiltros] = useState<TaskFilters>(emptyTaskFilters);
   const [modal, setModal] = useState<{ task: ProjectTask | null } | null>(null);
 
@@ -95,7 +95,9 @@ export function GeneralTasksBoard({ isCoordinator, profileId, projects }: Genera
             canDelete={canDelete}
             onArchive={arquivar}
             onDelete={apagar}
+            onDragChange={arrastar}
             onMove={mover}
+            onToggleChecklistItem={marcarItem}
             onPriorityChange={mudarPrioridade}
             onOpen={(task) => setModal({ task })}
           />

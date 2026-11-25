@@ -254,7 +254,16 @@ export type ProjectTask = {
   assignees: ProjectMember[];
   /** Quando foi arquivada (null = ativa). Arquivar guarda a tarefa fora do quadro sem apagá-la. */
   archived_at: string | null;
+  /** Subtarefas da checklist, na ordem em que a pessoa as organizou. */
+  checklist: ChecklistItem[];
 };
+
+export type ChecklistItem = { id: string; title: string; done: boolean; position: number };
+
+export function getChecklistProgress(items: Array<Pick<ChecklistItem, "done">>) {
+  const done = items.filter((item) => item.done).length;
+  return { done, total: items.length, percent: items.length === 0 ? 0 : Math.round((done / items.length) * 100) };
+}
 
 export function groupTasksByStatus(tasks: ProjectTask[]) {
   const groups: Record<TaskStatus, ProjectTask[]> = { todo: [], in_progress: [], review: [], done: [] };
@@ -265,9 +274,32 @@ export function groupTasksByStatus(tasks: ProjectTask[]) {
   return groups;
 }
 
-// Posição para o card entrar no fim de uma coluna.
-export function getNextTaskPosition(tasks: ProjectTask[], status: TaskStatus) {
-  return tasks.reduce((max, task) => (task.status === status ? Math.max(max, task.position) : max), 0) + 1;
+// Se `beforeId` é de outro projeto (quadro geral mistura projetos), a ordem só vale dentro do projeto da tarefa:
+// devolve a primeira tarefa do mesmo projeto a partir dali (ou null = fim da coluna).
+export function resolveBeforeTaskId(tasks: ProjectTask[], task: ProjectTask, status: TaskStatus, beforeId: string | null) {
+  if (beforeId === null) return null;
+  const column = groupTasksByStatus(tasks.filter((item) => item.status === status))[status];
+  const start = column.findIndex((item) => item.id === beforeId);
+  if (start === -1) return null;
+  return column.slice(start).find((item) => item.project_id === task.project_id && item.id !== task.id)?.id ?? null;
+}
+
+// Coloca a tarefa em `status` imediatamente antes de `beforeId` (null = fim) e renumera a coluna do projeto (1..n),
+// como faz o banco. As demais tarefas ficam como estão.
+export function reorderTasks(tasks: ProjectTask[], taskId: string, status: TaskStatus, beforeId: string | null) {
+  const moved = tasks.find((item) => item.id === taskId);
+  if (!moved) return tasks;
+  const column = groupTasksByStatus(tasks.filter((item) => item.project_id === moved.project_id && item.status === status))[status].filter(
+    (item) => item.id !== taskId,
+  );
+  const index = beforeId === null ? -1 : column.findIndex((item) => item.id === beforeId);
+  const ordered = index === -1 ? [...column, moved] : [...column.slice(0, index), moved, ...column.slice(index)];
+  const positions = new Map(ordered.map((item, i) => [item.id, i + 1]));
+  return tasks.map((item) => {
+    const position = positions.get(item.id);
+    if (position === undefined) return item;
+    return item.id === taskId ? { ...item, status, position } : { ...item, position };
+  });
 }
 
 // `today` no formato AAAA-MM-DD; tarefa concluída nunca está atrasada.

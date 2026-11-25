@@ -315,7 +315,9 @@ export function ProjetoDetalhe() {
             canDelete={(task) => Boolean(isCoordinator) || task.created_by === profile?.id}
             onArchive={quadro.arquivar}
             onDelete={quadro.apagar}
+            onDragChange={quadro.arrastar}
             onMove={quadro.mover}
+            onToggleChecklistItem={quadro.marcarItem}
             onPriorityChange={quadro.mudarPrioridade}
             onOpen={(task) => setTarefaAberta({ task, status: task.status })}
           />

@@ -1239,6 +1239,7 @@ const taskSelect = [
   "created_by",
   "archived_at",
   "project:projects(name)",
+  "checklist:project_task_checklist_items(id, title, done, position)",
   "assignees:project_task_assignees(profile_id, profile:profiles!project_task_assignees_profile_id_fkey(full_name, avatar_url))",
 ].join(", ");
 
@@ -1251,6 +1252,7 @@ function mapTask(row: TaskRow): ProjectTask {
   const { project, assignees, ...task } = row;
   return {
     ...task,
+    checklist: [...(task.checklist ?? [])].sort((a, b) => a.position - b.position),
     project_name: project?.name ?? null,
     assignees: (assignees ?? [])
       .map((assignee) => ({
@@ -1319,6 +1321,27 @@ export async function archiveProjectTask(id: string, archived: boolean) {
 
 export async function deleteProjectTask(id: string) {
   const { error } = await client().from("project_tasks").delete().eq("id", id);
+  throwIfError(error);
+}
+
+// Coloca a tarefa na coluna `status`, antes de `beforeId` (null = no fim), e renumera a coluna no banco.
+export async function moveProjectTask(taskId: string, status: TaskStatus, beforeId: string | null) {
+  const { error } = await client().rpc("move_project_task", {
+    p_task_id: taskId,
+    p_status: status,
+    ...(beforeId ? { p_before_task_id: beforeId } : {}),
+  });
+  throwIfError(error);
+}
+
+// Substitui a checklist da tarefa; a ordem do array vira a ordem dos itens.
+export async function setTaskChecklist(taskId: string, items: Array<{ id: string; title: string; done: boolean }>) {
+  const { error } = await client().rpc("set_task_checklist", { p_task_id: taskId, p_items: items });
+  throwIfError(error);
+}
+
+export async function setChecklistItemDone(itemId: string, done: boolean) {
+  const { error } = await client().from("project_task_checklist_items").update({ done }).eq("id", itemId);
   throwIfError(error);
 }
 
