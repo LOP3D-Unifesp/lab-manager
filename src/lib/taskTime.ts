@@ -10,6 +10,7 @@ export type TimeEntry = {
   started_at: string;
   ended_at: string | null;
   seconds: number | null;
+  auto_closed: boolean;
 };
 
 export type PersonTime = { profile_id: string; full_name: string; avatar_url: string | null; work: number; review: number; total: number };

@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(435);
+select plan(436);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -1186,59 +1186,68 @@ select is(
   'the task goes right before the chosen one and the column is renumbered'
 );
 
+-- Cronômetro por pessoa.
 select lives_ok(
   $$ insert into public.project_tasks (id, project_id, title) values ('00000000-0000-0000-0000-0000000000d4', '00000000-0000-0000-0000-0000000000c1', 'Cronometrar') $$,
   'a task is created in the todo column'
 );
-select ok((select timer_phase is null and timer_started_at is null from public.project_tasks where id = '00000000-0000-0000-0000-0000000000d4'), 'a todo task has no running timer');
-select lives_ok($$ update public.project_tasks set status = 'in_progress' where id = '00000000-0000-0000-0000-0000000000d4' $$, 'the task moves to in progress');
-select is((select timer_phase from public.project_tasks where id = '00000000-0000-0000-0000-0000000000d4'), 'work', 'entering in progress starts the work timer');
-select lives_ok($$ update public.project_tasks set timer_started_at = now() - interval '10 minutes' where id = '00000000-0000-0000-0000-0000000000d4' $$, 'the running timer is moved back 10 minutes');
+select is((select count(*)::int from public.project_task_time_entries where task_id = '00000000-0000-0000-0000-0000000000d4'), 0, 'a todo task has no timer');
+select lives_ok($$ select public.set_task_timer('00000000-0000-0000-0000-0000000000d4', true) $$, 'a member starts the timer on a todo task');
+select ok(
+  (select t.status = 'in_progress' and (select count(*) from public.project_task_time_entries e where e.task_id = t.id and e.ended_at is null and e.phase = 'work' and e.profile_id = '00000000-0000-0000-0000-000000000102') = 1
+   from public.project_tasks t where t.id = '00000000-0000-0000-0000-0000000000d4'),
+  'starting the timer moves the task to in progress and runs the work timer of that person'
+);
+reset role;
+update public.project_task_time_entries set started_at = now() - interval '10 minutes' where task_id = '00000000-0000-0000-0000-0000000000d4' and ended_at is null;
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
 select lives_ok($$ update public.project_tasks set status = 'review' where id = '00000000-0000-0000-0000-0000000000d4' $$, 'the task moves to review');
 select ok(
-  (select work_seconds between 600 and 602 and timer_phase = 'review' and timer_started_at is not null from public.project_tasks where id = '00000000-0000-0000-0000-0000000000d4'),
-  'leaving in progress closes the work time and starts the review timer'
+  (select t.work_seconds between 600 and 602 and (select count(*) from public.project_task_time_entries e where e.task_id = t.id and e.ended_at is null and e.phase = 'review' and e.profile_id = '00000000-0000-0000-0000-000000000102') = 1
+   from public.project_tasks t where t.id = '00000000-0000-0000-0000-0000000000d4'),
+  'moving to review closes the work time and carries the running person to the review phase'
 );
-select lives_ok($$ update public.project_tasks set timer_started_at = now() - interval '5 minutes' where id = '00000000-0000-0000-0000-0000000000d4' $$, 'the review timer is moved back 5 minutes');
-select lives_ok($$ select public.set_task_timer('00000000-0000-0000-0000-0000000000d4', false) $$, 'a member pauses the timer');
+reset role;
+update public.project_task_time_entries set started_at = now() - interval '5 minutes' where task_id = '00000000-0000-0000-0000-0000000000d4' and ended_at is null;
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
+select lives_ok($$ select public.set_task_timer('00000000-0000-0000-0000-0000000000d4', false) $$, 'a member pauses their timer');
 select ok(
-  (select review_seconds between 300 and 302 and timer_started_at is null from public.project_tasks where id = '00000000-0000-0000-0000-0000000000d4'),
+  (select t.review_seconds between 300 and 302 and not exists (select 1 from public.project_task_time_entries e where e.task_id = t.id and e.ended_at is null)
+   from public.project_tasks t where t.id = '00000000-0000-0000-0000-0000000000d4'),
   'pausing keeps the review time and stops the clock'
 );
 select lives_ok($$ select public.set_task_timer('00000000-0000-0000-0000-0000000000d4', true) $$, 'a member resumes the timer');
-select ok((select timer_started_at is not null and timer_phase = 'review' from public.project_tasks where id = '00000000-0000-0000-0000-0000000000d4'), 'resuming runs the timer in the column phase');
+select ok(exists (select 1 from public.project_task_time_entries where task_id = '00000000-0000-0000-0000-0000000000d4' and ended_at is null and phase = 'review'), 'resuming runs the timer in the column phase');
 select lives_ok($$ update public.project_tasks set status = 'done' where id = '00000000-0000-0000-0000-0000000000d4' $$, 'the task is finished');
 select ok(
-  (select timer_started_at is null and timer_phase is null and work_seconds >= 600 and review_seconds >= 300 from public.project_tasks where id = '00000000-0000-0000-0000-0000000000d4'),
-  'finishing stops the timer and keeps work and review time'
+  (select not exists (select 1 from public.project_task_time_entries e where e.task_id = t.id and e.ended_at is null) and t.work_seconds >= 600 and t.review_seconds >= 300 and t.completed_at is not null
+   from public.project_tasks t where t.id = '00000000-0000-0000-0000-0000000000d4'),
+  'finishing stops every timer, keeps the time and records the completion date'
 );
 select throws_ok($$ select public.set_task_timer('00000000-0000-0000-0000-0000000000d4', true) $$, 'P0001', 'timer_not_available', 'a finished task has no timer to resume');
-select ok((select completed_at is not null from public.project_tasks where id = '00000000-0000-0000-0000-0000000000d4'), 'finishing a task records when it was completed');
 select lives_ok($$ update public.project_tasks set status = 'todo' where id = '00000000-0000-0000-0000-0000000000d4' $$, 'a finished task is reopened');
 select ok((select completed_at is null from public.project_tasks where id = '00000000-0000-0000-0000-0000000000d4'), 'reopening a task clears the completion date');
-
-select is((select count(*)::int from public.project_task_time_entries where task_id = '00000000-0000-0000-0000-0000000000d4' and ended_at is null), 0, 'no time entry stays open after the task is finished');
-select is((select count(distinct profile_id)::int from public.project_task_time_entries where task_id = '00000000-0000-0000-0000-0000000000d4'), 1, 'all the time of the task belongs to the person who ran the timer');
 select ok(
-  (select sum(seconds) filter (where phase = 'work') between 600 and 606 from public.project_task_time_entries where task_id = '00000000-0000-0000-0000-0000000000d4'),
-  'work entries add up to the work time'
-);
-select ok(
-  (select sum(seconds) filter (where phase = 'review') between 300 and 306 from public.project_task_time_entries where task_id = '00000000-0000-0000-0000-0000000000d4'),
-  'review entries add up to the review time'
+  (select t.work_seconds = (select coalesce(sum(seconds), 0) from public.project_task_time_entries e where e.task_id = t.id and e.phase = 'work')
+      and t.review_seconds = (select coalesce(sum(seconds), 0) from public.project_task_time_entries e where e.task_id = t.id and e.phase = 'review')
+   from public.project_tasks t where t.id = '00000000-0000-0000-0000-0000000000d4'),
+  'the task totals are the sum of its time entries'
 );
 
+-- Duas pessoas, timers independentes.
 select lives_ok(
   $$ insert into public.project_tasks (id, project_id, title, status) values ('00000000-0000-0000-0000-0000000000d5', '00000000-0000-0000-0000-0000000000c1', 'Dois no relógio', 'in_progress') $$,
-  'a task created in progress starts a time entry'
+  'a task created in progress starts the timer of whoever created it'
 );
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
-select lives_ok($$ select public.set_task_timer('00000000-0000-0000-0000-0000000000d5', false) $$, 'the coordinator pauses the timer started by someone else');
-select lives_ok($$ select public.set_task_timer('00000000-0000-0000-0000-0000000000d5', true) $$, 'the coordinator resumes the timer');
-select is((select count(distinct profile_id)::int from public.project_task_time_entries where task_id = '00000000-0000-0000-0000-0000000000d5'), 2, 'each person gets their own time entries');
+select lives_ok($$ select public.set_task_timer('00000000-0000-0000-0000-0000000000d5', true) $$, 'the coordinator starts their own timer on the same task');
+select is((select count(*)::int from public.project_task_time_entries where task_id = '00000000-0000-0000-0000-0000000000d5' and ended_at is null), 2, 'two people can have the timer running at the same time');
+select lives_ok($$ select public.set_task_timer('00000000-0000-0000-0000-0000000000d5', false) $$, 'the coordinator pauses only their own timer');
 select ok(
-  (select profile_id = '00000000-0000-0000-0000-000000000101' from public.project_task_time_entries where task_id = '00000000-0000-0000-0000-0000000000d5' and ended_at is null),
-  'the open entry belongs to whoever resumed the timer'
+  (select count(*) = 1 and bool_and(profile_id = '00000000-0000-0000-0000-000000000102') from public.project_task_time_entries where task_id = '00000000-0000-0000-0000-0000000000d5' and ended_at is null),
+  'the other person timer keeps running'
 );
 select is(
   (select count(distinct profile_id)::int from public.get_task_time_report(now() - interval '1 day', now() + interval '1 day')),
@@ -1249,6 +1258,39 @@ select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000
 select ok(
   (select count(*) > 0 and bool_and(profile_id = '00000000-0000-0000-0000-000000000102') from public.get_task_time_report(now() - interval '1 day', now() + interval '1 day')),
   'a researcher report only has their own time'
+);
+
+-- Ajustar o horário e pausa automática.
+reset role;
+update public.project_task_time_entries set started_at = now() - interval '3 hours' where task_id = '00000000-0000-0000-0000-0000000000d5' and ended_at is null;
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
+select lives_ok(
+  $$ select public.adjust_time_entry((select id from public.project_task_time_entries where task_id = '00000000-0000-0000-0000-0000000000d5' and ended_at is null), now() - interval '1 hour') $$,
+  'the owner closes a forgotten timer at an earlier time'
+);
+select ok(
+  (select e.seconds between 7200 and 7202 and e.ended_at is not null and not e.auto_closed
+   from public.project_task_time_entries e where e.task_id = '00000000-0000-0000-0000-0000000000d5' and e.profile_id = '00000000-0000-0000-0000-000000000102' and e.ended_at is not null order by e.started_at limit 1),
+  'the adjusted entry has the corrected duration'
+);
+select throws_ok(
+  $$ select public.adjust_time_entry((select id from public.project_task_time_entries where task_id = '00000000-0000-0000-0000-0000000000d5' and profile_id = '00000000-0000-0000-0000-000000000102' limit 1), now() - interval '10 days') $$,
+  'P0001', 'invalid_time',
+  'an end before the start is rejected'
+);
+select lives_ok($$ select public.set_task_timer('00000000-0000-0000-0000-0000000000d5', true) $$, 'the owner starts a new timer');
+reset role;
+update public.project_task_time_entries set started_at = now() - interval '13 hours' where task_id = '00000000-0000-0000-0000-0000000000d5' and ended_at is null;
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
+reset role;
+select is(private.pause_stale_timers(), 1, 'the automatic pause closes a timer left running for more than 12 hours');
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
+select ok(
+  (select e.seconds = 43200 and e.auto_closed from public.project_task_time_entries e where e.task_id = '00000000-0000-0000-0000-0000000000d5' and e.profile_id = '00000000-0000-0000-0000-000000000102' and e.auto_closed),
+  'the automatic pause counts exactly 12 hours'
 );
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000103","email":"other@example.com","role":"authenticated"}', true);
@@ -1280,6 +1322,11 @@ select throws_ok(
   'non-member cannot move a task to another project'
 );
 select throws_ok($$ select public.set_task_timer('00000000-0000-0000-0000-0000000000d4', false) $$, 'P0001', 'project_access_required', 'non-member cannot control the timer');
+select throws_ok(
+  $$ select public.adjust_time_entry((select id from public.project_task_time_entries limit 1), now()) $$,
+  'P0001', 'entry_not_found',
+  'non-member cannot see or adjust time entries'
+);
 select is((select count(*) from public.project_task_time_entries), 0::bigint, 'non-member cannot read time entries');
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);

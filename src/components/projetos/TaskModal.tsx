@@ -6,6 +6,7 @@ import {
   createProjectTask,
   listTaskTimeEntries,
   deleteProjectTask,
+  getTaskTotals,
   moveTaskToProject,
   setTaskAssignees,
   setTaskChecklist,
@@ -31,6 +32,8 @@ import { Button } from "../ui/Button";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { Modal } from "../ui/Modal";
 import { RichTextEditor } from "../ui/RichTextEditor";
+import { useCurrentProfile } from "../../lib/currentUser";
+import { TimeEntriesEditor } from "./TimeEntriesEditor";
 import { ChecklistEditor, type ChecklistDraftItem } from "./ChecklistEditor";
 import { inputClassName } from "../ui/formStyles";
 
@@ -90,20 +93,28 @@ export function TaskModal({
   const [salvando, setSalvando] = useState(false);
   const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
   const [trechos, setTrechos] = useState<TimeEntry[]>([]);
+  const [totais, setTotais] = useState({ work: task?.work_seconds ?? 0, review: task?.review_seconds ?? 0 });
+  const { currentProfile } = useCurrentProfile();
 
-  // Tempo por pessoa: lê os trechos de tempo da tarefa ao abrir (e de novo se o cronômetro mudar).
+  // Tempo por pessoa: lê os trechos de tempo e os totais da tarefa ao abrir (e de novo depois de um ajuste ou se
+  // alguém ligar/pausar o timer enquanto o modal está aberto).
   const taskId = task?.id;
-  const cronometro = task?.timer_started_at ?? null;
+  const cronometro = task ? task.running.map((item) => item.profile_id).join(",") + `:${task.work_seconds}:${task.review_seconds}` : "";
+  const [versaoTempo, setVersaoTempo] = useState(0);
   useEffect(() => {
     if (!taskId) return;
     let ativo = true;
-    listTaskTimeEntries(taskId)
-      .then((lista) => ativo && setTrechos(lista))
+    Promise.all([listTaskTimeEntries(taskId), getTaskTotals(taskId)])
+      .then(([lista, soma]) => {
+        if (!ativo) return;
+        setTrechos(lista);
+        setTotais({ work: soma.work_seconds, review: soma.review_seconds });
+      })
       .catch(() => undefined);
     return () => {
       ativo = false;
     };
-  }, [taskId, cronometro]);
+  }, [taskId, cronometro, versaoTempo]);
 
   function escolherProjeto(id: string) {
     setChosenProjectId(id);
@@ -168,9 +179,20 @@ export function TaskModal({
     }
   }
 
-  const agora = useNow(Boolean(task?.timer_started_at));
-  const tempos = task ? getTaskTimes(task, agora) : null;
-  const porPessoa = task ? getTimeByPerson(trechos, task, agora) : null;
+  const trechosAbertos = trechos.filter((trecho) => trecho.ended_at === null);
+  const agora = useNow(trechosAbertos.length > 0);
+  const tempos = task
+    ? getTaskTimes(
+        {
+          status: task.status,
+          work_seconds: totais.work,
+          review_seconds: totais.review,
+          running: trechosAbertos.map((trecho) => ({ profile_id: trecho.profile_id, phase: trecho.phase, started_at: trecho.started_at, full_name: trecho.full_name, avatar_url: trecho.avatar_url })),
+        },
+        agora,
+      )
+    : null;
+  const porPessoa = task ? getTimeByPerson(trechos, { work_seconds: totais.work, review_seconds: totais.review }, agora) : null;
   const mostrar = (segundos: number) => (tempos?.running ? formatClock(segundos) : formatDuration(segundos));
   const formatarData = (valor: string) => new Intl.DateTimeFormat(getLocale(), { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(valor));
   const semProjetos = !lockedProjectId && projects.length === 0;
@@ -288,6 +310,16 @@ export function TaskModal({
               ) : null}
             </ul>
           </div>
+        ) : null}
+
+        {task ? (
+          <TimeEntriesEditor
+            entries={trechos}
+            profileId={currentProfile?.id}
+            isCoordinator={currentProfile?.role === "coordinator"}
+            now={agora}
+            onChanged={() => setVersaoTempo((valor) => valor + 1)}
+          />
         ) : null}
 
         <fieldset className="grid gap-2">

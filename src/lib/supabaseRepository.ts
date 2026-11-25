@@ -1243,22 +1243,31 @@ const taskSelect = [
   "completed_at",
   "work_seconds",
   "review_seconds",
-  "timer_phase",
-  "timer_started_at",
+  "running:project_task_time_entries(profile_id, phase, started_at, profile:profiles!project_task_time_entries_profile_fkey(full_name, avatar_url))",
   "project:projects(name)",
   "checklist:project_task_checklist_items(id, title, done, position)",
   "assignees:project_task_assignees(profile_id, profile:profiles!project_task_assignees_profile_id_fkey(full_name, avatar_url))",
 ].join(", ");
 
-type TaskRow = Omit<ProjectTask, "project_name" | "assignees"> & {
+type RunningRow = { profile_id: string; phase: "work" | "review"; started_at: string; profile: { full_name: string; avatar_url: string | null } | null };
+
+type TaskRow = Omit<ProjectTask, "project_name" | "assignees" | "running"> & {
   project: { name: string } | null;
+  running: RunningRow[] | null;
   assignees: Array<{ profile_id: string; profile: { full_name: string; avatar_url: string | null } | null }>;
 };
 
 function mapTask(row: TaskRow): ProjectTask {
-  const { project, assignees, ...task } = row;
+  const { project, assignees, running, ...task } = row;
   return {
     ...task,
+    running: (running ?? []).map((timer) => ({
+      profile_id: timer.profile_id,
+      phase: timer.phase,
+      started_at: timer.started_at,
+      full_name: timer.profile?.full_name ?? "",
+      avatar_url: timer.profile?.avatar_url ?? null,
+    })),
     checklist: [...(task.checklist ?? [])].sort((a, b) => a.position - b.position),
     project_name: project?.name ?? null,
     assignees: (assignees ?? [])
@@ -1272,14 +1281,14 @@ function mapTask(row: TaskRow): ProjectTask {
 }
 
 export async function listProjectTasks(projectId: string) {
-  const { data, error } = await client().from("project_tasks").select(taskSelect).eq("project_id", projectId);
+  const { data, error } = await client().from("project_tasks").select(taskSelect).eq("project_id", projectId).is("running.ended_at", null);
   throwIfError(error);
   return ((data ?? []) as unknown as TaskRow[]).map(mapTask);
 }
 
 // Todas as tarefas que a pessoa pode ver (coordenador: todas; pesquisador: as dos seus projetos).
 export async function listVisibleTasks() {
-  const { data, error } = await client().from("project_tasks").select(taskSelect);
+  const { data, error } = await client().from("project_tasks").select(taskSelect).is("running.ended_at", null);
   throwIfError(error);
   return ((data ?? []) as unknown as TaskRow[]).map(mapTask);
 }
@@ -1289,7 +1298,8 @@ export async function listMyTasks(profileId: string) {
   const { data, error } = await client()
     .from("project_tasks")
     .select(`${taskSelect}, mine:project_task_assignees!inner(profile_id)`)
-    .eq("mine.profile_id", profileId);
+    .eq("mine.profile_id", profileId)
+    .is("running.ended_at", null);
   throwIfError(error);
   return ((data ?? []) as unknown as TaskRow[]).map(mapTask);
 }
@@ -1351,7 +1361,7 @@ export async function setTaskTimer(taskId: string, running: boolean) {
 export async function listTaskTimeEntries(taskId: string): Promise<TimeEntry[]> {
   const { data, error } = await client()
     .from("project_task_time_entries")
-    .select("id, profile_id, phase, started_at, ended_at, seconds, profile:profiles!project_task_time_entries_profile_fkey(full_name, avatar_url)")
+    .select("id, profile_id, phase, started_at, ended_at, seconds, auto_closed, profile:profiles!project_task_time_entries_profile_fkey(full_name, avatar_url)")
     .eq("task_id", taskId)
     .order("started_at");
   throwIfError(error);
@@ -1361,6 +1371,19 @@ export async function listTaskTimeEntries(taskId: string): Promise<TimeEntry[]> 
     full_name: profile?.full_name ?? "",
     avatar_url: profile?.avatar_url ?? null,
   }));
+}
+
+// Totais fechados da tarefa (de todos); o modal usa para mostrar o tempo certo depois de um ajuste.
+export async function getTaskTotals(taskId: string) {
+  const { data, error } = await client().from("project_tasks").select("work_seconds, review_seconds").eq("id", taskId).single();
+  throwIfError(error);
+  return data as { work_seconds: number; review_seconds: number };
+}
+
+// Corrige (ou define) a hora em que um trecho de tempo terminou.
+export async function adjustTimeEntry(entryId: string, endedAt: Date) {
+  const { error } = await client().rpc("adjust_time_entry", { p_entry_id: entryId, p_ended_at: endedAt.toISOString() });
+  throwIfError(error);
 }
 
 // Tempo trabalhado por pessoa e projeto no período (coordenador: todos; demais: só o próprio).
