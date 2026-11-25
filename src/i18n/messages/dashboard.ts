@@ -41,7 +41,6 @@ export const dashboard = {
   "home.actionProjects": { pt: "Projetos e tarefas", en: "Projects and tasks", es: "Proyectos y tareas" },
   "home.actionPurchase": { pt: "Pedir compra", en: "Request purchase", es: "Pedir compra" },
   "home.actionRequest": { pt: "Abrir chamado", en: "Open request", es: "Abrir solicitud" },
-  "home.actionSuggestion": { pt: "Enviar sugestão", en: "Send suggestion", es: "Enviar sugerencia" },
   "home.nowHappening": { pt: "Acontecendo agora", en: "Happening now", es: "Ocurriendo ahora" },
   "home.nextBooking": { pt: "Sua próxima reserva", en: "Your next booking", es: "Tu próxima reserva" },
   "home.noBookings": { pt: "Você não tem reservas por vir.", en: "You have no upcoming bookings.", es: "No tienes reservas próximas." },
