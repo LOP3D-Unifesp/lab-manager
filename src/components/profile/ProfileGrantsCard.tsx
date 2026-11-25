@@ -2,9 +2,18 @@ import { Landmark, Save } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { t } from "../../i18n";
-import { validateGrant, type FundingGrant } from "../../lib/domain";
+import { validateContractFile, validateGrant, type FundingGrant } from "../../lib/domain";
 import type { ProjectDirectoryEntry } from "../../lib/projects";
-import { listProjectDirectory, replaceMyFundingGrants, requestProjectJoin } from "../../lib/supabaseRepository";
+import {
+  deleteGrantContractFiles,
+  getGrantContracts,
+  getGrantContractUrl,
+  listProjectDirectory,
+  removeGrantContract,
+  replaceMyFundingGrants,
+  requestProjectJoin,
+  uploadGrantContract,
+} from "../../lib/supabaseRepository";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { FundingGrantsEditor } from "./FundingGrantsEditor";
@@ -24,14 +33,28 @@ export function ProfileGrantsCard({ onSaved, profileId, saved }: ProfileGrantsCa
   const [draft, setDraft] = useState<FundingGrant[]>(saved);
   const [directory, setDirectory] = useState<ProjectDirectoryEntry[]>([]);
   const [joiningProjectId, setJoiningProjectId] = useState<string | null>(null);
+  const [contracts, setContracts] = useState<Record<string, string>>({});
+  const [contractBusyId, setContractBusyId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // Quando o perfil é recarregado (depois de salvar), o rascunho passa a ser o que ficou salvo.
+  // Quando o perfil é recarregado (depois de salvar), o rascunho passa a ser o que ficou salvo e os termos são relidos
+  // (salvar recria as bolsas, com ids novos).
   useEffect(() => {
     setDraft(saved);
-  }, [saved]);
+    let active = true;
+    getGrantContracts(profileId)
+      .then((found) => {
+        if (active) setContracts(found);
+      })
+      .catch(() => {
+        if (active) setError(t("grants.errContractLoad"));
+      });
+    return () => {
+      active = false;
+    };
+  }, [saved, profileId]);
 
   useEffect(() => {
     let active = true;
@@ -76,6 +99,52 @@ export function ProfileGrantsCard({ onSaved, profileId, saved }: ProfileGrantsCa
     }
   }
 
+  async function uploadContract(grantId: string, file: File) {
+    setError("");
+    setSuccess("");
+    const problem = validateContractFile(file);
+    if (problem) {
+      setError(t(problem === "type" ? "grants.errContractType" : "grants.errContractSize"));
+      return;
+    }
+    setContractBusyId(grantId);
+    try {
+      const path = await uploadGrantContract(profileId, grantId, file);
+      setContracts((current) => ({ ...current, [grantId]: path }));
+      setSuccess(t("grants.contractSaved"));
+    } catch {
+      setError(t("grants.errContract"));
+    } finally {
+      setContractBusyId(null);
+    }
+  }
+
+  async function removeContract(grantId: string) {
+    setError("");
+    setSuccess("");
+    setContractBusyId(grantId);
+    try {
+      await removeGrantContract(grantId);
+      setContracts((current) => {
+        const next = { ...current };
+        delete next[grantId];
+        return next;
+      });
+    } catch {
+      setError(t("grants.errContract"));
+    } finally {
+      setContractBusyId(null);
+    }
+  }
+
+  async function openContract(path: string) {
+    try {
+      window.open(await getGrantContractUrl(path), "_blank", "noopener,noreferrer");
+    } catch {
+      setError(t("grants.errContract"));
+    }
+  }
+
   async function save() {
     setError("");
     setSuccess("");
@@ -90,7 +159,16 @@ export function ProfileGrantsCard({ onSaved, profileId, saved }: ProfileGrantsCa
 
     setSaving(true);
     try {
-      await replaceMyFundingGrants(profileId, draft);
+      // Bolsas removidas perdem o termo (o arquivo é apagado depois de salvar); as que ficam levam o termo junto.
+      const keptIds = new Set(draft.map((grant) => grant.id));
+      const orphanPaths = Object.entries(contracts)
+        .filter(([grantId]) => !keptIds.has(grantId))
+        .map(([, path]) => path);
+      await replaceMyFundingGrants(
+        profileId,
+        draft.map((grant) => ({ ...grant, contract_path: grant.id ? (contracts[grant.id] ?? null) : null })),
+      );
+      await deleteGrantContractFiles(orphanPaths).catch(() => undefined);
       await onSaved();
       setSuccess(t("grants.saved"));
     } catch {
@@ -120,7 +198,13 @@ export function ProfileGrantsCard({ onSaved, profileId, saved }: ProfileGrantsCa
       </div>
 
       <FundingGrantsEditor
+        contractBusyId={contractBusyId}
+        contracts={contracts}
+        dirty={dirty}
         disabled={saving}
+        onOpenContract={openContract}
+        onRemoveContract={removeContract}
+        onUploadContract={uploadContract}
         joiningProjectId={joiningProjectId}
         onChange={change}
         onRequestJoin={requestJoin}

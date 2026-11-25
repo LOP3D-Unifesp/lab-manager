@@ -44,6 +44,8 @@ export function getFundingAgencyLabel(
 }
 
 export type FundingGrant = {
+  /** Só existe em bolsa já salva. */
+  id?: string;
   agency: FundingAgency;
   agency_other: string | null;
   grant_name: string | null;
@@ -55,7 +57,19 @@ export type FundingGrant = {
   /** "AAAA-MM-DD" */
   end_date: string | null;
   process_number: string | null;
+  /** Caminho do termo de outorga (PDF) no armazenamento; só a dona e os coordenadores recebem. */
+  contract_path?: string | null;
 };
+
+export const CONTRACT_MAX_BYTES = 10 * 1024 * 1024;
+
+// O termo de outorga é um PDF de até 10 MB.
+export function validateContractFile(file: { type: string; name: string; size: number }): "type" | "size" | null {
+  const isPdf = file.type === "application/pdf" || (file.type === "" && file.name.toLowerCase().endsWith(".pdf"));
+  if (!isPdf) return "type";
+  if (file.size > CONTRACT_MAX_BYTES) return "size";
+  return null;
+}
 
 export function emptyGrant(): FundingGrant {
   return {

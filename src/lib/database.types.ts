@@ -461,14 +461,14 @@ isOneToOne: false
                   ]
                 },"profile_funding_grants": {
                   Row: {
-                    "agency": Database["public"]['Enums']["funding_agency"],"agency_other": string | null,"created_at": string,"grant_name": string | null,"id": string,"monthly_value": number | null,"process_number": string | null,"profile_id": string,"project_id": string | null,"start_date": string | null,"end_date": string | null,"weekly_hours": number | null
+                    "agency": Database["public"]['Enums']["funding_agency"],"agency_other": string | null,"contract_path": string | null,"created_at": string,"grant_name": string | null,"id": string,"monthly_value": number | null,"process_number": string | null,"profile_id": string,"project_id": string | null,"start_date": string | null,"end_date": string | null,"weekly_hours": number | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "agency": Database["public"]['Enums']["funding_agency"],"agency_other"?: string | null,"created_at"?: string,"grant_name"?: string | null,"id"?: string,"monthly_value"?: number | null,"process_number"?: string | null,"profile_id": string,"project_id"?: string | null,"start_date"?: string | null,"end_date"?: string | null,"weekly_hours"?: number | null
+                    "agency": Database["public"]['Enums']["funding_agency"],"agency_other"?: string | null,"contract_path"?: string | null,"created_at"?: string,"grant_name"?: string | null,"id"?: string,"monthly_value"?: number | null,"process_number"?: string | null,"profile_id": string,"project_id"?: string | null,"start_date"?: string | null,"end_date"?: string | null,"weekly_hours"?: number | null
                   }
                   Update: {
-                    "agency"?: Database["public"]['Enums']["funding_agency"],"agency_other"?: string | null,"created_at"?: string,"grant_name"?: string | null,"id"?: string,"monthly_value"?: number | null,"process_number"?: string | null,"profile_id"?: string,"project_id"?: string | null,"start_date"?: string | null,"end_date"?: string | null,"weekly_hours"?: number | null
+                    "agency"?: Database["public"]['Enums']["funding_agency"],"agency_other"?: string | null,"contract_path"?: string | null,"created_at"?: string,"grant_name"?: string | null,"id"?: string,"monthly_value"?: number | null,"process_number"?: string | null,"profile_id"?: string,"project_id"?: string | null,"start_date"?: string | null,"end_date"?: string | null,"weekly_hours"?: number | null
                   }
                   Relationships: [
                     {
@@ -1084,10 +1084,20 @@ isOneToOne: false
         isOneToOne: false
         isSetofReturn: true
       } },
+"get_grant_contracts":
+{ Args: { "p_profile_id": string }; Returns: {
+              "contract_path": string,
+"grant_id": string
+            }[]
+                          },
+"set_grant_contract":
+{ Args: { "p_grant_id": string,"p_path": string | null }; Returns: string | null
+                           },
 "replace_profile_funding_grants":
 { Args: { "p_grants": Json,"p_profile_id": string }; Returns: {
               "agency": Database["public"]['Enums']["funding_agency"],
 "agency_other": string | null,
+"contract_path": string | null,
 "created_at": string,
 "grant_name": string | null,
 "id": string,

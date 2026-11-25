@@ -1,5 +1,5 @@
-import { Plus, Trash2 } from "lucide-react";
-import type { ReactNode } from "react";
+import { ExternalLink, FileText, Paperclip, Plus, Trash2 } from "lucide-react";
+import { useRef, type ReactNode } from "react";
 
 import { t } from "../../i18n";
 import { emptyGrant, fundingAgencyOptions, type FundingAgency, type FundingGrant } from "../../lib/domain";
@@ -14,8 +14,79 @@ type FundingGrantsEditorProps = {
   projects: ProjectDirectoryEntry[];
   onRequestJoin: (projectId: string) => void;
   joiningProjectId: string | null;
+  /** Termos já anexados ({ id da bolsa: caminho }). */
+  contracts: Record<string, string>;
+  /** Há alterações não salvas: o anexo só vale para bolsa já salva e sem edição pendente. */
+  dirty: boolean;
+  contractBusyId: string | null;
+  onUploadContract: (grantId: string, file: File) => void;
+  onRemoveContract: (grantId: string) => void;
+  onOpenContract: (path: string) => void;
   disabled?: boolean;
 };
+
+type ContractRowProps = {
+  busy: boolean;
+  dirty: boolean;
+  disabled?: boolean;
+  grantId: string | undefined;
+  onOpen: (path: string) => void;
+  onRemove: (grantId: string) => void;
+  onUpload: (grantId: string, file: File) => void;
+  path: string | undefined;
+};
+
+// Termo de outorga da bolsa: só vale para bolsa já salva e sem edição pendente (salvar recria as bolsas).
+function ContractRow({ busy, dirty, disabled, grantId, onOpen, onRemove, onUpload, path }: ContractRowProps) {
+  const input = useRef<HTMLInputElement>(null);
+  const canAttach = Boolean(grantId) && !dirty;
+  const hint = !grantId ? t("grants.contractSaveFirst") : dirty ? t("grants.contractSaveChanges") : t("grants.contractHint");
+
+  return (
+    <div className="grid gap-2 rounded-lg border border-dashed border-border p-3">
+      <p className="text-sm font-semibold">{t("grants.contract")}</p>
+      <div className="flex flex-wrap items-center gap-2">
+        {path ? (
+          <>
+            <FileText className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+            <Button className="min-h-9 px-3 py-2 text-sm" onClick={() => onOpen(path)} variant="secondary">
+              <ExternalLink className="mr-2 h-4 w-4" aria-hidden="true" />
+              {t("grants.contractOpen")}
+            </Button>
+          </>
+        ) : (
+          <span className="text-sm text-muted">{t("grants.contractNone")}</span>
+        )}
+        <Button
+          className="min-h-9 px-3 py-2 text-sm"
+          disabled={disabled || busy || !canAttach}
+          onClick={() => input.current?.click()}
+          variant="secondary"
+        >
+          <Paperclip className="mr-2 h-4 w-4" aria-hidden="true" />
+          {busy ? t("grants.contractSending") : path ? t("grants.contractReplace") : t("grants.contractAttach")}
+        </Button>
+        {path && grantId ? (
+          <Button className="min-h-9 px-3 py-2 text-sm" disabled={disabled || busy || !canAttach} onClick={() => onRemove(grantId)} variant="ghost">
+            {t("grants.contractRemove")}
+          </Button>
+        ) : null}
+        <input
+          accept="application/pdf,.pdf"
+          className="hidden"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (file && grantId) onUpload(grantId, file);
+          }}
+          ref={input}
+          type="file"
+        />
+      </div>
+      <p className="text-sm text-muted">{hint}</p>
+    </div>
+  );
+}
 
 function Field({ children, label }: { children: ReactNode; label: string }) {
   return (
@@ -26,7 +97,20 @@ function Field({ children, label }: { children: ReactNode; label: string }) {
   );
 }
 
-export function FundingGrantsEditor({ disabled, joiningProjectId, onChange, onRequestJoin, projects, value }: FundingGrantsEditorProps) {
+export function FundingGrantsEditor({
+  contractBusyId,
+  contracts,
+  dirty,
+  disabled,
+  joiningProjectId,
+  onChange,
+  onOpenContract,
+  onRemoveContract,
+  onRequestJoin,
+  onUploadContract,
+  projects,
+  value,
+}: FundingGrantsEditorProps) {
   function updateGrant(index: number, patch: Partial<FundingGrant>) {
     onChange(value.map((grant, i) => (i === index ? { ...grant, ...patch } : grant)));
   }
@@ -186,6 +270,17 @@ export function FundingGrantsEditor({ disabled, joiningProjectId, onChange, onRe
                   />
                 </Field>
               </div>
+
+              <ContractRow
+                busy={contractBusyId !== null && contractBusyId === grant.id}
+                dirty={dirty}
+                disabled={disabled}
+                grantId={grant.id}
+                onOpen={onOpenContract}
+                onRemove={onRemoveContract}
+                onUpload={onUploadContract}
+                path={grant.id ? contracts[grant.id] : undefined}
+              />
             </div>
           );
         })

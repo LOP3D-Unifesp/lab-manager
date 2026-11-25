@@ -84,6 +84,7 @@ Status do MVP implementado:
 | `20260930_notification_recipients` | Quem recebe aviso de compra e de chamado; tipo `request_status` (secao 3.20). |
 | `20261001_project_join_requests` | Pedidos de entrada em projetos e resumo de projetos para todos (secao 3.21). |
 | `20261002_funding_grant_project_dates` | `profile_funding_grants.project_id`, `start_date`, `end_date`, `process_number`; `sus` vira `fap`; RPC `replace_profile_funding_grants` com os campos novos, recusa `sus` e atualiza a carga semanal. |
+| `20261003_funding_grant_contract_file` | `profile_funding_grants.contract_path`; bucket privado `grant-contracts` (PDF, 10 MB; dona e coordenadores leem e apagam); `contract_path` sai da leitura de `authenticated` (leitura por coluna); RPCs `get_grant_contracts` e `set_grant_contract`; `replace_profile_funding_grants` preserva o caminho. |
 
 Resumo dos objetos que mais mudam o entendimento do schema:
 

@@ -82,7 +82,7 @@ export const publicProfileSelect = [
   "email",
   "role",
   "academic_affiliation",
-  "funding_grants:profile_funding_grants(agency, agency_other, grant_name, weekly_hours, monthly_value, project_id, start_date, end_date, process_number)",
+  "funding_grants:profile_funding_grants(id, agency, agency_other, grant_name, weekly_hours, monthly_value, project_id, start_date, end_date, process_number)",
   "weekly_workload_hours",
   "lattes_url",
   "nationality_country_code",
@@ -119,6 +119,7 @@ export type ProfileInput = {
 
 function mapGrant(grant: FundingGrant): FundingGrant {
   return {
+    id: grant.id,
     agency: grant.agency,
     agency_other: grant.agency_other,
     grant_name: grant.grant_name,
@@ -132,14 +133,72 @@ function mapGrant(grant: FundingGrant): FundingGrant {
 }
 
 // Grava de uma vez todas as bolsas da pessoa (a RPC troca o conjunto inteiro) e devolve o que ficou salvo.
+// O termo de cada bolsa vai junto em contract_path, senão ele se perderia na troca.
 export async function replaceMyFundingGrants(profileId: string, grants: FundingGrant[]) {
   const { data, error } = await client().rpc("replace_profile_funding_grants", {
     p_profile_id: profileId,
-    p_grants: grants.map((grant) => ({ ...mapGrant(grant), agency_other: grant.agency === "other" ? grant.agency_other : null })),
+    p_grants: grants.map((grant) => ({
+      ...mapGrant(grant),
+      id: undefined,
+      agency_other: grant.agency === "other" ? grant.agency_other : null,
+      contract_path: grant.contract_path ?? null,
+    })),
   });
   throwIfError(error);
 
-  return ((data ?? []) as FundingGrant[]).map(mapGrant);
+  return ((data ?? []) as FundingGrant[]).map((grant) => ({ ...mapGrant(grant), contract_path: grant.contract_path ?? null }));
+}
+
+const CONTRACT_BUCKET = "grant-contracts";
+
+// Termos de outorga das bolsas de uma pessoa ({ id da bolsa: caminho }); só a dona e os coordenadores podem ler.
+export async function getGrantContracts(profileId: string) {
+  const { data, error } = await client().rpc("get_grant_contracts", { p_profile_id: profileId });
+  throwIfError(error);
+  const contracts: Record<string, string> = {};
+  for (const row of (data ?? []) as Array<{ grant_id: string; contract_path: string }>) {
+    contracts[row.grant_id] = row.contract_path;
+  }
+  return contracts;
+}
+
+async function removeContractFile(path: string | null) {
+  if (!path) return;
+  // Apagar o arquivo antigo é limpeza: se falhar, o termo novo já está ligado à bolsa.
+  await client().storage.from(CONTRACT_BUCKET).remove([path]);
+}
+
+// Sobe o PDF, liga à bolsa já salva e apaga o arquivo anterior. Devolve o novo caminho.
+export async function uploadGrantContract(profileId: string, grantId: string, file: File) {
+  const path = `${profileId}/${crypto.randomUUID()}.pdf`;
+  const { error: uploadError } = await client().storage.from(CONTRACT_BUCKET).upload(path, file, { contentType: "application/pdf" });
+  throwIfError(uploadError);
+  const { data, error } = await client().rpc("set_grant_contract", { p_grant_id: grantId, p_path: path });
+  if (error) {
+    await removeContractFile(path);
+    throwIfError(error);
+  }
+  await removeContractFile((data as string | null) ?? null);
+  return path;
+}
+
+export async function removeGrantContract(grantId: string) {
+  const { data, error } = await client().rpc("set_grant_contract", { p_grant_id: grantId, p_path: null });
+  throwIfError(error);
+  await removeContractFile((data as string | null) ?? null);
+}
+
+// Apaga arquivos de termos que ficaram sem bolsa (bolsa removida).
+export async function deleteGrantContractFiles(paths: string[]) {
+  if (paths.length === 0) return;
+  await client().storage.from(CONTRACT_BUCKET).remove(paths);
+}
+
+// Endereço temporário (1 hora) para abrir o termo.
+export async function getGrantContractUrl(path: string) {
+  const { data, error } = await client().storage.from(CONTRACT_BUCKET).createSignedUrl(path, 3600);
+  throwIfError(error);
+  return data?.signedUrl ?? "";
 }
 
 function profileRpcArgs(params: ProfileInput) {

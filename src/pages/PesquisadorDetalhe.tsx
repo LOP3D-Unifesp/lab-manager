@@ -18,7 +18,15 @@ import {
 } from "../lib/domain";
 import { getStatusPresenca, getVinculoLabel, type StatusPresenca } from "../lib/pesquisadores";
 import { getProjectStatusLabel, getProjectStatusVariant, type ProjectDirectoryEntry } from "../lib/projects";
-import { getProfile, listAvailability, listProfileSkills, listProjectDirectory, listSkills } from "../lib/supabaseRepository";
+import {
+  getGrantContracts,
+  getGrantContractUrl,
+  getProfile,
+  listAvailability,
+  listProfileSkills,
+  listProjectDirectory,
+  listSkills,
+} from "../lib/supabaseRepository";
 
 const presenceVariants: Record<StatusPresenca, "success" | "info" | "warning" | "neutral"> = {
   Presente: "success",
@@ -59,6 +67,28 @@ export function PesquisadorDetalhe() {
   // undefined: carregando; null: não encontrado.
   const [data, setData] = useState<Loaded | null | undefined>(undefined);
   const [error, setError] = useState("");
+  // Termos de outorga ({ id da bolsa: caminho }): só a própria pessoa e os coordenadores podem ler.
+  const [contracts, setContracts] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    setContracts({});
+    if (!id || !me || (me.id !== id && me.role !== "coordinator")) return;
+    let ativo = true;
+    getGrantContracts(id)
+      .then((found) => ativo && setContracts(found))
+      .catch(() => undefined);
+    return () => {
+      ativo = false;
+    };
+  }, [id, me]);
+
+  async function openContract(path: string) {
+    try {
+      window.open(await getGrantContractUrl(path), "_blank", "noopener,noreferrer");
+    } catch {
+      setError(t("grants.errContract"));
+    }
+  }
 
   useEffect(() => {
     if (!id) {
@@ -246,6 +276,16 @@ export function PesquisadorDetalhe() {
                           </span>
                         ) : grant.process_number ? (
                           <span className="block text-sm text-muted">{t("grants.processShort", { number: grant.process_number })}</span>
+                        ) : null}
+                        {grant.id && contracts[grant.id] ? (
+                          <button
+                            className="mt-1 inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-primary-dark"
+                            onClick={() => openContract(contracts[grant.id as string])}
+                            type="button"
+                          >
+                            <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                            {t("grants.contractOpen")}
+                          </button>
                         ) : null}
                       </li>
                     );
