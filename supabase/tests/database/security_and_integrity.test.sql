@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(432);
+select plan(435);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -1213,6 +1213,9 @@ select ok(
   'finishing stops the timer and keeps work and review time'
 );
 select throws_ok($$ select public.set_task_timer('00000000-0000-0000-0000-0000000000d4', true) $$, 'P0001', 'timer_not_available', 'a finished task has no timer to resume');
+select ok((select completed_at is not null from public.project_tasks where id = '00000000-0000-0000-0000-0000000000d4'), 'finishing a task records when it was completed');
+select lives_ok($$ update public.project_tasks set status = 'todo' where id = '00000000-0000-0000-0000-0000000000d4' $$, 'a finished task is reopened');
+select ok((select completed_at is null from public.project_tasks where id = '00000000-0000-0000-0000-0000000000d4'), 'reopening a task clears the completion date');
 
 select is((select count(*)::int from public.project_task_time_entries where task_id = '00000000-0000-0000-0000-0000000000d4' and ended_at is null), 0, 'no time entry stays open after the task is finished');
 select is((select count(distinct profile_id)::int from public.project_task_time_entries where task_id = '00000000-0000-0000-0000-0000000000d4'), 1, 'all the time of the task belongs to the person who ran the timer');

@@ -16,6 +16,7 @@ import {
 } from "../../lib/projects";
 import { Avatar } from "../ui/Avatar";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
+import { formatLeadTime, getLeadTimeSeconds } from "../../lib/taskLeadTime";
 import { TaskTimer } from "./TaskTimer";
 
 function todayLocal() {
@@ -266,6 +267,9 @@ export function KanbanBoard({ canDelete, onArchive, onDelete, onDragChange, onMo
                   </div>
                 ) : null}
                 <TaskTimer task={task} onToggle={onToggleTimer} />
+                {task.status === "done" && getLeadTimeSeconds(task) !== null ? (
+                  <p className="text-sm text-muted">{t("tasks.leadDone", { time: formatLeadTime(getLeadTimeSeconds(task) ?? 0) })}</p>
+                ) : null}
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex -space-x-2">
                     {task.assignees.map((assignee) => (

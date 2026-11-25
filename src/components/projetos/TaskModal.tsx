@@ -1,4 +1,4 @@
-import { t } from "../../i18n";
+import { getLocale, t } from "../../i18n";
 import { FormEvent, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -22,6 +22,7 @@ import {
   type TaskPriority,
   type TaskStatus,
 } from "../../lib/projects";
+import { formatLeadTime, getLeadTimeSeconds } from "../../lib/taskLeadTime";
 import { formatClock, formatDuration, getTaskTimes } from "../../lib/taskTimer";
 import { getTimeByPerson, type TimeEntry } from "../../lib/taskTime";
 import { useNow } from "./TaskTimer";
@@ -171,6 +172,7 @@ export function TaskModal({
   const tempos = task ? getTaskTimes(task, agora) : null;
   const porPessoa = task ? getTimeByPerson(trechos, task, agora) : null;
   const mostrar = (segundos: number) => (tempos?.running ? formatClock(segundos) : formatDuration(segundos));
+  const formatarData = (valor: string) => new Intl.DateTimeFormat(getLocale(), { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(valor));
   const semProjetos = !lockedProjectId && projects.length === 0;
 
   return (
@@ -239,6 +241,15 @@ export function TaskModal({
             </select>
           </label>
         </div>
+
+        {task ? (
+          <p className="text-sm text-muted">
+            {t("tasks.createdOn", { date: formatarData(task.created_at) })}
+            {task.completed_at
+              ? ` · ${t("tasks.completedOn", { date: formatarData(task.completed_at), time: formatLeadTime(getLeadTimeSeconds(task) ?? 0) })}`
+              : ""}
+          </p>
+        ) : null}
 
         {task && tempos && tempos.total > 0 ? (
           <p className="rounded-lg border border-border bg-background p-3 text-base text-text">

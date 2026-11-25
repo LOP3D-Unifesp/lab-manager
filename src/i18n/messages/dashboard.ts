@@ -91,6 +91,8 @@ export const dashboard = {
   "analytics.noData": { pt: "Sem dados neste período.", en: "No data in this period.", es: "Sin datos en este período." },
   "analytics.myHours": { pt: "Minhas horas reservadas", en: "My booked hours", es: "Mis horas reservadas" },
   "analytics.myBookings": { pt: "Minhas reservas", en: "My bookings", es: "Mis reservas" },
+  "analytics.leadTime": { pt: "Tempo médio até concluir", en: "Average time to complete", es: "Tiempo medio hasta concluir" },
+  "analytics.leadTimeHint": { pt: "Da criação até Finalizado, nas tarefas concluídas no período.", en: "From creation to Done, for tasks completed in the period.", es: "Desde la creación hasta Finalizado, en las tareas concluidas en el período." },
   "analytics.myTaskTime": { pt: "Meu tempo nas tarefas", en: "My time on tasks", es: "Mi tiempo en tareas" },
   "analytics.labTaskTime": { pt: "Tempo trabalhado nas tarefas", en: "Time worked on tasks", es: "Tiempo trabajado en tareas" },
   "analytics.taskTimeByPerson": { pt: "Tempo nas tarefas por pessoa", en: "Task time by person", es: "Tiempo en tareas por persona" },
