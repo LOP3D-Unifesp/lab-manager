@@ -16,7 +16,7 @@ type HomeCardProps = {
 export function HomeCard({ children, className = "", title, to }: HomeCardProps) {
   const t = useT();
   return (
-    <Card className={`min-w-0 p-4 sm:p-5 ${className}`}>
+    <Card className={`h-full min-w-0 p-4 sm:p-5 ${className}`}>
       <div className="mb-3 flex items-baseline justify-between gap-3">
         <h3 className="text-xl font-bold text-text">{title}</h3>
         {to ? (
