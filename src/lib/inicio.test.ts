@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { EquipmentBooking } from "./domain";
-import { getDayPart, getDecisionItems, getFirstName, getMyOpenPurchases, getMyUpcomingBookings, isBookingHappeningNow } from "./inicio";
+import { countEquipmentByStatus, getDayPart, getDecisionItems, getFirstName, getMyOpenPurchases, getMyUpcomingBookings, isBookingHappeningNow } from "./inicio";
 import type { PurchaseRequest } from "./purchases";
 
 function booking(id: string, profileId: string, start: string, end: string, status: EquipmentBooking["status"] = "approved") {
@@ -98,5 +98,12 @@ describe("o que espera decisão", () => {
   it("pesquisador sem permissões extras só vê pedidos de entrada", () => {
     const items = getDecisionItems({ ...base, purchases: 5, joinRequests: 2 });
     expect(items.map((item) => item.key)).toEqual(["joinRequests"]);
+  });
+});
+
+describe("equipamentos por situação", () => {
+  it("conta o total e cada situação", () => {
+    const counts = countEquipmentByStatus([{ status: "active" }, { status: "active" }, { status: "maintenance" }, { status: "stopped" }, { status: "disabled" }, { status: "unavailable" }]);
+    expect(counts).toEqual({ total: 6, active: 2, maintenance: 1, stopped: 1, other: 2 });
   });
 });

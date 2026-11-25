@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
+import { EquipmentCard } from "../components/inicio/EquipmentCard";
 import { DecisionCard } from "../components/inicio/DecisionCard";
 import { MyBookingsCard } from "../components/inicio/MyBookingsCard";
 import { MyProjectsCard } from "../components/inicio/MyProjectsCard";
@@ -13,12 +14,12 @@ import { MyTasksBoard } from "../components/projetos/MyTasksBoard";
 import { PageHeader } from "../components/ui/PageHeader";
 import { formatDateTime, useT } from "../i18n";
 import { useCurrentProfile } from "../lib/currentUser";
-import { canMaintain, type AvailabilitySlot, type EquipmentBooking } from "../lib/domain";
-import { getDayPart, getDecisionItems, getFirstName, getMyOpenPurchases, getMyUpcomingBookings } from "../lib/inicio";
+import { canMaintain, type AvailabilitySlot, type Equipment, type EquipmentBooking } from "../lib/domain";
+import { countEquipmentByStatus, getDayPart, getDecisionItems, getFirstName, getMyOpenPurchases, getMyUpcomingBookings } from "../lib/inicio";
 import { useLabSchedule } from "../lib/labSchedule";
 import type { ProjectDirectoryEntry } from "../lib/projects";
 import type { PurchaseRequest } from "../lib/purchases";
-import { listAvailability, listBookings, listProjectDirectory, listPurchaseRequests } from "../lib/supabaseRepository";
+import { listAvailability, listBookings, listEquipment, listProjectDirectory, listPurchaseRequests } from "../lib/supabaseRepository";
 
 // Inicial: o centro de comando de cada pessoa. Só o que é dela (próxima reserva, tarefas, pedidos, avisos) e, para
 // quem decide, o que espera uma decisão. Os números do laboratório inteiro ficam em Analytics.
@@ -31,6 +32,7 @@ export function Dashboard() {
   const [availability, setAvailability] = useState<AvailabilitySlot[]>([]);
   const [purchases, setPurchases] = useState<PurchaseRequest[]>([]);
   const [directory, setDirectory] = useState<ProjectDirectoryEntry[]>([]);
+  const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [erro, setErro] = useState("");
   const now = useMemo(() => new Date(), []);
   const profileId = currentProfile?.id;
@@ -39,14 +41,15 @@ export function Dashboard() {
     if (!profileId) return undefined;
     let ativo = true;
 
-    Promise.all([listBookings(), listAvailability(profileId), listPurchaseRequests(), listProjectDirectory()])
-      .then(([bookingsData, availabilityData, purchasesData, directoryData]) => {
+    Promise.all([listBookings(), listAvailability(profileId), listPurchaseRequests(), listProjectDirectory(), listEquipment()])
+      .then(([bookingsData, availabilityData, purchasesData, directoryData, equipmentData]) => {
         if (!ativo) return;
         setErro("");
         setBookings(bookingsData);
         setAvailability(availabilityData);
         setPurchases(purchasesData);
         setDirectory(directoryData);
+        setEquipment(equipmentData);
       })
       .catch((error) => {
         if (ativo) setErro(error instanceof Error ? error.message : t("dashboard.loadError"));
@@ -100,6 +103,7 @@ export function Dashboard() {
 
       <div className="grid items-start gap-5 md:grid-cols-2 xl:grid-cols-3">
         <NewsCard />
+        <EquipmentCard counts={countEquipmentByStatus(equipment)} />
         <MyBookingsCard bookings={myBookings} />
         <MyPurchasesCard purchases={myPurchases} />
         <MyProjectsCard directory={directory} />

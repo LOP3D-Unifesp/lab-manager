@@ -68,3 +68,17 @@ export function getDecisionItems(input: DecisionInput): DecisionItem[] {
   }
   return items.filter((item) => item.count > 0);
 }
+
+export type EquipmentCounts = { total: number; active: number; maintenance: number; stopped: number; other: number };
+
+// Quantos equipamentos há e em que situação estão ("other" reúne indisponíveis e desativados).
+export function countEquipmentByStatus(equipment: Array<{ status: string }>): EquipmentCounts {
+  const counts: EquipmentCounts = { total: equipment.length, active: 0, maintenance: 0, stopped: 0, other: 0 };
+  for (const item of equipment) {
+    if (item.status === "active") counts.active += 1;
+    else if (item.status === "maintenance") counts.maintenance += 1;
+    else if (item.status === "stopped") counts.stopped += 1;
+    else counts.other += 1;
+  }
+  return counts;
+}
