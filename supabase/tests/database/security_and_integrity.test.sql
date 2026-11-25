@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(420);
+select plan(432);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -1214,6 +1214,40 @@ select ok(
 );
 select throws_ok($$ select public.set_task_timer('00000000-0000-0000-0000-0000000000d4', true) $$, 'P0001', 'timer_not_available', 'a finished task has no timer to resume');
 
+select is((select count(*)::int from public.project_task_time_entries where task_id = '00000000-0000-0000-0000-0000000000d4' and ended_at is null), 0, 'no time entry stays open after the task is finished');
+select is((select count(distinct profile_id)::int from public.project_task_time_entries where task_id = '00000000-0000-0000-0000-0000000000d4'), 1, 'all the time of the task belongs to the person who ran the timer');
+select ok(
+  (select sum(seconds) filter (where phase = 'work') between 600 and 606 from public.project_task_time_entries where task_id = '00000000-0000-0000-0000-0000000000d4'),
+  'work entries add up to the work time'
+);
+select ok(
+  (select sum(seconds) filter (where phase = 'review') between 300 and 306 from public.project_task_time_entries where task_id = '00000000-0000-0000-0000-0000000000d4'),
+  'review entries add up to the review time'
+);
+
+select lives_ok(
+  $$ insert into public.project_tasks (id, project_id, title, status) values ('00000000-0000-0000-0000-0000000000d5', '00000000-0000-0000-0000-0000000000c1', 'Dois no relógio', 'in_progress') $$,
+  'a task created in progress starts a time entry'
+);
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
+select lives_ok($$ select public.set_task_timer('00000000-0000-0000-0000-0000000000d5', false) $$, 'the coordinator pauses the timer started by someone else');
+select lives_ok($$ select public.set_task_timer('00000000-0000-0000-0000-0000000000d5', true) $$, 'the coordinator resumes the timer');
+select is((select count(distinct profile_id)::int from public.project_task_time_entries where task_id = '00000000-0000-0000-0000-0000000000d5'), 2, 'each person gets their own time entries');
+select ok(
+  (select profile_id = '00000000-0000-0000-0000-000000000101' from public.project_task_time_entries where task_id = '00000000-0000-0000-0000-0000000000d5' and ended_at is null),
+  'the open entry belongs to whoever resumed the timer'
+);
+select is(
+  (select count(distinct profile_id)::int from public.get_task_time_report(now() - interval '1 day', now() + interval '1 day')),
+  2,
+  'the coordinator report lists everyone who worked'
+);
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
+select ok(
+  (select count(*) > 0 and bool_and(profile_id = '00000000-0000-0000-0000-000000000102') from public.get_task_time_report(now() - interval '1 day', now() + interval '1 day')),
+  'a researcher report only has their own time'
+);
+
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000103","email":"other@example.com","role":"authenticated"}', true);
 select is((select count(*) from public.project_tasks), 0::bigint, 'non-member cannot read tasks');
 select throws_ok(
@@ -1243,6 +1277,7 @@ select throws_ok(
   'non-member cannot move a task to another project'
 );
 select throws_ok($$ select public.set_task_timer('00000000-0000-0000-0000-0000000000d4', false) $$, 'P0001', 'project_access_required', 'non-member cannot control the timer');
+select is((select count(*) from public.project_task_time_entries), 0::bigint, 'non-member cannot read time entries');
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","email":"coord@example.com","role":"authenticated"}', true);
 select lives_ok(

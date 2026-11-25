@@ -73,6 +73,8 @@ export const projetos = {
   "tasks.setPriority": { pt: "Prioridade de \"{title}\"", en: "Priority of \"{title}\"", es: "Prioridad de \"{title}\"" },
   "tasks.timeWork": { pt: "Trabalho", en: "Work", es: "Trabajo" },
   "tasks.timeReview": { pt: "Revisão", en: "Review", es: "Revisión" },
+  "tasks.timeByPerson": { pt: "Tempo por pessoa", en: "Time by person", es: "Tiempo por persona" },
+  "tasks.timeUnassigned": { pt: "Sem registro por pessoa (antes desse recurso)", en: "Not tracked per person (before this feature)", es: "Sin registro por persona (antes de esta función)" },
   "tasks.timeTotal": { pt: "Tempo total", en: "Total time", es: "Tiempo total" },
   "tasks.timerPause": { pt: "Pausar o cronômetro de \"{title}\"", en: "Pause the timer of \"{title}\"", es: "Pausar el cronómetro de \"{title}\"" },
   "tasks.timerResume": { pt: "Retomar o cronômetro de \"{title}\"", en: "Resume the timer of \"{title}\"", es: "Reanudar el cronómetro de \"{title}\"" },

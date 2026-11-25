@@ -5,6 +5,7 @@ import { useSearchParams } from "react-router-dom";
 import { ChartCard, DonutChart, RankingChart, TimeBarChart, type ChartDatum } from "../components/analytics/Charts";
 import { LabTodayOverview } from "../components/inicio/LabTodayOverview";
 import { PageHeader } from "../components/ui/PageHeader";
+import { TimeReportSection } from "../components/analytics/TimeReportSection";
 import { StatCard } from "../components/ui/StatCard";
 import { formatDateTime, useT } from "../i18n";
 import {
@@ -254,6 +255,7 @@ export function Analytics() {
               icon={ShoppingCart}
             />
           </section>
+          {profileId ? <TimeReportSection from={range.from} to={range.to} profileId={profileId} scope="mine" /> : null}
           <UsageSection bookings={myBookings} now={now} period={period} />
           <div className="grid gap-5 lg:grid-cols-2">
             <ChartCard
@@ -290,6 +292,7 @@ export function Analytics() {
             <StatCard title={t("analytics.lowStock")} value={String(lowSpools)} description={t("analytics.lowStockHint")} icon={Boxes} />
           </section>
           <UsageSection bookings={bookings} now={now} period={period} />
+          {profileId ? <TimeReportSection from={range.from} to={range.to} profileId={profileId} scope="lab" /> : null}
           <div className="grid gap-5 lg:grid-cols-2">
             <ChartCard
               title={t("analytics.byPerson")}

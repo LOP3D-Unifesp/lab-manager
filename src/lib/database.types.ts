@@ -707,6 +707,32 @@ isOneToOne: false
       referencedColumns: ["id","project_id"]
     }
                   ]
+                },"project_task_time_entries": {
+                  Row: {
+                    "ended_at": string | null,"id": string,"phase": string,"profile_id": string,"project_id": string,"seconds": number | null,"started_at": string,"task_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "ended_at"?: string | null,"id"?: string,"phase": string,"profile_id": string,"project_id": string,"seconds"?: number | null,"started_at"?: string,"task_id": string
+                  }
+                  Update: {
+                    "ended_at"?: string | null,"id"?: string,"phase"?: string,"profile_id"?: string,"project_id"?: string,"seconds"?: number | null,"started_at"?: string,"task_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "project_task_time_entries_profile_fkey"
+      columns: ["profile_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "project_task_time_entries_task_fkey"
+      columns: ["task_id","project_id"]
+isOneToOne: false
+      referencedRelation: "project_tasks"
+      referencedColumns: ["id","project_id"]
+    }
+                  ]
                 },"project_tasks": {
                   Row: {
                     "archived_at": string | null,"created_at": string,"created_by": string,"description": string | null,"due_on": string | null,"id": string,"position": number,"priority": Database["public"]['Enums']["task_priority"],"project_id": string,"review_seconds": number,"status": Database["public"]['Enums']["task_status"],"timer_phase": string | null,"timer_started_at": string | null,"title": string,"updated_at": string,"work_seconds": number
@@ -1010,6 +1036,11 @@ isOneToOne: false
 "get_purchase_project_names":
 { Args: { "p_project_ids": (string)[] }; Returns: {
               "id": string,"name": string
+            }[]
+                           },
+"get_task_time_report":
+{ Args: { "p_from": string,"p_to": string }; Returns: {
+              "full_name": string,"phase": string,"profile_id": string,"project_id": string,"project_name": string,"seconds": number
             }[]
                            },
 "list_project_directory":

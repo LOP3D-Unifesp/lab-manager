@@ -24,6 +24,9 @@ com duas contas (coordenadora e pesquisador):
   "Visualizar"; checklist logo abaixo da descrição; arrastar cartão acima de outro de projeto diferente; editar a tarefa e
   trocar o projeto (responsáveis que não são do novo projeto saem; ninguém recebe aviso de novo). Depende da migration
   `20261006` (não aplicada em produção).
+- [ ] **Tarefas (tempo por pessoa):** pessoa A liga o cronômetro e pausa; pessoa B retoma e pausa; abrir a tarefa e ver os
+  dois em "Tempo por pessoa" (trabalho/revisão); Analytics: "Meu tempo nas tarefas" e, como coordenadora, tempo por pessoa e
+  por projeto no período. Depende da migration `20261008` (não aplicada em produção).
 - [ ] **Tarefas (cronômetro):** mover para Em andamento liga o tempo (contando ao vivo no cartão); Pausar/Retomar; mover
   para Em revisão separa o tempo de revisão; Finalizado mostra "Tempo total"; arquivar pausa; aviso "rodando há Xh" depois de
   8h. Depende da migration `20261007` (não aplicada em produção).
