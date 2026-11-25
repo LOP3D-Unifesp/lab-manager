@@ -164,16 +164,28 @@ export function FundingGrantsEditor({ disabled, joiningProjectId, onChange, onRe
                 </Field>
               </div>
 
-              <Field label={t("grants.processNumber")}>
-                <input
-                  className={inputClassName}
-                  disabled={disabled}
-                  maxLength={60}
-                  onChange={(event) => updateGrant(index, { process_number: event.target.value || null })}
-                  placeholder={t("profile.optional")}
-                  value={grant.process_number ?? ""}
-                />
-              </Field>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label={t("grants.name")}>
+                  <input
+                    className={inputClassName}
+                    disabled={disabled}
+                    maxLength={120}
+                    onChange={(event) => updateGrant(index, { grant_name: event.target.value || null })}
+                    placeholder={t("profile.optional")}
+                    value={grant.grant_name ?? ""}
+                  />
+                </Field>
+                <Field label={t("grants.processNumber")}>
+                  <input
+                    className={inputClassName}
+                    disabled={disabled}
+                    maxLength={60}
+                    onChange={(event) => updateGrant(index, { process_number: event.target.value || null })}
+                    placeholder={t("profile.optional")}
+                    value={grant.process_number ?? ""}
+                  />
+                </Field>
+              </div>
             </div>
           );
         })
