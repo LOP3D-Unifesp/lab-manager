@@ -14,6 +14,8 @@ export const pessoas = {
   "researchers.cards": { pt: "Cards", en: "Cards", es: "Tarjetas" },
   "researchers.list": { pt: "Lista", en: "List", es: "Lista" },
   "researchers.manageInvites": { pt: "Gerenciar convites", en: "Manage invitations", es: "Gestionar invitaciones" },
+  "researchers.copyEmail": { pt: "Copiar e-mail", en: "Copy email", es: "Copiar correo" },
+  "researchers.emailCopied": { pt: "E-mail copiado", en: "Email copied", es: "Correo copiado" },
   "researchers.none": { pt: "Nenhum pesquisador ativo encontrado.", en: "No active researchers found.", es: "No se encontraron investigadores activos." },
   "researchers.affiliationLine": { pt: "Vínculo: {value}", en: "Affiliation: {value}", es: "Vínculo: {value}" },
   "researchers.noGrant": { pt: "Sem bolsa de fomento", en: "No funding grant", es: "Sin beca de financiamiento" },
