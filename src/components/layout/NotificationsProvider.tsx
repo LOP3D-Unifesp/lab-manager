@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 
 import { useAuth } from "../../lib/auth";
 import { showDesktopAlert, syncPushSubscription } from "../../lib/desktopAlerts";
+import { describeAlertBody } from "../../lib/notificationAlert";
 import { describeNotification, getNotificationGroup, type AppNotification, type NotificationGroup } from "../../lib/notifications";
 import {
   countUnreadNotifications,
@@ -100,8 +101,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     const avisarNoComputador = (notification: AppNotification) => {
       const group = getNotificationGroup(notification.type);
       if (preferencesRef.current.find((preference) => preference.topic === group)?.push === false) return;
-      const { detail, title } = describeNotification(notification);
-      showDesktopAlert({ title, body: detail ?? "", path: notification.link ?? "/", tag: notification.id });
+      const { title } = describeNotification(notification);
+      showDesktopAlert({ title, body: describeAlertBody(notification), path: notification.link ?? "/", tag: notification.id });
     };
     const agendar = () => {
       window.clearTimeout(debounce);

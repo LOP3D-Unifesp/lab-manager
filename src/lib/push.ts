@@ -20,7 +20,10 @@ function serviceWorkerUrl() {
 
 async function getRegistration() {
   const existing = await navigator.serviceWorker.getRegistration(import.meta.env.BASE_URL);
-  return existing ?? navigator.serviceWorker.register(serviceWorkerUrl(), { scope: import.meta.env.BASE_URL });
+  if (!existing) return navigator.serviceWorker.register(serviceWorkerUrl(), { scope: import.meta.env.BASE_URL });
+  // Pede ao navegador para buscar o service worker novo a cada abertura do app: é ele que escreve os avisos.
+  void existing.update().catch(() => undefined);
+  return existing;
 }
 
 async function saveSubscription(subscription: PushSubscription) {

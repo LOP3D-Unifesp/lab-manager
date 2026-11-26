@@ -1,5 +1,6 @@
 // Service worker do Lab Manager: recebe os avisos (Web Push) mesmo com o app fechado e os mostra.
 // O servidor manda só o tipo e os dados do evento; o texto é montado aqui na língua do navegador.
+// As linhas do corpo são as mesmas de src/lib/notificationAlert.ts (aviso com o app aberto): mude os dois juntos.
 
 const TEXTS = {
   booking_pending: { pt: "Reserva aguardando aprovação", en: "Booking awaiting approval", es: "Reserva pendiente de aprobación" },
@@ -60,11 +61,118 @@ function textKey(type, params) {
   return TEXTS[type] ? type : "generic";
 }
 
+const WORDS = {
+  by: { pt: "por {value}", en: "by {value}", es: "por {value}" },
+  openedBy: { pt: "Aberto por {value}", en: "Opened by {value}", es: "Abierta por {value}" },
+  due: { pt: "Prazo {value}", en: "Due {value}", es: "Plazo {value}" },
+  solution: { pt: "Solução: {value}", en: "Solution: {value}", es: "Solución: {value}" },
+  reason: { pt: "Motivo: {value}", en: "Reason: {value}", es: "Motivo: {value}" },
+  stock: { pt: "Estoque geral", en: "General stock", es: "Stock general" },
+  urgent: { pt: "Urgente", en: "Urgent", es: "Urgente" },
+  high: { pt: "Alta", en: "High", es: "Alta" },
+  taskAssignedBy: { pt: "{value} atribuiu uma tarefa a você", en: "{value} assigned a task to you", es: "{value} te asignó una tarea" },
+};
+
+const LOCALES = { pt: "pt-BR", en: "en", es: "es" };
+
+function word(key, value) {
+  return WORDS[key][language()].replace("{value}", () => value);
+}
+
+function text(params, key) {
+  const value = params[key];
+  return typeof value === "string" && value.trim() ? value : null;
+}
+
+function join(...parts) {
+  return parts.filter(Boolean).join(" · ") || null;
+}
+
+function byName(key, name) {
+  return name ? word(key, name) : null;
+}
+
+function formatDay(date, timeZone) {
+  return new Intl.DateTimeFormat(LOCALES[language()], { day: "2-digit", month: "2-digit", timeZone }).format(date);
+}
+
+function formatDueDate(value) {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  return formatDay(new Date(value + "T00:00:00Z"), "UTC");
+}
+
+function formatPeriod(params) {
+  const start = new Date(text(params, "starts_at") || "");
+  const end = new Date(text(params, "ends_at") || "");
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
+  const timeZone = text(params, "timezone") || "America/Sao_Paulo";
+  const hour = new Intl.DateTimeFormat(LOCALES[language()], { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone });
+  const startDay = formatDay(start, timeZone);
+  const endDay = formatDay(end, timeZone);
+  return startDay + " " + hour.format(start) + "–" + (startDay === endDay ? "" : endDay + " ") + hour.format(end);
+}
+
+function formatMoney(value) {
+  return new Intl.NumberFormat(LOCALES[language()], { style: "currency", currency: "BRL" }).format(value);
+}
+
+// Até três linhas: o assunto, o contexto e um trecho do texto.
+function bodyLines(type, params) {
+  const reason = byName("reason", text(params, "reason"));
+
+  if (type === "task_assigned" || type === "task_status" || type === "task_timer_reminder") {
+    const due = formatDueDate(text(params, "due_on"));
+    const priority = params.priority === "urgent" || params.priority === "high" ? WORDS[params.priority][language()] : null;
+    return [
+      text(params, "task"),
+      join(text(params, "project"), type === "task_status" ? byName("by", text(params, "by")) : null, byName("due", due), priority),
+      text(params, "description"),
+    ];
+  }
+
+  if (type === "request_new" || type === "request_status" || type === "request_resolved") {
+    const solution = params.status === "resolved" ? text(params, "solution") : null;
+    return [
+      text(params, "equipment"),
+      type === "request_new" ? byName("openedBy", text(params, "author")) : byName("by", text(params, "by")),
+      solution ? word("solution", solution) : text(params, "description"),
+    ];
+  }
+
+  if (type === "purchase_new" || type === "purchase_status") {
+    const item = text(params, "item");
+    const quantity = typeof params.quantity === "number" && params.quantity > 1 ? " × " + params.quantity : "";
+    return [
+      item ? item + quantity : null,
+      join(
+        typeof params.amount === "number" ? formatMoney(params.amount) : null,
+        byName("by", text(params, type === "purchase_new" ? "author" : "by")),
+        params.stock === true ? WORDS.stock[language()] : text(params, "project"),
+      ),
+      reason || (type === "purchase_new" ? text(params, "description") : null),
+    ];
+  }
+
+  if (["booking_pending", "booking_approved", "booking_rejected", "booking_cancelled"].includes(type)) {
+    const showAuthor = type === "booking_pending" || type === "booking_cancelled";
+    return [
+      text(params, "equipment"),
+      join(formatPeriod(params), text(params, "project"), showAuthor ? text(params, "author") : null),
+      reason,
+    ];
+  }
+
+  if (type === "project_join_request") return [join(text(params, "requester"), text(params, "project")), text(params, "description")];
+  if (type === "project_join_decision") return [text(params, "project"), byName("by", text(params, "by"))];
+  if (type === "feedback_new") return [text(params, "author"), text(params, "description")];
+  return [];
+}
+
 function describe(data) {
   const params = data.params && typeof data.params === "object" ? data.params : {};
-  const title = TEXTS[textKey(data.type, params)][language()];
-  const detail = [params.requester, params.task, params.project, params.equipment, params.item].filter((value) => typeof value === "string" && value);
-  return { title, body: detail.join(" · ") };
+  const assignedBy = data.type === "task_assigned" ? text(params, "by") : null;
+  const title = assignedBy ? word("taskAssignedBy", assignedBy) : TEXTS[textKey(data.type, params)][language()];
+  return { title, body: bodyLines(data.type, params).filter(Boolean).join("\n") };
 }
 
 self.addEventListener("install", () => self.skipWaiting());

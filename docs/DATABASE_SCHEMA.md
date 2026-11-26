@@ -98,6 +98,7 @@ Status do MVP implementado:
 | `20261014_purchase_equipment` | `purchase_requests.equipment_id`: equipamento do gasto de manutencao, com ou sem chamado; `update_purchase_request` ganha `p_set_equipment` e `p_equipment_id` (secao 3.19). |
 | `20261015_task_notifications` | Assunto `tasks` nas preferencias (copia a escolha de `projects`) e notificacao `task_status`: mudanca de situacao de tarefa avisa quem criou e os responsaveis (secao 3.20). |
 | `20261016_notification_resolution` | Avisos de assunto resolvido sao marcados como lidos por gatilhos (reservas, chamados, compras, pedidos de entrada e tarefas); lidos guardados por 30 dias (secao 3.20). |
+| `20261017_notification_details` | `notifications_enrich`: dados do assunto (descricao, prazo, autor, valor, horario) entram em `params` para o push e o aviso no computador (secao 3.20). |
 
 Resumo dos objetos que mais mudam o entendimento do schema:
 
@@ -1210,6 +1211,10 @@ O texto nao e guardado: so o tipo e os dados do evento (`params`), e o cliente m
   `pending`; `request_new` quando o chamado e resolvido ou cancelado; `purchase_new` quando o pedido sai de
   `requested`; `project_join_request` quando sai de `pending`; avisos `task_*` quando a tarefa e concluida ou
   arquivada (menos o `task_status` de conclusao) ou apagada. Vale para todos os destinatarios.
+- Detalhes (`private.enrich_notification`, antes da inclusao): conforme o tipo, `params` ganha trecho sem marcacao
+  da descricao ou mensagem (ate 140 caracteres, `private.plain_excerpt`), autor, quem fez a acao (`by`), prazo e
+  prioridade da tarefa, quantidade e valor da compra, solucao do chamado, horario e fuso da reserva. O que o gatilho
+  de origem envia tem prioridade. O texto e montado em `public/sw.js` (push) e `src/lib/notificationAlert.ts`.
 - `notification_preferences`: `(profile_id, topic)` com `topic` em `bookings`, `requests`, `purchases`, `feedback`,
   `projects`, `tasks`, `in_app` e `push` (padrao ligado). `private.wants_notification` consulta a tabela: com `in_app`
   desligado a notificacao nem e criada (e o push, que parte dela, tambem nao).
