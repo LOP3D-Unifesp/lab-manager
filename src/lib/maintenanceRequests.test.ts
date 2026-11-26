@@ -139,6 +139,21 @@ describe("chamados no Dashboard", () => {
     expect(ids(getMyRequestGroups(requests, "carla", false).mine)).toEqual(["b", "c"]);
   });
 
+  it("responsáveis também veem o que está com outras pessoas, sem repetir", () => {
+    const list = [
+      request({ id: "meu", status: "in_progress", requested_by: "bia", assigned_to: "caio" }),
+      request({ id: "outro", status: "in_progress", requested_by: "ana", assigned_to: "caio" }),
+      request({ id: "peca", status: "waiting_part", requested_by: "ana", assigned_to: "caio" }),
+      request({ id: "aberto", status: "open", requested_by: "ana" }),
+      request({ id: "fim", status: "resolved", requested_by: "ana", assigned_to: "caio" }),
+    ];
+    const groups = getMyRequestGroups(list, "bia", true);
+    expect(ids(groups.toHandle)).toEqual(["aberto"]);
+    expect(ids(groups.mine)).toEqual(["meu"]);
+    expect(ids(groups.others)).toEqual(["outro", "peca"]);
+    expect(getMyRequestGroups(list, "bia", false).others).toEqual([]);
+  });
+
   it("chamados encerrados não aparecem", () => {
     expect(ids(getMyRequestGroups(requests, "bia", false).mine)).toEqual(["d"]);
   });

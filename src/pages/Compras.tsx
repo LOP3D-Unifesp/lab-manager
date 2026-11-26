@@ -10,7 +10,7 @@ import { Card } from "../components/ui/Card";
 import { PageHeader } from "../components/ui/PageHeader";
 import { StatusBadge } from "../components/ui/StatusBadge";
 import { useAuth } from "../lib/auth";
-import { getTimezonePadrao } from "../lib/domain";
+import { getTimezonePadrao, type Equipment } from "../lib/domain";
 import { formatMaintenanceDateTime } from "../lib/maintenance";
 import { formatCurrencyBRL, isProjectOpen, type Project } from "../lib/projects";
 import {
@@ -37,7 +37,7 @@ import {
   type PurchaseRequest,
   type PurchaseStatus,
 } from "../lib/purchases";
-import { listProjects, listPurchaseRequests, setPurchaseStatus } from "../lib/supabaseRepository";
+import { listEquipment, listProjects, listPurchaseRequests, setPurchaseStatus } from "../lib/supabaseRepository";
 
 const selectClassName =
   "min-h-11 min-w-0 rounded-lg border border-border bg-background px-3 text-base font-normal text-text outline-none transition focus:border-primary";
@@ -50,6 +50,7 @@ export function Compras() {
   const profileId = profile?.id ?? null;
   const [purchases, setPurchases] = useState<PurchaseRequest[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [carregado, setCarregado] = useState(false);
   const [filters, setFilters] = useState<PurchaseFilters>({ status: "open", projectId: "all", category: "all", urgency: "all", kind: "all", mine: false });
   const [formulario, setFormulario] = useState<{ purchase: PurchaseRequest | null } | null>(null);
@@ -59,9 +60,10 @@ export function Compras() {
 
   async function carregar() {
     try {
-      const [purchasesData, projectsData] = await Promise.all([listPurchaseRequests(), listProjects()]);
+      const [purchasesData, projectsData, equipmentData] = await Promise.all([listPurchaseRequests(), listProjects(), listEquipment()]);
       setPurchases(purchasesData);
       setProjects(projectsData);
+      setEquipment(equipmentData);
       window.dispatchEvent(new Event(PURCHASES_CHANGED_EVENT));
     } catch (error) {
       setErro(getPurchaseErrorMessage(error));
@@ -372,6 +374,7 @@ export function Compras() {
       {formulario ? (
         <PurchaseFormModal
           projects={projetosAbertos}
+          equipment={equipment}
           purchase={formulario.purchase}
           defaultProjectId={filters.projectId === GENERAL_STOCK_VALUE || (filters.projectId !== "all" && projetosAbertos.some((project) => project.id === filters.projectId)) ? filters.projectId : projetosAbertos.length === 1 ? projetosAbertos[0].id : ""}
           onClose={() => setFormulario(null)}

@@ -74,6 +74,8 @@ export type PurchaseRequest = {
   decided_by_name: string | null;
   /** Chamado de manutenção que originou o pedido (uma peça de que a máquina precisa), se houver. */
   maintenance_request_id: string | null;
+  /** Equipamento a que se destina o gasto de manutenção (o do chamado, quando há um). */
+  equipment_id: string | null;
   maintenance_equipment_name: string | null;
   /** Gasto de manutenção (peças, reparos), independente da rubrica. */
   for_maintenance: boolean;

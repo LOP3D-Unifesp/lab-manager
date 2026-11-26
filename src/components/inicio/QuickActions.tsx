@@ -24,7 +24,7 @@ export function QuickActions() {
       <ActionLink icon={CalendarPlus} label={t("home.actionBooking")} to="/reservas" />
       <ActionLink icon={FolderKanban} label={t("home.actionProjects")} to="/projetos" />
       <ActionLink icon={ShoppingCart} label={t("home.actionPurchase")} to="/compras" />
-      <ActionLink icon={Wrench} label={t("home.actionRequest")} to="/equipamentos?vista=chamados" />
+      <ActionLink icon={Wrench} label={t("home.actionRequest")} to="/equipamentos?vista=chamados&novo=1" />
     </nav>
   );
 }

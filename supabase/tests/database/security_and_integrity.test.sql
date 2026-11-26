@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(439);
+select plan(452);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -2168,7 +2168,8 @@ select is(
   'topics without a saved preference are still delivered'
 );
 
--- Who is told about requests and purchases: new ones reach only coordinators; status changes reach only who opened them.
+-- Who is told about requests and purchases: new requests reach coordinators and maintainers, new purchases only
+-- coordinators; status changes reach who opened them (and, for maintenance requests, the maintainers).
 set local role postgres;
 select set_config('request.jwt.claims', '', true);
 update public.profiles set is_maintainer = true where id = '00000000-0000-0000-0000-000000000103';
@@ -2210,6 +2211,119 @@ select is(
   1,
   'any status change on a purchase notifies who requested it'
 );
+
+-- Maintenance alerts by profile: 101 coordinator, 102 researcher, 103 researcher + maintenance,
+-- 120 coordinator + maintenance, 121 researcher who neither opens nor maintains.
+insert into auth.users (
+  instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
+  created_at, updated_at, confirmation_token, email_change, email_change_token_new, recovery_token
+) values
+  ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000120', 'authenticated', 'authenticated', 'pgtap-both@example.com', crypt('password', gen_salt('bf')), now(), '{}', '{}', now(), now(), '', '', '', ''),
+  ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000121', 'authenticated', 'authenticated', 'pgtap-plain@example.com', crypt('password', gen_salt('bf')), now(), '{}', '{}', now(), now(), '', '', '', '');
+insert into public.profiles (id, full_name, email, role, is_active, requires_booking_approval, is_maintainer) values
+  ('00000000-0000-0000-0000-000000000120', 'Coordinator Maintainer', 'pgtap-both@example.com', 'coordinator', true, false, true),
+  ('00000000-0000-0000-0000-000000000121', 'Plain Researcher', 'pgtap-plain@example.com', 'researcher', true, false, false);
+update public.profiles set is_maintainer = false where id = '00000000-0000-0000-0000-000000000101';
+
+-- Last three digits of everyone told about one maintenance request (one entry per notification, so repeats show up).
+create function pg_temp.told(p_description text, p_type text, p_status text default null) returns text
+language sql
+as $$
+  select coalesce(string_agg(right(n.recipient_id::text, 3), ',' order by n.recipient_id), '')
+  from public.notifications n
+  join public.maintenance_requests r on r.id = n.entity_id
+  where r.description = p_description and n.type = p_type and (p_status is null or n.params->>'status' = p_status)
+    and right(n.recipient_id::text, 3) in ('101', '102', '103', '120', '121');
+$$;
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","role":"authenticated"}', true);
+insert into public.maintenance_requests (equipment_id, requested_by, description)
+values ('20000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000102', 'pgtap matriz pesquisador');
+select is(pg_temp.told('pgtap matriz pesquisador', 'request_new'), '101,103,120', 'a new request reaches coordinators and maintainers, not other researchers');
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000103","role":"authenticated"}', true);
+update public.maintenance_requests set status = 'in_progress' where description = 'pgtap matriz pesquisador';
+select is(pg_temp.told('pgtap matriz pesquisador', 'request_status', 'in_progress'), '102,120', 'a change by a maintainer reaches the opener and the other maintainers');
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","role":"authenticated"}', true);
+update public.maintenance_requests set status = 'cancelled' where description = 'pgtap matriz pesquisador';
+select is(pg_temp.told('pgtap matriz pesquisador', 'request_status', 'cancelled'), '103,120', 'a change by the opener reaches only the maintainers');
+
+insert into public.maintenance_requests (equipment_id, requested_by, description) values
+  ('20000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000103', 'pgtap matriz manutencao'),
+  ('20000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000101', 'pgtap matriz coordenacao');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000120","role":"authenticated"}', true);
+update public.maintenance_requests set status = 'in_progress' where description = 'pgtap matriz manutencao';
+select is(pg_temp.told('pgtap matriz manutencao', 'request_status', 'in_progress'), '103', 'a maintainer who opened the request is told only once');
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000103","role":"authenticated"}', true);
+update public.maintenance_requests set status = 'waiting_part' where description = 'pgtap matriz coordenacao';
+select is(pg_temp.told('pgtap matriz coordenacao', 'request_status', 'waiting_part'), '101,120', 'a coordinator who is not a maintainer is told about the requests they opened');
+
+insert into public.notification_preferences (profile_id, topic, in_app, push)
+values ('00000000-0000-0000-0000-000000000103', 'requests', false, false)
+on conflict (profile_id, topic) do update set in_app = false, push = false;
+select set_config('request.jwt.claims', '', true);
+update public.maintenance_requests set status = 'resolved' where description = 'pgtap matriz coordenacao';
+select is(pg_temp.told('pgtap matriz coordenacao', 'request_status', 'resolved'), '101,120', 'a maintainer who switched the topic off is not told');
+
+-- Equipment of a maintenance purchase.
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000102","email":"researcher@example.com","role":"authenticated"}', true);
+select lives_ok(
+  $$ insert into public.purchase_requests (funding_category, item, estimated_amount, for_maintenance, equipment_id)
+     values ('custeio', 'pgtap peca avulsa', 10, true, '20000000-0000-0000-0000-000000000003') $$,
+  'a spare part is requested for an equipment with no maintenance request'
+);
+select is(
+  (select equipment_id from public.purchase_requests where item = 'pgtap peca avulsa'),
+  '20000000-0000-0000-0000-000000000003'::uuid,
+  'the maintenance purchase keeps the chosen equipment'
+);
+insert into public.purchase_requests (funding_category, item, estimated_amount, for_maintenance, equipment_id)
+values ('custeio', 'pgtap compra comum', 10, false, '20000000-0000-0000-0000-000000000003');
+select is(
+  (select equipment_id from public.purchase_requests where item = 'pgtap compra comum'),
+  null::uuid,
+  'a purchase that is not maintenance has no equipment'
+);
+insert into public.purchase_requests (funding_category, item, estimated_amount, maintenance_request_id)
+values ('custeio', 'pgtap peca ligada ao chamado', 10, (select id from public.maintenance_requests where description = 'pgtap matriz manutencao'));
+select is(
+  (select equipment_id from public.purchase_requests where item = 'pgtap peca ligada ao chamado'),
+  '20000000-0000-0000-0000-000000000003'::uuid,
+  'a part requested from a maintenance request takes its equipment'
+);
+select public.update_purchase_request(
+  p_request_id => (select id from public.purchase_requests where item = 'pgtap peca avulsa'),
+  p_item => 'pgtap peca avulsa', p_url => '', p_quantity => 2, p_estimated_amount => 20
+);
+select is(
+  (select equipment_id from public.purchase_requests where item = 'pgtap peca avulsa'),
+  '20000000-0000-0000-0000-000000000003'::uuid,
+  'an edit that does not send the equipment keeps it'
+);
+select public.update_purchase_request(
+  p_request_id => (select id from public.purchase_requests where item = 'pgtap peca avulsa'),
+  p_item => 'pgtap peca avulsa', p_url => '', p_quantity => 2, p_estimated_amount => 20, p_set_equipment => true
+);
+select is(
+  (select equipment_id from public.purchase_requests where item = 'pgtap peca avulsa'),
+  null::uuid,
+  'an edit can remove the equipment'
+);
+select public.update_purchase_request(
+  p_request_id => (select id from public.purchase_requests where item = 'pgtap peca avulsa'),
+  p_item => 'pgtap peca avulsa', p_url => '', p_quantity => 2, p_estimated_amount => 20,
+  p_for_maintenance => false, p_set_equipment => true, p_equipment_id => '20000000-0000-0000-0000-000000000003'
+);
+select is(
+  (select equipment_id from public.purchase_requests where item = 'pgtap peca avulsa'),
+  null::uuid,
+  'unmarking maintenance drops the equipment'
+);
+set local role postgres;
+select set_config('request.jwt.claims', '', true);
 
 -- Project join requests: anyone active asks, members and coordinators decide, and the notifications follow.
 set local role authenticated;

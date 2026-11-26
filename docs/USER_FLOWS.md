@@ -542,7 +542,7 @@ A reserva própria é cancelada, permanece no histórico e deixa de bloquear o h
 **Ator principal:** pesquisador (ou coordenador).
 
 **Passos:**
-1. Em **Compras**, a pessoa usa **Novo pedido**, escolhe para quem é a compra (um projeto ou o **estoque geral do laboratório**) e a **rubrica** (capital para equipamento e material permanente; custeio para consumo e serviços; passagens; diárias), descreve o item, marca **Gasto de manutenção** quando for peça ou reparo (já vem marcado nos pedidos feitos a partir de um chamado), escolhe a **urgência** (baixa, normal ou urgente; urgente sobe o pedido na fila do coordenador), cola o link, informa a quantidade e o valor de uma unidade (o app calcula o total) e envia. O pedido nasce *Solicitado*.
+1. Em **Compras**, a pessoa usa **Novo pedido**, escolhe para quem é a compra (um projeto ou o **estoque geral do laboratório**) e a **rubrica** (capital para equipamento e material permanente; custeio para consumo e serviços; passagens; diárias), descreve o item, marca **Gasto de manutenção** quando for peça ou reparo (já vem marcado nos pedidos feitos a partir de um chamado) e, se quiser, escolhe o **equipamento** (qualquer um, mesmo sem defeito), escolhe a **urgência** (baixa, normal ou urgente; urgente sobe o pedido na fila do coordenador), cola o link, informa a quantidade e o valor de uma unidade (o app calcula o total) e envia. O pedido nasce *Solicitado*.
 2. O coordenador vê o pedido (selo no menu e na campainha) e escolhe **Aprovar** ou **Recusar** (com motivo opcional).
 3. Aprovado, o coordenador compra e usa **Marcar como comprado**, informando o valor pago (já vem preenchido com o estimado).
 4. Quando o item chega, usa **Marcar como entregue**.
@@ -556,8 +556,9 @@ A reserva própria é cancelada, permanece no histórico e deixa de bloquear o h
 ### Fluxo 14b - Reportar problema e tratar chamado de manutenção
 
 **Passos:**  
-1. Qualquer pessoa abre **Reportar problema** no card do equipamento, descreve o problema, escolhe a urgência e, se quiser, tira ou anexa até 3 fotos. Em chamado **urgente**, o equipamento fica **Parado** (sem novas reservas) assim que o chamado é enviado. Se já houver chamados abertos, o diálogo avisa.
-2. O chamado entra na aba **Chamados** como *Aberto* e aparece como pendência (menu e campainha) para coordenadores e responsáveis pela manutenção.
+1. Qualquer pessoa abre **Reportar problema** no card do equipamento (ou **Abrir chamado** na aba **Chamados** ou na Inicial, escolhendo o equipamento no formulário), descreve o problema, escolhe a urgência e, se quiser, tira ou anexa até 3 fotos. Em chamado **urgente**, o equipamento fica **Parado** (sem novas reservas) assim que o chamado é enviado. Se já houver chamados abertos, o diálogo avisa.
+2. O chamado entra na aba **Chamados** como *Aberto* e aparece como pendência (menu e campainha) para coordenadores e responsáveis pela manutenção, que também recebem o aviso de chamado novo. Na Inicial, quem cuida da manutenção vê todos os chamados não encerrados (para atender, os que abriu e os que estão com outras pessoas).
+2b. Cada mudança de situação avisa quem abriu o chamado e os responsáveis pela manutenção (nunca quem fez a mudança); o coordenador que não é responsável só é avisado das mudanças dos chamados que abriu.
 3. Um responsável usa **Iniciar manutenção**: o chamado vira *Em andamento* e o equipamento (ativo ou parado) entra em **Em manutenção**, com início registrado. Se o chamado urgente for cancelado ou resolvido sem a manutenção começar, o equipamento volta a *Ativa* sozinho.
 3b. Se a máquina precisa de uma peça, o responsável usa **Pedir peça** no chamado: o pedido de compra já vem preenchido e fica ligado ao chamado, que passa a mostrar a situação da peça.
 3c. Quando a peça pedida é **comprada**, o chamado passa sozinho para *Aguardando peça*; quando ela é **entregue**, o chamado volta para *Em andamento* (ou *Aberto*, se ninguém tinha assumido). O responsável também pode marcar e retomar isso à mão.

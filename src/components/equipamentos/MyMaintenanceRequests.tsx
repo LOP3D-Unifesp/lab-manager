@@ -68,7 +68,7 @@ function Group({ title, requests, timezone }: { title: string; requests: Mainten
   );
 }
 
-// Bloco do Dashboard: chamados que a pessoa precisa atender (responsáveis) e os que ela mesma abriu.
+// Bloco do Dashboard: para os responsáveis, todos os chamados ativos; para as demais pessoas, os que elas abriram.
 export function MyMaintenanceRequests() {
   const t = useT();
   const { profile, labSettings } = useAuth();
@@ -95,8 +95,10 @@ export function MyMaintenanceRequests() {
   }, []);
 
   if (!requests || !profileId) return null;
-  const { toHandle, mine } = getMyRequestGroups(requests, profileId, podeManter);
-  if (toHandle.length === 0 && mine.length === 0) return null;
+  const { toHandle, mine, others } = getMyRequestGroups(requests, profileId, podeManter);
+  const vazio = toHandle.length === 0 && mine.length === 0 && others.length === 0;
+  // Quem cuida da manutenção sempre vê o bloco, para saber que não há nada esperando.
+  if (vazio && !podeManter) return null;
 
   return (
     <section>
@@ -114,6 +116,8 @@ export function MyMaintenanceRequests() {
         </div>
         <Group title={t("myRequests.toHandle")} requests={toHandle} timezone={timezone} />
         <Group title={t("myRequests.mine")} requests={mine} timezone={timezone} />
+        <Group title={t("myRequests.others")} requests={others} timezone={timezone} />
+        {vazio ? <p className="mt-4 text-base font-semibold text-muted">{t("myRequests.none")}</p> : null}
       </Card>
     </section>
   );

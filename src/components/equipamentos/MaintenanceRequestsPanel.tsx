@@ -51,7 +51,7 @@ type PanelProps = {
 };
 
 const selectClassName =
-  "min-h-11 min-w-0 rounded-lg border border-border bg-background px-3 text-base font-normal text-text outline-none transition focus:border-primary";
+  "min-h-11 min-w-0 max-w-full rounded-lg border border-border bg-background px-3 text-base font-normal text-text outline-none transition focus:border-primary";
 
 const TYPE_FILTER_KEY = "chamados:tipo";
 const SORT_KEY = "chamados:ordem";
@@ -211,7 +211,7 @@ export function MaintenanceRequestsPanel({ canMaintainNow, equipment, onChanged,
   }
 
   return (
-    <div className="grid gap-4">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
       <div className="flex flex-wrap items-center gap-3">
         <select
           aria-label={t("requests.filterStatus")}
@@ -399,6 +399,7 @@ export function MaintenanceRequestsPanel({ canMaintainNow, equipment, onChanged,
       {partFor ? (
         <PurchaseFormModal
           projects={projects}
+          equipment={equipment}
           purchase={null}
           defaultProjectId={GENERAL_STOCK_VALUE}
           fromMaintenance={{

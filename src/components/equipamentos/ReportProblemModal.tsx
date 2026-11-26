@@ -13,16 +13,22 @@ import { createMaintenanceRequest, uploadMaintenancePhotos } from "../../lib/sup
 import { PhotoAttachments, type PendingPhoto } from "../ui/PhotoAttachments";
 import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
+import { inputClassName } from "../ui/formStyles";
 
 type ReportProblemModalProps = {
-  equipment: Equipment;
-  openCount: number;
+  /** Equipamento já definido (botão do cartão); sem ele, a pessoa escolhe no próprio formulário. */
+  equipment: Equipment | null;
+  equipmentList: Equipment[];
+  countOpen: (equipmentId: string) => number;
   onClose: () => void;
   onDone: () => Promise<void> | void;
 };
 
-export function ReportProblemModal({ equipment, onClose, onDone, openCount }: ReportProblemModalProps) {
+export function ReportProblemModal({ countOpen, equipment: preset, equipmentList, onClose, onDone }: ReportProblemModalProps) {
   const t = useT();
+  const [equipmentId, setEquipmentId] = useState(preset?.id ?? "");
+  const equipment = preset ?? equipmentList.find((item) => item.id === equipmentId) ?? null;
+  const openCount = equipment ? countOpen(equipment.id) : 0;
   const [description, setDescription] = useState("");
   const [urgency, setUrgency] = useState<MaintenanceUrgency>("normal");
   const [erro, setErro] = useState("");
@@ -31,6 +37,10 @@ export function ReportProblemModal({ equipment, onClose, onDone, openCount }: Re
 
   async function enviar(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!equipment) {
+      setErro(t("report.chooseEquipment"));
+      return;
+    }
     const invalid = validateRequestDescription(description);
     if (invalid) {
       setErro(invalid);
@@ -52,11 +62,26 @@ export function ReportProblemModal({ equipment, onClose, onDone, openCount }: Re
 
   return (
     <Modal
-      title={t("report.title", { name: equipment.name })}
+      title={preset ? t("report.title", { name: preset.name }) : t("report.newTitle")}
       description={t("report.hint")}
       onClose={onClose}
     >
       <form className="grid gap-4" onSubmit={enviar}>
+        {preset ? null : (
+          <label className="grid gap-2 text-base font-semibold text-text">
+            {t("report.equipment")}
+            <select autoFocus className={inputClassName} value={equipmentId} onChange={(event) => setEquipmentId(event.target.value)}>
+              <option value="" disabled>
+                {t("report.selectEquipment")}
+              </option>
+              {equipmentList.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         {openCount > 0 ? (
           <p className="rounded-lg border border-warning-dark bg-warning-soft p-3 text-sm text-text">
             {t("report.alreadyOpen", { count: openCount })}
@@ -65,7 +90,7 @@ export function ReportProblemModal({ equipment, onClose, onDone, openCount }: Re
         <label className="grid gap-2 text-base font-semibold text-text">
           {t("report.whatsHappening")}
           <textarea
-            autoFocus
+            autoFocus={Boolean(preset)}
             className="min-h-28 min-w-0 rounded-lg border border-border bg-background px-4 py-3 text-base font-normal text-text outline-none transition focus:border-primary"
             maxLength={2000}
             value={description}
@@ -99,7 +124,7 @@ export function ReportProblemModal({ equipment, onClose, onDone, openCount }: Re
           </div>
         </fieldset>
         <PhotoAttachments photos={photos} onChange={setPhotos} onError={setErro} />
-        {urgency === "urgent" && equipment.status === "active" ? (
+        {urgency === "urgent" && equipment?.status === "active" ? (
           <p className="rounded-lg border border-danger bg-danger-soft p-3 text-sm font-semibold text-danger">
             {t("report.urgentWarning")}
           </p>

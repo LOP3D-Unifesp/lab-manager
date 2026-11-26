@@ -40,6 +40,7 @@ function purchase(overrides: Partial<PurchaseRequest>): PurchaseRequest {
     status: "requested",
     decided_by_name: null,
     maintenance_request_id: null,
+    equipment_id: null,
     maintenance_equipment_name: null,
     for_maintenance: false,
     decided_at: null,

@@ -55,6 +55,10 @@ export const manutencao = {
   "requests.photosDownloadFailed": { pt: "Não foi possível baixar as fotos.", en: "Could not download the photos.", es: "No se pudieron descargar las fotos." },
 
   "report.title": { pt: "Reportar problema: {name}", en: "Report a problem: {name}", es: "Reportar problema: {name}" },
+  "report.newTitle": { pt: "Abrir chamado", en: "Open a request", es: "Abrir solicitud" },
+  "report.equipment": { pt: "Equipamento", en: "Equipment", es: "Equipo" },
+  "report.selectEquipment": { pt: "Selecione o equipamento", en: "Select the equipment", es: "Selecciona el equipo" },
+  "report.chooseEquipment": { pt: "Escolha o equipamento.", en: "Choose the equipment.", es: "Elige el equipo." },
   "report.hint": { pt: "Os responsáveis pela manutenção são avisados.", en: "The maintenance owners are notified.", es: "Se avisa a los responsables de mantenimiento." },
   "report.alreadyOpen_one": { pt: "Já há {count} chamado aberto para este equipamento. Confira a aba Chamados antes de abrir outro.", en: "There is already {count} open request for this equipment. Check the Requests tab before opening another.", es: "Ya hay {count} solicitud abierta para este equipo. Revisa la pestaña Solicitudes antes de abrir otra." },
   "report.alreadyOpen_other": { pt: "Já há {count} chamados abertos para este equipamento. Confira a aba Chamados antes de abrir outro.", en: "There are already {count} open requests for this equipment. Check the Requests tab before opening another.", es: "Ya hay {count} solicitudes abiertas para este equipo. Revisa la pestaña Solicitudes antes de abrir otra." },

@@ -63,6 +63,7 @@ export function Dashboard() {
   if (!currentProfile) return null;
 
   const isCoordinator = currentProfile.role === "coordinator";
+  const maintains = canMaintain(currentProfile);
   const myBookings = getMyUpcomingBookings(bookings, currentProfile.id, now);
   const myPurchases = getMyOpenPurchases(purchases, currentProfile.id);
   const presence = availability
@@ -71,7 +72,7 @@ export function Dashboard() {
     .join(", ");
   const decisions = getDecisionItems({
     isCoordinator,
-    canMaintain: canMaintain(currentProfile),
+    canMaintain: maintains,
     pendingBookings: attention.pendingBookings,
     purchases: attention.purchases,
     urgentPurchases: attention.urgentPurchases,
@@ -98,8 +99,10 @@ export function Dashboard() {
       <QuickActions />
       <DecisionCard items={decisions} />
 
+      {/* Para quem cuida da manutenção os chamados vêm antes das tarefas; para as demais pessoas, depois. */}
+      {maintains ? <MyMaintenanceRequests /> : null}
       <MyTasksBoard isCoordinator={isCoordinator} profileId={currentProfile.id} />
-      <MyMaintenanceRequests />
+      {maintains ? null : <MyMaintenanceRequests />}
 
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
         <NewsCard />

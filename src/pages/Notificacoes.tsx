@@ -9,7 +9,8 @@ import { Card } from "../components/ui/Card";
 import { EmptyState } from "../components/ui/EmptyState";
 import { PageHeader } from "../components/ui/PageHeader";
 import { t } from "../i18n";
-import { getNotificationGroup, notificationGroups, type AppNotification, type NotificationGroup } from "../lib/notifications";
+import { useAuth } from "../lib/auth";
+import { getNotificationGroup, getVisibleNotificationGroups, type AppNotification, type NotificationGroup } from "../lib/notifications";
 
 const GROUP_LABELS: Record<NotificationGroup, () => string> = {
   bookings: () => t("notifPage.group.bookings"),
@@ -24,6 +25,7 @@ const selectClassName =
 
 // Histórico completo das notificações da pessoa, com filtro por assunto e "só não lidas".
 export function Notificacoes() {
+  const { profile } = useAuth();
   const { hasMore, items, loadMore, markAllRead, markRead, unread } = useNotifications();
   const navigate = useNavigate();
   const [group, setGroup] = useState<NotificationGroup | "all">("all");
@@ -57,7 +59,7 @@ export function Notificacoes() {
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <select aria-label={t("notifPage.title")} className={selectClassName} value={group} onChange={(event) => setGroup(event.target.value as NotificationGroup | "all")}>
           <option value="all">{t("notifPage.all")}</option>
-          {notificationGroups.map((value) => (
+          {getVisibleNotificationGroups(profile).map((value) => (
             <option key={value} value={value}>
               {GROUP_LABELS[value]()}
             </option>
