@@ -5,6 +5,12 @@ on:
   push:
     branches: [main]
 
+# Um envio novo no mesmo branch cancela o CI do anterior. Na main isso evita que o CI de uma versão antiga termine
+# depois do da nova e publique o site por cima dela.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   frontend:
     runs-on: ubuntu-latest

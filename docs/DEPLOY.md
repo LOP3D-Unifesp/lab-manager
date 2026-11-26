@@ -25,6 +25,11 @@ que o CI testou; se o CI ficar vermelho (inclusive o job `database`), o site nã
 publicar manualmente em *Actions → Deploy Pages → Run workflow* (emergência). A publicação leva uns 4 a 5 minutos a mais
 porque espera o job do banco.
 
+**Merges em sequência.** Um push novo cancela o CI do anterior no mesmo branch, então só a versão mais recente da
+`main` termina o CI e é publicada (se ela falhar, o site fica como está). Execuções de publicação puladas, por CI
+cancelado ou com falha, não interrompem uma publicação em andamento. Cuidado ao **reexecutar um CI antigo** da `main`:
+ele publica a versão daquele commit; para voltar à atual, use *Actions → Deploy Pages → Run workflow*.
+
 ## Configuração inicial (uma vez)
 
 ### 1. GitHub
