@@ -14,8 +14,10 @@ permissions:
   pages: write
   id-token: write
 
+# Só entra no grupo "pages" a execução que vai publicar. A disparada por um CI cancelado ou com falha (que é pulada)
+# fica num grupo próprio, para não cancelar uma publicação em andamento.
 concurrency:
-  group: pages
+  group: ${{ (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success') && 'pages' || format('pages-skipped-{0}', github.run_id) }}
   cancel-in-progress: true
 
 jobs:
