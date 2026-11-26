@@ -31,12 +31,13 @@ describe("pendências da campainha", () => {
 });
 
 describe("tipo desconhecido", () => {
-  it("mostra um texto genérico em vez de falhar", () => {
-    expect(describeNotification({ type: "tipo_novo" as NotificationType, params: { task: "x" } })).toEqual({
+  it("mostra um título genérico, com o assunto, em vez de falhar", () => {
+    expect(describeNotification({ type: "tipo_novo" as NotificationType, params: { task: "Calibrar", project: "Lab 3D" } })).toEqual({
       title: "Nova notificação",
-      detail: null,
+      detail: "Calibrar · Lab 3D",
       reason: null,
     });
+    expect(describeNotification({ type: "tipo_novo" as NotificationType, params: {} }).detail).toBeNull();
   });
 });
 

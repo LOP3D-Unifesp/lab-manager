@@ -186,8 +186,11 @@ export function describeNotification(notification: Pick<AppNotification, "type" 
       if (status === "requested") return { title: t("notif.purchaseReopened"), detail: item, reason: null };
       return { title: t("notif.purchaseStatus"), detail: item, reason: null };
     }
-    // Tipo criado depois desta versão do app (aba aberta desde antes de uma atualização): mostra um texto genérico.
-    default:
-      return { title: t("notif.generic"), detail: null, reason: null };
+    // Tipo criado depois desta versão do app (aba aberta desde antes de uma atualização): título genérico, com o
+    // assunto que vier nos dados.
+    default: {
+      const subject = text(params, "task") ?? text(params, "equipment") ?? text(params, "item");
+      return { title: t("notif.generic"), detail: [subject, text(params, "project")].filter(Boolean).join(" · ") || null, reason: null };
+    }
   }
 }

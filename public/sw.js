@@ -174,7 +174,8 @@ function bodyLines(type, params) {
   if (type === "project_join_request") return [join(text(params, "requester"), text(params, "project")), text(params, "description")];
   if (type === "project_join_decision") return [text(params, "project"), byName("by", text(params, "by"))];
   if (type === "feedback_new") return [text(params, "author"), text(params, "description")];
-  return [];
+  // Tipo criado depois desta versão do service worker: mostra o assunto com o que veio nos dados.
+  return [text(params, "task") || text(params, "equipment") || text(params, "item"), text(params, "project"), text(params, "description")];
 }
 
 function describe(data) {
@@ -201,20 +202,22 @@ self.addEventListener("push", (event) => {
     data = {};
   }
 
-  event.waitUntil(
-    (async () => {
-      // Com o app aberto e em foco o sino já mostra a novidade; avisar de novo seria repetição.
-      const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
-      if (windows.some((client) => client.visibilityState === "visible" && client.focused)) return;
+  async function show() {
+    // Com o app aberto e em foco o sino já mostra a novidade; avisar de novo seria repetição.
+    const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    if (windows.some((client) => client.visibilityState === "visible" && client.focused)) return;
 
-      const { body, title } = describe(data);
-      await self.registration.showNotification(title, {
-        body,
-        tag: data.id || data.type || "lab-manager",
-        data: { link: typeof data.link === "string" ? data.link : "/" },
-      });
-    })(),
-  );
+    const { body, title } = describe(data);
+    await self.registration.showNotification(title, {
+      body,
+      tag: data.id || data.type || "lab-manager",
+      data: { link: typeof data.link === "string" ? data.link : "/" },
+    });
+  }
+
+  // Cada push também procura uma versão nova deste arquivo, para os textos não ficarem velhos em quem passa dias sem
+  // abrir o app. A busca vem depois do aviso e uma falha nela não importa.
+  event.waitUntil(show().finally(() => self.registration.update().catch(() => undefined)));
 });
 
 self.addEventListener("notificationclick", (event) => {

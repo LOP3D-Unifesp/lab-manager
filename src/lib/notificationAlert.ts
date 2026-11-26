@@ -101,7 +101,8 @@ function lines(notification: Pick<AppNotification, "type" | "params">): Array<st
   if (type === "project_join_request") return [join(text(params, "requester"), text(params, "project")), text(params, "description")];
   if (type === "project_join_decision") return [text(params, "project"), by(text(params, "by"))];
   if (type === "feedback_new") return [text(params, "author"), text(params, "description")];
-  return [];
+  // Tipo criado depois desta versão do app: mostra o assunto com o que veio nos dados.
+  return [text(params, "task") ?? text(params, "equipment") ?? text(params, "item"), text(params, "project"), text(params, "description")];
 }
 
 export function describeAlertBody(notification: Pick<AppNotification, "type" | "params">) {

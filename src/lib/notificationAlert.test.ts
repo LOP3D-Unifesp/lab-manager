@@ -79,6 +79,34 @@ describe("texto do aviso no computador e do push", () => {
     expect(worker({ type: "tipo_novo", params: {} })).toEqual({ title: "Nova notificação", body: "" });
   });
 
+  it("um tipo que esta versão não conhece ainda mostra o assunto", () => {
+    const params = { task: "Calibrar", project: "Lab 3D", description: "Trecho" };
+    const expected = "Calibrar\nLab 3D\nTrecho";
+    expect(describeAlertBody({ type: "tipo_novo" as NotificationType, params })).toBe(expected);
+    expect(worker({ type: "tipo_novo", params })).toEqual({ title: "Nova notificação", body: expected });
+  });
+
+  it("cada push mostra o aviso e procura uma versão nova do service worker", async () => {
+    const listeners: Record<string, (event: unknown) => void> = {};
+    const calls: string[] = [];
+    new Function("self", source)({
+      addEventListener: (name: string, listener: (event: unknown) => void) => (listeners[name] = listener),
+      navigator: { language: "pt-BR" },
+      clients: { matchAll: async () => [] },
+      registration: {
+        showNotification: async (title: string) => void calls.push(title),
+        update: async () => {
+          calls.push("update");
+          throw new Error("sem rede");
+        },
+      },
+    });
+    let done: Promise<unknown> = Promise.resolve();
+    listeners.push({ data: { json: () => ({ type: "feedback_new", params: {} }) }, waitUntil: (work: Promise<unknown>) => (done = work) });
+    await done;
+    expect(calls).toEqual(["Nova sugestão", "update"]);
+  });
+
   it("o push diz quem atribuiu a tarefa, comentou ou mencionou, com o mesmo título do app", () => {
     for (const type of ["task_assigned", "task_comment", "task_mention"] as const) {
       expect(worker({ type, params: { by: "Ana" } }).title).toBe(describeNotification({ type, params: { by: "Ana" } }).title);
