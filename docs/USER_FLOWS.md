@@ -542,6 +542,12 @@ A reserva própria é cancelada, permanece no histórico e deixa de bloquear o h
 - Nos quadros de tarefas (Inicial, **Projetos** e dentro de um projeto) a pessoa escolhe a ordem dos cartões em cada coluna: **manual** (a arrastada), **prazo** (mais próximo primeiro; sem prazo no fim) ou **urgência** (urgente, alta, normal, baixa), misturando os projetos. Um critério desempata o outro.
 - A escolha vale só para quem escolheu e fica salva no navegador. Fora da ordem manual, arrastar muda só a coluna e os botões de subir e descer somem.
 
+### Fluxo 13b - Editar uma tarefa e fechar janelas
+
+- Numa tarefa já criada, **checklist** (marcar, adicionar, editar, remover, reordenar), **coluna**, **prazo**, **prioridade** e **responsáveis** são salvos na hora. **Título**, **descrição** e **troca de projeto** pedem **Salvar**, que fica fixo no topo. Tarefa nova é toda salva pelo botão.
+- O item digitado no campo de novo item entra no checklist ao apertar Enter ou ao sair do campo.
+- Todas as janelas fecham ao clicar fora, no X ou no Esc. Havendo algo preenchido e não salvo, a janela pergunta antes (continuar editando ou descartar; na tarefa, também salvar). O botão **Cancelar** descarta direto.
+
 ### Fluxo 14a - Sino, pendências e preferências de aviso
 
 - O sino mostra **Pendências** (o que está em aberto: reservas, chamados, compras e sugestões para quem decide ou resolve, e as tarefas da própria pessoa urgentes, atrasadas ou para hoje) e **Novidades** (avisos de eventos).

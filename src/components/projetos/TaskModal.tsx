@@ -1,5 +1,5 @@
 import { getLocale, t } from "../../i18n";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useId, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
 import {
@@ -27,6 +27,7 @@ import { formatLeadTime, getLeadTimeSeconds } from "../../lib/taskLeadTime";
 import { formatClock, formatDuration, getTaskTimes } from "../../lib/taskTimer";
 import { getTimeByPerson, type TimeEntry } from "../../lib/taskTime";
 import { useNow } from "./TaskTimer";
+import { useAutoSave } from "./useAutoSave";
 import { Avatar } from "../ui/Avatar";
 import { Button } from "../ui/Button";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
@@ -51,6 +52,14 @@ type TaskModalProps = {
   onClose: () => void;
   onSaved: () => void;
 };
+
+// Itens prontos para gravar: sem espaços nas pontas; um título esvaziado mantém o que estava gravado, e itens sem
+// título nenhum ficam de fora.
+function normalizarChecklist(itens: ChecklistDraftItem[], gravados: ChecklistDraftItem[]) {
+  return itens
+    .map((item) => ({ ...item, title: item.title.trim() || (gravados.find((saved) => saved.id === item.id)?.title ?? "") }))
+    .filter((item) => item.title);
+}
 
 export function TaskModal({
   canDelete,
@@ -88,11 +97,18 @@ export function TaskModal({
   });
   const itensIniciais = (task?.checklist ?? []).map(({ id, title, done }) => ({ id, title, done }));
   const [checklist, setChecklist] = useState<ChecklistDraftItem[]>(itensIniciais);
+  // O que já está no banco, atualizado a cada gravação.
+  const checklistGravada = useRef<ChecklistDraftItem[]>(itensIniciais);
+  const responsaveisGravados = useRef<string[]>(task?.assignees.map((a) => a.profile_id) ?? []);
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
   const [trechos, setTrechos] = useState<TimeEntry[]>([]);
   const [totais, setTotais] = useState({ work: task?.work_seconds ?? 0, review: task?.review_seconds ?? 0 });
+  const [descricaoEditada, setDescricaoEditada] = useState(false);
+  // Numa tarefa já criada, tudo menos título, descrição e projeto é gravado na hora.
+  const auto = useAutoSave((error) => setErro(getTaskErrorMessage(error)));
+  const formId = useId();
 
   // Tempo por pessoa: lê os trechos de tempo e os totais da tarefa ao abrir (e de novo depois de um ajuste ou se
   // alguém ligar/pausar o timer enquanto o modal está aberto).
@@ -115,6 +131,11 @@ export function TaskModal({
 
   function escolherProjeto(id: string) {
     setChosenProjectId(id);
+    // Voltou ao projeto da tarefa: voltam os responsáveis dela.
+    if (task && id === task.project_id) {
+      setResponsaveis(responsaveisGravados.current);
+      return;
+    }
     const novoMembros = projects.find((item) => item.id === id)?.members ?? [];
     // Tarefa nova: sugere os responsáveis padrão; tarefa existente: mantém quem também é membro do novo projeto.
     const base = task ? responsaveis : defaultAssigneeIds;
@@ -122,13 +143,68 @@ export function TaskModal({
   }
 
   function alternar(profileId: string) {
-    setResponsaveis((current) =>
-      current.includes(profileId) ? current.filter((id) => id !== profileId) : [...current, profileId],
-    );
+    const novos = responsaveis.includes(profileId) ? responsaveis.filter((id) => id !== profileId) : [...responsaveis, profileId];
+    setResponsaveis(novos);
+    // Com a troca de projeto ainda não salva, os responsáveis vão junto no Salvar.
+    if (task && projectId === task.project_id) {
+      auto.now("assignees", async () => {
+        await setTaskAssignees(task.id, novos);
+        responsaveisGravados.current = novos;
+      });
+    }
   }
 
-  async function salvar(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  function mudarColuna(value: TaskStatus) {
+    setStatus(value);
+    if (task) auto.now("status", () => updateProjectTask(task.id, { status: value }));
+  }
+
+  function mudarPrioridade(value: TaskPriority) {
+    setPriority(value);
+    if (task) auto.now("priority", () => updateProjectTask(task.id, { priority: value }));
+  }
+
+  function mudarPrazo(value: string) {
+    setDueOn(value);
+    // Enquanto o ano é digitado o campo passa por valores como 0002: só grava datas completas.
+    if (task && (value === "" || /^[2-9]\d{3}-/.test(value))) auto.later("due", () => updateProjectTask(task.id, { due_on: value || null }));
+    else auto.drop("due");
+  }
+
+  function mudarChecklist(itens: ChecklistDraftItem[]) {
+    setChecklist(itens);
+    if (!task) return;
+    // Título apagado por enquanto mantém o anterior; remover é pelo X.
+    const gravar = normalizarChecklist(itens, checklistGravada.current);
+    auto.later("checklist", async () => {
+      await setTaskChecklist(task.id, gravar);
+      checklistGravada.current = gravar;
+    });
+  }
+
+  const textoPendente = Boolean(
+    task &&
+      (title.trim() !== task.title ||
+        (descricaoEditada && description.trim() !== (task.description ?? "").trim()) ||
+        projectId !== task.project_id),
+  );
+  const rascunhoNovo = Boolean(
+    !task && (title.trim() || (descricaoEditada && description.trim()) || checklist.length > 0 || dueOn || priority !== "normal"),
+  );
+  const naoSalvo = textoPendente || rascunhoNovo || auto.failed;
+
+  // Fecha depois de gravar o que estiver na fila; se algo mudou no banco, o quadro recarrega.
+  async function encerrar() {
+    const jaTinhaFalha = auto.hasFailed();
+    await auto.flush();
+    // Uma falha que só apareceu agora mantém a janela aberta, com o erro à vista; fechar de novo pergunta antes.
+    if (!jaTinhaFalha && auto.hasFailed()) return;
+    if (auto.hasSaved()) onSaved();
+    else onClose();
+  }
+
+  async function salvar(event?: FormEvent<HTMLFormElement>) {
+    event?.preventDefault();
     const trimmed = title.trim();
     if (!projectId) {
       setErro(t("taskModal.errProject"));
@@ -142,6 +218,8 @@ export function TaskModal({
     try {
       setSalvando(true);
       setErro("");
+      // O que ainda esperava para ser gravado vai junto neste salvamento.
+      await auto.flush();
       const base = { title: trimmed, description: description.trim() || null, due_on: dueOn || null, priority };
       let taskId: string;
       if (task) {
@@ -153,8 +231,8 @@ export function TaskModal({
         taskId = await createProjectTask(projectId, { ...base, status });
       }
       await setTaskAssignees(taskId, responsaveis);
-      const itens = checklist.map((item) => ({ ...item, title: item.title.trim() })).filter((item) => item.title);
-      if (JSON.stringify(itens) !== JSON.stringify(itensIniciais)) await setTaskChecklist(taskId, itens);
+      const itens = normalizarChecklist(checklist, checklistGravada.current);
+      if (JSON.stringify(itens) !== JSON.stringify(checklistGravada.current)) await setTaskChecklist(taskId, itens);
       onSaved();
     } catch (error) {
       setErro(getTaskErrorMessage(error));
@@ -168,6 +246,7 @@ export function TaskModal({
     setConfirmandoExclusao(false);
     try {
       setSalvando(true);
+      auto.cancel();
       await deleteProjectTask(task.id);
       onSaved();
     } catch (error) {
@@ -194,14 +273,42 @@ export function TaskModal({
   const formatarData = (valor: string) => new Intl.DateTimeFormat(getLocale(), { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(valor));
   const semProjetos = !lockedProjectId && projects.length === 0;
 
+  const aviso = auto.status === "saving" ? t("common.saving") : auto.status === "saved" ? t("taskModal.autoSaved") : "";
+
   return (
-    <Modal title={task ? t("taskModal.edit") : t("taskModal.new")} onClose={onClose}>
-      <form className="grid gap-4" onSubmit={salvar}>
+    <Modal
+      title={task ? t("taskModal.edit") : t("taskModal.new")}
+      description={task ? <span role="status" className="block min-h-5 text-sm">{aviso}</span> : undefined}
+      headerActions={
+        <Button className="min-h-10 px-4 py-2 text-base" type="submit" form={formId} disabled={salvando || semProjetos}>
+          {salvando ? t("common.saving") : t("common.save")}
+        </Button>
+      }
+      trackInputs={false}
+      unsaved={naoSalvo}
+      onSave={() => void salvar()}
+      onClose={() => void encerrar()}
+    >
+      <form id={formId} className="grid grid-cols-[minmax(0,1fr)] gap-4" onSubmit={salvar}>
+        {erro ? (
+          <p role="alert" className="rounded-lg border border-danger bg-danger-soft p-3 text-base font-semibold text-danger">{erro}</p>
+        ) : null}
+        {task ? <p className="text-sm text-muted">{t("taskModal.autoHint")}</p> : null}
         {lockedProjectId ? (
           showProjectLink && task ? (
             <p className="text-base text-muted">
               {t("taskModal.projectLabel")}{" "}
-              <Link className="font-semibold text-primary underline" to={`/projetos/${lockedProjectId}`} onClick={onClose}>
+              <Link
+                className="font-semibold text-primary underline"
+                to={`/projetos/${lockedProjectId}`}
+                onClick={(event) => {
+                  // Com texto não salvo, não sai da tela.
+                  if (naoSalvo) {
+                    event.preventDefault();
+                    setErro(t("taskModal.saveBeforeLeaving"));
+                  } else void encerrar();
+                }}
+              >
                 {task.project_name ?? project?.name ?? t("taskModal.openProject")}
               </Link>
             </p>
@@ -232,12 +339,14 @@ export function TaskModal({
           {t("taskModal.title")}
           <input className={inputClassName} required value={title} onChange={(e) => setTitle(e.target.value)} />
         </label>
-        <RichTextEditor label={t("taskModal.description")} value={description} onChange={setDescription} />
-        <ChecklistEditor items={checklist} onChange={setChecklist} />
+        <div onInput={() => setDescricaoEditada(true)}>
+          <RichTextEditor label={t("taskModal.description")} value={description} onChange={setDescription} />
+        </div>
+        <ChecklistEditor items={checklist} onChange={mudarChecklist} />
         <div className="grid items-start gap-4 sm:grid-cols-3">
           <label className="grid gap-2 text-base font-semibold text-text">
             {t("taskModal.column")}
-            <select className={inputClassName} value={status} onChange={(e) => setStatus(e.target.value as TaskStatus)}>
+            <select className={inputClassName} value={status} onChange={(e) => mudarColuna(e.target.value as TaskStatus)}>
               {taskStatusOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
@@ -247,11 +356,11 @@ export function TaskModal({
           </label>
           <label className="grid gap-2 text-base font-semibold text-text">
             {t("taskModal.due")}
-            <input className={inputClassName} type="date" value={dueOn} onChange={(e) => setDueOn(e.target.value)} />
+            <input className={inputClassName} type="date" value={dueOn} onChange={(e) => mudarPrazo(e.target.value)} />
           </label>
           <label className="grid gap-2 text-base font-semibold text-text">
             {t("taskModal.priority")}
-            <select className={inputClassName} value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)}>
+            <select className={inputClassName} value={priority} onChange={(e) => mudarPrioridade(e.target.value as TaskPriority)}>
               {taskPriorityOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
@@ -313,7 +422,7 @@ export function TaskModal({
           <TimeEntriesList entries={trechos} now={agora} />
         ) : null}
 
-        <fieldset className="grid gap-2">
+        <fieldset className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-2">
           <legend className="mb-1 text-base font-semibold text-text">{t("taskModal.assignees")}</legend>
           {!projectId ? (
             <p className="text-base text-muted">{t("taskModal.pickProject")}</p>
@@ -348,27 +457,13 @@ export function TaskModal({
           )}
         </fieldset>
 
-        {erro ? (
-          <p className="rounded-lg border border-danger bg-danger-soft p-3 text-base font-semibold text-danger">{erro}</p>
+        {task && canDelete ? (
+          <div className="mt-2">
+            <Button variant="danger" disabled={salvando} onClick={() => setConfirmandoExclusao(true)}>
+              {t("taskModal.delete")}
+            </Button>
+          </div>
         ) : null}
-
-        <div className="mt-2 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            {task && canDelete ? (
-              <Button variant="danger" disabled={salvando} onClick={() => setConfirmandoExclusao(true)}>
-                {t("taskModal.delete")}
-              </Button>
-            ) : null}
-          </div>
-          <div className="flex flex-col-reverse gap-3 sm:flex-row">
-            <Button variant="secondary" onClick={onClose}>
-              {t("common.cancel")}
-            </Button>
-            <Button type="submit" disabled={salvando || semProjetos}>
-              {salvando ? t("common.saving") : t("taskModal.save")}
-            </Button>
-          </div>
-        </div>
       </form>
       {confirmandoExclusao && task ? (
         <ConfirmDialog confirmLabel={t("tasks.deleteConfirmButton")} busy={salvando} onCancel={() => setConfirmandoExclusao(false)} onConfirm={excluir} title={t("tasks.deleteTitle")}>

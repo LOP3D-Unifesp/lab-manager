@@ -65,6 +65,7 @@ export function ReportProblemModal({ countOpen, equipment: preset, equipmentList
       title={preset ? t("report.title", { name: preset.name }) : t("report.newTitle")}
       description={t("report.hint")}
       onClose={onClose}
+      unsaved={photos.length > 0}
     >
       <form className="grid gap-4" onSubmit={enviar}>
         {preset ? null : (
