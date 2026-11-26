@@ -97,6 +97,7 @@ Status do MVP implementado:
 | `20261013_maintenance_status_alerts` | Mudanca de situacao de um chamado avisa quem abriu e os responsaveis pela manutencao (secao 3.20). |
 | `20261014_purchase_equipment` | `purchase_requests.equipment_id`: equipamento do gasto de manutencao, com ou sem chamado; `update_purchase_request` ganha `p_set_equipment` e `p_equipment_id` (secao 3.19). |
 | `20261015_task_notifications` | Assunto `tasks` nas preferencias (copia a escolha de `projects`) e notificacao `task_status`: mudanca de situacao de tarefa avisa quem criou e os responsaveis (secao 3.20). |
+| `20261016_notification_resolution` | Avisos de assunto resolvido sao marcados como lidos por gatilhos (reservas, chamados, compras, pedidos de entrada e tarefas); lidos guardados por 30 dias (secao 3.20). |
 
 Resumo dos objetos que mais mudam o entendimento do schema:
 
@@ -1197,7 +1198,7 @@ O texto nao e guardado: so o tipo e os dados do evento (`params`), e o cliente m
   `task_timer_reminder`, `task_status`), `params` (jsonb), `link`
   (caminho do app), `entity_id`, `created_at` e `read_at`. Cada pessoa le e apaga as proprias e so altera `read_at`
   (grant de coluna); ninguem insere pelo cliente. Na publicacao `supabase_realtime`. Ao criar uma notificacao,
-  as lidas ha mais de 90 dias do destinatario sao apagadas.
+  as lidas ha mais de 30 dias do destinatario sao apagadas.
 - Quem cria: gatilhos `security definer` em `equipment_bookings`, `maintenance_requests`, `feedback_reports`,
   `purchase_requests` e `project_join_requests`, via `private.notify` (nunca avisa quem fez a acao). Destinatarios:
   reserva pendente, feedback novo e pedido de compra novo, so coordenadores; chamado novo, coordenadores e
@@ -1205,6 +1206,10 @@ O texto nao e guardado: so o tipo e os dados do evento (`params`), e o cliente m
   status de chamado, quem abriu e os mantenedores; mudanca de status de compra, so quem pediu; pedido de entrada em projeto, coordenadores e
   membros; decisao do pedido, quem pediu; tarefa atribuida e timer ligado, a propria pessoa; mudanca de situacao de
   tarefa (`project_tasks_notify_status`), quem criou e os responsaveis que ainda veem o projeto.
+- Baixa automatica (`private.resolve_notifications`, por `entity_id`): `booking_pending` quando a reserva sai de
+  `pending`; `request_new` quando o chamado e resolvido ou cancelado; `purchase_new` quando o pedido sai de
+  `requested`; `project_join_request` quando sai de `pending`; avisos `task_*` quando a tarefa e concluida ou
+  arquivada (menos o `task_status` de conclusao) ou apagada. Vale para todos os destinatarios.
 - `notification_preferences`: `(profile_id, topic)` com `topic` em `bookings`, `requests`, `purchases`, `feedback`,
   `projects`, `tasks`, `in_app` e `push` (padrao ligado). `private.wants_notification` consulta a tabela: com `in_app`
   desligado a notificacao nem e criada (e o push, que parte dela, tambem nao).

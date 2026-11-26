@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(459);
+select plan(471);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -2426,6 +2426,83 @@ select is(
   (select string_agg(private.notification_topic(type), ',') from unnest(array['task_assigned', 'task_status', 'task_timer_reminder']) as type),
   'tasks,tasks,tasks',
   'every task notification belongs to the Tasks topic'
+);
+
+-- Notifications about a subject that is settled stop being new, for everyone who received them.
+create function pg_temp.unread(p_entity uuid, p_type text) returns int
+language sql
+as $$
+  select count(*)::int from public.notifications where entity_id = p_entity and type = p_type and read_at is null;
+$$;
+
+insert into public.equipment_bookings (id, equipment_id, profile_id, project_id, project_name, starts_at, ends_at, status, estimated_duration_minutes)
+values ('00000000-0000-0000-0000-00000000f801', '20000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000103',
+  '00000000-0000-0000-0000-0000000000f7', 'pgtap avisos de tarefa', now() + interval '300 days', now() + interval '300 days 1 hour', 'pending', 60);
+update public.equipment_bookings set status = 'rejected', rejected_reason = 'pgtap' where id = '00000000-0000-0000-0000-00000000f801';
+select ok(
+  (select count(*) > 0 and bool_and(read_at is not null) from public.notifications where entity_id = '00000000-0000-0000-0000-00000000f801' and type = 'booking_pending'),
+  'deciding a booking clears the pending booking notice'
+);
+
+insert into public.maintenance_requests (id, equipment_id, requested_by, description)
+values ('00000000-0000-0000-0000-00000000f802', '20000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000121', 'pgtap baixa chamado');
+update public.maintenance_requests set status = 'in_progress' where id = '00000000-0000-0000-0000-00000000f802';
+select ok(pg_temp.unread('00000000-0000-0000-0000-00000000f802', 'request_new') > 0, 'a request being worked on keeps its new-request notice');
+update public.maintenance_requests set status = 'resolved' where id = '00000000-0000-0000-0000-00000000f802';
+select is(pg_temp.unread('00000000-0000-0000-0000-00000000f802', 'request_new'), 0, 'resolving a request clears the new-request notice');
+select ok(
+  (select count(*) > 0 from public.notifications where entity_id = '00000000-0000-0000-0000-00000000f802' and type = 'request_status' and params->>'status' = 'resolved' and read_at is null),
+  'the notice that the request was resolved stays new'
+);
+
+insert into public.purchase_requests (id, funding_category, item, estimated_amount, requested_by)
+values ('00000000-0000-0000-0000-00000000f803', 'custeio', 'pgtap baixa compra', 10, '00000000-0000-0000-0000-000000000121');
+update public.purchase_requests set status = 'approved' where id = '00000000-0000-0000-0000-00000000f803';
+select is(pg_temp.unread('00000000-0000-0000-0000-00000000f803', 'purchase_new'), 0, 'deciding a purchase clears the new-purchase notice');
+select is(pg_temp.unread('00000000-0000-0000-0000-00000000f803', 'purchase_status'), 1, 'the decision stays new for who asked');
+
+insert into public.project_join_requests (id, project_id, profile_id)
+values ('00000000-0000-0000-0000-00000000f804', '00000000-0000-0000-0000-0000000000f7', '00000000-0000-0000-0000-000000000121');
+update public.project_join_requests set status = 'cancelled' where id = '00000000-0000-0000-0000-00000000f804';
+select ok(
+  (select count(*) > 0 and bool_and(read_at is not null) from public.notifications where entity_id = '00000000-0000-0000-0000-00000000f804' and type = 'project_join_request'),
+  'cancelling a join request clears its notice'
+);
+
+insert into public.project_tasks (id, project_id, title, created_by) values
+  ('00000000-0000-0000-0000-00000000f805', '00000000-0000-0000-0000-0000000000f7', 'pgtap baixa tarefa', '00000000-0000-0000-0000-000000000101'),
+  ('00000000-0000-0000-0000-00000000f806', '00000000-0000-0000-0000-0000000000f7', 'pgtap baixa arquivada', '00000000-0000-0000-0000-000000000101');
+insert into public.project_task_assignees (task_id, project_id, profile_id) values
+  ('00000000-0000-0000-0000-00000000f805', '00000000-0000-0000-0000-0000000000f7', '00000000-0000-0000-0000-000000000103'),
+  ('00000000-0000-0000-0000-00000000f806', '00000000-0000-0000-0000-0000000000f7', '00000000-0000-0000-0000-000000000103');
+delete from public.notification_preferences where profile_id = '00000000-0000-0000-0000-000000000103';
+update public.project_tasks set status = 'review' where id = '00000000-0000-0000-0000-00000000f805';
+update public.project_tasks set status = 'done' where id = '00000000-0000-0000-0000-00000000f805';
+select is(
+  pg_temp.unread('00000000-0000-0000-0000-00000000f805', 'task_assigned')
+    + (select count(*)::int from public.notifications where entity_id = '00000000-0000-0000-0000-00000000f805' and params->>'status' = 'review' and read_at is null),
+  0,
+  'completing a task clears its earlier notices'
+);
+select ok(
+  (select count(*) > 0 from public.notifications where entity_id = '00000000-0000-0000-0000-00000000f805' and params->>'status' = 'done' and read_at is null),
+  'the notice that the task was completed stays new'
+);
+update public.project_tasks set archived_at = now() where id = '00000000-0000-0000-0000-00000000f806';
+select is(pg_temp.unread('00000000-0000-0000-0000-00000000f806', 'task_assigned'), 0, 'archiving a task clears its notices');
+delete from public.project_tasks where id = '00000000-0000-0000-0000-00000000f805';
+select is(pg_temp.unread('00000000-0000-0000-0000-00000000f805', 'task_status'), 0, 'deleting a task clears all its notices');
+
+-- Read notices are kept for 30 days; unread ones are never removed.
+insert into public.notifications (recipient_id, type, params, created_at, read_at) values
+  ('00000000-0000-0000-0000-000000000121', 'feedback_new', '{"kind":"pgtap-31"}', now() - interval '40 days', now() - interval '31 days'),
+  ('00000000-0000-0000-0000-000000000121', 'feedback_new', '{"kind":"pgtap-29"}', now() - interval '40 days', now() - interval '29 days'),
+  ('00000000-0000-0000-0000-000000000121', 'feedback_new', '{"kind":"pgtap-new"}', now() - interval '40 days', null);
+select private.notify('00000000-0000-0000-0000-000000000121', 'feedback_new', '{"kind":"pgtap-trigger"}'::jsonb, '/feedback', null);
+select is(
+  (select string_agg(params->>'kind', ',' order by params->>'kind') from public.notifications where recipient_id = '00000000-0000-0000-0000-000000000121' and params->>'kind' like 'pgtap-%'),
+  'pgtap-29,pgtap-new,pgtap-trigger',
+  'only notices read more than 30 days ago are removed'
 );
 
 select * from finish();

@@ -81,7 +81,7 @@ export const sistema = {
   "notifPrefs.feedback": { pt: "Sugestões", en: "Suggestions", es: "Sugerencias" },
   "notifPrefs.feedbackHint": { pt: "Sugestões novas enviadas pelas pessoas.", en: "New suggestions sent by people.", es: "Nuevas sugerencias enviadas por las personas." },
   "notifPage.title": { pt: "Notificações", en: "Notifications", es: "Notificaciones" },
-  "notifPage.subtitle": { pt: "Histórico de avisos sobre reservas, chamados, compras e sugestões.", en: "History of alerts about bookings, requests, purchases and suggestions.", es: "Historial de avisos sobre reservas, solicitudes, compras y sugerencias." },
+  "notifPage.subtitle": { pt: "Histórico de avisos sobre reservas, chamados, compras, projetos, tarefas e sugestões. Os lidos ficam guardados por 30 dias.", en: "History of alerts about bookings, requests, purchases, projects, tasks and suggestions. Read ones are kept for 30 days.", es: "Historial de avisos sobre reservas, solicitudes, compras, proyectos, tareas y sugerencias. Los leídos se guardan 30 días." },
   "notifPage.all": { pt: "Todas", en: "All", es: "Todas" },
   "notifPage.unreadOnly": { pt: "Só não lidas", en: "Unread only", es: "Solo no leídas" },
   "notifPage.group.bookings": { pt: "Reservas", en: "Bookings", es: "Reservas" },

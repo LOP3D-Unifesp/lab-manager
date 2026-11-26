@@ -131,8 +131,10 @@ export function NotificationBell({ align = "right" }: NotificationBellProps) {
     setDesktopState(getDesktopAlertState());
   }
 
-  const visiveis = showAll ? items : items.slice(0, PREVIEW_LIMIT);
-  const tudoEmDia = pendencias.length === 0 && items.length === 0;
+  // O sino mostra só o que ainda não foi lido; o histórico fica em "Ver todas as notificações".
+  const novas = items.filter((item) => !item.read_at);
+  const visiveis = showAll ? novas : novas.slice(0, PREVIEW_LIMIT);
+  const tudoEmDia = pendencias.length === 0 && novas.length === 0;
 
   return (
     <div ref={containerRef} className="relative">
@@ -210,14 +212,14 @@ export function NotificationBell({ align = "right" }: NotificationBellProps) {
               </section>
             ) : null}
 
-            {items.length > 0 ? (
+            {novas.length > 0 ? (
               <section>
                 <SectionTitle>{t("bell.news")}</SectionTitle>
                 <div className="grid gap-0.5 px-1.5">
                   {visiveis.map((notification) => (
                     <NotificationRow key={notification.id} notification={notification} onOpen={abrir} />
                   ))}
-                  {items.length > PREVIEW_LIMIT ? (
+                  {novas.length > PREVIEW_LIMIT ? (
                     <button
                       type="button"
                       className="min-h-9 rounded-md px-3 text-left text-sm font-semibold text-primary transition hover:bg-primary-soft"
