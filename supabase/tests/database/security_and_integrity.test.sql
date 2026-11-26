@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(452);
+select plan(459);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -2381,6 +2381,51 @@ select is(
      and params->>'approved' = 'true'),
   1,
   'the requester is told about the decision'
+);
+
+-- Task alerts: 101 coordinator, 102 creator, 103 assignee, 121 outside the project.
+insert into public.projects (id, name, created_by) values ('00000000-0000-0000-0000-0000000000f7', 'pgtap avisos de tarefa', '00000000-0000-0000-0000-000000000101');
+insert into public.project_members (project_id, profile_id) values
+  ('00000000-0000-0000-0000-0000000000f7', '00000000-0000-0000-0000-000000000102'),
+  ('00000000-0000-0000-0000-0000000000f7', '00000000-0000-0000-0000-000000000103');
+insert into public.project_tasks (id, project_id, title, created_by)
+values ('00000000-0000-0000-0000-00000000f701', '00000000-0000-0000-0000-0000000000f7', 'pgtap tarefa avisos', '00000000-0000-0000-0000-000000000102');
+insert into public.project_task_assignees (task_id, project_id, profile_id)
+values ('00000000-0000-0000-0000-00000000f701', '00000000-0000-0000-0000-0000000000f7', '00000000-0000-0000-0000-000000000103');
+delete from public.notification_preferences where profile_id in ('00000000-0000-0000-0000-000000000102', '00000000-0000-0000-0000-000000000103') and topic in ('projects', 'tasks');
+
+-- Moves the task as one person and returns the last three digits of everyone told about that change.
+create function pg_temp.move_task(p_actor text, p_status public.task_status) returns text
+language plpgsql
+as $$
+declare
+  v_told text;
+begin
+  delete from public.notifications where entity_id = '00000000-0000-0000-0000-00000000f701';
+  perform set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000000' || p_actor, 'role', 'authenticated')::text, true);
+  update public.project_tasks set status = p_status where id = '00000000-0000-0000-0000-00000000f701';
+  perform set_config('request.jwt.claims', '', true);
+  select coalesce(string_agg(right(recipient_id::text, 3), ',' order by recipient_id), '') into v_told
+  from public.notifications
+  where entity_id = '00000000-0000-0000-0000-00000000f701' and type = 'task_status' and params->>'status' = p_status::text;
+  return v_told;
+end;
+$$;
+
+select is(pg_temp.move_task('103', 'in_progress'), '102', 'a status change by the assignee reaches the creator');
+select is(pg_temp.move_task('101', 'review'), '102,103', 'a status change by someone else reaches the creator and the assignee');
+select is(pg_temp.move_task('101', 'review'), '', 'saving a task without changing its status tells nobody');
+insert into public.notification_preferences (profile_id, topic, in_app, push) values ('00000000-0000-0000-0000-000000000103', 'tasks', false, false);
+select is(pg_temp.move_task('101', 'done'), '102', 'a person who switched Tasks off is not told');
+delete from public.notification_preferences where profile_id = '00000000-0000-0000-0000-000000000103' and topic = 'tasks';
+insert into public.notification_preferences (profile_id, topic, in_app, push) values ('00000000-0000-0000-0000-000000000103', 'projects', false, false);
+select is(pg_temp.move_task('101', 'todo'), '102,103', 'switching Projects off does not silence tasks');
+delete from public.project_members where project_id = '00000000-0000-0000-0000-0000000000f7' and profile_id = '00000000-0000-0000-0000-000000000102';
+select is(pg_temp.move_task('101', 'in_progress'), '103', 'a creator who left the project is not told');
+select is(
+  (select string_agg(private.notification_topic(type), ',') from unnest(array['task_assigned', 'task_status', 'task_timer_reminder']) as type),
+  'tasks,tasks,tasks',
+  'every task notification belongs to the Tasks topic'
 );
 
 select * from finish();

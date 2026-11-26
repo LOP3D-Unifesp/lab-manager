@@ -13,6 +13,7 @@ const TITLES: Record<NotificationGroup, () => string> = {
   purchases: () => t("notifPrefs.purchases"),
   feedback: () => t("notifPrefs.feedback"),
   projects: () => t("notifPrefs.projects"),
+  tasks: () => t("notifPrefs.tasks"),
 };
 
 // Por assunto: aparecer no sino e/ou avisar no computador. Sem escolha salva, tudo fica ligado.

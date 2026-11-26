@@ -1,5 +1,5 @@
 import { t } from "../../i18n";
-import { Bell, BellOff, BellRing, CalendarCheck, CheckCheck, MessageSquare, ShoppingCart, Wrench } from "lucide-react";
+import { Bell, BellOff, BellRing, CalendarCheck, CheckCheck, ListChecks, MessageSquare, ShoppingCart, Wrench } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -10,7 +10,7 @@ import {
   getDesktopAlertState,
   type DesktopAlertState,
 } from "../../lib/desktopAlerts";
-import type { AppNotification } from "../../lib/notifications";
+import { filterByBellPreference, type AppNotification } from "../../lib/notifications";
 import { NotificationItem } from "../ui/NotificationItem";
 import { useAttention } from "./AttentionProvider";
 import { NotificationRow } from "./NotificationRow";
@@ -28,18 +28,19 @@ type NotificationBellProps = {
 
 export function NotificationBell({ align = "right" }: NotificationBellProps) {
   const { profile } = useAuth();
-  const { error, items, markAllRead, markRead, unread } = useNotifications();
+  const { error, items, markAllRead, markRead, preferences, unread } = useNotifications();
   const attention = useAttention();
-  const count = unread + attention.total;
   const [isOpen, setIsOpen] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [desktopState, setDesktopState] = useState<DesktopAlertState>("unsupported");
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Trabalho em aberto, contado direto das tabelas: some quando a pendência é resolvida.
-  const pendencias = [
+  // Trabalho em aberto, contado direto das tabelas: some quando a pendência é resolvida ou quando a pessoa desliga
+  // o assunto em "No sino".
+  const abertas = [
     {
       key: "reservas",
+      topic: "bookings" as const,
       total: attention.pendingBookings,
       to: "/reservas",
       icon: CalendarCheck,
@@ -48,6 +49,7 @@ export function NotificationBell({ align = "right" }: NotificationBellProps) {
     },
     {
       key: "chamados",
+      topic: "requests" as const,
       total: attention.maintenanceRequests,
       to: "/equipamentos?vista=chamados",
       icon: Wrench,
@@ -56,6 +58,7 @@ export function NotificationBell({ align = "right" }: NotificationBellProps) {
     },
     {
       key: "compras",
+      topic: "purchases" as const,
       total: attention.purchases,
       to: "/compras",
       icon: ShoppingCart,
@@ -64,13 +67,25 @@ export function NotificationBell({ align = "right" }: NotificationBellProps) {
     },
     {
       key: "feedback",
+      topic: "feedback" as const,
       total: attention.feedback,
       to: "/feedback",
       icon: MessageSquare,
       label: t("bell.newFeedback", { count: attention.feedback }),
       detail: null,
     },
+    {
+      key: "tarefas",
+      topic: "tasks" as const,
+      total: attention.dueTasks,
+      to: "/",
+      icon: ListChecks,
+      label: t("bell.tasksDue", { count: attention.dueTasks }),
+      detail: attention.overdueTasks > 0 ? t("bell.overdue", { count: attention.overdueTasks }) : null,
+    },
   ].filter((item) => item.total > 0);
+  const pendencias = filterByBellPreference(abertas, preferences);
+  const count = unread + pendencias.reduce((sum, item) => sum + item.total, 0);
 
   useEffect(() => {
     if (!isOpen) {

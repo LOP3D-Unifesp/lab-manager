@@ -16,7 +16,8 @@ export type NotificationType =
   | "project_join_request"
   | "project_join_decision"
   | "task_assigned"
-  | "task_timer_reminder";
+  | "task_timer_reminder"
+  | "task_status";
 
 export type AppNotification = {
   id: string;
@@ -28,9 +29,9 @@ export type AppNotification = {
   read_at: string | null;
 };
 
-export type NotificationGroup = "bookings" | "requests" | "purchases" | "feedback" | "projects";
+export type NotificationGroup = "bookings" | "requests" | "purchases" | "feedback" | "projects" | "tasks";
 
-export const notificationGroups: NotificationGroup[] = ["bookings", "requests", "purchases", "feedback", "projects"];
+export const notificationGroups: NotificationGroup[] = ["bookings", "requests", "purchases", "feedback", "projects", "tasks"];
 
 type Audience = { role: ProfileRole; is_maintainer?: boolean } | null | undefined;
 
@@ -49,7 +50,13 @@ export function getNotificationHintKey(group: NotificationGroup, profile: Audien
   if (group === "bookings") return coordinator ? ("notifPrefs.bookingsHintCoordinator" as const) : ("notifPrefs.bookingsHint" as const);
   if (group === "purchases") return coordinator ? ("notifPrefs.purchasesHintCoordinator" as const) : ("notifPrefs.purchasesHint" as const);
   if (group === "projects") return coordinator ? ("notifPrefs.projectsHintCoordinator" as const) : ("notifPrefs.projectsHint" as const);
+  if (group === "tasks") return "notifPrefs.tasksHint" as const;
   return "notifPrefs.feedbackHint" as const;
+}
+
+// Pendências da campainha: um assunto desligado em "No sino" sai da lista e da contagem. Sem escolha salva, aparece.
+export function filterByBellPreference<T extends { topic: NotificationGroup }>(items: T[], preferences: Array<{ topic: NotificationGroup; in_app: boolean }>) {
+  return items.filter((item) => preferences.find((preference) => preference.topic === item.topic)?.in_app !== false);
 }
 
 const GROUP_BY_TYPE: Record<NotificationType, NotificationGroup> = {
@@ -65,8 +72,9 @@ const GROUP_BY_TYPE: Record<NotificationType, NotificationGroup> = {
   purchase_status: "purchases",
   project_join_request: "projects",
   project_join_decision: "projects",
-  task_assigned: "projects",
-  task_timer_reminder: "projects",
+  task_assigned: "tasks",
+  task_timer_reminder: "tasks",
+  task_status: "tasks",
 };
 
 export function getNotificationGroup(type: NotificationType): NotificationGroup {
@@ -133,6 +141,15 @@ export function describeNotification(notification: Pick<AppNotification, "type" 
         detail: [text(params, "task"), text(params, "project")].filter(Boolean).join(" · ") || null,
         reason: null,
       };
+    case "task_status": {
+      const status = text(params, "status");
+      const known = ["todo", "in_progress", "review", "done"];
+      return {
+        title: status && known.includes(status) ? t(`notif.task.${status}` as Parameters<typeof t>[0]) : t("notif.taskUpdated"),
+        detail: [text(params, "task"), text(params, "project")].filter(Boolean).join(" · ") || null,
+        reason: null,
+      };
+    }
     case "task_timer_reminder":
       return {
         title: t("notif.taskTimerReminder", { hours: typeof params.hours === "number" ? params.hours : 4 }),

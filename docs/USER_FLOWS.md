@@ -537,6 +537,12 @@ A reserva própria é cancelada, permanece no histórico e deixa de bloquear o h
 
 ### 5.5 Administração operacional
 
+### Fluxo 14a - Sino, pendências e preferências de aviso
+
+- O sino mostra **Pendências** (o que está em aberto: reservas, chamados, compras e sugestões para quem decide ou resolve, e as tarefas da própria pessoa atrasadas ou para hoje) e **Novidades** (avisos de eventos).
+- Em **Meu perfil > Notificações**, desligar **No sino** de um assunto tira as pendências dele (e a contagem no número vermelho) e deixa de criar novos avisos; os avisos antigos continuam no histórico. Os selos do menu não mudam.
+- Mudança de situação de uma tarefa avisa quem a criou e os responsáveis, nunca quem fez a mudança.
+
 ### Fluxo 14c - Pedir e acompanhar uma compra
 
 **Ator principal:** pesquisador (ou coordenador).
