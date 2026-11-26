@@ -6,12 +6,39 @@ import { useAuth } from "../../lib/auth";
 import { Avatar } from "../ui/Avatar";
 import { StatusBadge } from "../ui/StatusBadge";
 
-export function AuthUserMenu() {
+export function AuthUserMenu({ collapsed = false }: { collapsed?: boolean }) {
   const { profile, signOut } = useAuth();
   const t = useT();
 
   if (!profile) {
     return null;
+  }
+
+  const signOutButton = (
+    <button
+      type="button"
+      className={[
+        "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition hover:bg-danger-soft hover:text-danger-dark",
+        collapsed ? "" : "ml-auto",
+      ].join(" ")}
+      onClick={signOut}
+      title={t("common.signOut")}
+      aria-label={t("common.signOut")}
+    >
+      <LogOut className="h-4 w-4" aria-hidden="true" />
+    </button>
+  );
+
+  // Menu encolhido: a foto leva ao perfil e o botão de sair fica embaixo.
+  if (collapsed) {
+    return (
+      <div className="grid justify-items-center gap-2">
+        <Link to="/perfil" aria-label={t("account.profile")} title={`${profile.full_name} · ${t("account.profile")}`} className="rounded-full">
+          <Avatar avatarUrl={profile.avatar_url} name={profile.full_name} className="h-9 w-9" />
+        </Link>
+        {signOutButton}
+      </div>
+    );
   }
 
   return (
@@ -36,15 +63,7 @@ export function AuthUserMenu() {
         >
           {t("account.profile")}
         </Link>
-        <button
-          type="button"
-          className="ml-auto inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted transition hover:bg-danger-soft hover:text-danger-dark"
-          onClick={signOut}
-          title={t("common.signOut")}
-          aria-label={t("common.signOut")}
-        >
-          <LogOut className="h-4 w-4" aria-hidden="true" />
-        </button>
+        {signOutButton}
       </div>
     </div>
   );

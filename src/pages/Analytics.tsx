@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { Boxes, CalendarCheck, Clock, ListChecks, ShoppingCart, Users, Wrench } from "lucide-react";
+import { Boxes, CalendarCheck, Clock, ListChecks, ShoppingCart, Timer, Users, Wrench } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 
 import { ChartCard, DonutChart, RankingChart, TimeBarChart, type ChartDatum } from "../components/analytics/Charts";
 import { LabTodayOverview } from "../components/inicio/LabTodayOverview";
 import { PageHeader } from "../components/ui/PageHeader";
 import { averageLeadTime, formatLeadTime } from "../lib/taskLeadTime";
-import { TimeReportSection } from "../components/analytics/TimeReportSection";
+import { LabTimeSection, TaskTimeByProjectChart, useTimeReport } from "../components/analytics/TimeReportSection";
 import { StatCard } from "../components/ui/StatCard";
 import { formatDateTime, useT } from "../i18n";
 import {
@@ -25,7 +25,7 @@ import {
   type PeriodKey,
 } from "../lib/analytics";
 import { useCurrentProfile } from "../lib/currentUser";
-import { getBookingStatusLabel, getTimezonePadrao, type Equipment, type EquipmentBooking } from "../lib/domain";
+import { getBookingStatusLabel, getTimezonePadrao, type Equipment, type EquipmentBooking, type PublicProfile } from "../lib/domain";
 import { isSpoolLow } from "../lib/inventory";
 import type { MaintenanceEpisode } from "../lib/maintenance";
 import { getTaskStatusLabel, isTaskOverdue, formatCurrencyBRL, type ProjectTask, type TaskStatus } from "../lib/projects";
@@ -36,9 +36,12 @@ import {
   listMaintenanceEpisodes,
   listMyTasks,
   listVisibleTasks,
+  listProfiles,
   listPurchaseRequests,
   listSpools,
 } from "../lib/supabaseRepository";
+import { totalReportSeconds } from "../lib/taskTime";
+import { formatDuration } from "../lib/taskTimer";
 import type { MaterialSpool } from "../lib/inventory";
 
 type Tab = "mine" | "lab";
@@ -116,6 +119,13 @@ export function Analytics() {
   const period: PeriodKey = periodOptions.includes(periodParam as PeriodKey) ? (periodParam as PeriodKey) : "30d";
   const now = useMemo(() => new Date(), []);
   const profileId = currentProfile?.id;
+  const [people, setPeople] = useState<PublicProfile[]>([]);
+  // Só o coordenador escolhe de quem são os números; os demais veem sempre os próprios.
+  const requestedPerson = isCoordinator ? searchParams.get("pessoa") : null;
+  const knownPerson = people.length === 0 || people.some((person) => person.id === requestedPerson);
+  const selectedId = requestedPerson && knownPerson ? requestedPerson : profileId;
+  const range = useMemo(() => getPeriodRange(period, now), [period, now]);
+  const timeRows = useTimeReport(range.from, range.to);
 
   const [bookings, setBookings] = useState<EquipmentBooking[]>([]);
   const [purchases, setPurchases] = useState<PurchaseRequest[]>([]);
@@ -132,19 +142,17 @@ export function Analytics() {
     Promise.all([
       listBookings(),
       listPurchaseRequests(),
-      listMyTasks(profileId),
       isCoordinator ? listVisibleTasks() : Promise.resolve([] as ProjectTask[]),
       isCoordinator ? listEquipment() : Promise.resolve([] as Equipment[]),
       isCoordinator ? listMaintenanceEpisodes() : Promise.resolve([] as MaintenanceEpisode[]),
       isCoordinator ? listSpools() : Promise.resolve([] as MaterialSpool[]),
     ])
-      .then(([bookingsData, purchasesData, tasksData, labTasksData, equipmentData, episodesData, spoolsData]) => {
+      .then(([bookingsData, purchasesData, labTasksData, equipmentData, episodesData, spoolsData]) => {
         if (!ativo) return;
         setErro("");
         setBookings(bookingsData);
         setPurchases(purchasesData);
         // Tarefas arquivadas ficam fora dos números.
-        setTasks(tasksData.filter((task) => !task.archived_at));
         setLabTasks(labTasksData.filter((task) => !task.archived_at));
         setEquipment(equipmentData);
         setEpisodes(episodesData);
@@ -158,6 +166,32 @@ export function Analytics() {
     };
   }, [profileId, isCoordinator]);
 
+  useEffect(() => {
+    if (!isCoordinator) return undefined;
+    let ativo = true;
+    listProfiles()
+      .then((data) => ativo && setPeople(data))
+      .catch(() => undefined);
+    return () => {
+      ativo = false;
+    };
+  }, [isCoordinator]);
+
+  // Tarefas da pessoa escolhida; ao trocar, a lista anterior sai da tela enquanto a nova chega.
+  useEffect(() => {
+    if (!selectedId) return undefined;
+    let ativo = true;
+    setTasks([]);
+    listMyTasks(selectedId)
+      .then((data) => ativo && setTasks(data.filter((task) => !task.archived_at)))
+      .catch((error) => {
+        if (ativo) setErro(error instanceof Error ? error.message : t("analytics.loadError"));
+      });
+    return () => {
+      ativo = false;
+    };
+  }, [selectedId]);
+
   function setParam(key: string, value: string | null) {
     const next = new URLSearchParams(searchParams);
     if (value) next.set(key, value);
@@ -167,15 +201,17 @@ export function Analytics() {
 
   if (!currentProfile) return null;
 
-  const range = getPeriodRange(period, now);
   const hoursHeader = t("analytics.hours");
   const nameHeader = t("analytics.name");
   const countHeader = t("analytics.bookings");
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: getTimezonePadrao() }).format(now);
 
-  const myBookings = bookings.filter((booking) => booking.profile_id === currentProfile.id);
+  const isSelf = selectedId === currentProfile.id;
+  const selectedName = people.find((person) => person.id === selectedId)?.full_name ?? currentProfile.full_name;
+  const myTimeRows = (timeRows ?? []).filter((row) => row.profile_id === selectedId);
+  const myBookings = bookings.filter((booking) => booking.profile_id === selectedId);
   const myUsage = filterUsageInPeriod(myBookings, range);
-  const myPurchases = purchases.filter((purchase) => purchase.requested_by === currentProfile.id);
+  const myPurchases = purchases.filter((purchase) => purchase.requested_by === selectedId);
   const myPurchaseTotals = purchaseTotals(myPurchases);
   const myLead = averageLeadTime(tasks, range);
   const labLead = averageLeadTime(labTasks, range);
@@ -204,7 +240,12 @@ export function Analytics() {
 
   return (
     <div className="grid gap-5">
-      <PageHeader title={t("analytics.title")} description={t(tab === "lab" ? "analytics.subtitleLab" : "analytics.subtitleMine")} />
+      <PageHeader
+        title={t("analytics.title")}
+        description={
+          tab === "lab" ? t("analytics.subtitleLab") : isSelf ? t("analytics.subtitleMine") : t("analytics.subtitlePerson", { name: selectedName })
+        }
+      />
 
       {erro ? <p className="rounded-lg border border-danger bg-danger-soft p-3 text-base font-semibold text-danger">{erro}</p> : null}
 
@@ -222,7 +263,7 @@ export function Analytics() {
                 tab === item ? "border-primary bg-primary-soft text-primary-dark" : "border-border bg-surface text-text hover:border-primary",
               ].join(" ")}
             >
-              {t(item === "lab" ? "analytics.tabLab" : "analytics.tabMine")}
+              {t(item === "lab" ? "analytics.tabLab" : isCoordinator ? "analytics.tabPerson" : "analytics.tabMine")}
             </button>
           ))}
         </div>
@@ -246,34 +287,61 @@ export function Analytics() {
 
       {tab === "mine" ? (
         <>
+          {isCoordinator && people.length > 0 ? (
+            <label className="flex flex-wrap items-center gap-3 text-base font-semibold text-text">
+              {t("analytics.person")}
+              <select
+                className="min-h-11 min-w-0 max-w-full rounded-lg border border-border bg-surface px-4 text-base font-normal outline-none transition focus:border-primary sm:min-w-72"
+                value={selectedId}
+                onChange={(event) => setParam("pessoa", event.target.value === currentProfile.id ? null : event.target.value)}
+              >
+                <option value={currentProfile.id}>{t("analytics.you", { name: currentProfile.full_name })}</option>
+                {people
+                  .filter((person) => person.id !== currentProfile.id)
+                  .map((person) => (
+                    <option key={person.id} value={person.id}>
+                      {person.full_name}
+                    </option>
+                  ))}
+              </select>
+            </label>
+          ) : null}
           <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <StatCard title={t("analytics.myHours")} value={String(sumHours(myUsage))} description={t("analytics.inPeriod")} icon={Clock} />
-            <StatCard title={t("analytics.myBookings")} value={String(myUsage.length)} description={t("analytics.inPeriod")} icon={CalendarCheck} />
+            <StatCard title={t(isSelf ? "analytics.myHours" : "analytics.hoursBooked")} value={String(sumHours(myUsage))} description={t("analytics.inPeriod")} icon={Clock} />
+            <StatCard title={t(isSelf ? "analytics.myBookings" : "analytics.bookings")} value={String(myUsage.length)} description={t("analytics.inPeriod")} icon={CalendarCheck} />
             <StatCard
-              title={t("analytics.myTasks")}
+              title={t(isSelf ? "analytics.myTasks" : "analytics.openTasks")}
               value={String(openTasks.length)}
               description={t("analytics.overdueCount", { count: overdueTasks.length })}
               icon={ListChecks}
             />
             <StatCard
-              title={t("analytics.myPurchases")}
+              title={t(isSelf ? "analytics.myPurchases" : "analytics.purchaseRequests")}
               value={formatCurrencyBRL(myPurchaseTotals.reduce((total, row) => total + row.value, 0))}
               description={t("analytics.purchasesHint")}
               icon={ShoppingCart}
             />
           </section>
-          {profileId ? <TimeReportSection from={range.from} to={range.to} profileId={profileId} scope="mine" /> : null}
           <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <StatCard
+              title={t(isSelf ? "analytics.myTaskTime" : "analytics.taskTime")}
+              value={timeRows === null ? "-" : formatDuration(totalReportSeconds(myTimeRows))}
+              description={t("analytics.inPeriod")}
+              icon={Timer}
+            />
             <StatCard title={t("analytics.leadTime")} value={myLead === null ? "-" : formatLeadTime(myLead)} description={t("analytics.leadTimeHint")} icon={CalendarCheck} />
           </section>
-          <UsageSection bookings={myBookings} now={now} period={period} />
           <div className="grid gap-5 lg:grid-cols-2">
+            {timeRows === null ? null : <TaskTimeByProjectChart rows={myTimeRows} />}
             <ChartCard
               title={t("analytics.tasksByStatus")}
               table={{ headers: [nameHeader, t("analytics.count")], rows: tasksByStatus.map((row) => [row.name, row.value]) }}
             >
               <DonutChart data={tasksByStatus} />
             </ChartCard>
+          </div>
+          <UsageSection bookings={myBookings} now={now} period={period} />
+          <div className="grid gap-5 lg:grid-cols-2">
             <ChartCard
               title={t("analytics.purchasesByProject")}
               hint={t("analytics.purchasesHint")}
@@ -302,7 +370,7 @@ export function Analytics() {
             <StatCard title={t("analytics.lowStock")} value={String(lowSpools)} description={t("analytics.lowStockHint")} icon={Boxes} />
           </section>
           <UsageSection bookings={bookings} now={now} period={period} />
-          {profileId ? <TimeReportSection from={range.from} to={range.to} profileId={profileId} scope="lab" /> : null}
+          {timeRows === null ? null : <LabTimeSection rows={timeRows} />}
           <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <StatCard title={t("analytics.leadTime")} value={labLead === null ? "-" : formatLeadTime(labLead)} description={t("analytics.leadTimeHint")} icon={CalendarCheck} />
           </section>

@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 
 import { MobileNavigation } from "./MobileNavigation";
 import { Sidebar } from "./Sidebar";
+import { useCollapsedSidebar } from "./useCollapsedSidebar";
 import { MobileAccountMenu } from "./MobileAccountMenu";
 import { EnvironmentBadge } from "./EnvironmentBadge";
 import { LanguageSelect } from "../ui/LanguageSelect";
@@ -21,15 +22,16 @@ type AppLayoutProps = {
 export function AppLayout({ children }: AppLayoutProps) {
   const { labSettings } = useAuth();
   const acronym = labSettings?.acronym ?? "Lab";
+  const [collapsed, toggleSidebar] = useCollapsedSidebar();
 
   return (
     <NotificationsProvider>
     <FeedbackProvider>
     <AttentionProvider>
     <div className="min-h-screen bg-background text-text">
-      <Sidebar />
+      <Sidebar collapsed={collapsed} onToggle={toggleSidebar} />
 
-      <div className="flex min-h-screen flex-col lg:pl-80">
+      <div className={["flex min-h-screen flex-col", collapsed ? "lg:pl-20" : "lg:pl-80"].join(" ")}>
         <div className="sticky top-0 z-20 hidden items-center justify-end gap-3 border-b border-border bg-surface/95 px-10 py-2 backdrop-blur lg:flex">
           <LanguageSelect />
           <ThemeToggle compact />

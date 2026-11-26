@@ -6,7 +6,7 @@ import { Card } from "../ui/Card";
 
 // Cores dos gráficos vêm dos tokens do tema (claro e escuro), então acompanham a troca de tema.
 const color = (token: string) => `rgb(var(--c-${token}))`;
-export const chartColors = [color("primary"), color("success"), color("accent-solid"), color("warning"), color("muted")];
+export const chartColors = [color("primary"), color("success"), color("accent-solid"), color("warning"), color("danger"), color("muted")];
 
 const tooltipStyle = {
   background: color("surface"),
@@ -67,9 +67,9 @@ export function ChartCard({ children, hint, table, title }: ChartCardProps) {
   );
 }
 
-export function ChartEmpty() {
+export function ChartEmpty({ message }: { message?: string }) {
   const t = useT();
-  return <p className="rounded-lg border border-dashed border-border bg-background p-4 text-base text-muted">{t("analytics.noData")}</p>;
+  return <p className="rounded-lg border border-dashed border-border bg-background p-4 text-base text-muted">{message ?? t("analytics.noData")}</p>;
 }
 
 // Ranking em barras horizontais (equipamentos, projetos, pessoas).
@@ -110,8 +110,8 @@ export function TimeBarChart({ data, valueLabel }: { data: ChartDatum[]; valueLa
 }
 
 // Rosca para partes de um todo (situação das reservas, tarefas por status).
-export function DonutChart({ data }: { data: ChartDatum[] }) {
-  if (data.length === 0) return <ChartEmpty />;
+export function DonutChart({ data, empty, format }: { data: ChartDatum[]; empty?: string; format?: (value: number) => string }) {
+  if (data.length === 0) return <ChartEmpty message={empty} />;
   return (
     <div style={{ height: 240 }}>
       <ResponsiveContainer width="100%" height="100%">
@@ -121,7 +121,7 @@ export function DonutChart({ data }: { data: ChartDatum[] }) {
               <Cell key={index} fill={chartColors[index % chartColors.length]} />
             ))}
           </Pie>
-          <Tooltip contentStyle={tooltipStyle} />
+          <Tooltip contentStyle={tooltipStyle} formatter={format ? (value: number) => format(value) : undefined} />
           <Legend wrapperStyle={{ fontSize: 13, color: color("text") }} />
         </PieChart>
       </ResponsiveContainer>

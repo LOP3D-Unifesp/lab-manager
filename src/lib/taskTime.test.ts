@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { getTimeByPerson, sumTimeReport, totalReportSeconds, type TimeEntry, type TimeReportRow } from "./taskTime";
+import { groupSmallest, getTimeByPerson, sumTimeReport, totalReportSeconds, type TimeEntry, type TimeReportRow } from "./taskTime";
 
 const NOW = new Date("2026-11-25T12:00:00Z");
 
@@ -51,5 +51,18 @@ describe("tempo por pessoa", () => {
     expect(sumTimeReport(rows, "person").map((r) => [r.name, r.seconds])).toEqual([["Bia", 200], ["Ana", 150]]);
     expect(sumTimeReport(rows, "project").map((r) => [r.name, r.seconds])).toEqual([["Alfa", 300], ["Beta", 50]]);
     expect(totalReportSeconds(rows)).toBe(350);
+  });
+});
+
+describe("fatias do gráfico de tempo", () => {
+  const rows = [50, 40, 30, 20, 10].map((seconds, index) => ({ id: `p${index}`, name: `Projeto ${index}`, seconds }));
+
+  it("mantém todos quando cabem", () => {
+    expect(groupSmallest(rows, 5, "Outros")).toEqual(rows);
+  });
+
+  it("junta os menores numa fatia, sem perder tempo", () => {
+    const slices = groupSmallest(rows, 3, "Outros");
+    expect(slices.map((row) => [row.name, row.seconds])).toEqual([["Projeto 0", 50], ["Projeto 1", 40], ["Outros", 60]]);
   });
 });
