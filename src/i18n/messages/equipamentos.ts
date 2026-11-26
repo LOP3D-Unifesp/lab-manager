@@ -28,6 +28,7 @@ export const equipamentos = {
   "equipment.compatibleMaterials": { pt: "Materiais compatíveis", en: "Compatible materials", es: "Materiales compatibles" },
   "equipment.noCompatibleMaterial": { pt: "Nenhum material compatível", en: "No compatible material", es: "Ningún material compatible" },
   "equipment.history": { pt: "Histórico", en: "History", es: "Historial" },
+  "equipment.openRequest": { pt: "Abrir chamado", en: "Open request", es: "Abrir solicitud" },
   "equipment.reportProblem": { pt: "Reportar problema", en: "Report a problem", es: "Reportar problema" },
   "equipment.openRequests_one": { pt: "{count} chamado aberto", en: "{count} open request", es: "{count} solicitud abierta" },
   "equipment.openRequests_other": { pt: "{count} chamados abertos", en: "{count} open requests", es: "{count} solicitudes abiertas" },

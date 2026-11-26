@@ -1598,7 +1598,7 @@ export async function getEquipmentName(equipmentId: string) {
 // ---------------------------------------------------------------------------
 
 type PurchaseRequestRow = Omit<PurchaseRequest, "project_name" | "requested_by_name" | "decided_by_name" | "maintenance_equipment_name" | "estimated_amount" | "actual_amount"> & {
-  maintenance: { equipment: { name: string } | null } | null;
+  equipment: { name: string } | null;
   estimated_amount: number | string;
   actual_amount: number | string | null;
   project: { name: string } | null;
@@ -1610,7 +1610,7 @@ export async function listPurchaseRequests() {
   const { data, error } = await client()
     .from("purchase_requests")
     .select(
-      "id, project_id, requested_by, item, url, quantity, estimated_amount, urgency, funding_category, maintenance_request_id, for_maintenance, notes, status, decided_at, rejected_reason, actual_amount, purchased_at, delivered_at, created_at, project:projects!purchase_requests_project_id_fkey(name), requester:profiles!purchase_requests_requested_by_fkey(full_name), decider:profiles!purchase_requests_decided_by_fkey(full_name), maintenance:maintenance_requests!purchase_requests_maintenance_request_id_fkey(equipment:equipment!maintenance_requests_equipment_id_fkey(name))",
+      "id, project_id, requested_by, item, url, quantity, estimated_amount, urgency, funding_category, maintenance_request_id, for_maintenance, notes, status, decided_at, rejected_reason, actual_amount, purchased_at, delivered_at, created_at, project:projects!purchase_requests_project_id_fkey(name), requester:profiles!purchase_requests_requested_by_fkey(full_name), decider:profiles!purchase_requests_decided_by_fkey(full_name), equipment_id, equipment:equipment!purchase_requests_equipment_id_fkey(name)",
     )
     .order("created_at", { ascending: false });
   throwIfError(error);
@@ -1623,7 +1623,7 @@ export async function listPurchaseRequests() {
     throwIfError(namesError);
     for (const item of (names ?? []) as Array<{ id: string; name: string }>) projectNames.set(item.id, item.name);
   }
-  return rows.map(({ decider, maintenance, project, requester, ...row }) => ({
+  return rows.map(({ decider, equipment, project, requester, ...row }) => ({
     ...row,
     estimated_amount: Number(row.estimated_amount),
     actual_amount: row.actual_amount === null ? null : Number(row.actual_amount),
@@ -1632,7 +1632,7 @@ export async function listPurchaseRequests() {
       (row.project_id ? (projectNames.get(row.project_id) ?? "Projeto removido") : "Estoque geral do laboratório"),
     requested_by_name: requester?.full_name ?? null,
     decided_by_name: decider?.full_name ?? null,
-    maintenance_equipment_name: maintenance?.equipment?.name ?? null,
+    maintenance_equipment_name: equipment?.name ?? null,
   })) as PurchaseRequest[];
 }
 
@@ -1645,6 +1645,8 @@ export type PurchaseInput = {
   fundingCategory: FundingCategory;
   urgency: PurchaseUrgency;
   forMaintenance: boolean;
+  /** Equipamento do gasto de manutenção; nulo quando não é para um equipamento específico. */
+  equipmentId: string | null;
   /** Só na edição: novo destino do pedido (projeto, ou nulo para o estoque geral); indefinido mantém o atual. */
   projectId?: string | null;
 };
@@ -1659,6 +1661,7 @@ export async function createPurchaseRequest(input: PurchaseInput & { projectId: 
     funding_category: input.fundingCategory,
     urgency: input.urgency,
     for_maintenance: input.forMaintenance,
+    equipment_id: input.equipmentId,
     maintenance_request_id: input.maintenanceRequestId ?? null,
     notes: input.notes?.trim() || null,
   });
@@ -1676,6 +1679,8 @@ export async function updatePurchaseRequest(requestId: string, input: PurchaseIn
     p_funding_category: input.fundingCategory,
     p_urgency: input.urgency,
     p_for_maintenance: input.forMaintenance,
+    p_set_equipment: true,
+    p_equipment_id: input.equipmentId ?? undefined,
     p_set_project: input.projectId !== undefined,
     p_project_id: input.projectId ?? undefined,
   });

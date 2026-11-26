@@ -94,6 +94,8 @@ Status do MVP implementado:
 | `20261010_task_timers_per_person` | Cronômetro por pessoa: o estado é o trecho aberto em `project_task_time_entries` (um por tarefa e pessoa; `auto_closed`); `project_tasks.timer_started_at/timer_phase` removidos, `work_seconds/review_seconds` = soma dos trechos fechados. Gatilhos `sync_task_timers` (Em andamento<->Em revisão mantém quem trabalha; A fazer/Finalizado/arquivar param todos; entrar em andamento liga só o timer de quem moveu se for responsável) e `start_creator_timer`; RPCs `set_task_timer` (do próprio usuário) e `adjust_time_entry`; `private.pause_stale_timers` (pg_cron a cada 15 min, encerra trechos abertos há mais de 12 h em 12 h); Realtime da tabela de trechos. |
 | `20261011_timer_forgotten_protections` | Proteções contra timer esquecido: `lab_settings.timer_reminder_hours` (4), `timer_max_hours` (8) e `timer_grace_minutes` (60), alteráveis pela RPC `update_timer_settings` (coordenador); `private.pause_stale_timers` (a cada 15 min) avisa (`task_timer_reminder`, uma vez por trecho: `reminded_at`), encerra no fim do último turno da disponibilidade da pessoa no dia + tolerância (só se o timer começou antes) ou no limite de horas; remover a pessoa do projeto ou desativá-la encerra os timers; tópico das notificações `task_*` passa a ser "projects". |
 | `20261012_remove_time_entry_adjust` | Remove a RPC `adjust_time_entry`: os trechos de tempo registrados não podem ser alterados por ninguém (evita adulterar o tempo trabalhado); o modal da tarefa só consulta os trechos. |
+| `20261013_maintenance_status_alerts` | Mudanca de situacao de um chamado avisa quem abriu e os responsaveis pela manutencao (secao 3.20). |
+| `20261014_purchase_equipment` | `purchase_requests.equipment_id`: equipamento do gasto de manutencao, com ou sem chamado; `update_purchase_request` ganha `p_set_equipment` e `p_equipment_id` (secao 3.19). |
 
 Resumo dos objetos que mais mudam o entendimento do schema:
 
@@ -1173,6 +1175,9 @@ compra e confirma a entrega.
   acompanhar quanto se gasta com manutencao. Um gatilho (`private.purchase_maintenance_flag`) forca `true` quando
   `maintenance_request_id` esta preenchido; nos demais pedidos o autor marca enquanto o pedido esta `requested`
   (`p_for_maintenance` em `update_purchase_request`; nulo mantem o valor atual).
+- `equipment_id` (opcional, `ON DELETE SET NULL`): equipamento a que se destina o gasto de manutencao, mesmo sem
+  chamado aberto. O mesmo gatilho copia o equipamento do chamado ligado e limpa o campo em compra que nao e de
+  manutencao. Na edicao, `p_set_equipment` + `p_equipment_id` trocam ou removem; sem eles o valor e mantido.
 - A tabela esta na publicacao `supabase_realtime` (aviso ao coordenador).
 
 - **Leitura (a partir de `20260929`):** qualquer usuario ativo le todos os pedidos (item, projeto, valores, rubrica e quem
@@ -1194,8 +1199,8 @@ O texto nao e guardado: so o tipo e os dados do evento (`params`), e o cliente m
 - Quem cria: gatilhos `security definer` em `equipment_bookings`, `maintenance_requests`, `feedback_reports`,
   `purchase_requests` e `project_join_requests`, via `private.notify` (nunca avisa quem fez a acao). Destinatarios:
   reserva pendente, feedback novo e pedido de compra novo, so coordenadores; chamado novo, coordenadores e
-  mantenedores; reserva aprovada/recusada/cancelada, o dono (e os coordenadores quando o dono cancela); qualquer
-  mudanca de status de chamado ou de compra, so quem abriu/pediu; pedido de entrada em projeto, coordenadores e
+  mantenedores; reserva aprovada/recusada/cancelada, o dono (e os coordenadores quando o dono cancela); mudanca de
+  status de chamado, quem abriu e os mantenedores; mudanca de status de compra, so quem pediu; pedido de entrada em projeto, coordenadores e
   membros; decisao do pedido, quem pediu.
 - `notification_preferences`: `(profile_id, topic)` com `topic` em `bookings`, `requests`, `purchases`, `feedback`,
   `projects`, `in_app` e `push` (padrao ligado). `private.wants_notification` consulta a tabela: com `in_app`

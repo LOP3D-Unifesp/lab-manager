@@ -141,8 +141,8 @@ com duas contas (coordenadora e pesquisador):
   anteriores não geram histórico (dá para preencher com uma migration, se fizer falta).
 - `notifications.read_at` é gravado com o relógio do navegador e pode ficar alguns décimos de segundo antes de
   `created_at`; o ideal é o banco gravar o horário (gatilho `before update`).
-- Notificação por assunto, não por evento: desligar "Chamados" também desliga o aviso de mudança de status dos chamados
-  que a pessoa abriu.
+- Notificação por assunto, não por evento: desligar "Chamados" desliga também o aviso de chamado novo e o de mudança
+  de situação (dos chamados que a pessoa abriu ou, para quem cuida da manutenção, de todos).
 - Reservas: o painel não mostra mais o "quem aprovou/recusou" nem o horário da reserva (só tipo, projeto e
   equipamento); reintroduzir se os testadores sentirem falta.
 

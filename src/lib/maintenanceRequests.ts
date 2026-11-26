@@ -98,8 +98,6 @@ export function sortRequests(requests: MaintenanceRequest[]) {
   );
 }
 
-// Para o Dashboard: o que a pessoa precisa atender (responsáveis: chamados abertos ou em andamento com ela)
-// e o que ela mesma abriu e segue ativo. Um chamado nunca aparece nos dois grupos.
 export type RequestSort = "priority" | "newest" | "oldest" | "equipment" | "status";
 
 export const requestSortOptions: Array<{ value: RequestSort; label: string }> = [
@@ -133,6 +131,9 @@ export function orderRequests(requests: MaintenanceRequest[], sort: RequestSort)
   );
 }
 
+// Para o Dashboard: o que a pessoa precisa atender (responsáveis: abertos, com ela ou aguardando peça sem encarregado),
+// o que ela mesma abriu e segue ativo e, para quem cuida da manutenção, os demais ativos (com outras pessoas).
+// Um chamado nunca aparece em dois grupos.
 export function getMyRequestGroups(requests: MaintenanceRequest[], profileId: string, canMaintainNow: boolean) {
   const active = requests.filter((request) => isRequestActive(request.status));
   const toHandle = canMaintainNow
@@ -144,7 +145,9 @@ export function getMyRequestGroups(requests: MaintenanceRequest[], profileId: st
     : [];
   const handled = new Set(toHandle.map((request) => request.id));
   const mine = sortRequests(active.filter((request) => request.requested_by === profileId && !handled.has(request.id)));
-  return { toHandle, mine };
+  const own = new Set(mine.map((request) => request.id));
+  const others = canMaintainNow ? sortRequests(active.filter((request) => !handled.has(request.id) && !own.has(request.id))) : [];
+  return { toHandle, mine, others };
 }
 
 export function countOpenRequests(requests: MaintenanceRequest[], equipmentId: string) {

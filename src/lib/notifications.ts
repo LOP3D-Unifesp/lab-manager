@@ -1,4 +1,5 @@
 import { t } from "../i18n";
+import type { ProfileRole } from "./domain";
 import { describePurchaseUpdate, isNotifiablePurchaseStatus } from "./purchases";
 
 export type NotificationType =
@@ -30,6 +31,26 @@ export type AppNotification = {
 export type NotificationGroup = "bookings" | "requests" | "purchases" | "feedback" | "projects";
 
 export const notificationGroups: NotificationGroup[] = ["bookings", "requests", "purchases", "feedback", "projects"];
+
+type Audience = { role: ProfileRole; is_maintainer?: boolean } | null | undefined;
+
+// Só os coordenadores recebem sugestões; os demais assuntos valem para qualquer pessoa.
+export function getVisibleNotificationGroups(profile: Audience): NotificationGroup[] {
+  return notificationGroups.filter((group) => group !== "feedback" || profile?.role === "coordinator");
+}
+
+// Texto das preferências conforme o que cada perfil de fato recebe (ver os gatilhos de notificação no banco).
+export function getNotificationHintKey(group: NotificationGroup, profile: Audience) {
+  const coordinator = profile?.role === "coordinator";
+  if (group === "requests") {
+    if (profile?.is_maintainer) return "notifPrefs.requestsHintMaintainer" as const;
+    return coordinator ? ("notifPrefs.requestsHintCoordinator" as const) : ("notifPrefs.requestsHint" as const);
+  }
+  if (group === "bookings") return coordinator ? ("notifPrefs.bookingsHintCoordinator" as const) : ("notifPrefs.bookingsHint" as const);
+  if (group === "purchases") return coordinator ? ("notifPrefs.purchasesHintCoordinator" as const) : ("notifPrefs.purchasesHint" as const);
+  if (group === "projects") return coordinator ? ("notifPrefs.projectsHintCoordinator" as const) : ("notifPrefs.projectsHint" as const);
+  return "notifPrefs.feedbackHint" as const;
+}
 
 const GROUP_BY_TYPE: Record<NotificationType, NotificationGroup> = {
   booking_pending: "bookings",

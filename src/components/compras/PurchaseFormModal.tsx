@@ -20,6 +20,7 @@ import {
   type PurchaseUrgency,
 } from "../../lib/purchases";
 import type { FundingCategory } from "../../lib/projects";
+import type { Equipment } from "../../lib/domain";
 import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
 import { inputClassName } from "../ui/formStyles";
@@ -28,19 +29,23 @@ type PurchaseFormModalProps = {
   /** Pedido de peça feito a partir de um chamado de manutenção: já vem preenchido e fica ligado ao chamado. */
   fromMaintenance?: { requestId: string; equipmentName: string; description: string; urgency: PurchaseUrgency };
   projects: Project[];
+  /** Equipamentos do laboratório, para dizer de qual é o gasto de manutenção. */
+  equipment: Equipment[];
   purchase: PurchaseRequest | null; // null = novo pedido
   defaultProjectId: string;
   onClose: () => void;
   onDone: () => Promise<void> | void;
 };
 
-export function PurchaseFormModal({ defaultProjectId, fromMaintenance, onClose, onDone, projects, purchase }: PurchaseFormModalProps) {
+export function PurchaseFormModal({ defaultProjectId, equipment, fromMaintenance, onClose, onDone, projects, purchase }: PurchaseFormModalProps) {
   const t = useT();
   const [projectId, setProjectId] = useState(purchase ? (purchase.project_id ?? GENERAL_STOCK_VALUE) : defaultProjectId);
   const [category, setCategory] = useState<string>(purchase?.funding_category ?? (fromMaintenance ? "custeio" : ""));
   const [urgency, setUrgency] = useState<PurchaseUrgency>(purchase?.urgency ?? fromMaintenance?.urgency ?? "normal");
   const linkedToRequest = Boolean(fromMaintenance || purchase?.maintenance_request_id);
   const [forMaintenance, setForMaintenance] = useState(linkedToRequest || (purchase?.for_maintenance ?? false));
+  const [equipmentId, setEquipmentId] = useState(purchase?.equipment_id ?? "");
+  const linkedEquipmentName = fromMaintenance?.equipmentName ?? purchase?.maintenance_equipment_name ?? "";
   const [item, setItem] = useState(purchase?.item ?? "");
   const [url, setUrl] = useState(purchase?.url ?? "");
   const [quantity, setQuantity] = useState(String(purchase?.quantity ?? 1));
@@ -69,6 +74,8 @@ export function PurchaseFormModal({ defaultProjectId, fromMaintenance, onClose, 
       fundingCategory: category as FundingCategory,
       urgency,
       forMaintenance: linkedToRequest || forMaintenance,
+      // Pedido ligado a um chamado: o banco usa o equipamento do chamado.
+      equipmentId: forMaintenance && equipmentId ? equipmentId : null,
     };
     try {
       setSalvando(true);
@@ -192,6 +199,25 @@ export function PurchaseFormModal({ defaultProjectId, fromMaintenance, onClose, 
             </span>
           </span>
         </label>
+        {linkedToRequest ? (
+          linkedEquipmentName ? (
+            <p className="-mt-2 text-sm text-muted">
+              {t("purchases.equipmentFromTicket")} <strong className="text-text">{linkedEquipmentName}</strong>
+            </p>
+          ) : null
+        ) : forMaintenance ? (
+          <label className="grid gap-2 text-base font-semibold text-text">
+            {t("purchases.equipment")}
+            <select className={inputClassName} value={equipmentId} onChange={(event) => setEquipmentId(event.target.value)}>
+              <option value="">{t("purchases.anyEquipment")}</option>
+              {equipment.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
         <fieldset className="grid gap-2">
           <legend className="mb-1 text-base font-semibold text-text">{t("purchases.urgency")}</legend>
           <div className="grid gap-2 sm:grid-cols-3">

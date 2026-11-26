@@ -1,6 +1,36 @@
 import { describe, expect, it } from "vitest";
 
-import { describeNotification, getNotificationGroup, getNotificationTypesOfGroup } from "./notifications";
+import { describeNotification, getNotificationGroup, getNotificationHintKey, getNotificationTypesOfGroup, getVisibleNotificationGroups } from "./notifications";
+
+describe("preferências por perfil", () => {
+  const researcher = { role: "researcher" as const, is_maintainer: false };
+  const maintainer = { role: "researcher" as const, is_maintainer: true };
+  const coordinator = { role: "coordinator" as const, is_maintainer: false };
+  const both = { role: "coordinator" as const, is_maintainer: true };
+
+  it("mostra Sugestões só para coordenadores", () => {
+    expect(getVisibleNotificationGroups(researcher)).not.toContain("feedback");
+    expect(getVisibleNotificationGroups(maintainer)).not.toContain("feedback");
+    expect(getVisibleNotificationGroups(coordinator)).toContain("feedback");
+    expect(getVisibleNotificationGroups(both)).toContain("feedback");
+  });
+
+  it("explica os chamados conforme o que cada perfil recebe", () => {
+    expect([researcher, maintainer, coordinator, both].map((profile) => getNotificationHintKey("requests", profile))).toEqual([
+      "notifPrefs.requestsHint",
+      "notifPrefs.requestsHintMaintainer",
+      "notifPrefs.requestsHintCoordinator",
+      "notifPrefs.requestsHintMaintainer",
+    ]);
+  });
+
+  it("os demais assuntos mudam de texto só para coordenadores", () => {
+    for (const group of ["bookings", "purchases", "projects"] as const) {
+      expect(getNotificationHintKey(group, maintainer)).toBe(`notifPrefs.${group}Hint`);
+      expect(getNotificationHintKey(group, coordinator)).toBe(`notifPrefs.${group}HintCoordinator`);
+    }
+  });
+});
 
 describe("describeNotification", () => {
   it("monta o texto da reserva com projeto e equipamento", () => {

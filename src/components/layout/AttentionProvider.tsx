@@ -84,7 +84,10 @@ export function AttentionProvider({ children }: { children: ReactNode }) {
       const client = supabase;
       channel = client.channel(`attention_${profileId}`);
       if (wantsRequests) {
-        channel.on("postgres_changes", { event: "*", schema: "public", table: "maintenance_requests" }, atualizar);
+        // O evento atualiza estas contagens e as listas abertas na tela (como os chamados da Inicial).
+        channel.on("postgres_changes", { event: "*", schema: "public", table: "maintenance_requests" }, () =>
+          window.dispatchEvent(new Event(MAINTENANCE_REQUESTS_CHANGED_EVENT)),
+        );
       }
       if (wantsFeedback) {
         channel.on("postgres_changes", { event: "INSERT", schema: "public", table: "feedback_reports" }, atualizar);

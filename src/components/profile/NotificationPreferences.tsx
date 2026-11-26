@@ -1,21 +1,23 @@
 import { useState } from "react";
 
 import { t } from "../../i18n";
-import { notificationGroups, type NotificationGroup } from "../../lib/notifications";
+import { useAuth } from "../../lib/auth";
+import { getNotificationHintKey, getVisibleNotificationGroups, type NotificationGroup } from "../../lib/notifications";
 import { useNotifications } from "../layout/NotificationsProvider";
 import { Alert } from "../ui/Alert";
 import { Card } from "../ui/Card";
 
-const LABELS: Record<NotificationGroup, { title: () => string; hint: () => string }> = {
-  bookings: { title: () => t("notifPrefs.bookings"), hint: () => t("notifPrefs.bookingsHint") },
-  requests: { title: () => t("notifPrefs.requests"), hint: () => t("notifPrefs.requestsHint") },
-  purchases: { title: () => t("notifPrefs.purchases"), hint: () => t("notifPrefs.purchasesHint") },
-  feedback: { title: () => t("notifPrefs.feedback"), hint: () => t("notifPrefs.feedbackHint") },
-  projects: { title: () => t("notifPrefs.projects"), hint: () => t("notifPrefs.projectsHint") },
+const TITLES: Record<NotificationGroup, () => string> = {
+  bookings: () => t("notifPrefs.bookings"),
+  requests: () => t("notifPrefs.requests"),
+  purchases: () => t("notifPrefs.purchases"),
+  feedback: () => t("notifPrefs.feedback"),
+  projects: () => t("notifPrefs.projects"),
 };
 
 // Por assunto: aparecer no sino e/ou avisar no computador. Sem escolha salva, tudo fica ligado.
 export function NotificationPreferences() {
+  const { profile } = useAuth();
   const { preferences, setPreference } = useNotifications();
   const [error, setError] = useState("");
 
@@ -39,15 +41,15 @@ export function NotificationPreferences() {
       ) : null}
 
       <div className="mt-4 grid gap-3">
-        {notificationGroups.map((topic) => {
+        {getVisibleNotificationGroups(profile).map((topic) => {
           const saved = preferences.find((preference) => preference.topic === topic);
           const inApp = saved?.in_app ?? true;
           const push = (saved?.push ?? true) && inApp;
           return (
             <div key={topic} className="grid gap-2 rounded-lg border border-border p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
               <div className="min-w-0">
-                <p className="font-bold text-text">{LABELS[topic].title()}</p>
-                <p className="text-sm text-muted">{LABELS[topic].hint()}</p>
+                <p className="font-bold text-text">{TITLES[topic]()}</p>
+                <p className="text-sm text-muted">{t(getNotificationHintKey(topic, profile))}</p>
               </div>
               <div className="flex flex-wrap items-center gap-4">
                 <label className="flex min-h-11 items-center gap-2 text-base font-semibold text-text">

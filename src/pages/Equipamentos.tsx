@@ -84,6 +84,8 @@ export function Equipamentos() {
   const podeManter = canMaintain(profile);
   const [searchParams, setSearchParams] = useSearchParams();
   const vista = searchParams.get("vista") === "chamados" ? "chamados" : "equipamentos";
+  // "Abrir chamado" (botão da aba e atalho da Inicial): o formulário abre sem equipamento escolhido.
+  const novoChamado = vista === "chamados" && searchParams.get("novo") === "1";
   const [requests, setRequests] = useState<MaintenanceRequest[]>([]);
   const [reportarEm, setReportarEm] = useState<Equipment | null>(null);
   const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
@@ -224,6 +226,11 @@ export function Equipamentos() {
     );
   }
 
+  function fecharChamado() {
+    setReportarEm(null);
+    if (novoChamado) setSearchParams({ vista: "chamados" }, { replace: true });
+  }
+
   async function cadastrarTipo() {
     const name = novoTipo?.name.trim();
     if (!novoTipo || !name) {
@@ -290,7 +297,12 @@ export function Equipamentos() {
         title={t("equipment.title")}
         description={t("equipment.subtitle")}
         action={
-          isCoordinator ? (
+          vista === "chamados" ? (
+            <Button fullWidth variant="success" onClick={() => setSearchParams({ vista: "chamados", novo: "1" }, { replace: true })}>
+              <Plus className="mr-2 h-5 w-5" aria-hidden="true" />
+              {t("equipment.openRequest")}
+            </Button>
+          ) : isCoordinator ? (
             <Button fullWidth variant="success" onClick={abrirCadastro}>
               <Plus className="mr-2 h-5 w-5" aria-hidden="true" />
               {t("equipment.register")}
@@ -542,11 +554,12 @@ export function Equipamentos() {
         />
       ) : null}
 
-      {reportarEm ? (
+      {reportarEm || novoChamado ? (
         <ReportProblemModal
           equipment={reportarEm}
-          openCount={countOpenRequests(requests, reportarEm.id)}
-          onClose={() => setReportarEm(null)}
+          equipmentList={equipmentList}
+          countOpen={(equipmentId) => countOpenRequests(requests, equipmentId)}
+          onClose={fecharChamado}
           onDone={async () => {
             setReportarEm(null);
             await recarregar();
