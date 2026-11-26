@@ -709,14 +709,14 @@ isOneToOne: false
                   ]
                 },"project_task_comments": {
                   Row: {
-                    "author_id": string,"body": string,"created_at": string,"edited_at": string | null,"id": string,"mentions": (string)[],"project_id": string,"task_id": string
+                    "author_id": string,"body": string,"created_at": string,"edited_at": string | null,"id": string,"mentions": (string)[],"parent_id": string | null,"project_id": string,"task_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "author_id"?: string,"body": string,"created_at"?: string,"edited_at"?: string | null,"id"?: string,"mentions"?: (string)[],"project_id": string,"task_id": string
+                    "author_id"?: string,"body": string,"created_at"?: string,"edited_at"?: string | null,"id"?: string,"mentions"?: (string)[],"parent_id"?: string | null,"project_id": string,"task_id": string
                   }
                   Update: {
-                    "author_id"?: string,"body"?: string,"created_at"?: string,"edited_at"?: string | null,"id"?: string,"mentions"?: (string)[],"project_id"?: string,"task_id"?: string
+                    "author_id"?: string,"body"?: string,"created_at"?: string,"edited_at"?: string | null,"id"?: string,"mentions"?: (string)[],"parent_id"?: string | null,"project_id"?: string,"task_id"?: string
                   }
                   Relationships: [
                     {
@@ -725,6 +725,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "profiles"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "project_task_comments_parent_fkey"
+      columns: ["parent_id","task_id"]
+isOneToOne: false
+      referencedRelation: "project_task_comments"
+      referencedColumns: ["id","task_id"]
     },{
       foreignKeyName: "project_task_comments_task_fkey"
       columns: ["task_id","project_id"]

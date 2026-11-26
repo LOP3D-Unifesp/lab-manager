@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(496);
+select plan(506);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -2718,6 +2718,90 @@ select ok(
   (select count(*) = 0 from public.project_task_comments where task_id = '00000000-0000-0000-0000-00000000fa01')
     and (select count(*) = 0 from public.notifications where entity_id = '00000000-0000-0000-0000-00000000fa01' and read_at is null),
   'deleting a task removes its comments and clears their notices'
+);
+
+-- Replies: task created by 101, assigned to 102; 103 starts the conversation.
+insert into public.project_tasks (id, project_id, title, created_by) values
+  ('00000000-0000-0000-0000-00000000fa02', '00000000-0000-0000-0000-00000000fa00', 'pgtap conversa', '00000000-0000-0000-0000-000000000101'),
+  ('00000000-0000-0000-0000-00000000fa03', '00000000-0000-0000-0000-00000000fa00', 'pgtap outra tarefa', '00000000-0000-0000-0000-000000000101');
+insert into public.project_task_assignees (task_id, project_id, profile_id)
+values ('00000000-0000-0000-0000-00000000fa02', '00000000-0000-0000-0000-00000000fa00', '00000000-0000-0000-0000-000000000102');
+delete from public.notification_preferences
+where profile_id in ('00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000102', '00000000-0000-0000-0000-000000000103') and topic = 'tasks';
+
+set local role authenticated;
+select pg_temp.act_as('103');
+insert into public.project_task_comments (task_id, project_id, body)
+values ('00000000-0000-0000-0000-00000000fa02', '00000000-0000-0000-0000-00000000fa00', 'pgtap pergunta');
+
+select pg_temp.act_as('101');
+select lives_ok(
+  $$ insert into public.project_task_comments (task_id, project_id, parent_id, body)
+     select task_id, project_id, id, 'pgtap resposta um' from public.project_task_comments where body = 'pgtap pergunta' $$,
+  'a comment can be answered'
+);
+select is(pg_temp.told_comment('pgtap resposta um'), 'comment:103', 'a reply reaches only the conversation, not everyone on the task');
+
+select pg_temp.act_as('102');
+insert into public.project_task_comments (task_id, project_id, parent_id, body)
+select task_id, project_id, id, 'pgtap resposta da resposta' from public.project_task_comments where body = 'pgtap resposta um';
+select is(
+  (select parent_id from public.project_task_comments where body = 'pgtap resposta da resposta'),
+  (select id from public.project_task_comments where body = 'pgtap pergunta'),
+  'answering a reply stays in the same conversation'
+);
+select is(
+  pg_temp.told_comment('pgtap resposta da resposta'),
+  'comment:101 comment:103',
+  'a reply reaches everyone who already wrote in the conversation'
+);
+
+select pg_temp.act_as('103');
+insert into public.project_task_comments (task_id, project_id, parent_id, body, mentions)
+select task_id, project_id, id, 'pgtap com mencao', array['00000000-0000-0000-0000-000000000102']::uuid[]
+from public.project_task_comments where body = 'pgtap pergunta';
+select is(
+  pg_temp.told_comment('pgtap com mencao'),
+  'comment:101 mention:102',
+  'a person mentioned in a reply gets only the mention'
+);
+select throws_ok(
+  $$ insert into public.project_task_comments (task_id, project_id, parent_id, body)
+     select '00000000-0000-0000-0000-00000000fa03', project_id, id, 'pgtap resposta cruzada' from public.project_task_comments where body = 'pgtap pergunta' $$,
+  '23503', null,
+  'a reply cannot point to a comment of another task'
+);
+select throws_ok(
+  $$ update public.project_task_comments set parent_id = null where body = 'pgtap com mencao' $$,
+  '42501', null,
+  'a reply cannot be moved to another conversation'
+);
+
+set local role postgres;
+select ok(
+  (select bool_and(params->>'reply' = 'true') from public.notifications n
+   join public.project_task_comments c on c.id::text = n.params->>'comment_id' where c.body = 'pgtap resposta um')
+    and (select bool_and(not n.params ? 'reply') from public.notifications n
+   join public.project_task_comments c on c.id::text = n.params->>'comment_id' where c.body = 'pgtap pergunta'),
+  'only the notices of replies are marked as replies'
+);
+
+set local role authenticated;
+select pg_temp.act_as('103');
+delete from public.project_task_comments where body = 'pgtap pergunta';
+select is(
+  (select count(*)::int from public.project_task_comments where task_id = '00000000-0000-0000-0000-00000000fa02' and parent_id is null),
+  3,
+  'deleting the first comment keeps the replies of other people'
+);
+set local role postgres;
+select set_config('request.jwt.claims', '', true);
+insert into public.project_task_comments (task_id, project_id, parent_id, author_id, body)
+select task_id, project_id, id, '00000000-0000-0000-0000-000000000101', 'pgtap nova conversa'
+from public.project_task_comments where body = 'pgtap resposta um';
+select lives_ok(
+  $$ delete from public.project_tasks where id = '00000000-0000-0000-0000-00000000fa02' $$,
+  'a task with conversations can be deleted'
 );
 
 select * from finish();

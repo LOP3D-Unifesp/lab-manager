@@ -71,7 +71,8 @@ type KanbanBoardProps = {
   onToggleChecklistItem?: (task: ProjectTask, itemId: string, done: boolean) => void;
   /** Quando informado, o cartão ganha um seletor de prioridade. */
   onPriorityChange?: (task: ProjectTask, priority: TaskPriority) => void;
-  onOpen?: (task: ProjectTask) => void;
+  /** Com "comments", a tarefa abre direto nos comentários. */
+  onOpen?: (task: ProjectTask, tab?: "comments") => void;
   /** Quando informado, o cartão ganha o botão de arquivar (e de desarquivar, nas arquivadas). */
   onArchive?: (task: ProjectTask, archived: boolean) => void;
   /** Quando informado, o cartão ganha a lixeira nas tarefas em que `canDelete` for verdadeiro (com confirmação). */
@@ -311,7 +312,7 @@ export function KanbanBoard({ canDelete, onArchive, onDelete, onDragChange, onMo
                     aria-label={`${task.title} · ${t("tasks.commentCount", { count: task.comment_count })}`}
                     title={t("tasks.commentCount", { count: task.comment_count })}
                     className="flex w-fit items-center gap-1.5 text-sm text-muted hover:text-text"
-                    onClick={() => onOpen?.(task)}
+                    onClick={() => onOpen?.(task, "comments")}
                   >
                     <MessageSquare className="h-4 w-4 shrink-0" aria-hidden="true" />
                     {task.comment_count}

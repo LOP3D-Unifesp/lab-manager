@@ -13,11 +13,28 @@ export type TaskComment = {
   author_id: string;
   author_name: string;
   author_avatar_url: string | null;
+  /** Comentário inicial da conversa; null quando este é o inicial (ou ficou solto porque o inicial foi apagado). */
+  parent_id: string | null;
   body: string;
   mentions: string[];
   created_at: string;
   edited_at: string | null;
 };
+
+export type CommentThread<T> = { root: T; replies: T[] };
+
+// Agrupa as respostas sob o comentário inicial, mantendo a ordem recebida (do mais antigo ao mais novo).
+export function groupThreads<T extends { id: string; parent_id: string | null }>(comments: T[]): CommentThread<T>[] {
+  const threads = new Map<string, CommentThread<T>>();
+  for (const comment of comments) if (!comment.parent_id) threads.set(comment.id, { root: comment, replies: [] });
+  for (const comment of comments) {
+    if (!comment.parent_id) continue;
+    const thread = threads.get(comment.parent_id);
+    if (thread) thread.replies.push(comment);
+    else threads.set(comment.id, { root: comment, replies: [] });
+  }
+  return comments.flatMap((comment) => threads.get(comment.id) ?? []);
+}
 
 // Sem acento e em minúsculas, para "@joao" achar "João".
 function fold(value: string) {

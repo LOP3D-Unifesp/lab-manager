@@ -41,7 +41,7 @@ export function GeneralTasksBoard({ isCoordinator, profileId, projects }: Genera
   const { alternarCronometro, apagar, arquivar, arrastar, erro, marcarItem, mover, mudarPrioridade, recarregar, tarefas } = useTaskBoard(loader);
   const [filtros, setFiltros] = useState<TaskFilters>(emptyTaskFilters);
   const [ordem, setOrdem] = useTaskSort();
-  const [modal, setModal] = useState<{ task: ProjectTask | null } | null>(null);
+  const [modal, setModal] = useState<{ task: ProjectTask | null; tab?: "comments" } | null>(null);
 
   const projetosOrdenados = useMemo(() => sortProjects(projects), [projects]);
   const projetosAbertos = useMemo(() => projetosOrdenados.filter((projeto) => isProjectOpen(projeto.status)), [projetosOrdenados]);
@@ -103,13 +103,14 @@ export function GeneralTasksBoard({ isCoordinator, profileId, projects }: Genera
             onToggleChecklistItem={marcarItem}
             onToggleTimer={alternarCronometro}
             onPriorityChange={mudarPrioridade}
-            onOpen={(task) => setModal({ task })}
+            onOpen={(task, tab) => setModal({ task, tab })}
           />
         </>
       ) : null}
 
       {modal ? (
         <TaskModal
+          initialTab={modal.tab}
           task={modal.task}
           projects={modal.task ? projects : projetosAbertos}
           defaultAssigneeIds={modal.task ? [] : [profileId]}

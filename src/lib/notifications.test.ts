@@ -56,6 +56,7 @@ describe("avisos de tarefa", () => {
     expect(describeNotification({ type: "task_comment", params })).toEqual({ title: "Ana comentou em uma tarefa", detail: "Calibrar · Lab 3D", reason: null });
     expect(describeNotification({ type: "task_mention", params }).title).toBe("Ana mencionou você em um comentário");
     expect(describeNotification({ type: "task_mention", params: {} }).title).toBe("Mencionaram você em um comentário");
+    expect(describeNotification({ type: "task_comment", params: { ...params, reply: true } }).title).toBe("Ana respondeu em uma conversa");
   });
 
   it("ficam no assunto Tarefas, separado de Projetos", () => {

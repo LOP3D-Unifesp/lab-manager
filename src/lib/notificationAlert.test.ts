@@ -85,5 +85,8 @@ describe("texto do aviso no computador e do push", () => {
       expect(worker({ type, params: {} }).title).not.toBe("Nova notificação");
     }
     expect(worker({ type: "task_mention", params: { by: "Ana" } }).title).toBe("Ana mencionou você em um comentário");
+    for (const params of [{ by: "Ana", reply: true }, { reply: true }]) {
+      expect(worker({ type: "task_comment", params }).title).toBe(describeNotification({ type: "task_comment", params }).title);
+    }
   });
 });

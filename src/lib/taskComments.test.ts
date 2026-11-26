@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { extractMentions, filterMentionable, getMentionQuery, insertMention, splitMentions } from "./taskComments";
+import { extractMentions, filterMentionable, getMentionQuery, groupThreads, insertMention, splitMentions } from "./taskComments";
 
 const people = [
   { id: "ana", full_name: "Ana" },
@@ -31,6 +31,22 @@ describe("citação enquanto se digita", () => {
   it("escreve o nome completo no lugar do que foi digitado", () => {
     expect(insertMention("oi @jo, tudo?", 3, 6, "João Pedro Lima")).toEqual({ text: "oi @João Pedro Lima , tudo?", caret: 20 });
     expect(insertMention("@an depois", 0, 3, "Ana")).toEqual({ text: "@Ana depois", caret: 5 });
+  });
+});
+
+describe("conversas", () => {
+  const comment = (id: string, parent_id: string | null = null) => ({ id, parent_id });
+
+  it("junta as respostas ao comentário inicial, na ordem de chegada", () => {
+    const threads = groupThreads([comment("a"), comment("b"), comment("a1", "a"), comment("b1", "b"), comment("a2", "a")]);
+    expect(threads.map((thread) => [thread.root.id, thread.replies.map((reply) => reply.id)])).toEqual([
+      ["a", ["a1", "a2"]],
+      ["b", ["b1"]],
+    ]);
+  });
+
+  it("mostra solta a resposta cujo comentário inicial não veio", () => {
+    expect(groupThreads([comment("x1", "x"), comment("a")]).map((thread) => thread.root.id)).toEqual(["x1", "a"]);
   });
 });
 

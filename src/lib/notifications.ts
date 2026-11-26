@@ -148,11 +148,9 @@ export function describeNotification(notification: Pick<AppNotification, "type" 
     case "task_comment":
     case "task_mention": {
       const by = text(params, "by");
-      const mention = type === "task_mention";
+      const kind = type === "task_mention" ? "Mention" : params.reply === true ? "Reply" : "Comment";
       return {
-        title: by
-          ? t(mention ? "notif.taskMentionBy" : "notif.taskCommentBy", { name: by })
-          : t(mention ? "notif.taskMention" : "notif.taskComment"),
+        title: by ? t(`notif.task${kind}By`, { name: by }) : t(`notif.task${kind}`),
         detail: [text(params, "task"), text(params, "project")].filter(Boolean).join(" · ") || null,
         reason: null,
       };

@@ -100,6 +100,7 @@ Status do MVP implementado:
 | `20261016_notification_resolution` | Avisos de assunto resolvido sao marcados como lidos por gatilhos (reservas, chamados, compras, pedidos de entrada e tarefas); lidos guardados por 30 dias (secao 3.20). |
 | `20261017_notification_details` | `notifications_enrich`: dados do assunto (descricao, prazo, autor, valor, horario) entram em `params` para o push e o aviso no computador (secao 3.20). |
 | `20261018_task_comments` | `project_task_comments` (comentarios das tarefas, com mencoes) no Realtime e notificacoes `task_comment` e `task_mention` (secao 3.20). |
+| `20261019_task_comment_replies` | `project_task_comments.parent_id` (respostas em um nivel) e avisos de resposta so para a conversa (secao 3.20). |
 
 Resumo dos objetos que mais mudam o entendimento do schema:
 
@@ -1026,7 +1027,9 @@ Kanban de tarefas:
 - `project_task_comments`: `task_id`, `project_id`, `author_id` (padrao `auth.uid()`), `body` (ate 2000, nao vazio),
   `mentions` (`uuid[]`, ate 30), `created_at` e `edited_at` (gatilho quando o texto muda). FK composta com
   `on update cascade`: trocar a tarefa de projeto leva os comentarios. Membros e coordenadores leem e comentam em nome
-  proprio; o autor edita (so `body` e `mentions`) e apaga; o coordenador apaga qualquer um.
+  proprio; o autor edita (so `body` e `mentions`) e apaga; o coordenador apaga qualquer um. `parent_id` aponta o
+  comentario inicial da conversa, da mesma tarefa (o gatilho `flatten_task_comment_reply` leva a resposta de uma resposta para ele;
+  apagar o inicial deixa as respostas com `parent_id` nulo).
 - Ordem: `move_project_task(p_task_id, p_status, p_before_task_id)` poe a tarefa na coluna antes de outra (ou no fim) e
   renumera a coluna do projeto (1..n). Os quadros assinam o Realtime das tabelas de tarefas (inclusive comentarios) e
   recarregam a lista.
@@ -1215,7 +1218,8 @@ O texto nao e guardado: so o tipo e os dados do evento (`params`), e o cliente m
   tarefa (`project_tasks_notify_status`), quem criou e os responsaveis que ainda veem o projeto; comentario em tarefa
   (`project_task_comments_notify`): `task_mention` para os mencionados e `task_comment` para quem criou, os
   responsaveis e quem ja comentou, um por pessoa, so para quem ve o projeto; na edicao, so os mencionados novos. O
-  `link` leva a tarefa (`?tarefa=`) e `params.comment_id` identifica o comentario.
+  `link` leva a tarefa (`?tarefa=`) e `params.comment_id` identifica o comentario. Numa resposta (`params.reply`),
+  `task_comment` vai so para quem escreveu o comentario inicial e quem ja respondeu nele.
 - Baixa automatica (`private.resolve_notifications`, por `entity_id`): `booking_pending` quando a reserva sai de
   `pending`; `request_new` quando o chamado e resolvido ou cancelado; `purchase_new` quando o pedido sai de
   `requested`; `project_join_request` quando sai de `pending`; avisos `task_*` quando a tarefa e concluida ou

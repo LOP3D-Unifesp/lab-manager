@@ -1429,7 +1429,7 @@ export async function moveTaskToProject(taskId: string, projectId: string) {
 export async function listTaskComments(taskId: string): Promise<TaskComment[]> {
   const { data, error } = await client()
     .from("project_task_comments")
-    .select("id, author_id, body, mentions, created_at, edited_at, author:profiles!project_task_comments_author_fkey(full_name, avatar_url)")
+    .select("id, author_id, parent_id, body, mentions, created_at, edited_at, author:profiles!project_task_comments_author_fkey(full_name, avatar_url)")
     .eq("task_id", taskId)
     .order("created_at");
   throwIfError(error);
@@ -1441,8 +1441,10 @@ export async function listTaskComments(taskId: string): Promise<TaskComment[]> {
   }));
 }
 
-export async function createTaskComment(taskId: string, projectId: string, body: string, mentions: string[]) {
-  const { error } = await client().from("project_task_comments").insert({ task_id: taskId, project_id: projectId, body, mentions });
+export async function createTaskComment(taskId: string, projectId: string, body: string, mentions: string[], parentId: string | null = null) {
+  const { error } = await client()
+    .from("project_task_comments")
+    .insert({ task_id: taskId, project_id: projectId, body, mentions, ...(parentId ? { parent_id: parentId } : {}) });
   throwIfError(error);
 }
 

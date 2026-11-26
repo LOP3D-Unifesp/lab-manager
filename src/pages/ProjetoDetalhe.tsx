@@ -11,7 +11,7 @@ import { SpoolCard } from "../components/inventario/SpoolCard";
 import { MembersEditor } from "../components/projetos/MembersEditor";
 import { ProjectFormModal } from "../components/projetos/ProjectFormModal";
 import { TaskFilterBar } from "../components/projetos/TaskFilterBar";
-import { TaskModal } from "../components/projetos/TaskModal";
+import { TaskModal, type TaskModalTab } from "../components/projetos/TaskModal";
 import { useTaskBoard } from "../components/projetos/useTaskBoard";
 import { useTaskSort } from "../components/projetos/useTaskSort";
 import { Avatar } from "../components/ui/Avatar";
@@ -85,7 +85,7 @@ export function ProjetoDetalhe() {
   const [filtrosTarefas, setFiltrosTarefas] = useState<TaskFilters>(emptyTaskFilters);
   const [rolos, setRolos] = useState<MaterialSpool[] | null>(null);
   const [consumo, setConsumo] = useState<Array<{ name: string; unit: MaterialUnit; total: number }>>([]);
-  const [tarefaAberta, setTarefaAberta] = useState<{ task: ProjectTask | null; status: TaskStatus; comentarios?: boolean } | null>(null);
+  const [tarefaAberta, setTarefaAberta] = useState<{ task: ProjectTask | null; status: TaskStatus; tab?: TaskModalTab } | null>(null);
   // Link de um aviso de comentário: /projetos/<id>?tarefa=<id da tarefa>.
   const [searchParams, setSearchParams] = useSearchParams();
   const tarefaDoLink = searchParams.get("tarefa");
@@ -107,7 +107,7 @@ export function ProjetoDetalhe() {
     const task = quadro.tarefas?.find((item) => item.id === tarefaDoLink);
     if (!task) return;
     setAba("kanban");
-    setTarefaAberta({ task, status: task.status, comentarios: true });
+    setTarefaAberta({ task, status: task.status, tab: "comments" });
     setSearchParams(
       (params) => {
         params.delete("tarefa");
@@ -342,7 +342,7 @@ export function ProjetoDetalhe() {
             onToggleChecklistItem={quadro.marcarItem}
             onToggleTimer={quadro.alternarCronometro}
             onPriorityChange={quadro.mudarPrioridade}
-            onOpen={(task) => setTarefaAberta({ task, status: task.status })}
+            onOpen={(task, tab) => setTarefaAberta({ task, status: task.status, tab })}
           />
         </div>
       ) : null}
@@ -467,7 +467,7 @@ export function ProjetoDetalhe() {
       {tarefaAberta ? (
         <TaskModal
           key={tarefaAberta.task?.id ?? "nova"}
-          showComments={tarefaAberta.comentarios}
+          initialTab={tarefaAberta.tab}
           projectId={project.id}
           task={tarefaAberta.task}
           members={project.members}

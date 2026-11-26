@@ -555,10 +555,12 @@ A reserva própria é cancelada, permanece no histórico e deixa de bloquear o h
 
 ### Fluxo 13c - Comentar numa tarefa
 
-- Numa tarefa já criada, quem vê o projeto escreve em **Comentários** e envia com **Comentar** ou Ctrl+Enter. O autor edita (fica marcado como editado) e apaga o seu; o coordenador apaga qualquer um. O cartão do quadro mostra quantos comentários há.
+- A janela de uma tarefa já criada tem as abas **Detalhes**, **Comentários** e **Tempo** (total, por pessoa e registros). **Salvar** vale para a janela toda.
+- Quem vê o projeto escreve na aba **Comentários** e envia com **Comentar** ou Ctrl+Enter. O autor edita (fica marcado como editado) e apaga o seu; o coordenador apaga qualquer um. O cartão do quadro mostra quantos comentários há.
 - Ao digitar **@** aparecem os membros do projeto e os coordenadores; a pessoa mencionada recebe um aviso próprio. Quem criou a tarefa, os responsáveis e quem já comentou recebem o aviso de comentário novo. Cada pessoa recebe um só por comentário e o autor nenhum; editar avisa apenas quem passou a ser mencionado.
-- Clicar no aviso abre o projeto com a tarefa aberta nos comentários.
-- Um comentário digitado e não enviado conta como não salvo ao fechar a janela; **Salvar** envia junto.
+- **Responder** abre uma conversa abaixo do comentário (um nível só). A resposta avisa quem escreveu o comentário e quem já respondeu nele, além dos mencionados; não avisa o restante da tarefa. Apagar o comentário inicial mantém as respostas, soltas.
+- Clicar no aviso, ou no número de comentários do cartão, abre a tarefa na aba **Comentários**.
+- Um comentário ou resposta digitada e não enviada conta como não salva ao fechar a janela; **Salvar** envia junto.
 
 ### Fluxo 14a - Sino, pendências e preferências de aviso
 

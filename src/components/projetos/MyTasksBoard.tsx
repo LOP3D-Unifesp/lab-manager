@@ -22,7 +22,7 @@ export function MyTasksBoard({ isCoordinator, profileId }: { isCoordinator: bool
   const [filtros, setFiltros] = useState<TaskFilters>(emptyTaskFilters);
   const [ordem, setOrdem] = useTaskSort();
   const [projetos, setProjetos] = useState<Project[]>([]);
-  const [modal, setModal] = useState<{ task: ProjectTask | null } | null>(null);
+  const [modal, setModal] = useState<{ task: ProjectTask | null; tab?: "comments" } | null>(null);
 
   useEffect(() => {
     let ativo = true;
@@ -101,7 +101,7 @@ export function MyTasksBoard({ isCoordinator, profileId }: { isCoordinator: bool
             onToggleChecklistItem={marcarItem}
             onToggleTimer={alternarCronometro}
               onPriorityChange={mudarPrioridade}
-              onOpen={(task) => setModal({ task })}
+              onOpen={(task, tab) => setModal({ task, tab })}
             />
           </div>
         )}
@@ -109,6 +109,7 @@ export function MyTasksBoard({ isCoordinator, profileId }: { isCoordinator: bool
 
       {modal ? (
         <TaskModal
+          initialTab={modal.tab}
           task={modal.task}
           projects={modal.task ? projetos : projetosAbertos}
           defaultAssigneeIds={[profileId]}
