@@ -12,8 +12,8 @@ type ChecklistEditorProps = {
   onChange: (items: ChecklistDraftItem[]) => void;
 };
 
-// Checklist (subtarefas) dentro do modal da tarefa: adiciona, marca, renomeia, reordena e remove. Só vai ao
-// banco quando a pessoa salva a tarefa.
+// Checklist (subtarefas) dentro do modal da tarefa: adiciona, marca, renomeia, reordena e remove. Quem decide quando
+// gravar é o modal (numa tarefa já criada, grava sozinho).
 export function ChecklistEditor({ items, onChange }: ChecklistEditorProps) {
   const t = useT();
   const [novo, setNovo] = useState("");
@@ -39,7 +39,7 @@ export function ChecklistEditor({ items, onChange }: ChecklistEditorProps) {
   }
 
   return (
-    <fieldset className="grid gap-2">
+    <fieldset className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-2">
       <legend className="mb-1 flex w-full items-center justify-between gap-2 text-base font-semibold text-text">
         <span>{t("checklist.title")}</span>
         {items.length > 0 ? (
@@ -50,9 +50,9 @@ export function ChecklistEditor({ items, onChange }: ChecklistEditorProps) {
       </legend>
 
       {items.length > 0 ? (
-        <ul className="grid gap-2">
+        <ul className="grid grid-cols-[minmax(0,1fr)] gap-2">
           {items.map((item, indice) => (
-            <li key={item.id} className="flex items-center gap-2">
+            <li key={item.id} className="flex min-w-0 items-center gap-1 sm:gap-2">
               <input
                 type="checkbox"
                 aria-label={t("checklist.done", { title: item.title })}
@@ -62,7 +62,7 @@ export function ChecklistEditor({ items, onChange }: ChecklistEditorProps) {
               />
               <input
                 aria-label={t("checklist.itemTitle")}
-                className={`${inputClassName} min-w-0 flex-1 ${item.done ? "text-muted line-through" : ""}`}
+                className={`${inputClassName} w-0 min-w-0 flex-1 ${item.done ? "text-muted line-through" : ""}`}
                 maxLength={200}
                 value={item.title}
                 onChange={(event) => alterar(item.id, { title: event.target.value })}
@@ -106,6 +106,8 @@ export function ChecklistEditor({ items, onChange }: ChecklistEditorProps) {
           placeholder={t("checklist.placeholder")}
           value={novo}
           onChange={(event) => setNovo(event.target.value)}
+          // Sair do campo também adiciona: o item digitado não se perde ao fechar ou salvar.
+          onBlur={adicionar}
           onKeyDown={(event) => {
             // Enter adiciona o item em vez de salvar a tarefa inteira.
             if (event.key === "Enter") {

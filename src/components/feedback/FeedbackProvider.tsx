@@ -76,6 +76,7 @@ function FeedbackModal({ onClose, pagePath }: { onClose: () => void; pagePath: s
       title={t("feedback.sendTitle")}
       description={t("feedback.sendHint")}
       onClose={onClose}
+      unsaved={photos.length > 0}
     >
       <form className="grid gap-4" onSubmit={enviar}>
         <fieldset className="grid gap-2">
