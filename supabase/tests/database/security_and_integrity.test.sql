@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(471);
+select plan(477);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -2503,6 +2503,47 @@ select is(
   (select string_agg(params->>'kind', ',' order by params->>'kind') from public.notifications where recipient_id = '00000000-0000-0000-0000-000000000121' and params->>'kind' like 'pgtap-%'),
   'pgtap-29,pgtap-new,pgtap-trigger',
   'only notices read more than 30 days ago are removed'
+);
+
+-- Notifications carry the details of their subject, used by the desktop and push alerts.
+select is(
+  private.plain_excerpt(E'**Urgente**: ver [o guia](https://exemplo.org)\n- passo `um`\n2. *dois*'),
+  'Urgente: ver o guia passo um dois',
+  'the excerpt drops the description markup'
+);
+select is(length(private.plain_excerpt(repeat('a', 500))), 140, 'the excerpt is cut at 140 characters');
+insert into public.project_tasks (id, project_id, title, description, due_on, priority, created_by)
+values ('00000000-0000-0000-0000-00000000f901', '00000000-0000-0000-0000-0000000000f7', 'pgtap detalhes', 'Conferir a **mesa**', current_date + 3, 'urgent', '00000000-0000-0000-0000-000000000101');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-000000000101","role":"authenticated"}', true);
+insert into public.project_task_assignees (task_id, project_id, profile_id)
+values ('00000000-0000-0000-0000-00000000f901', '00000000-0000-0000-0000-0000000000f7', '00000000-0000-0000-0000-000000000103');
+select set_config('request.jwt.claims', '', true);
+select is(
+  (select concat_ws('|', params->>'task', params->>'description', params->>'priority', params->>'by', (params->>'due_on' = (current_date + 3)::text)::text)
+   from public.notifications where entity_id = '00000000-0000-0000-0000-00000000f901' and type = 'task_assigned'),
+  'pgtap detalhes|Conferir a mesa|urgent|Coordinator|true',
+  'a task notification carries description, priority, author and due date'
+);
+insert into public.purchase_requests (id, funding_category, item, quantity, estimated_amount, notes, requested_by)
+values ('00000000-0000-0000-0000-00000000f902', 'custeio', 'pgtap detalhe compra', 3, 45.50, 'Para a impressora', '00000000-0000-0000-0000-000000000121');
+select is(
+  (select concat_ws('|', params->>'quantity', params->>'amount', params->>'author', params->>'stock', params->>'description')
+   from public.notifications where entity_id = '00000000-0000-0000-0000-00000000f902' and type = 'purchase_new' limit 1),
+  '3|45.50|Plain Researcher|true|Para a impressora',
+  'a purchase notification carries quantity, value, who asked and notes'
+);
+insert into public.maintenance_requests (id, equipment_id, requested_by, description)
+values ('00000000-0000-0000-0000-00000000f903', '20000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000121', 'pgtap detalhe chamado');
+select is(
+  (select concat_ws('|', params->>'equipment', params->>'author', params->>'description')
+   from public.notifications where entity_id = '00000000-0000-0000-0000-00000000f903' and type = 'request_new' limit 1),
+  'Scanner A|Plain Researcher|pgtap detalhe chamado',
+  'a maintenance notification carries the equipment, who opened it and the description'
+);
+select ok(
+  (select bool_and(params ? 'starts_at' and params ? 'ends_at' and params ? 'author' and params ? 'timezone')
+   from public.notifications where entity_id = '00000000-0000-0000-0000-00000000f801' and type = 'booking_pending'),
+  'a booking notification carries when it is and whose it is'
 );
 
 select * from finish();

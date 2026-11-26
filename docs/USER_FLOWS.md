@@ -542,6 +542,7 @@ A reserva própria é cancelada, permanece no histórico e deixa de bloquear o h
 - O sino mostra **Pendências** (o que está em aberto: reservas, chamados, compras e sugestões para quem decide ou resolve, e as tarefas da própria pessoa urgentes, atrasadas ou para hoje) e **Novidades** (avisos de eventos).
 - Em **Meu perfil > Notificações**, desligar **No sino** de um assunto tira as pendências dele (e a contagem no número vermelho) e deixa de criar novos avisos; os avisos antigos continuam no histórico. Os selos do menu não mudam.
 - Mudança de situação de uma tarefa avisa quem a criou e os responsáveis, nunca quem fez a mudança.
+- O aviso no computador (com o app aberto ou fechado) traz o assunto, o contexto (projeto, quem, prazo, horário ou valor) e um trecho da descrição. Esse texto aparece também na tela de bloqueio, conforme a configuração do aparelho.
 - O sino mostra só as novidades não lidas. Um aviso é lido quando a pessoa clica nele ou usa **Marcar tudo como lido**; abrir o sino não marca. O histórico (**Ver todas as notificações**) guarda os lidos por 30 dias.
 - Avisos que esperam uma ação saem sozinhos, para todos que os receberam, quando o assunto se resolve: reserva pendente decidida ou cancelada; chamado novo resolvido ou cancelado; pedido de compra novo aprovado, recusado ou cancelado; pedido de entrada decidido ou cancelado; avisos de tarefa quando ela é concluída, arquivada ou apagada. Os que só informam saem quando lidos.
 
