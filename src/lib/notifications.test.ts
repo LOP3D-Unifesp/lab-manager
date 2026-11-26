@@ -7,6 +7,7 @@ import {
   getNotificationHintKey,
   getNotificationTypesOfGroup,
   getVisibleNotificationGroups,
+  type NotificationType,
 } from "./notifications";
 
 describe("pendências da campainha", () => {
@@ -26,6 +27,16 @@ describe("pendências da campainha", () => {
       { topic: "purchases", in_app: true },
     ]);
     expect(visible.map((item) => item.topic)).toEqual(["purchases", "tasks"]);
+  });
+});
+
+describe("tipo desconhecido", () => {
+  it("mostra um texto genérico em vez de falhar", () => {
+    expect(describeNotification({ type: "tipo_novo" as NotificationType, params: { task: "x" } })).toEqual({
+      title: "Nova notificação",
+      detail: null,
+      reason: null,
+    });
   });
 });
 

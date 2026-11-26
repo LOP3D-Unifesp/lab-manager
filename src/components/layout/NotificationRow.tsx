@@ -1,4 +1,4 @@
-import { CalendarCheck, CheckCircle2, ListChecks, MessageSquare, ShoppingCart, Timer, UserCheck, UserPlus, Wrench, XCircle, type LucideIcon } from "lucide-react";
+import { Bell, CalendarCheck, CheckCircle2, ListChecks, MessageSquare, ShoppingCart, Timer, UserCheck, UserPlus, Wrench, XCircle, type LucideIcon } from "lucide-react";
 
 import { getLocale, t } from "../../i18n";
 import { describeNotification, type AppNotification, type NotificationType } from "../../lib/notifications";
@@ -40,7 +40,7 @@ export function NotificationRow({ notification, onOpen }: NotificationRowProps) 
   return (
     <NotificationItem
       to={notification.link ?? "/"}
-      icon={ICONS[notification.type]}
+      icon={ICONS[notification.type] ?? Bell}
       title={title}
       unread={!notification.read_at}
       time={formatRelativeTime(notification.created_at, getLocale()) || formatFullDate(notification.created_at)}

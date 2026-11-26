@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { countDueTasks, toLocalDate,
+import { countPendingTasks, toLocalDate,
   filterProjects,
   emptyTaskFilters,
   filterTasks,
@@ -249,14 +249,18 @@ describe("quadro geral de tarefas", () => {
 });
 
 describe("tarefas pendentes na campainha", () => {
-  it("conta as atrasadas e as de hoje, só de projetos em aberto", () => {
+  it("conta as urgentes, as atrasadas e as de hoje, cada uma uma vez, só de projetos em aberto", () => {
     const tasks = [
-      { due_on: "2026-11-20", project_status: "active" as const },
-      { due_on: "2026-11-26", project_status: "paused" as const },
-      { due_on: "2026-11-27", project_status: "active" as const },
-      { due_on: "2026-11-01", project_status: "completed" as const },
+      { due_on: "2026-11-20", priority: "normal" as const, project_status: "active" as const },
+      { due_on: "2026-11-26", priority: "high" as const, project_status: "paused" as const },
+      { due_on: "2026-11-27", priority: "high" as const, project_status: "active" as const },
+      { due_on: null, priority: "urgent" as const, project_status: "active" as const },
+      { due_on: "2026-12-10", priority: "urgent" as const, project_status: "planning" as const },
+      { due_on: "2026-11-01", priority: "urgent" as const, project_status: "active" as const },
+      { due_on: null, priority: "normal" as const, project_status: "active" as const },
+      { due_on: null, priority: "urgent" as const, project_status: "completed" as const },
     ];
-    expect(countDueTasks(tasks, "2026-11-26")).toEqual({ due: 2, overdue: 1 });
+    expect(countPendingTasks(tasks, "2026-11-26")).toEqual({ total: 5, urgent: 3, overdue: 2 });
   });
 
   it("formata a data local como a do banco", () => {

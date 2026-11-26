@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { useAuth } from "../../lib/auth";
-import { canMaintain, getTimezonePadrao } from "../../lib/domain";
+import { getTimezonePadrao } from "../../lib/domain";
 import { formatMaintenanceDateTime } from "../../lib/maintenance";
 import {
   getMaintenanceRequestStatusLabel,
@@ -68,14 +68,9 @@ function Group({ title, requests, timezone }: { title: string; requests: Mainten
   );
 }
 
-// Bloco do Dashboard: para os responsáveis, todos os chamados ativos; para as demais pessoas, os que elas abriram.
-export function MyMaintenanceRequests() {
-  const t = useT();
-  const { profile, labSettings } = useAuth();
-  const timezone = labSettings?.timezone || getTimezonePadrao();
+// Chamados do laboratório, recarregados quando algo muda. Nulo enquanto não chegaram.
+export function useMaintenanceRequests() {
   const [requests, setRequests] = useState<MaintenanceRequest[] | null>(null);
-  const profileId = profile?.id ?? null;
-  const podeManter = canMaintain(profile);
 
   useEffect(() => {
     let ativo = true;
@@ -94,11 +89,24 @@ export function MyMaintenanceRequests() {
     };
   }, []);
 
-  if (!requests || !profileId) return null;
-  const { toHandle, mine, others } = getMyRequestGroups(requests, profileId, podeManter);
+  return requests;
+}
+
+type MyMaintenanceRequestsProps = {
+  groups: ReturnType<typeof getMyRequestGroups>;
+  /** Pessoa marcada como responsável pela manutenção. */
+  maintains: boolean;
+};
+
+// Bloco do Dashboard: para os responsáveis, todos os chamados ativos; para as demais pessoas, os que elas abriram.
+export function MyMaintenanceRequests({ groups, maintains }: MyMaintenanceRequestsProps) {
+  const t = useT();
+  const { labSettings } = useAuth();
+  const timezone = labSettings?.timezone || getTimezonePadrao();
+  const { toHandle, mine, others } = groups;
   const vazio = toHandle.length === 0 && mine.length === 0 && others.length === 0;
   // Quem cuida da manutenção sempre vê o bloco, para saber que não há nada esperando.
-  if (vazio && !podeManter) return null;
+  if (vazio && !maintains) return null;
 
   return (
     <section>
@@ -110,7 +118,7 @@ export function MyMaintenanceRequests() {
           <div className="min-w-0">
             <h3 className="text-2xl font-bold text-text">{t("myRequests.title")}</h3>
             <p className="mt-1 text-base text-muted">
-              {podeManter ? t("myRequests.hintMaintainer") : t("myRequests.hintUser")}
+              {maintains ? t("myRequests.hintMaintainer") : t("myRequests.hintUser")}
             </p>
           </div>
         </div>

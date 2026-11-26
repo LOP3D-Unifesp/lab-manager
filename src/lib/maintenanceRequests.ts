@@ -131,22 +131,23 @@ export function orderRequests(requests: MaintenanceRequest[], sort: RequestSort)
   );
 }
 
-// Para o Dashboard: o que a pessoa precisa atender (responsáveis: abertos, com ela ou aguardando peça sem encarregado),
-// o que ela mesma abriu e segue ativo e, para quem cuida da manutenção, os demais ativos (com outras pessoas).
-// Um chamado nunca aparece em dois grupos.
-export function getMyRequestGroups(requests: MaintenanceRequest[], profileId: string, canMaintainNow: boolean) {
+// Para o Dashboard: o que a pessoa precisa atender (o que está com ela e, para quem cuida da manutenção, os abertos e
+// os que aguardam peça sem encarregado), o que ela mesma abriu e segue ativo e, só para quem cuida da manutenção, os
+// demais ativos (com outras pessoas). Um chamado nunca aparece em dois grupos. "Cuida da manutenção" é a marcação
+// no cadastro: um coordenador sem ela acompanha pela contagem de abertos.
+export function getMyRequestGroups(requests: MaintenanceRequest[], profileId: string, maintains: boolean) {
   const active = requests.filter((request) => isRequestActive(request.status));
-  const toHandle = canMaintainNow
-    ? sortRequests(
-        active.filter(
-          (request) => request.status === "open" || request.assigned_to === profileId || (request.status === "waiting_part" && request.assigned_to === null),
-        ),
-      )
-    : [];
+  const toHandle = sortRequests(
+    active.filter(
+      (request) =>
+        request.assigned_to === profileId ||
+        (maintains && (request.status === "open" || (request.status === "waiting_part" && request.assigned_to === null))),
+    ),
+  );
   const handled = new Set(toHandle.map((request) => request.id));
   const mine = sortRequests(active.filter((request) => request.requested_by === profileId && !handled.has(request.id)));
   const own = new Set(mine.map((request) => request.id));
-  const others = canMaintainNow ? sortRequests(active.filter((request) => !handled.has(request.id) && !own.has(request.id))) : [];
+  const others = maintains ? sortRequests(active.filter((request) => !handled.has(request.id) && !own.has(request.id))) : [];
   return { toHandle, mine, others };
 }
 

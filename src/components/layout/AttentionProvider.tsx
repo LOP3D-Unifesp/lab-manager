@@ -2,8 +2,8 @@ import { createContext, ReactNode, useContext, useEffect, useState } from "react
 
 import { useAuth } from "../../lib/auth";
 import { canMaintain } from "../../lib/domain";
-import { countDueTasks, toLocalDate } from "../../lib/projects";
-import { countNewFeedback, countOpenMaintenanceRequests, countPendingBookings, countRequestedPurchases, listMyDueTasks } from "../../lib/supabaseRepository";
+import { countPendingTasks, toLocalDate } from "../../lib/projects";
+import { countNewFeedback, countOpenMaintenanceRequests, countPendingBookings, countRequestedPurchases, listMyPendingTasks } from "../../lib/supabaseRepository";
 import { supabase } from "../../lib/supabaseClient";
 import { FEEDBACK_CHANGED_EVENT } from "../feedback/FeedbackProvider";
 
@@ -28,8 +28,10 @@ type Attention = {
   urgentPurchases: number;
   /** Reservas aguardando aprovação (só coordenador). */
   pendingBookings: number;
-  /** Tarefas da pessoa atrasadas ou que vencem hoje. */
-  dueTasks: number;
+  /** Tarefas da pessoa urgentes, atrasadas ou que vencem hoje. */
+  pendingTasks: number;
+  /** Quantas delas são urgentes. */
+  urgentTasks: number;
   /** Quantas delas já estão atrasadas. */
   overdueTasks: number;
 };
@@ -41,7 +43,8 @@ const emptyCounts: Attention = {
   purchases: 0,
   urgentPurchases: 0,
   pendingBookings: 0,
-  dueTasks: 0,
+  pendingTasks: 0,
+  urgentTasks: 0,
   overdueTasks: 0,
 };
 
@@ -72,11 +75,11 @@ export function AttentionProvider({ children }: { children: ReactNode }) {
         wantsFeedback ? countNewFeedback() : Promise.resolve(0),
         wantsPurchases ? countRequestedPurchases() : Promise.resolve({ open: 0, urgent: 0 }),
         wantsPurchases ? countPendingBookings() : Promise.resolve(0),
-        listMyDueTasks(profileId, hoje),
+        listMyPendingTasks(profileId, hoje),
       ])
         .then(([requests, feedback, purchases, pendingBookings, myTasks]) => {
           if (!ativo) return;
-          const tasks = countDueTasks(myTasks, hoje);
+          const tasks = countPendingTasks(myTasks, hoje);
           setCounts({
             maintenanceRequests: requests.open,
             urgentRequests: requests.urgent,
@@ -84,7 +87,8 @@ export function AttentionProvider({ children }: { children: ReactNode }) {
             purchases: purchases.open,
             urgentPurchases: purchases.urgent,
             pendingBookings,
-            dueTasks: tasks.due,
+            pendingTasks: tasks.total,
+            urgentTasks: tasks.urgent,
             overdueTasks: tasks.overdue,
           });
         })

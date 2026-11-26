@@ -77,11 +77,17 @@ export function NotificationBell({ align = "right" }: NotificationBellProps) {
     {
       key: "tarefas",
       topic: "tasks" as const,
-      total: attention.dueTasks,
+      total: attention.pendingTasks,
       to: "/",
       icon: ListChecks,
-      label: t("bell.tasksDue", { count: attention.dueTasks }),
-      detail: attention.overdueTasks > 0 ? t("bell.overdue", { count: attention.overdueTasks }) : null,
+      label: t("bell.tasksPending", { count: attention.pendingTasks }),
+      detail:
+        [
+          attention.urgentTasks > 0 ? t("bell.urgent", { count: attention.urgentTasks }) : null,
+          attention.overdueTasks > 0 ? t("bell.overdue", { count: attention.overdueTasks }) : null,
+        ]
+          .filter(Boolean)
+          .join(" · ") || null,
     },
   ].filter((item) => item.total > 0);
   const pendencias = filterByBellPreference(abertas, preferences);
