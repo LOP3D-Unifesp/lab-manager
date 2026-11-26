@@ -15,6 +15,8 @@ type ModalProps = {
   sheet?: boolean;
   /** Botões ao lado do fechar; com eles o cabeçalho fica fixo no topo ao rolar. */
   headerActions?: ReactNode;
+  /** Conteúdo no pé do cabeçalho (abas, por exemplo); fica fixo junto com ele. */
+  headerTabs?: ReactNode;
   /** Há algo não salvo que o formulário não revela (fotos anexadas, por exemplo). */
   unsaved?: boolean;
   /** Por padrão, qualquer campo mexido conta como não salvo; desligue quando só `unsaved` deve valer. */
@@ -28,7 +30,7 @@ const openModals: symbol[] = [];
 
 // Fechar pelo X, pelo Esc ou clicando fora pergunta antes quando há algo não salvo. Os botões "Cancelar" de cada
 // formulário chamam `onClose` direto, porque cancelar já é desistir.
-export function Modal({ children, description, headerActions, onClose, onSave, sheet = false, title, trackInputs = true, unsaved = false, wide = false }: ModalProps) {
+export function Modal({ children, description, headerActions, headerTabs, onClose, onSave, sheet = false, title, trackInputs = true, unsaved = false, wide = false }: ModalProps) {
   const t = useT();
   const [touched, setTouched] = useState(false);
   const [asking, setAsking] = useState(false);
@@ -85,16 +87,19 @@ export function Modal({ children, description, headerActions, onClose, onSave, s
         className={[
           "max-h-[92vh] overflow-y-auto rounded-lg border border-border bg-surface px-5 pb-5 text-left shadow-2xl sm:px-9 sm:pb-8",
           headerActions ? "" : "pt-5 sm:pt-8",
+          // Com abas a altura é fixa, para a janela e as abas não pularem ao trocar.
+          headerTabs ? "h-[92vh]" : "",
           wide ? "w-[min(94vw,960px)]" : "w-[min(94vw,720px)]",
         ].join(" ")}
       >
         <div
           className={[
-            "mb-5 flex items-start justify-between gap-4",
-            headerActions ? "sticky top-0 z-20 -mx-5 border-b border-border bg-surface px-5 pb-3 pt-5 sm:-mx-9 sm:px-9 sm:pt-6" : "",
+            "mb-5 flex flex-wrap items-start justify-between gap-x-4",
+            headerActions ? "sticky top-0 z-20 -mx-5 border-b border-border bg-surface px-5 pt-5 sm:-mx-9 sm:px-9 sm:pt-6" : "",
+            headerActions && !headerTabs ? "pb-3" : "",
           ].join(" ")}
         >
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <h3 className="text-xl font-bold leading-tight text-text sm:text-2xl">{title}</h3>
             {description ? <p className="mt-1.5 text-base leading-6 text-muted">{description}</p> : null}
           </div>
@@ -110,6 +115,7 @@ export function Modal({ children, description, headerActions, onClose, onSave, s
               <X className="h-5 w-5" aria-hidden="true" />
             </button>
           </div>
+          {headerTabs ? <div className="min-w-0 basis-full">{headerTabs}</div> : null}
         </div>
         {children}
       </div>

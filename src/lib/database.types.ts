@@ -707,6 +707,38 @@ isOneToOne: false
       referencedColumns: ["id","project_id"]
     }
                   ]
+                },"project_task_comments": {
+                  Row: {
+                    "author_id": string,"body": string,"created_at": string,"edited_at": string | null,"id": string,"mentions": (string)[],"parent_id": string | null,"project_id": string,"task_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "author_id"?: string,"body": string,"created_at"?: string,"edited_at"?: string | null,"id"?: string,"mentions"?: (string)[],"parent_id"?: string | null,"project_id": string,"task_id": string
+                  }
+                  Update: {
+                    "author_id"?: string,"body"?: string,"created_at"?: string,"edited_at"?: string | null,"id"?: string,"mentions"?: (string)[],"parent_id"?: string | null,"project_id"?: string,"task_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "project_task_comments_author_fkey"
+      columns: ["author_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "project_task_comments_parent_fkey"
+      columns: ["parent_id","task_id"]
+isOneToOne: false
+      referencedRelation: "project_task_comments"
+      referencedColumns: ["id","task_id"]
+    },{
+      foreignKeyName: "project_task_comments_task_fkey"
+      columns: ["task_id","project_id"]
+isOneToOne: false
+      referencedRelation: "project_tasks"
+      referencedColumns: ["id","project_id"]
+    }
+                  ]
                 },"project_task_time_entries": {
                   Row: {
                     "auto_closed": boolean,"ended_at": string | null,"id": string,"phase": string,"profile_id": string,"project_id": string,"reminded_at": string | null,"seconds": number | null,"started_at": string,"task_id": string

@@ -17,7 +17,9 @@ export type NotificationType =
   | "project_join_decision"
   | "task_assigned"
   | "task_timer_reminder"
-  | "task_status";
+  | "task_status"
+  | "task_comment"
+  | "task_mention";
 
 export type AppNotification = {
   id: string;
@@ -75,6 +77,8 @@ const GROUP_BY_TYPE: Record<NotificationType, NotificationGroup> = {
   task_assigned: "tasks",
   task_timer_reminder: "tasks",
   task_status: "tasks",
+  task_comment: "tasks",
+  task_mention: "tasks",
 };
 
 export function getNotificationGroup(type: NotificationType): NotificationGroup {
@@ -141,6 +145,16 @@ export function describeNotification(notification: Pick<AppNotification, "type" 
         detail: [text(params, "task"), text(params, "project")].filter(Boolean).join(" · ") || null,
         reason: null,
       };
+    case "task_comment":
+    case "task_mention": {
+      const by = text(params, "by");
+      const kind = type === "task_mention" ? "Mention" : params.reply === true ? "Reply" : "Comment";
+      return {
+        title: by ? t(`notif.task${kind}By`, { name: by }) : t(`notif.task${kind}`),
+        detail: [text(params, "task"), text(params, "project")].filter(Boolean).join(" · ") || null,
+        reason: null,
+      };
+    }
     case "task_status": {
       const status = text(params, "status");
       const known = ["todo", "in_progress", "review", "done"];

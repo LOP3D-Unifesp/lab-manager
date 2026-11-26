@@ -257,6 +257,7 @@ export type ProjectTask = {
   archived_at: string | null;
   /** Subtarefas da checklist, na ordem em que a pessoa as organizou. */
   checklist: ChecklistItem[];
+  comment_count: number;
   created_at: string;
   /** Quando entrou em Finalizado (null enquanto não concluída; reabrir limpa). */
   completed_at: string | null;

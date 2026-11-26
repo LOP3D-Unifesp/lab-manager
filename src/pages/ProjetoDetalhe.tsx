@@ -1,6 +1,6 @@
 import { useT } from "../i18n";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Pencil, Plus } from "lucide-react";
 
 import { FundingEditor, fundingFormToInput, fundingToForm, type FundingForm } from "../components/projetos/FundingEditor";
@@ -11,7 +11,7 @@ import { SpoolCard } from "../components/inventario/SpoolCard";
 import { MembersEditor } from "../components/projetos/MembersEditor";
 import { ProjectFormModal } from "../components/projetos/ProjectFormModal";
 import { TaskFilterBar } from "../components/projetos/TaskFilterBar";
-import { TaskModal } from "../components/projetos/TaskModal";
+import { TaskModal, type TaskModalTab } from "../components/projetos/TaskModal";
 import { useTaskBoard } from "../components/projetos/useTaskBoard";
 import { useTaskSort } from "../components/projetos/useTaskSort";
 import { Avatar } from "../components/ui/Avatar";
@@ -85,7 +85,10 @@ export function ProjetoDetalhe() {
   const [filtrosTarefas, setFiltrosTarefas] = useState<TaskFilters>(emptyTaskFilters);
   const [rolos, setRolos] = useState<MaterialSpool[] | null>(null);
   const [consumo, setConsumo] = useState<Array<{ name: string; unit: MaterialUnit; total: number }>>([]);
-  const [tarefaAberta, setTarefaAberta] = useState<{ task: ProjectTask | null; status: TaskStatus } | null>(null);
+  const [tarefaAberta, setTarefaAberta] = useState<{ task: ProjectTask | null; status: TaskStatus; tab?: TaskModalTab } | null>(null);
+  // Link de um aviso de comentário: /projetos/<id>?tarefa=<id da tarefa>.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tarefaDoLink = searchParams.get("tarefa");
 
   const carregadorTarefas = useCallback(() => listProjectTasks(id), [id]);
   const quadro = useTaskBoard(carregadorTarefas);
@@ -97,6 +100,22 @@ export function ProjetoDetalhe() {
     const hoje = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
     return filterTasks(tarefas, filtrosTarefas, profile?.id ?? null, hoje);
   }, [tarefas, filtrosTarefas, profile?.id]);
+
+  // Abre a tarefa do link assim que ela estiver carregada e limpa o endereço, para não reabrir depois de fechada.
+  useEffect(() => {
+    if (!tarefaDoLink) return;
+    const task = quadro.tarefas?.find((item) => item.id === tarefaDoLink);
+    if (!task) return;
+    setAba("kanban");
+    setTarefaAberta({ task, status: task.status, tab: "comments" });
+    setSearchParams(
+      (params) => {
+        params.delete("tarefa");
+        return params;
+      },
+      { replace: true },
+    );
+  }, [tarefaDoLink, quadro.tarefas, setSearchParams]);
 
   const carregar = useCallback(async () => {
     const data = await getProject(id);
@@ -323,7 +342,7 @@ export function ProjetoDetalhe() {
             onToggleChecklistItem={quadro.marcarItem}
             onToggleTimer={quadro.alternarCronometro}
             onPriorityChange={quadro.mudarPrioridade}
-            onOpen={(task) => setTarefaAberta({ task, status: task.status })}
+            onOpen={(task, tab) => setTarefaAberta({ task, status: task.status, tab })}
           />
         </div>
       ) : null}
@@ -447,6 +466,8 @@ export function ProjetoDetalhe() {
 
       {tarefaAberta ? (
         <TaskModal
+          key={tarefaAberta.task?.id ?? "nova"}
+          initialTab={tarefaAberta.tab}
           projectId={project.id}
           task={tarefaAberta.task}
           members={project.members}

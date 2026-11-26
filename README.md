@@ -32,6 +32,7 @@ O projeto centraliza informações operacionais do laboratório para que pesquis
 
 - Projetos com membros, fomentos (agência, processo, vigência e valor por rubrica) e quadro de tarefas.
 - Em **Projetos**, quadro geral de tarefas; na **Início**, **Minhas tarefas**.
+- Comentários nas tarefas, com menção por **@nome** e aviso para os envolvidos.
 
 **Equipamentos, inventário e reservas**
 

@@ -35,6 +35,9 @@ const TEXTS = {
   task_review: { pt: "Tarefa em revisão", en: "Task in review", es: "Tarea en revisión" },
   task_done: { pt: "Tarefa concluída", en: "Task completed", es: "Tarea concluida" },
   task_updated: { pt: "Tarefa atualizada", en: "Task updated", es: "Tarea actualizada" },
+  task_comment: { pt: "Novo comentário em uma tarefa", en: "New comment on a task", es: "Nuevo comentario en una tarea" },
+  task_reply: { pt: "Nova resposta em uma conversa", en: "New reply in a conversation", es: "Nueva respuesta en una conversación" },
+  task_mention: { pt: "Mencionaram você em um comentário", en: "You were mentioned in a comment", es: "Te mencionaron en un comentario" },
   generic: { pt: "Nova notificação", en: "New notification", es: "Nueva notificación" },
 };
 
@@ -44,6 +47,7 @@ function language() {
 }
 
 function textKey(type, params) {
+  if (type === "task_comment" && params.reply === true) return "task_reply";
   if (type === "request_new" && params.urgency === "urgent") return "request_urgent";
   if (type === "purchase_new" && params.urgency === "urgent") return "purchase_urgent";
   if (type === "purchase_status") {
@@ -71,6 +75,9 @@ const WORDS = {
   urgent: { pt: "Urgente", en: "Urgent", es: "Urgente" },
   high: { pt: "Alta", en: "High", es: "Alta" },
   taskAssignedBy: { pt: "{value} atribuiu uma tarefa a você", en: "{value} assigned a task to you", es: "{value} te asignó una tarea" },
+  taskCommentBy: { pt: "{value} comentou em uma tarefa", en: "{value} commented on a task", es: "{value} comentó en una tarea" },
+  taskReplyBy: { pt: "{value} respondeu em uma conversa", en: "{value} replied in a conversation", es: "{value} respondió en una conversación" },
+  taskMentionBy: { pt: "{value} mencionou você em um comentário", en: "{value} mentioned you in a comment", es: "{value} te mencionó en un comentario" },
 };
 
 const LOCALES = { pt: "pt-BR", en: "en", es: "es" };
@@ -130,6 +137,8 @@ function bodyLines(type, params) {
     ];
   }
 
+  if (type === "task_comment" || type === "task_mention") return [text(params, "task"), text(params, "project"), text(params, "description")];
+
   if (type === "request_new" || type === "request_status" || type === "request_resolved") {
     const solution = params.status === "resolved" ? text(params, "solution") : null;
     return [
@@ -170,8 +179,14 @@ function bodyLines(type, params) {
 
 function describe(data) {
   const params = data.params && typeof data.params === "object" ? data.params : {};
-  const assignedBy = data.type === "task_assigned" ? text(params, "by") : null;
-  const title = assignedBy ? word("taskAssignedBy", assignedBy) : TEXTS[textKey(data.type, params)][language()];
+  // Avisos cujo título diz quem fez a ação.
+  const byWord = {
+    task_assigned: "taskAssignedBy",
+    task_comment: params.reply === true ? "taskReplyBy" : "taskCommentBy",
+    task_mention: "taskMentionBy",
+  }[data.type];
+  const author = byWord ? text(params, "by") : null;
+  const title = author ? word(byWord, author) : TEXTS[textKey(data.type, params)][language()];
   return { title, body: bodyLines(data.type, params).filter(Boolean).join("\n") };
 }
 

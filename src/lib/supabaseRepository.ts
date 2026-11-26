@@ -1,4 +1,5 @@
 import type { TimeEntry, TimeReportRow } from "./taskTime";
+import type { TaskComment } from "./taskComments";
 import { getLocale, t } from "../i18n";
 import { supabase } from "./supabaseClient";
 import type { AppNotification, NotificationGroup } from "./notifications";
@@ -1256,21 +1257,24 @@ const taskSelect = [
   "running:project_task_time_entries(profile_id, phase, started_at, profile:profiles!project_task_time_entries_profile_fkey(full_name, avatar_url))",
   "project:projects(name)",
   "checklist:project_task_checklist_items(id, title, done, position)",
+  "comments:project_task_comments(count)",
   "assignees:project_task_assignees(profile_id, profile:profiles!project_task_assignees_profile_id_fkey(full_name, avatar_url))",
 ].join(", ");
 
 type RunningRow = { profile_id: string; phase: "work" | "review"; started_at: string; profile: { full_name: string; avatar_url: string | null } | null };
 
-type TaskRow = Omit<ProjectTask, "project_name" | "assignees" | "running"> & {
+type TaskRow = Omit<ProjectTask, "project_name" | "assignees" | "running" | "comment_count"> & {
   project: { name: string } | null;
+  comments: Array<{ count: number }> | null;
   running: RunningRow[] | null;
   assignees: Array<{ profile_id: string; profile: { full_name: string; avatar_url: string | null } | null }>;
 };
 
 function mapTask(row: TaskRow): ProjectTask {
-  const { project, assignees, running, ...task } = row;
+  const { project, assignees, running, comments, ...task } = row;
   return {
     ...task,
+    comment_count: comments?.[0]?.count ?? 0,
     running: (running ?? []).map((timer) => ({
       profile_id: timer.profile_id,
       phase: timer.phase,
@@ -1418,6 +1422,39 @@ export async function getTaskTimeReport(from: Date, to: Date): Promise<TimeRepor
 // Passa a tarefa para outro projeto (mantém só os responsáveis que também são membros do novo).
 export async function moveTaskToProject(taskId: string, projectId: string) {
   const { error } = await client().rpc("move_task_to_project", { p_task_id: taskId, p_project_id: projectId });
+  throwIfError(error);
+}
+
+// Comentários da tarefa, do mais antigo ao mais novo.
+export async function listTaskComments(taskId: string): Promise<TaskComment[]> {
+  const { data, error } = await client()
+    .from("project_task_comments")
+    .select("id, author_id, parent_id, body, mentions, created_at, edited_at, author:profiles!project_task_comments_author_fkey(full_name, avatar_url)")
+    .eq("task_id", taskId)
+    .order("created_at");
+  throwIfError(error);
+  type Row = Omit<TaskComment, "author_name" | "author_avatar_url"> & { author: { full_name: string; avatar_url: string | null } | null };
+  return ((data ?? []) as unknown as Row[]).map(({ author, ...comment }) => ({
+    ...comment,
+    author_name: author?.full_name ?? "",
+    author_avatar_url: author?.avatar_url ?? null,
+  }));
+}
+
+export async function createTaskComment(taskId: string, projectId: string, body: string, mentions: string[], parentId: string | null = null) {
+  const { error } = await client()
+    .from("project_task_comments")
+    .insert({ task_id: taskId, project_id: projectId, body, mentions, ...(parentId ? { parent_id: parentId } : {}) });
+  throwIfError(error);
+}
+
+export async function updateTaskComment(id: string, body: string, mentions: string[]) {
+  const { error } = await client().from("project_task_comments").update({ body, mentions }).eq("id", id);
+  throwIfError(error);
+}
+
+export async function deleteTaskComment(id: string) {
+  const { error } = await client().from("project_task_comments").delete().eq("id", id);
   throwIfError(error);
 }
 

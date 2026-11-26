@@ -75,6 +75,7 @@ export function useTaskBoard(loader: () => Promise<ProjectTask[]>) {
       .on("postgres_changes", { event: "*", schema: "public", table: "project_task_assignees" }, agendar)
       .on("postgres_changes", { event: "*", schema: "public", table: "project_task_checklist_items" }, agendar)
       .on("postgres_changes", { event: "*", schema: "public", table: "project_task_time_entries" }, agendar)
+      .on("postgres_changes", { event: "*", schema: "public", table: "project_task_comments" }, agendar)
       .subscribe();
     return () => {
       window.clearTimeout(debounce);
