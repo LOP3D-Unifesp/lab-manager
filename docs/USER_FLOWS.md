@@ -537,6 +537,11 @@ A reserva própria é cancelada, permanece no histórico e deixa de bloquear o h
 
 ### 5.5 Administração operacional
 
+### Fluxo 12a - Indicadores e menu lateral
+
+- **Indicadores** mostra os números do período escolhido. A pessoa vê os seus, incluindo a pizza **Tempo nas tarefas por projeto** (o que o cronômetro contou); o coordenador escolhe de qual pessoa ver (**Por pessoa**) e tem a aba **Laboratório**. **Horas reservadas por projeto** conta só reservas de equipamento.
+- No computador, o menu lateral pode ser recolhido para uma faixa com os ícones (o nome aparece ao passar o mouse); a escolha fica salva no navegador. No celular nada muda.
+
 ### Fluxo 13a - Ordenar as tarefas
 
 - Nos quadros de tarefas (Inicial, **Projetos** e dentro de um projeto) a pessoa escolhe a ordem dos cartões em cada coluna: **manual** (a arrastada), **prazo** (mais próximo primeiro; sem prazo no fim) ou **urgência** (urgente, alta, normal, baixa), misturando os projetos. Um critério desempata o outro.

@@ -76,6 +76,13 @@ export function sumTimeReport(rows: TimeReportRow[], by: "person" | "project") {
   return [...totals.values()].sort((a, b) => b.seconds - a.seconds || a.name.localeCompare(b.name));
 }
 
+// Para gráficos com poucas fatias: mantém os maiores (a lista vem ordenada) e junta o resto numa só.
+export function groupSmallest<T extends { id: string; name: string; seconds: number }>(rows: T[], limit: number, othersName: string) {
+  if (rows.length <= limit) return rows;
+  const rest = rows.slice(limit - 1);
+  return [...rows.slice(0, limit - 1), { id: "others", name: othersName, seconds: totalReportSeconds(rest) }];
+}
+
 export function totalReportSeconds(rows: Array<{ seconds: number }>) {
   return rows.reduce((sum, row) => sum + row.seconds, 0);
 }

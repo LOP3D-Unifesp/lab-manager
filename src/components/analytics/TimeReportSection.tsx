@@ -3,24 +3,17 @@ import { Timer } from "lucide-react";
 
 import { useT } from "../../i18n";
 import { getTaskTimeReport } from "../../lib/supabaseRepository";
-import { sumTimeReport, totalReportSeconds, type TimeReportRow } from "../../lib/taskTime";
+import { groupSmallest, sumTimeReport, totalReportSeconds, type TimeReportRow } from "../../lib/taskTime";
 import { formatDuration } from "../../lib/taskTimer";
 import { StatCard } from "../ui/StatCard";
-import { ChartCard, RankingChart, type ChartDatum } from "./Charts";
+import { ChartCard, DonutChart, RankingChart, type ChartDatum } from "./Charts";
 
-type TimeReportSectionProps = {
-  from: Date;
-  to: Date;
-  /** "mine": só o tempo da própria pessoa; "lab": o tempo de todos (coordenador), por pessoa e por projeto. */
-  scope: "mine" | "lab";
-  profileId: string;
-};
+// Acima disso a pizza fica ilegível: os menores projetos viram uma fatia só.
+const MAX_SLICES = 6;
 
-const toHours = (seconds: number) => Math.round((seconds / 3600) * 10) / 10;
-
-// Tempo trabalhado nas tarefas (cronômetro) no período selecionado.
-export function TimeReportSection({ from, profileId, scope, to }: TimeReportSectionProps) {
-  const t = useT();
+// Tempo trabalhado nas tarefas (cronômetro) no período. Nulo enquanto carrega; o banco só devolve o tempo de outras
+// pessoas para o coordenador.
+export function useTimeReport(from: Date, to: Date) {
   const [rows, setRows] = useState<TimeReportRow[] | null>(null);
   const fromKey = from.getTime();
   const toKey = to.getTime();
@@ -35,20 +28,31 @@ export function TimeReportSection({ from, profileId, scope, to }: TimeReportSect
     };
   }, [fromKey, toKey]);
 
-  if (rows === null) return null;
+  return rows;
+}
 
-  if (scope === "mine") {
-    const mine = rows.filter((row) => row.profile_id === profileId);
-    return (
-      <StatCard
-        title={t("analytics.myTaskTime")}
-        value={formatDuration(totalReportSeconds(mine))}
-        description={t("analytics.inPeriod")}
-        icon={Timer}
-      />
-    );
-  }
+const toHours = (seconds: number) => Math.round((seconds / 3600) * 10) / 10;
 
+// Pizza do tempo de uma pessoa, por projeto. Os valores vão em segundos para tempos curtos não sumirem do gráfico.
+export function TaskTimeByProjectChart({ rows }: { rows: TimeReportRow[] }) {
+  const t = useT();
+  const byProject = sumTimeReport(rows, "project").filter((row) => row.seconds > 0);
+  const slices = groupSmallest(byProject, MAX_SLICES, t("analytics.otherProjects"));
+
+  return (
+    <ChartCard
+      title={t("analytics.taskTimeByProject")}
+      hint={t("analytics.taskTimeHint")}
+      table={{ headers: [t("analytics.name"), t("analytics.time")], rows: byProject.map((row) => [row.name, formatDuration(row.seconds)]) }}
+    >
+      <DonutChart data={slices.map((row) => ({ name: row.name, value: row.seconds }))} format={formatDuration} empty={t("analytics.noTaskTime")} />
+    </ChartCard>
+  );
+}
+
+// Tempo de todo o laboratório, por pessoa e por projeto (coordenador).
+export function LabTimeSection({ rows }: { rows: TimeReportRow[] }) {
+  const t = useT();
   const byPerson = sumTimeReport(rows, "person");
   const byProject = sumTimeReport(rows, "project");
   const hoursHeader = t("analytics.hours");

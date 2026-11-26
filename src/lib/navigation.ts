@@ -67,10 +67,10 @@ export const navigationItems: NavigationItem[] = [
     mobileOrder: 1,
   },
   {
-    desktopLabel: "Analytics",
+    desktopLabel: "Indicadores",
     desktopSection: "work",
     desktopOrder: 5.5,
-    mobileLabel: "Analytics",
+    mobileLabel: "Indicadores",
     path: "/analytics",
     icon: BarChart3,
     mobilePlacement: "secondary",
