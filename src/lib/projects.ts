@@ -273,12 +273,46 @@ export function getChecklistProgress(items: Array<Pick<ChecklistItem, "done">>) 
   return { done, total: items.length, percent: items.length === 0 ? 0 : Math.round((done / items.length) * 100) };
 }
 
-export function groupTasksByStatus(tasks: ProjectTask[]) {
+// Ordem dos cartões nas colunas. "manual" é a ordem arrastada (vale para todos); as demais são só de quem está vendo.
+export type TaskSort = "manual" | "due" | "urgency";
+
+export const taskSortOptions: Array<{ value: TaskSort; label: string }> = [
+  { value: "manual", get label() { return t("tasks.sort.manual"); } },
+  { value: "due", get label() { return t("tasks.sort.due"); } },
+  { value: "urgency", get label() { return t("tasks.sort.urgency"); } },
+];
+
+export function isTaskSort(value: unknown): value is TaskSort {
+  return taskSortOptions.some((option) => option.value === value);
+}
+
+const TASK_PRIORITY_RANK: Record<TaskPriority, number> = { urgent: 0, high: 1, normal: 2, low: 3 };
+
+function compareManual(a: ProjectTask, b: ProjectTask) {
+  return a.position - b.position || a.title.localeCompare(b.title, getLocale());
+}
+
+// Sem prazo vai para o fim.
+function compareDue(a: ProjectTask, b: ProjectTask) {
+  if (a.due_on === b.due_on) return 0;
+  if (a.due_on === null) return 1;
+  if (b.due_on === null) return -1;
+  return a.due_on < b.due_on ? -1 : 1;
+}
+
+const compareUrgency = (a: ProjectTask, b: ProjectTask) => TASK_PRIORITY_RANK[a.priority] - TASK_PRIORITY_RANK[b.priority];
+
+// Por prazo, o mais próximo primeiro e a urgência desempata; por urgência, o contrário. A ordem manual é o último critério.
+const taskComparators: Record<TaskSort, (a: ProjectTask, b: ProjectTask) => number> = {
+  manual: compareManual,
+  due: (a, b) => compareDue(a, b) || compareUrgency(a, b) || compareManual(a, b),
+  urgency: (a, b) => compareUrgency(a, b) || compareDue(a, b) || compareManual(a, b),
+};
+
+export function groupTasksByStatus(tasks: ProjectTask[], sort: TaskSort = "manual") {
   const groups: Record<TaskStatus, ProjectTask[]> = { todo: [], in_progress: [], review: [], done: [] };
   for (const task of tasks) groups[task.status].push(task);
-  for (const status of Object.keys(groups) as TaskStatus[]) {
-    groups[status].sort((a, b) => a.position - b.position || a.title.localeCompare(b.title, getLocale()));
-  }
+  for (const status of Object.keys(groups) as TaskStatus[]) groups[status].sort(taskComparators[sort]);
   return groups;
 }
 

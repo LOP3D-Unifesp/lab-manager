@@ -267,3 +267,28 @@ describe("tarefas pendentes na campainha", () => {
     expect(toLocalDate(new Date(2026, 0, 5, 23, 30))).toBe("2026-01-05");
   });
 });
+
+describe("ordem das tarefas nas colunas", () => {
+  const task = (id: string, due_on: string | null, priority: "low" | "normal" | "high" | "urgent", position: number, project_id = "p1") =>
+    ({ id, title: id, status: "todo", due_on, priority, position, project_id }) as unknown as ProjectTask;
+  const tasks = [
+    task("sem-prazo-urgente", null, "urgent", 1),
+    task("longe-alta", "2026-12-10", "high", 2, "p2"),
+    task("perto-baixa", "2026-11-27", "low", 3),
+    task("perto-urgente", "2026-11-27", "urgent", 4, "p2"),
+    task("sem-prazo-normal", null, "normal", 5),
+  ];
+  const order = (sort?: "manual" | "due" | "urgency") => groupTasksByStatus(tasks, sort).todo.map((item) => item.id);
+
+  it("manual mantém a ordem arrastada", () => {
+    expect(order()).toEqual(["sem-prazo-urgente", "longe-alta", "perto-baixa", "perto-urgente", "sem-prazo-normal"]);
+  });
+
+  it("por prazo: o mais próximo primeiro, a urgência desempata e sem prazo fica no fim, misturando projetos", () => {
+    expect(order("due")).toEqual(["perto-urgente", "perto-baixa", "longe-alta", "sem-prazo-urgente", "sem-prazo-normal"]);
+  });
+
+  it("por urgência: da urgente à baixa, o prazo desempata", () => {
+    expect(order("urgency")).toEqual(["perto-urgente", "sem-prazo-urgente", "longe-alta", "sem-prazo-normal", "perto-baixa"]);
+  });
+});

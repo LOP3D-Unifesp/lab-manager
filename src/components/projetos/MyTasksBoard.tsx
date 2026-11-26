@@ -10,6 +10,7 @@ import { KanbanBoard } from "./KanbanBoard";
 import { TaskFilterBar } from "./TaskFilterBar";
 import { TaskModal } from "./TaskModal";
 import { useTaskBoard } from "./useTaskBoard";
+import { useTaskSort } from "./useTaskSort";
 
 // Kanban pessoal: só as tarefas atribuídas à pessoa, de todos os projetos. Fica sempre visível (depois de carregar):
 // quem participa de algum projeto aberto pode criar a primeira tarefa sem sair do Dashboard, e quem ainda não
@@ -19,6 +20,7 @@ export function MyTasksBoard({ isCoordinator, profileId }: { isCoordinator: bool
   const loader = useCallback(() => listMyTasks(profileId), [profileId]);
   const { alternarCronometro, apagar, arquivar, arrastar, erro, marcarItem, mover, mudarPrioridade, recarregar, tarefas } = useTaskBoard(loader);
   const [filtros, setFiltros] = useState<TaskFilters>(emptyTaskFilters);
+  const [ordem, setOrdem] = useTaskSort();
   const [projetos, setProjetos] = useState<Project[]>([]);
   const [modal, setModal] = useState<{ task: ProjectTask | null } | null>(null);
 
@@ -78,7 +80,7 @@ export function MyTasksBoard({ isCoordinator, profileId }: { isCoordinator: bool
           </p>
         ) : (
           <div className="mt-4 grid gap-4">
-            <TaskFilterBar filters={filtros} onChange={setFiltros} profileId={profileId} projects={projetosDasTarefas} />
+            <TaskFilterBar sort={ordem} onSortChange={setOrdem} filters={filtros} onChange={setFiltros} profileId={profileId} projects={projetosDasTarefas} />
             {hasActiveTaskFilters(filtros) ? (
               <div className="flex items-center justify-between gap-3 text-base text-muted">
                 <span>{t("tasks.countOf", { shown: visiveis.length, total: filtros.showArchived ? tarefas.length : ativas.length })}</span>
@@ -90,6 +92,7 @@ export function MyTasksBoard({ isCoordinator, profileId }: { isCoordinator: bool
             <KanbanBoard
               tasks={visiveis}
               showProject
+              sort={ordem}
               canDelete={(task) => isCoordinator || task.created_by === profileId}
               onArchive={arquivar}
               onDelete={apagar}

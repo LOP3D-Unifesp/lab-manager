@@ -20,6 +20,7 @@ import { KanbanBoard } from "./KanbanBoard";
 import { TaskFilterBar } from "./TaskFilterBar";
 import { TaskModal } from "./TaskModal";
 import { useTaskBoard } from "./useTaskBoard";
+import { useTaskSort } from "./useTaskSort";
 
 function todayLocal() {
   const now = new Date();
@@ -39,6 +40,7 @@ export function GeneralTasksBoard({ isCoordinator, profileId, projects }: Genera
   const loader = useCallback(() => listVisibleTasks(), []);
   const { alternarCronometro, apagar, arquivar, arrastar, erro, marcarItem, mover, mudarPrioridade, recarregar, tarefas } = useTaskBoard(loader);
   const [filtros, setFiltros] = useState<TaskFilters>(emptyTaskFilters);
+  const [ordem, setOrdem] = useTaskSort();
   const [modal, setModal] = useState<{ task: ProjectTask | null } | null>(null);
 
   const projetosOrdenados = useMemo(() => sortProjects(projects), [projects]);
@@ -52,7 +54,7 @@ export function GeneralTasksBoard({ isCoordinator, profileId, projects }: Genera
     <div className="grid gap-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="lg:flex-1">
-          <TaskFilterBar assignees={responsaveis} filters={filtros} onChange={setFiltros} profileId={profileId} projects={projetosOrdenados} />
+          <TaskFilterBar sort={ordem} onSortChange={setOrdem} assignees={responsaveis} filters={filtros} onChange={setFiltros} profileId={profileId} projects={projetosOrdenados} />
         </div>
         {projetosAbertos.length > 0 ? (
           <Button onClick={() => setModal({ task: null })}>
@@ -92,6 +94,7 @@ export function GeneralTasksBoard({ isCoordinator, profileId, projects }: Genera
           <KanbanBoard
             tasks={visiveis}
             showProject
+            sort={ordem}
             canDelete={canDelete}
             onArchive={arquivar}
             onDelete={apagar}

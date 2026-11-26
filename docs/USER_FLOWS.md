@@ -537,6 +537,11 @@ A reserva própria é cancelada, permanece no histórico e deixa de bloquear o h
 
 ### 5.5 Administração operacional
 
+### Fluxo 13a - Ordenar as tarefas
+
+- Nos quadros de tarefas (Inicial, **Projetos** e dentro de um projeto) a pessoa escolhe a ordem dos cartões em cada coluna: **manual** (a arrastada), **prazo** (mais próximo primeiro; sem prazo no fim) ou **urgência** (urgente, alta, normal, baixa), misturando os projetos. Um critério desempata o outro.
+- A escolha vale só para quem escolheu e fica salva no navegador. Fora da ordem manual, arrastar muda só a coluna e os botões de subir e descer somem.
+
 ### Fluxo 14a - Sino, pendências e preferências de aviso
 
 - O sino mostra **Pendências** (o que está em aberto: reservas, chamados, compras e sugestões para quem decide ou resolve, e as tarefas da própria pessoa urgentes, atrasadas ou para hoje) e **Novidades** (avisos de eventos).
