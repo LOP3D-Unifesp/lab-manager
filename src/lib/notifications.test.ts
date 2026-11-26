@@ -1,6 +1,51 @@
 import { describe, expect, it } from "vitest";
 
-import { describeNotification, getNotificationGroup, getNotificationHintKey, getNotificationTypesOfGroup, getVisibleNotificationGroups } from "./notifications";
+import {
+  describeNotification,
+  filterByBellPreference,
+  getNotificationGroup,
+  getNotificationHintKey,
+  getNotificationTypesOfGroup,
+  getVisibleNotificationGroups,
+} from "./notifications";
+
+describe("pendências da campainha", () => {
+  const pending = [
+    { topic: "requests" as const, total: 1 },
+    { topic: "purchases" as const, total: 3 },
+    { topic: "tasks" as const, total: 2 },
+  ];
+
+  it("sem escolha salva, tudo aparece", () => {
+    expect(filterByBellPreference(pending, [])).toEqual(pending);
+  });
+
+  it("assunto desligado no sino sai da lista e da contagem", () => {
+    const visible = filterByBellPreference(pending, [
+      { topic: "requests", in_app: false },
+      { topic: "purchases", in_app: true },
+    ]);
+    expect(visible.map((item) => item.topic)).toEqual(["purchases", "tasks"]);
+  });
+});
+
+describe("avisos de tarefa", () => {
+  it("descreve cada mudança de situação", () => {
+    expect(describeNotification({ type: "task_status", params: { task: "Calibrar", project: "Lab 3D", status: "review" } })).toEqual({
+      title: "Tarefa em revisão",
+      detail: "Calibrar · Lab 3D",
+      reason: null,
+    });
+    expect(describeNotification({ type: "task_status", params: { status: "done" } }).title).toBe("Tarefa concluída");
+    expect(describeNotification({ type: "task_status", params: {} }).title).toBe("Tarefa atualizada");
+  });
+
+  it("ficam no assunto Tarefas, separado de Projetos", () => {
+    expect(getNotificationTypesOfGroup("tasks").sort()).toEqual(["task_assigned", "task_status", "task_timer_reminder"]);
+    expect(getNotificationTypesOfGroup("projects").sort()).toEqual(["project_join_decision", "project_join_request"]);
+    expect(getNotificationHintKey("tasks", { role: "researcher" })).toBe("notifPrefs.tasksHint");
+  });
+});
 
 describe("preferências por perfil", () => {
   const researcher = { role: "researcher" as const, is_maintainer: false };
@@ -89,7 +134,7 @@ describe("notificação de tarefa atribuída", () => {
       reason: null,
     });
     expect(describeNotification({ type: "task_assigned", params: { task: "Calibrar a mesa" } }).title).toBe("Uma tarefa foi atribuída a você");
-    expect(getNotificationGroup("task_assigned")).toBe("projects");
+    expect(getNotificationGroup("task_assigned")).toBe("tasks");
   });
 
   it("lembra do timer ligado há horas, com a tarefa e o projeto", () => {
@@ -98,7 +143,7 @@ describe("notificação de tarefa atribuída", () => {
       detail: "Ensaio de tração · Lab 3D",
       reason: null,
     });
-    expect(getNotificationGroup("task_timer_reminder")).toBe("projects");
+    expect(getNotificationGroup("task_timer_reminder")).toBe("tasks");
   });
 });
 

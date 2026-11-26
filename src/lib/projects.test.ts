@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
+import { countDueTasks, toLocalDate,
   filterProjects,
   emptyTaskFilters,
   filterTasks,
@@ -245,5 +245,21 @@ describe("quadro geral de tarefas", () => {
   it("gera a mesma cor para o mesmo projeto e cores diferentes entre projetos", () => {
     expect(getProjectColor("abc")).toEqual(getProjectColor("abc"));
     expect(getProjectColor("abc").background).not.toBe(getProjectColor("xyz").background);
+  });
+});
+
+describe("tarefas pendentes na campainha", () => {
+  it("conta as atrasadas e as de hoje, só de projetos em aberto", () => {
+    const tasks = [
+      { due_on: "2026-11-20", project_status: "active" as const },
+      { due_on: "2026-11-26", project_status: "paused" as const },
+      { due_on: "2026-11-27", project_status: "active" as const },
+      { due_on: "2026-11-01", project_status: "completed" as const },
+    ];
+    expect(countDueTasks(tasks, "2026-11-26")).toEqual({ due: 2, overdue: 1 });
+  });
+
+  it("formata a data local como a do banco", () => {
+    expect(toLocalDate(new Date(2026, 0, 5, 23, 30))).toBe("2026-01-05");
   });
 });

@@ -303,6 +303,17 @@ export function isTaskOverdue(task: Pick<ProjectTask, "due_on" | "status">, toda
   return task.status !== "done" && task.due_on !== null && task.due_on < today;
 }
 
+// Data de hoje no relógio de quem usa, no formato de `due_on` (AAAA-MM-DD).
+export function toLocalDate(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+// Pendências de tarefas da campainha: as atrasadas e as que vencem hoje, só de projetos em aberto.
+export function countDueTasks(tasks: Array<{ due_on: string; project_status: ProjectStatus }>, today: string) {
+  const open = tasks.filter((task) => isProjectOpen(task.project_status) && task.due_on <= today);
+  return { due: open.length, overdue: open.filter((task) => task.due_on < today).length };
+}
+
 export function getTaskErrorMessage(error: unknown) {
   const text = error instanceof Error ? error.message : String(error ?? "");
   if (text.includes("assignee_must_be_project_member")) return t("taskError.assignee_must_be_project_member");

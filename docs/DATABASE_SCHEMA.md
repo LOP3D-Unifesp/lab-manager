@@ -96,6 +96,7 @@ Status do MVP implementado:
 | `20261012_remove_time_entry_adjust` | Remove a RPC `adjust_time_entry`: os trechos de tempo registrados não podem ser alterados por ninguém (evita adulterar o tempo trabalhado); o modal da tarefa só consulta os trechos. |
 | `20261013_maintenance_status_alerts` | Mudanca de situacao de um chamado avisa quem abriu e os responsaveis pela manutencao (secao 3.20). |
 | `20261014_purchase_equipment` | `purchase_requests.equipment_id`: equipamento do gasto de manutencao, com ou sem chamado; `update_purchase_request` ganha `p_set_equipment` e `p_equipment_id` (secao 3.19). |
+| `20261015_task_notifications` | Assunto `tasks` nas preferencias (copia a escolha de `projects`) e notificacao `task_status`: mudanca de situacao de tarefa avisa quem criou e os responsaveis (secao 3.20). |
 
 Resumo dos objetos que mais mudam o entendimento do schema:
 
@@ -1192,7 +1193,8 @@ O texto nao e guardado: so o tipo e os dados do evento (`params`), e o cliente m
 
 - `notifications`: `recipient_id` (`ON DELETE CASCADE`), `type` (`booking_pending`, `booking_approved`,
   `booking_rejected`, `booking_cancelled`, `request_new`, `request_resolved`, `request_status`, `feedback_new`,
-  `purchase_new`, `purchase_status`, `project_join_request`, `project_join_decision`), `params` (jsonb), `link`
+  `purchase_new`, `purchase_status`, `project_join_request`, `project_join_decision`, `task_assigned`,
+  `task_timer_reminder`, `task_status`), `params` (jsonb), `link`
   (caminho do app), `entity_id`, `created_at` e `read_at`. Cada pessoa le e apaga as proprias e so altera `read_at`
   (grant de coluna); ninguem insere pelo cliente. Na publicacao `supabase_realtime`. Ao criar uma notificacao,
   as lidas ha mais de 90 dias do destinatario sao apagadas.
@@ -1201,9 +1203,10 @@ O texto nao e guardado: so o tipo e os dados do evento (`params`), e o cliente m
   reserva pendente, feedback novo e pedido de compra novo, so coordenadores; chamado novo, coordenadores e
   mantenedores; reserva aprovada/recusada/cancelada, o dono (e os coordenadores quando o dono cancela); mudanca de
   status de chamado, quem abriu e os mantenedores; mudanca de status de compra, so quem pediu; pedido de entrada em projeto, coordenadores e
-  membros; decisao do pedido, quem pediu.
+  membros; decisao do pedido, quem pediu; tarefa atribuida e timer ligado, a propria pessoa; mudanca de situacao de
+  tarefa (`project_tasks_notify_status`), quem criou e os responsaveis que ainda veem o projeto.
 - `notification_preferences`: `(profile_id, topic)` com `topic` em `bookings`, `requests`, `purchases`, `feedback`,
-  `projects`, `in_app` e `push` (padrao ligado). `private.wants_notification` consulta a tabela: com `in_app`
+  `projects`, `tasks`, `in_app` e `push` (padrao ligado). `private.wants_notification` consulta a tabela: com `in_app`
   desligado a notificacao nem e criada (e o push, que parte dela, tambem nao).
 - `push_subscriptions`: uma linha por navegador (`endpoint` unico, `p256dh`, `auth`). A pessoa le e apaga as
   proprias; criar e reatribuir passa por `register_push_subscription` (se outra pessoa entra no mesmo navegador, a

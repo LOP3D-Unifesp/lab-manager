@@ -29,6 +29,11 @@ const TEXTS = {
   task_assigned: { pt: "Tarefa atribuída a você", en: "Task assigned to you", es: "Tarea asignada a ti" },
   task_timer_reminder: { pt: "Seu timer ainda está ligado", en: "Your timer is still on", es: "Tu temporizador sigue encendido" },
   project_join_rejected: { pt: "Pedido de entrada recusado", en: "Join request rejected", es: "Solicitud de ingreso rechazada" },
+  task_todo: { pt: "Tarefa voltou para A fazer", en: "Task moved back to To do", es: "La tarea volvió a Por hacer" },
+  task_in_progress: { pt: "Tarefa em andamento", en: "Task in progress", es: "Tarea en curso" },
+  task_review: { pt: "Tarefa em revisão", en: "Task in review", es: "Tarea en revisión" },
+  task_done: { pt: "Tarefa concluída", en: "Task completed", es: "Tarea concluida" },
+  task_updated: { pt: "Tarefa atualizada", en: "Task updated", es: "Tarea actualizada" },
   generic: { pt: "Nova notificação", en: "New notification", es: "Nueva notificación" },
 };
 
@@ -45,6 +50,9 @@ function textKey(type, params) {
     return params.status === "requested" ? "purchase_reopened" : "purchase_updated";
   }
   if (type === "project_join_decision") return params.approved === true ? "project_join_approved" : "project_join_rejected";
+  if (type === "task_status") {
+    return ["todo", "in_progress", "review", "done"].includes(params.status) ? "task_" + params.status : "task_updated";
+  }
   if (type === "request_status") {
     if (params.status === "resolved") return "request_resolved";
     return ["open", "in_progress", "waiting_part", "cancelled"].includes(params.status) ? "request_" + params.status : "request_updated";

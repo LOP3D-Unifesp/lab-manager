@@ -20,6 +20,7 @@ const ICONS: Record<NotificationType, LucideIcon> = {
   project_join_decision: UserCheck,
   task_assigned: ListChecks,
   task_timer_reminder: Timer,
+  task_status: ListChecks,
 };
 
 type NotificationRowProps = {
