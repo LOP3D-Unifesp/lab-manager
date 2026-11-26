@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(477);
+select plan(496);
 
 -- Keep the suite repeatable even after a developer has completed the local wizard.
 update public.lab_settings
@@ -2544,6 +2544,180 @@ select ok(
   (select bool_and(params ? 'starts_at' and params ? 'ends_at' and params ? 'author' and params ? 'timezone')
    from public.notifications where entity_id = '00000000-0000-0000-0000-00000000f801' and type = 'booking_pending'),
   'a booking notification carries when it is and whose it is'
+);
+
+-- Task comments: 101 coordinator, 102 creator, 103 assignee, 121 outside the project.
+insert into public.projects (id, name, created_by) values
+  ('00000000-0000-0000-0000-00000000fa00', 'pgtap comentarios', '00000000-0000-0000-0000-000000000101'),
+  ('00000000-0000-0000-0000-00000000fa09', 'pgtap comentarios destino', '00000000-0000-0000-0000-000000000101');
+insert into public.project_members (project_id, profile_id) values
+  ('00000000-0000-0000-0000-00000000fa00', '00000000-0000-0000-0000-000000000102'),
+  ('00000000-0000-0000-0000-00000000fa00', '00000000-0000-0000-0000-000000000103');
+insert into public.project_tasks (id, project_id, title, description, created_by)
+values ('00000000-0000-0000-0000-00000000fa01', '00000000-0000-0000-0000-00000000fa00', 'pgtap tarefa comentada', 'descricao da tarefa', '00000000-0000-0000-0000-000000000102');
+insert into public.project_task_assignees (task_id, project_id, profile_id)
+values ('00000000-0000-0000-0000-00000000fa01', '00000000-0000-0000-0000-00000000fa00', '00000000-0000-0000-0000-000000000103');
+delete from public.notification_preferences
+where profile_id in ('00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000102', '00000000-0000-0000-0000-000000000103') and topic = 'tasks';
+delete from public.notifications where entity_id = '00000000-0000-0000-0000-00000000fa01';
+
+-- "mention:101 comment:102": who was told about the comment with this text, one entry per notification.
+create function pg_temp.told_comment(p_body text) returns text
+language sql
+security definer
+as $$
+  select coalesce(string_agg(replace(n.type, 'task_', '') || ':' || right(n.recipient_id::text, 3), ' ' order by n.recipient_id, n.type), '')
+  from public.notifications n
+  join public.project_task_comments c on c.id::text = n.params->>'comment_id'
+  where c.body = p_body;
+$$;
+
+create function pg_temp.act_as(p_actor text) returns void
+language sql
+as $$
+  select set_config('request.jwt.claims', json_build_object('sub', '00000000-0000-0000-0000-000000000' || p_actor, 'role', 'authenticated')::text, true);
+$$;
+
+set local role authenticated;
+select pg_temp.act_as('103');
+select lives_ok(
+  $$ insert into public.project_task_comments (task_id, project_id, body, mentions) values
+     ('00000000-0000-0000-0000-00000000fa01', '00000000-0000-0000-0000-00000000fa00', 'pgtap **primeiro** comentario',
+      array['00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000121', '00000000-0000-0000-0000-000000000103']::uuid[]) $$,
+  'a project member comments on a task'
+);
+select is(
+  (select author_id from public.project_task_comments where body = 'pgtap **primeiro** comentario'),
+  '00000000-0000-0000-0000-000000000103'::uuid,
+  'the comment belongs to who wrote it'
+);
+select is(
+  pg_temp.told_comment('pgtap **primeiro** comentario'),
+  'mention:101 comment:102',
+  'the mentioned person and the creator are told, never the author or someone outside the project'
+);
+select throws_ok(
+  $$ insert into public.project_task_comments (task_id, project_id, author_id, body)
+     values ('00000000-0000-0000-0000-00000000fa01', '00000000-0000-0000-0000-00000000fa00', '00000000-0000-0000-0000-000000000102', 'pgtap em nome de outra') $$,
+  '42501', null,
+  'nobody comments in the name of someone else'
+);
+select throws_ok(
+  $$ insert into public.project_task_comments (task_id, project_id, body)
+     values ('00000000-0000-0000-0000-00000000fa01', '00000000-0000-0000-0000-00000000fa00', E' \n ') $$,
+  '23514', null,
+  'an empty comment is refused'
+);
+
+select pg_temp.act_as('121');
+select throws_ok(
+  $$ insert into public.project_task_comments (task_id, project_id, body)
+     values ('00000000-0000-0000-0000-00000000fa01', '00000000-0000-0000-0000-00000000fa00', 'pgtap de fora') $$,
+  '42501', null,
+  'someone outside the project cannot comment'
+);
+select is(
+  (select count(*)::int from public.project_task_comments where task_id = '00000000-0000-0000-0000-00000000fa01'),
+  0,
+  'someone outside the project reads no comments'
+);
+
+select pg_temp.act_as('102');
+insert into public.project_task_comments (task_id, project_id, body)
+values ('00000000-0000-0000-0000-00000000fa01', '00000000-0000-0000-0000-00000000fa00', 'pgtap resposta');
+select is(
+  pg_temp.told_comment('pgtap resposta'),
+  'comment:103',
+  'a reply reaches the assignee who already commented only once'
+);
+
+select pg_temp.act_as('101');
+insert into public.project_task_comments (task_id, project_id, body, mentions)
+values ('00000000-0000-0000-0000-00000000fa01', '00000000-0000-0000-0000-00000000fa00', 'pgtap da coordenacao', array['00000000-0000-0000-0000-000000000102']::uuid[]);
+select is(
+  pg_temp.told_comment('pgtap da coordenacao'),
+  'mention:102 comment:103',
+  'a mentioned creator gets only the mention'
+);
+
+select pg_temp.act_as('103');
+update public.project_task_comments
+set body = 'pgtap primeiro editado', mentions = array['00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000102']::uuid[]
+where body = 'pgtap **primeiro** comentario';
+select ok(
+  (select edited_at is not null from public.project_task_comments where body = 'pgtap primeiro editado'),
+  'editing a comment marks it as edited'
+);
+select is(
+  pg_temp.told_comment('pgtap primeiro editado'),
+  'mention:101 comment:102 mention:102',
+  'editing tells only the newly mentioned person'
+);
+select throws_ok(
+  $$ update public.project_task_comments set author_id = '00000000-0000-0000-0000-000000000102' where body = 'pgtap primeiro editado' $$,
+  '42501', null,
+  'the author of a comment cannot be changed'
+);
+
+set local role postgres;
+select is(
+  (select string_agg(distinct concat_ws('|', params->>'task', params->>'description', params->>'by', link), '')
+   from public.notifications where entity_id = '00000000-0000-0000-0000-00000000fa01' and recipient_id = '00000000-0000-0000-0000-000000000101'),
+  'pgtap tarefa comentada|pgtap primeiro editado|Other Researcher|/projetos/00000000-0000-0000-0000-00000000fa00?tarefa=00000000-0000-0000-0000-00000000fa01',
+  'the unread notice carries the current excerpt, the author and a link to the task'
+);
+
+set local role authenticated;
+select pg_temp.act_as('102');
+update public.project_task_comments set body = 'pgtap alterado por outra pessoa' where body = 'pgtap primeiro editado';
+delete from public.project_task_comments where body = 'pgtap primeiro editado';
+select is(
+  (select count(*)::int from public.project_task_comments where body = 'pgtap primeiro editado'),
+  1,
+  'a member cannot edit or delete the comment of someone else'
+);
+
+select pg_temp.act_as('103');
+delete from public.project_task_comments where body = 'pgtap primeiro editado';
+set local role postgres;
+select ok(
+  (select count(*) = 3 and bool_and(read_at is not null and not params ? 'description')
+   from public.notifications n
+   where entity_id = '00000000-0000-0000-0000-00000000fa01'
+     and not exists (select 1 from public.project_task_comments c where c.id::text = n.params->>'comment_id')),
+  'deleting a comment clears its notices and drops the excerpt'
+);
+
+set local role authenticated;
+select pg_temp.act_as('101');
+delete from public.project_task_comments where body = 'pgtap resposta';
+select is(
+  (select count(*)::int from public.project_task_comments where body = 'pgtap resposta'),
+  0,
+  'a coordinator deletes any comment'
+);
+
+set local role postgres;
+insert into public.notification_preferences (profile_id, topic, in_app, push) values ('00000000-0000-0000-0000-000000000103', 'tasks', false, false);
+set local role authenticated;
+select pg_temp.act_as('102');
+insert into public.project_task_comments (task_id, project_id, body, mentions)
+values ('00000000-0000-0000-0000-00000000fa01', '00000000-0000-0000-0000-00000000fa00', 'pgtap sem aviso', array['00000000-0000-0000-0000-000000000103']::uuid[]);
+select is(pg_temp.told_comment('pgtap sem aviso'), 'comment:101', 'a person who switched Tasks off is not told, even when mentioned');
+
+select pg_temp.act_as('101');
+select public.move_task_to_project('00000000-0000-0000-0000-00000000fa01', '00000000-0000-0000-0000-00000000fa09');
+select ok(
+  (select count(*) > 0 and bool_and(project_id = '00000000-0000-0000-0000-00000000fa09') from public.project_task_comments where task_id = '00000000-0000-0000-0000-00000000fa01'),
+  'moving a task takes its comments along'
+);
+set local role postgres;
+select set_config('request.jwt.claims', '', true);
+delete from public.project_tasks where id = '00000000-0000-0000-0000-00000000fa01';
+select ok(
+  (select count(*) = 0 from public.project_task_comments where task_id = '00000000-0000-0000-0000-00000000fa01')
+    and (select count(*) = 0 from public.notifications where entity_id = '00000000-0000-0000-0000-00000000fa01' and read_at is null),
+  'deleting a task removes its comments and clears their notices'
 );
 
 select * from finish();

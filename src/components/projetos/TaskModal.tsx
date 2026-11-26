@@ -35,6 +35,7 @@ import { Modal } from "../ui/Modal";
 import { RichTextEditor } from "../ui/RichTextEditor";
 import { TimeEntriesList } from "./TimeEntriesList";
 import { ChecklistEditor, type ChecklistDraftItem } from "./ChecklistEditor";
+import { TaskComments, type TaskCommentsHandle } from "./TaskComments";
 import { inputClassName } from "../ui/formStyles";
 
 type TaskModalProps = {
@@ -49,6 +50,8 @@ type TaskModalProps = {
   defaultAssigneeIds?: string[];
   canDelete: boolean;
   showProjectLink?: boolean;
+  /** Aberta por um aviso de comentário: começa rolada até os comentários. */
+  showComments?: boolean;
   onClose: () => void;
   onSaved: () => void;
 };
@@ -70,6 +73,7 @@ export function TaskModal({
   onSaved,
   projectId: fixedProjectId,
   projects = [],
+  showComments = false,
   showProjectLink = false,
   task,
 }: TaskModalProps) {
@@ -109,6 +113,9 @@ export function TaskModal({
   // Numa tarefa já criada, tudo menos título, descrição e projeto é gravado na hora.
   const auto = useAutoSave((error) => setErro(getTaskErrorMessage(error)));
   const formId = useId();
+  const comentariosRef = useRef<TaskCommentsHandle>(null);
+  const comentou = useRef(false);
+  const [comentarioPendente, setComentarioPendente] = useState(false);
 
   // Tempo por pessoa: lê os trechos de tempo e os totais da tarefa ao abrir (e de novo depois de um ajuste ou se
   // alguém ligar/pausar o timer enquanto o modal está aberto).
@@ -191,7 +198,7 @@ export function TaskModal({
   const rascunhoNovo = Boolean(
     !task && (title.trim() || (descricaoEditada && description.trim()) || checklist.length > 0 || dueOn || priority !== "normal"),
   );
-  const naoSalvo = textoPendente || rascunhoNovo || auto.failed;
+  const naoSalvo = textoPendente || rascunhoNovo || comentarioPendente || auto.failed;
 
   // Fecha depois de gravar o que estiver na fila; se algo mudou no banco, o quadro recarrega.
   async function encerrar() {
@@ -199,7 +206,7 @@ export function TaskModal({
     await auto.flush();
     // Uma falha que só apareceu agora mantém a janela aberta, com o erro à vista; fechar de novo pergunta antes.
     if (!jaTinhaFalha && auto.hasFailed()) return;
-    if (auto.hasSaved()) onSaved();
+    if (auto.hasSaved() || comentou.current) onSaved();
     else onClose();
   }
 
@@ -233,6 +240,8 @@ export function TaskModal({
       await setTaskAssignees(taskId, responsaveis);
       const itens = normalizarChecklist(checklist, checklistGravada.current);
       if (JSON.stringify(itens) !== JSON.stringify(checklistGravada.current)) await setTaskChecklist(taskId, itens);
+      // Um comentário digitado e não enviado vai junto, para não se perder ao fechar.
+      await comentariosRef.current?.flush(projectId, members);
       onSaved();
     } catch (error) {
       setErro(getTaskErrorMessage(error));
@@ -456,15 +465,31 @@ export function TaskModal({
             </div>
           )}
         </fieldset>
-
-        {task && canDelete ? (
-          <div className="mt-2">
-            <Button variant="danger" disabled={salvando} onClick={() => setConfirmandoExclusao(true)}>
-              {t("taskModal.delete")}
-            </Button>
-          </div>
-        ) : null}
       </form>
+      {task ? (
+        // Fora do formulário: comentar não salva a tarefa. Com a troca de projeto ainda não salva, valem o projeto e os
+        // membros atuais.
+        <div className="mt-5 border-t border-border pt-4">
+          <TaskComments
+            ref={comentariosRef}
+            taskId={task.id}
+            projectId={task.project_id}
+            members={fixedMembers ?? projects.find((item) => item.id === task.project_id)?.members ?? []}
+            scrollIntoViewOnLoad={showComments}
+            onPendingChange={setComentarioPendente}
+            onChanged={() => {
+              comentou.current = true;
+            }}
+          />
+        </div>
+      ) : null}
+      {task && canDelete ? (
+        <div className="mt-6 border-t border-border pt-4">
+          <Button variant="danger" disabled={salvando} onClick={() => setConfirmandoExclusao(true)}>
+            {t("taskModal.delete")}
+          </Button>
+        </div>
+      ) : null}
       {confirmandoExclusao && task ? (
         <ConfirmDialog confirmLabel={t("tasks.deleteConfirmButton")} busy={salvando} onCancel={() => setConfirmandoExclusao(false)} onConfirm={excluir} title={t("tasks.deleteTitle")}>
           <p className="font-semibold">{task.title}</p>

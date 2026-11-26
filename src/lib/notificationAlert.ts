@@ -62,6 +62,9 @@ function lines(notification: Pick<AppNotification, "type" | "params">): Array<st
     ];
   }
 
+  // Quem comentou já está no título; o trecho é o do comentário.
+  if (type === "task_comment" || type === "task_mention") return [text(params, "task"), text(params, "project"), text(params, "description")];
+
   if (type === "request_new" || type === "request_status" || type === "request_resolved") {
     const author = text(params, "author");
     const solution = params.status === "resolved" ? text(params, "solution") : null;

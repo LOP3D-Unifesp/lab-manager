@@ -1,6 +1,6 @@
 import { getLocale, useT } from "../../i18n";
 import { useState } from "react";
-import { Archive, ArchiveRestore, CalendarDays, ChevronDown, ChevronUp, ListChecks, Trash2 } from "lucide-react";
+import { Archive, ArchiveRestore, CalendarDays, ChevronDown, ChevronUp, ListChecks, MessageSquare, Trash2 } from "lucide-react";
 
 import {
   getChecklistProgress,
@@ -304,6 +304,18 @@ export function KanbanBoard({ canDelete, onArchive, onDelete, onDragChange, onMo
                       </ul>
                     ) : null}
                   </div>
+                ) : null}
+                {task.comment_count > 0 ? (
+                  <button
+                    type="button"
+                    aria-label={`${task.title} · ${t("tasks.commentCount", { count: task.comment_count })}`}
+                    title={t("tasks.commentCount", { count: task.comment_count })}
+                    className="flex w-fit items-center gap-1.5 text-sm text-muted hover:text-text"
+                    onClick={() => onOpen?.(task)}
+                  >
+                    <MessageSquare className="h-4 w-4 shrink-0" aria-hidden="true" />
+                    {task.comment_count}
+                  </button>
                 ) : null}
                 <TaskTimer
                   task={task}

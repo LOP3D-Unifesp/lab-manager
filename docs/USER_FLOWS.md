@@ -553,6 +553,13 @@ A reserva própria é cancelada, permanece no histórico e deixa de bloquear o h
 - O item digitado no campo de novo item entra no checklist ao apertar Enter ou ao sair do campo.
 - Todas as janelas fecham ao clicar fora, no X ou no Esc. Havendo algo preenchido e não salvo, a janela pergunta antes (continuar editando ou descartar; na tarefa, também salvar). O botão **Cancelar** descarta direto.
 
+### Fluxo 13c - Comentar numa tarefa
+
+- Numa tarefa já criada, quem vê o projeto escreve em **Comentários** e envia com **Comentar** ou Ctrl+Enter. O autor edita (fica marcado como editado) e apaga o seu; o coordenador apaga qualquer um. O cartão do quadro mostra quantos comentários há.
+- Ao digitar **@** aparecem os membros do projeto e os coordenadores; a pessoa mencionada recebe um aviso próprio. Quem criou a tarefa, os responsáveis e quem já comentou recebem o aviso de comentário novo. Cada pessoa recebe um só por comentário e o autor nenhum; editar avisa apenas quem passou a ser mencionado.
+- Clicar no aviso abre o projeto com a tarefa aberta nos comentários.
+- Um comentário digitado e não enviado conta como não salvo ao fechar a janela; **Salvar** envia junto.
+
 ### Fluxo 14a - Sino, pendências e preferências de aviso
 
 - O sino mostra **Pendências** (o que está em aberto: reservas, chamados, compras e sugestões para quem decide ou resolve, e as tarefas da própria pessoa urgentes, atrasadas ou para hoje) e **Novidades** (avisos de eventos).
@@ -560,7 +567,7 @@ A reserva própria é cancelada, permanece no histórico e deixa de bloquear o h
 - Mudança de situação de uma tarefa avisa quem a criou e os responsáveis, nunca quem fez a mudança.
 - O aviso no computador (com o app aberto ou fechado) traz o assunto, o contexto (projeto, quem, prazo, horário ou valor) e um trecho da descrição. Esse texto aparece também na tela de bloqueio, conforme a configuração do aparelho.
 - O sino mostra só as novidades não lidas. Um aviso é lido quando a pessoa clica nele ou usa **Marcar tudo como lido**; abrir o sino não marca. O histórico (**Ver todas as notificações**) guarda os lidos por 30 dias.
-- Avisos que esperam uma ação saem sozinhos, para todos que os receberam, quando o assunto se resolve: reserva pendente decidida ou cancelada; chamado novo resolvido ou cancelado; pedido de compra novo aprovado, recusado ou cancelado; pedido de entrada decidido ou cancelado; avisos de tarefa quando ela é concluída, arquivada ou apagada. Os que só informam saem quando lidos.
+- Avisos que esperam uma ação saem sozinhos, para todos que os receberam, quando o assunto se resolve: reserva pendente decidida ou cancelada; chamado novo resolvido ou cancelado; pedido de compra novo aprovado, recusado ou cancelado; pedido de entrada decidido ou cancelado; avisos de tarefa quando ela é concluída, arquivada ou apagada. Os que só informam, inclusive os de comentário e menção, saem quando lidos (ou quando o comentário ou a tarefa é apagado).
 
 ### Fluxo 14c - Pedir e acompanhar uma compra
 

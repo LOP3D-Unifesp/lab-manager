@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import source from "../../public/sw.js?raw";
 import { describeAlertBody } from "./notificationAlert";
-import type { NotificationType } from "./notifications";
+import { describeNotification, type NotificationType } from "./notifications";
 
 // O push é escrito pelo service worker, que não importa o código do app: os dois precisam dizer a mesma coisa.
 const worker = new Function("self", `${source}\nreturn describe;`)({ addEventListener: () => undefined, navigator: { language: "pt-BR" } }) as (data: {
@@ -22,6 +22,16 @@ const samples: Array<{ type: NotificationType; params: Record<string, unknown>; 
     body: "Calibrar\nLab 3D · por Ana",
   },
   { type: "task_timer_reminder", params: { task: "Ensaio", project: "Lab 3D", hours: 4 }, body: "Ensaio\nLab 3D" },
+  {
+    type: "task_comment",
+    params: { task: "Calibrar", project: "Lab 3D", by: "Ana", description: "Já calibrei o eixo.", due_on: "2026-11-28", priority: "urgent" },
+    body: "Calibrar\nLab 3D\nJá calibrei o eixo.",
+  },
+  {
+    type: "task_mention",
+    params: { task: "Calibrar", project: "Lab 3D", by: "Ana", description: "@Pedro, pode ver?" },
+    body: "Calibrar\nLab 3D\n@Pedro, pode ver?",
+  },
   {
     type: "request_new",
     params: { equipment: "Bambu", author: "Pedro", by: "Pedro", description: "Bico entupido" },
@@ -69,7 +79,11 @@ describe("texto do aviso no computador e do push", () => {
     expect(worker({ type: "tipo_novo", params: {} })).toEqual({ title: "Nova notificação", body: "" });
   });
 
-  it("o push diz quem atribuiu a tarefa", () => {
-    expect(worker({ type: "task_assigned", params: { by: "Ana" } }).title).toBe("Ana atribuiu uma tarefa a você");
+  it("o push diz quem atribuiu a tarefa, comentou ou mencionou, com o mesmo título do app", () => {
+    for (const type of ["task_assigned", "task_comment", "task_mention"] as const) {
+      expect(worker({ type, params: { by: "Ana" } }).title).toBe(describeNotification({ type, params: { by: "Ana" } }).title);
+      expect(worker({ type, params: {} }).title).not.toBe("Nova notificação");
+    }
+    expect(worker({ type: "task_mention", params: { by: "Ana" } }).title).toBe("Ana mencionou você em um comentário");
   });
 });

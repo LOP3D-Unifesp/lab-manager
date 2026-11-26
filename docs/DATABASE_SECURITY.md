@@ -69,6 +69,10 @@ do inicio. A tabela `printer_bookings` esta na publicacao `supabase_realtime`: m
 aos clientes sujeitas a RLS, e qualquer usuario ativo le todas as reservas (incluindo o motivo de
 rejeicao).
 
+Comentarios de tarefa (`project_task_comments`): leitura e criacao por coordenador ou membro do projeto, sempre em nome
+proprio (a coluna do autor nao e aceita do cliente); edicao so pelo autor e apenas do texto e das mencoes; exclusao pelo
+autor ou por coordenador. Mencionar alguem de fora do projeto nao gera aviso nem da acesso.
+
 Notificacoes (`notifications`) so sao criadas por gatilhos `security definer`; o cliente nao insere e so altera `read_at`.
 A chamada da Edge Function `send-push` usa um segredo compartilhado guardado em `private.push_config`, tabela fechada para
 `anon` e `authenticated`. O resumo de projetos (`list_project_directory`) e as funcoes de pedido de entrada sao
