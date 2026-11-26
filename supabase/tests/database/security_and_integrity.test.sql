@@ -890,7 +890,7 @@ select throws_ok(
   'P0001', 'schedule_period_overlap',
   'active schedule periods cannot overlap'
 );
-select is((select count(*) from public.lab_schedule_periods where is_active), 7::bigint, 'new period appears in active schedule');
+select is((select count(*) from public.lab_schedule_periods where is_active and starts_at = '23:00' and ends_at = '23:30'), 1::bigint, 'new period appears in active schedule');
 select lives_ok(
   $$ select public.update_lab_breaks('12:00', '13:00', '18:00', '19:00') $$,
   'coordinator configures lunch and dinner intervals'

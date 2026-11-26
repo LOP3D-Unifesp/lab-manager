@@ -29,8 +29,9 @@ com duas contas (coordenadora e pesquisador):
   - Analytics: "Meu tempo nas tarefas", "Tempo médio até concluir" e, como coordenadora, tempo por pessoa e por projeto.
 - [ ] **Termo de outorga (PDF):** anexar, abrir, trocar e remover em bolsa já salva; só a dona e coordenadores abrem (testar com
   uma segunda conta de pesquisador, que não deve ver nem abrir); remover a bolsa apaga o arquivo.
-- [ ] **Notificações:** sino (pendências, "Novidades", "Marcar tudo como lido"), página `/notificacoes` (filtros e
-  "Carregar mais"), cartão "Notificações" em Meu perfil (desligar um assunto e conferir que o aviso para).
+- [ ] **Notificações:** sino (pendências e "Novidades" só com os não lidos, "Marcar tudo como lido", aviso saindo
+  quando o assunto se resolve), página `/notificacoes` (filtros e "Carregar mais"), cartão "Notificações" em Meu perfil
+  (desligar um assunto e conferir que o aviso e as pendências somem).
 - [ ] **Push com o app fechado:** ligar os avisos, fechar a aba e gerar um evento com outra conta; testar no Chrome
   (desktop e Android) e no iPhone/iPad com o app instalado na tela inicial.
 - [ ] **Pesquisadores:** card enxuto, página `/pesquisadores/:id` (sem bio, sem bolsa, sem projeto, agenda no celular) e
@@ -110,10 +111,6 @@ com duas contas (coordenadora e pesquisador):
 - **Avisar os outros membros do projeto nas compras.** Hoje só o coordenador (pedido novo) e quem fez o pedido
   (aprovado, recusado, comprado, entregue) recebem aviso. Falta decidir se todos os membros do projeto devem saber
   quando um item é comprado ou entregue.
-- **Responsáveis pela manutenção verem as peças uns dos outros.** O chamado só mostra as peças que a pessoa pode
-  ver; um pedido do estoque geral é visível só para quem pediu e para o coordenador. Se mais de um responsável
-  acompanha o mesmo chamado, é preciso dar a eles leitura dos pedidos ligados a chamados (política de leitura no
-  banco).
 - **Passagens e Diárias como duas rubricas.** Foram criadas separadas. Se no edital elas vêm juntas ("Passagens e
   diárias"), unificar.
 - **Chamado e equipamento.** *Iniciar manutenção* coloca o equipamento em manutenção em qualquer chamado, não só nos
@@ -163,7 +160,6 @@ com duas contas (coordenadora e pesquisador):
 
 - Salvar o idioma escolhido no perfil (`profiles.language`) em vez de só no navegador; usar o idioma também no e-mail
   de convite, que ainda usa a paleta e a fonte antigas.
-- O teste 106 do pgTAP falha no banco local (8 períodos em vez de 7); investigar se é dado do ambiente local.
 - Strings ainda fixas em português em `MeuPerfil.tsx` ("Presencial:", "Home office:", "Aula:", "presencial") e o rótulo
   "Outro" em `fundingAgencyOptions`; `Pesquisador.habilidades` (em `src/lib/pesquisadores.ts`) está sempre vazio e
   pode ser removido.
@@ -190,14 +186,11 @@ Planejada na revisão e deixada para depois, para que o uso real indique a prior
 
 ## Limitações conhecidas
 
-- **Teste 106 do pgTAP falha no banco local do desenvolvedor.** Ele cria um período de agenda e espera um estado
-  limpo; o banco local tem períodos de uso (por exemplo 7), então a asserção falha. O CI usa banco limpo e não é
-  afetado. Para ver os 343 verdes localmente seria preciso um banco de teste separado.
 - **Pedidos anteriores à rubrica** aparecem como "Sem rubrica", e pedidos feitos antes do valor unitário guardam o
   total digitado (um deles foi corrigido à mão no hospedado). Ao editar um pedido antigo cujo total não divide
   certinho pela quantidade, o total pode mudar 1 centavo; o total novo aparece antes de salvar.
-- **Gasto por equipamento** só existe para pedidos que vieram de um chamado; os marcados à mão como manutenção ficam
-  em "Sem equipamento definido".
+- **Gasto por equipamento:** pedidos marcados à mão como manutenção só entram num equipamento se ele for escolhido;
+  os demais, inclusive os anteriores a `20261014`, ficam em "Sem equipamento definido".
 - **Fotos de chamado:** no máximo 3, reduzidas a 1600 px, em bucket privado (URLs assinadas de 1 hora). O .zip é
   gerado no navegador, sem compressão.
 - **Chamado ativo só.** *Aguardando peça* só reage a chamados abertos ou em andamento; um chamado já resolvido ou

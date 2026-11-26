@@ -1,5 +1,5 @@
 import { t } from "../../i18n";
-import { taskPriorityOptions, type Project, type TaskFilters } from "../../lib/projects";
+import { taskPriorityOptions, taskSortOptions, type Project, type TaskFilters, type TaskSort } from "../../lib/projects";
 
 const selectClassName =
   "min-h-11 min-w-0 rounded-lg border border-border bg-surface px-4 text-base outline-none transition focus:border-primary";
@@ -12,6 +12,8 @@ type TaskFilterBarProps = {
   /** Responsáveis para o seletor; sem a lista, o filtro de responsável não aparece. */
   assignees?: Array<{ profile_id: string; full_name: string }>;
   profileId: string;
+  sort: TaskSort;
+  onSortChange: (sort: TaskSort) => void;
 };
 
 function Toggle({ checked, danger = false, label, onChange }: { checked: boolean; danger?: boolean; label: string; onChange: (checked: boolean) => void }) {
@@ -29,13 +31,13 @@ function Toggle({ checked, danger = false, label, onChange }: { checked: boolean
 }
 
 // Filtros dos quadros de tarefas: o quadro geral usa todos; a Início, só os que fazem sentido para as tarefas da pessoa.
-export function TaskFilterBar({ assignees, filters, onChange, profileId, projects }: TaskFilterBarProps) {
+export function TaskFilterBar({ assignees, filters, onChange, onSortChange, profileId, projects, sort }: TaskFilterBarProps) {
   const set = (patch: Partial<TaskFilters>) => onChange({ ...filters, ...patch });
 
   return (
     <div className="flex flex-wrap items-stretch gap-3">
       {projects ? (
-        <select aria-label={t("tasks.filterProject")} className={`${selectClassName} min-w-44 flex-1`} value={filters.projectId} onChange={(event) => set({ projectId: event.target.value })}>
+        <select aria-label={t("tasks.filterProject")} className={`${selectClassName} min-w-56 flex-1`} value={filters.projectId} onChange={(event) => set({ projectId: event.target.value })}>
           <option value="all">{t("tasks.allProjects")}</option>
           {projects.map((projeto) => (
             <option key={projeto.id} value={projeto.id}>
@@ -45,7 +47,7 @@ export function TaskFilterBar({ assignees, filters, onChange, profileId, project
         </select>
       ) : null}
       {assignees ? (
-        <select aria-label={t("tasks.filterAssignee")} className={`${selectClassName} min-w-44 flex-1`} value={filters.assignee} onChange={(event) => set({ assignee: event.target.value })}>
+        <select aria-label={t("tasks.filterAssignee")} className={`${selectClassName} min-w-56 flex-1`} value={filters.assignee} onChange={(event) => set({ assignee: event.target.value })}>
           <option value="all">{t("tasks.allAssignees")}</option>
           <option value="me">{t("tasks.onlyMine")}</option>
           {assignees
@@ -59,7 +61,7 @@ export function TaskFilterBar({ assignees, filters, onChange, profileId, project
       ) : null}
       <select
         aria-label={t("tasks.filterPriority")}
-        className={`${selectClassName} min-w-44 flex-1`}
+        className={`${selectClassName} min-w-56 flex-1`}
         value={filters.priority}
         onChange={(event) => set({ priority: event.target.value as TaskFilters["priority"] })}
       >
@@ -70,8 +72,21 @@ export function TaskFilterBar({ assignees, filters, onChange, profileId, project
           </option>
         ))}
       </select>
+      <select
+        aria-label={t("tasks.sortLabel")}
+        className={`${selectClassName} min-w-56 flex-1`}
+        value={sort}
+        onChange={(event) => onSortChange(event.target.value as TaskSort)}
+      >
+        {taskSortOptions.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
       <Toggle checked={filters.overdueOnly} danger label={t("tasks.onlyLate")} onChange={(overdueOnly) => set({ overdueOnly })} />
       <Toggle checked={filters.showArchived} label={t("tasks.showArchived")} onChange={(showArchived) => set({ showArchived })} />
+      {sort === "manual" ? null : <p className="w-full text-sm text-muted">{t("tasks.sortHint")}</p>}
     </div>
   );
 }

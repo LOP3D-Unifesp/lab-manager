@@ -12,6 +12,7 @@ import {
   taskStatusOptions,
   type ProjectTask,
   type TaskPriority,
+  type TaskSort,
   type TaskStatus,
 } from "../../lib/projects";
 import { Avatar } from "../ui/Avatar";
@@ -77,11 +78,14 @@ type KanbanBoardProps = {
   onDelete?: (task: ProjectTask) => void;
   canDelete?: (task: ProjectTask) => boolean;
   showProject?: boolean;
+  /** Fora da ordem manual, arrastar só troca a coluna: a posição dentro dela é automática. */
+  sort?: TaskSort;
 };
 
-export function KanbanBoard({ canDelete, onArchive, onDelete, onDragChange, onMove, onOpen, onPriorityChange, onToggleChecklistItem, onToggleTimer, showProject = false, tasks }: KanbanBoardProps) {
+export function KanbanBoard({ canDelete, onArchive, onDelete, onDragChange, onMove, onOpen, onPriorityChange, onToggleChecklistItem, onToggleTimer, showProject = false, sort = "manual", tasks }: KanbanBoardProps) {
   const t = useT();
-  const groups = groupTasksByStatus(tasks);
+  const groups = groupTasksByStatus(tasks, sort);
+  const manual = sort === "manual";
   const today = todayLocal();
   const [arrastando, setArrastando] = useState<string | null>(null);
   // Onde o cartão cairia: coluna e cartão à frente do qual entra (null = fim da coluna).
@@ -100,6 +104,11 @@ export function KanbanBoard({ canDelete, onArchive, onDelete, onDragChange, onMo
     const alvo = destino;
     terminarArrasto();
     if (!task || !alvo || alvo.antesDe === task.id) return;
+    if (!manual) {
+      // A posição é automática: só a troca de coluna grava alguma coisa.
+      if (task.status !== alvo.status) onMove(task, alvo.status, null);
+      return;
+    }
     const coluna = groups[alvo.status];
     const indice = coluna.findIndex((item) => item.id === task.id);
     // Soltar no mesmo lugar (logo antes do cartão que já vem depois) não muda nada.
@@ -126,6 +135,10 @@ export function KanbanBoard({ canDelete, onArchive, onDelete, onDragChange, onMo
           onDragOver={(event) => {
             event.preventDefault();
             if (!arrastando) return;
+            if (!manual) {
+              setDestino((atual) => (atual?.status === column.value ? atual : { status: column.value, antesDe: null }));
+              return;
+            }
             // Fora dos cartões: acima do primeiro (título da coluna) = entra no topo; abaixo do último = entra no fim;
             // no espaço entre cartões mantém o destino que já estava marcado.
             const artigos = event.currentTarget.querySelectorAll("article");
@@ -159,8 +172,8 @@ export function KanbanBoard({ canDelete, onArchive, onDelete, onDragChange, onMo
 
           {groups[column.value].map((task, indice) => {
             const coluna = groups[column.value];
-            const marcaAntes = destino?.status === column.value && destino.antesDe === task.id;
-            const marcaFim = destino?.status === column.value && destino.antesDe === null && indice === coluna.length - 1 && arrastando !== task.id;
+            const marcaAntes = manual && destino?.status === column.value && destino.antesDe === task.id;
+            const marcaFim = manual && destino?.status === column.value && destino.antesDe === null && indice === coluna.length - 1 && arrastando !== task.id;
             const progresso = getChecklistProgress(task.checklist);
             const aberta = checklistsAbertas.has(task.id);
             const arquivada = task.archived_at !== null;
@@ -176,7 +189,8 @@ export function KanbanBoard({ canDelete, onArchive, onDelete, onDragChange, onMo
                 }}
                 onDragEnd={terminarArrasto}
                 onDragOver={(event) => {
-                  if (!arrastando) return;
+                  // Em ordem automática o evento sobe para a coluna, que é o único destino possível.
+                  if (!arrastando || !manual) return;
                   event.preventDefault();
                   event.stopPropagation();
                   // Sobre o próprio cartão arrastado: mantém o destino atual.
@@ -334,7 +348,7 @@ export function KanbanBoard({ canDelete, onArchive, onDelete, onDragChange, onMo
                 </div>
                 {/* No toque não existe arrastar de verdade: celular e tablet trocam a coluna por este seletor
                     (no computador, a coluna muda arrastando o cartão ou em Editar). */}
-                {arquivada ? null : (
+                {arquivada || !manual ? null : (
                   <div className="hidden items-center gap-2 text-sm text-muted [@media(pointer:coarse)]:flex">
                     <span className="shrink-0">{t("tasks.orderLabel")}</span>
                     <button

@@ -13,6 +13,7 @@ import { ProjectFormModal } from "../components/projetos/ProjectFormModal";
 import { TaskFilterBar } from "../components/projetos/TaskFilterBar";
 import { TaskModal } from "../components/projetos/TaskModal";
 import { useTaskBoard } from "../components/projetos/useTaskBoard";
+import { useTaskSort } from "../components/projetos/useTaskSort";
 import { Avatar } from "../components/ui/Avatar";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
@@ -88,6 +89,7 @@ export function ProjetoDetalhe() {
 
   const carregadorTarefas = useCallback(() => listProjectTasks(id), [id]);
   const quadro = useTaskBoard(carregadorTarefas);
+  const [ordemTarefas, setOrdemTarefas] = useTaskSort();
   const tarefas = quadro.tarefas ?? [];
   const carregarTarefas = quadro.recarregar;
   const tarefasVisiveis = useMemo(() => {
@@ -293,7 +295,7 @@ export function ProjetoDetalhe() {
               {t("projects.newTask")}
             </Button>
           </div>
-          <TaskFilterBar filters={filtrosTarefas} onChange={setFiltrosTarefas} profileId={profile?.id ?? ""} />
+          <TaskFilterBar sort={ordemTarefas} onSortChange={setOrdemTarefas} filters={filtrosTarefas} onChange={setFiltrosTarefas} profileId={profile?.id ?? ""} />
           {quadro.erro ? (
             <p className="rounded-lg border border-danger bg-danger-soft p-3 text-base font-semibold text-danger">{quadro.erro}</p>
           ) : null}
@@ -311,6 +313,7 @@ export function ProjetoDetalhe() {
             </div>
           ) : null}
           <KanbanBoard
+            sort={ordemTarefas}
             tasks={tarefasVisiveis}
             canDelete={(task) => Boolean(isCoordinator) || task.created_by === profile?.id}
             onArchive={quadro.arquivar}
