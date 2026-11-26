@@ -9,7 +9,7 @@ import { NewsCard } from "../components/inicio/NewsCard";
 import { NowCard } from "../components/inicio/NowCard";
 import { QuickActions } from "../components/inicio/QuickActions";
 import { useAttention } from "../components/layout/AttentionProvider";
-import { MyMaintenanceRequests } from "../components/equipamentos/MyMaintenanceRequests";
+import { MyMaintenanceRequests, useMaintenanceRequests } from "../components/equipamentos/MyMaintenanceRequests";
 import { MyTasksBoard } from "../components/projetos/MyTasksBoard";
 import { PageHeader } from "../components/ui/PageHeader";
 import { formatDateTime, useT } from "../i18n";
@@ -17,6 +17,7 @@ import { useCurrentProfile } from "../lib/currentUser";
 import { canMaintain, type AvailabilitySlot, type Equipment, type EquipmentBooking } from "../lib/domain";
 import { countEquipmentByStatus, getDayPart, getDecisionItems, getFirstName, getMyOpenPurchases, getMyUpcomingBookings } from "../lib/inicio";
 import { useLabSchedule } from "../lib/labSchedule";
+import { getMyRequestGroups } from "../lib/maintenanceRequests";
 import type { ProjectDirectoryEntry } from "../lib/projects";
 import type { PurchaseRequest } from "../lib/purchases";
 import { listAvailability, listBookings, listEquipment, listProjectDirectory, listPurchaseRequests } from "../lib/supabaseRepository";
@@ -28,6 +29,7 @@ export function Dashboard() {
   const { periodos } = useLabSchedule();
   const { currentProfile } = useCurrentProfile();
   const attention = useAttention();
+  const maintenanceRequests = useMaintenanceRequests();
   const [bookings, setBookings] = useState<EquipmentBooking[]>([]);
   const [availability, setAvailability] = useState<AvailabilitySlot[]>([]);
   const [purchases, setPurchases] = useState<PurchaseRequest[]>([]);
@@ -63,7 +65,11 @@ export function Dashboard() {
   if (!currentProfile) return null;
 
   const isCoordinator = currentProfile.role === "coordinator";
-  const maintains = canMaintain(currentProfile);
+  const maintains = currentProfile.is_maintainer === true;
+  const requestGroups = maintenanceRequests ? getMyRequestGroups(maintenanceRequests, currentProfile.id, maintains) : null;
+  // Os chamados só passam à frente das tarefas quando há algo para quem cuida da manutenção atender.
+  const requestsFirst = maintains && (requestGroups?.toHandle.length ?? 0) > 0;
+  const requestsBlock = requestGroups ? <MyMaintenanceRequests groups={requestGroups} maintains={maintains} /> : null;
   const myBookings = getMyUpcomingBookings(bookings, currentProfile.id, now);
   const myPurchases = getMyOpenPurchases(purchases, currentProfile.id);
   const presence = availability
@@ -72,7 +78,7 @@ export function Dashboard() {
     .join(", ");
   const decisions = getDecisionItems({
     isCoordinator,
-    canMaintain: maintains,
+    canMaintain: canMaintain(currentProfile),
     pendingBookings: attention.pendingBookings,
     purchases: attention.purchases,
     urgentPurchases: attention.urgentPurchases,
@@ -99,10 +105,9 @@ export function Dashboard() {
       <QuickActions />
       <DecisionCard items={decisions} />
 
-      {/* Para quem cuida da manutenção os chamados vêm antes das tarefas; para as demais pessoas, depois. */}
-      {maintains ? <MyMaintenanceRequests /> : null}
+      {requestsFirst ? requestsBlock : null}
       <MyTasksBoard isCoordinator={isCoordinator} profileId={currentProfile.id} />
-      {maintains ? null : <MyMaintenanceRequests />}
+      {requestsFirst ? null : requestsBlock}
 
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
         <NewsCard />

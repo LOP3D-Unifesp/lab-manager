@@ -1314,19 +1314,20 @@ export async function listMyTasks(profileId: string) {
   return ((data ?? []) as unknown as TaskRow[]).map(mapTask);
 }
 
-// Prazos das tarefas da pessoa ainda não concluídas nem arquivadas que vencem até a data informada.
-export async function listMyDueTasks(profileId: string, until: string) {
+// Tarefas da pessoa ainda não concluídas nem arquivadas que são urgentes ou vencem até a data informada.
+export async function listMyPendingTasks(profileId: string, until: string) {
   const { data, error } = await client()
     .from("project_tasks")
-    .select("due_on, project:projects!inner(status), mine:project_task_assignees!inner(profile_id)")
+    .select("due_on, priority, project:projects!inner(status), mine:project_task_assignees!inner(profile_id)")
     .eq("mine.profile_id", profileId)
     .neq("status", "done")
     .is("archived_at", null)
-    .lte("due_on", until)
+    .or(`due_on.lte.${until},priority.eq.urgent`)
     .limit(500);
   throwIfError(error);
-  return ((data ?? []) as unknown as Array<{ due_on: string; project: { status: ProjectStatus } }>).map((row) => ({
+  return ((data ?? []) as unknown as Array<{ due_on: string | null; priority: TaskPriority; project: { status: ProjectStatus } }>).map((row) => ({
     due_on: row.due_on,
+    priority: row.priority,
     project_status: row.project.status,
   }));
 }

@@ -308,10 +308,17 @@ export function toLocalDate(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
-// Pendências de tarefas da campainha: as atrasadas e as que vencem hoje, só de projetos em aberto.
-export function countDueTasks(tasks: Array<{ due_on: string; project_status: ProjectStatus }>, today: string) {
-  const open = tasks.filter((task) => isProjectOpen(task.project_status) && task.due_on <= today);
-  return { due: open.length, overdue: open.filter((task) => task.due_on < today).length };
+// Pendências de tarefas da campainha: as urgentes, as atrasadas e as que vencem hoje, só de projetos em aberto.
+// Recebe tarefas ainda não concluídas; cada uma conta uma vez, mesmo sendo urgente e atrasada.
+export function countPendingTasks(tasks: Array<{ due_on: string | null; priority: TaskPriority; project_status: ProjectStatus }>, today: string) {
+  const pending = tasks.filter(
+    (task) => isProjectOpen(task.project_status) && (task.priority === "urgent" || (task.due_on !== null && task.due_on <= today)),
+  );
+  return {
+    total: pending.length,
+    urgent: pending.filter((task) => task.priority === "urgent").length,
+    overdue: pending.filter((task) => task.due_on !== null && task.due_on < today).length,
+  };
 }
 
 export function getTaskErrorMessage(error: unknown) {

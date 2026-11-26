@@ -154,6 +154,13 @@ describe("chamados no Dashboard", () => {
     expect(getMyRequestGroups(list, "bia", false).others).toEqual([]);
   });
 
+  it("quem não cuida da manutenção só atende o que está com ele, além de ver os que abriu", () => {
+    const groups = getMyRequestGroups(requests, "bia", false);
+    expect(ids(groups.toHandle)).toEqual(["b"]);
+    expect(ids(groups.mine)).toEqual(["d"]);
+    expect(groups.others).toEqual([]);
+  });
+
   it("chamados encerrados não aparecem", () => {
     expect(ids(getMyRequestGroups(requests, "bia", false).mine)).toEqual(["d"]);
   });

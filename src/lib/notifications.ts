@@ -172,5 +172,8 @@ export function describeNotification(notification: Pick<AppNotification, "type" 
       if (status === "requested") return { title: t("notif.purchaseReopened"), detail: item, reason: null };
       return { title: t("notif.purchaseStatus"), detail: item, reason: null };
     }
+    // Tipo criado depois desta versão do app (aba aberta desde antes de uma atualização): mostra um texto genérico.
+    default:
+      return { title: t("notif.generic"), detail: null, reason: null };
   }
 }
